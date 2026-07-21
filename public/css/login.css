@@ -1,0 +1,211 @@
+:root {
+    --ink-900: #09111f;
+    --ink-700: #24324a;
+    --ink-500: #4e607f;
+    --surface: rgba(255, 255, 255, 0.9);
+    --line: rgba(23, 43, 77, 0.18);
+    --accent: #0a6e6e;
+    --accent-strong: #075658;
+    --danger: #b91c1c;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'Outfit', sans-serif;
+    color: var(--ink-900);
+    background:
+        radial-gradient(circle at 12% 18%, rgba(31, 150, 139, 0.25), transparent 30%),
+        radial-gradient(circle at 85% 80%, rgba(215, 151, 55, 0.2), transparent 26%),
+        linear-gradient(135deg, #e2e8f0 0%, #f8fafc 45%, #dbeafe 100%);
+    display: grid;
+}
+
+body.loaded {
+    background-image:
+        linear-gradient(120deg, rgba(8, 26, 56, 0.5), rgba(2, 15, 35, 0.2)),
+        url('../images/backgrounds/nebula.jpg');
+    background-size: cover;
+    background-position: center;
+}
+
+.login-shell {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 2rem 1rem;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 430px;
+    background: var(--surface);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 1.75rem;
+    box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28);
+    animation: card-enter 360ms ease-out;
+}
+
+@keyframes card-enter {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.99);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.brand-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.35rem 0.8rem;
+    margin-bottom: 1.15rem;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.brand-logo {
+    width: 110px;
+    height: auto;
+}
+
+.brand-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-700);
+}
+
+h1 {
+    font-size: 1.7rem;
+    line-height: 1.1;
+    margin: 0 0 0.35rem;
+}
+
+.login-subtitle {
+    color: var(--ink-500);
+    margin-bottom: 1.25rem;
+}
+
+.dev-note {
+    margin-bottom: 1rem;
+    padding: 0.65rem 0.8rem;
+    border-radius: 10px;
+    border: 1px dashed rgba(8, 41, 80, 0.24);
+    background: rgba(255, 255, 255, 0.74);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--ink-700);
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+}
+
+.form-control {
+    border-radius: 12px;
+    border-color: rgba(36, 50, 74, 0.24);
+    min-height: 46px;
+}
+
+.form-control:focus {
+    border-color: rgba(7, 86, 88, 0.6);
+    box-shadow: 0 0 0 0.22rem rgba(10, 110, 110, 0.14);
+}
+
+.invalid-field,
+.form-control.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.2) !important;
+}
+
+.error-message {
+    color: var(--danger);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.alert-danger {
+    border-radius: 12px;
+}
+
+.alert-success {
+    border-radius: 12px;
+}
+
+.password-wrap {
+    position: relative;
+}
+
+.password-wrap .form-control {
+    padding-right: 2.6rem;
+}
+
+.btn-password {
+    position: absolute;
+    top: 50%;
+    right: 0.7rem;
+    transform: translateY(-50%);
+    border: none;
+    padding: 0.2rem;
+    cursor: pointer;
+    background: transparent;
+    color: var(--ink-500);
+}
+
+.btn-password i {
+    font-size: 1rem;
+}
+
+.meta-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--ink-500);
+    letter-spacing: 0.03em;
+}
+
+.login-btn {
+    min-height: 46px;
+    border: none;
+    background: linear-gradient(90deg, var(--accent), #138f80 70%, #1aa69e);
+    border-radius: 12px;
+    font-weight: 600;
+    transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.login-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+    box-shadow: 0 10px 24px rgba(10, 110, 110, 0.28);
+}
+
+.login-btn:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 576px) {
+    .login-card {
+        border-radius: 20px;
+        padding: 1.2rem;
+    }
+
+    .brand-logo {
+        width: 96px;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+}
