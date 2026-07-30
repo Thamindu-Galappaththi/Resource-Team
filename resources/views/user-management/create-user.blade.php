@@ -69,14 +69,19 @@
                                 <label for="password" class="form-label">Password</label>
                                 <div class="input-group input-group-lg">
                                     <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required>
-                                    <button class="btn btn-outline-secondary" type="button" tabindex="-1" onclick="togglePasswordVisibility())">
+                                    <button class="btn btn-outline-secondary" type="button" tabindex="-1" onclick="togglePasswordVisibility('password', 'togglePasswordIcon')">
                                         <i class="bi bi-eye" id="togglePasswordIcon"></i>
                                     </button>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label for="password_confirmation" class="form-label">Confirm Password</label>
-                                <input type="password" name="password_confirmation" id="password_confirmation" class="form-control form-control-lg" placeholder="••••••••" required>
+                                <div class="input-group input-group-lg">
+                                    <input type="password" name="password_confirmation" id="password_confirmation" class="form-control" placeholder="••••••••" required>
+                                    <button class="btn btn-outline-secondary" type="button" tabindex="-1" onclick="togglePasswordVisibility('password_confirmation', 'toggleConfirmPasswordIcon')">
+                                        <i class="bi bi-eye" id="toggleConfirmPasswordIcon"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -112,9 +117,13 @@
 
 @push('scripts')
 <script>
-    function togglePasswordVisibility() {
-        const password = document.getElementById('password');
-        const icon = document.getElementById('togglePasswordIcon');
+    function togglePasswordVisibility(inputId, iconId) {
+        const password = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (!password || !icon) {
+            return;
+        }
+
         if (password.type === 'password') {
             password.type = 'text';
             icon.classList.remove('bi-eye');
