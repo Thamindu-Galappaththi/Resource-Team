@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -19,9 +20,8 @@ Route::middleware('auth')->group(function () {
         return view('dashboards.dashboard');
     })->name('dashboard');
 
-    Route::get('/user-management/create-user', function () {
-        return view('user-management.create-user');
-    })->name('create.user');
+    Route::get('/user-management/create-user', [UserManagementController::class, 'create'])->name('create.user');
+    Route::post('/user-management/create-user', [UserManagementController::class, 'store'])->name('create.user.store');
 
     Route::get('/user-management', function () {
         return view('user-management.index');

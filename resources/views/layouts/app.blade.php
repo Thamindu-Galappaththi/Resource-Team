@@ -154,19 +154,8 @@
             <div class="footer-wrapper mt-auto">
                 <footer class="footer bg-dark text-light text-center py-3">
                     <div class="container">
-                        <div class="row">
-                            <div class="col-lg-4 col-md-4 col-sm-4">
-                                <!-- First Column - Left Blank -->
-                            </div>
-                            <div class="col-lg-4 col-md-4 col-sm-4 mb-3 mb-md-0 align-items-center">
-                                <!-- Second Column - Text -->
-                                <p id="footer-year" class="mb-0">&copy; <span id="current-year">2024</span> Nebula. All
-                                    rights reserved.</p>
-                            </div>
-                            <div class="col-lg-4 col-md-4 col-sm-4">
-                                <!-- Third Column - Left Blank -->
-                            </div>
-                        </div>
+                        <p class="mb-1 text-muted">© 2026 SLT Mobitel Nebula Institute of Technology</p>
+                        <p class="mb-0 text-muted">Resource Reservation System (NRRS) All Rights Reserved.</p>
                     </div>
                 </footer>
             </div>
