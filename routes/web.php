@@ -2,6 +2,51 @@
 
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
+ 
+/**
+ * These map 1:1 onto the fetch() calls already in create.blade.php:
+ *   POST /resource-categories  -> categoryForm submit handler
+ *   POST /resource-types       -> typeForm submit handler
+ *   POST /resources            -> resourceForm submit handler
+ * The two GET routes aren't called by the current JS (which keeps
+ * state in memory client-side) but are useful for re-fetching data,
+ * building an "edit"/"list" page later, or feeding
+ * window.__initialCategories / __initialTypes / __initialResources
+ * from the controller that renders create.blade.php.
+ */
+
+use App\Http\Controllers\ResourceCategoryController;
+use App\Http\Controllers\ResourceTypeController;
+use App\Http\Controllers\ResourceController;
+use App\Http\Controllers\LocationController;
+ 
+Route::get('/resource-categories', [ResourceCategoryController::class, 'index'])
+    ->name('resource-categories.index');
+ 
+Route::post('/resource-categories', [ResourceCategoryController::class, 'store'])
+    ->name('resource-categories.store');
+ 
+Route::get('/resource-types', [ResourceTypeController::class, 'index'])
+    ->name('resource-types.index');
+ 
+Route::post('/resource-types', [ResourceTypeController::class, 'store'])
+    ->name('resource-types.store');
+ 
+Route::get('/resources', [ResourceController::class, 'index'])
+    ->name('resources.index');
+ 
+Route::post('/resources', [ResourceController::class, 'store'])
+    ->name('resources.store');
+
+Route::get('/resource-lookups', [ResourceController::class, 'lookups'])
+    ->name('resources.lookups');
+
+    Route::get('/locations', [LocationController::class, 'index'])
+    ->name('locations.index');
+
+    Route::get('/resource-list', [ResourceController::class, 'index'])
+    ->name('resources.index');
+
 
 Route::get('/', function () {
     return auth()->check()
