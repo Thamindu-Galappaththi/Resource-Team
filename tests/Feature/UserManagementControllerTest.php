@@ -14,11 +14,13 @@ class UserManagementControllerTest extends TestCase
     {
         $response = $this->actingAs(User::factory()->create())
             ->post('/user-management/create-user', [
+                'slt_employee' => 'no',
                 'name' => 'Jane Doe',
+                'nic' => '200012345678',
                 'email' => 'jane@example.com',
-                'password' => 'secret123',
-                'password_confirmation' => 'secret123',
+                'phone' => '0771234567',
                 'user_role' => 'admin',
+                'location' => 'Nebula Institute of Technology - Welisara',
             ]);
 
         $response->assertRedirect(route('create.user'));
@@ -26,6 +28,7 @@ class UserManagementControllerTest extends TestCase
             'email' => 'jane@example.com',
             'name' => 'Jane Doe',
             'user_role' => 'admin',
+            'slt_employee' => false,
         ]);
     }
 }

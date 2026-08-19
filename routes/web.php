@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/user-management/create-user', [UserManagementController::class, 'create'])->name('create.user');
     Route::post('/user-management/create-user', [UserManagementController::class, 'store'])->name('create.user.store');
+    Route::get('/user-management/slt-employee', [UserManagementController::class, 'lookupSltEmployee'])->name('slt.employee.lookup');
 
     Route::get('/user-management', function () {
         return view('user-management.index');

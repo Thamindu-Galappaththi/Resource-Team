@@ -18,8 +18,10 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'service_id',
+        'slt_employee',
         'nic',
         'email',
+        'phone',
         'location',
         'password',
         'user_role',
@@ -45,6 +47,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'slt_employee' => 'boolean',
         'password' => 'hashed',
     ];
 }
