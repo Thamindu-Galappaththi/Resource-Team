@@ -31,4 +31,26 @@ class UserManagementControllerTest extends TestCase
             'slt_employee' => false,
         ]);
     }
+
+    public function test_slt_employee_details_can_be_looked_up_by_employee_id(): void
+    {
+        $administrator = User::factory()->create();
+        User::factory()->create([
+            'service_id' => 'SLT-1001',
+            'name' => 'Sam Perera',
+            'nic' => '199012345678',
+            'email' => 'sam.perera@slt.lk',
+            'phone' => '0712345678',
+        ]);
+
+        $this->actingAs($administrator)
+            ->getJson(route('slt.employee.lookup', ['employee_id' => 'SLT-1001']))
+            ->assertOk()
+            ->assertExactJson([
+                'name' => 'Sam Perera',
+                'nic' => '199012345678',
+                'email' => 'sam.perera@slt.lk',
+                'phone' => '0712345678',
+            ]);
+    }
 }

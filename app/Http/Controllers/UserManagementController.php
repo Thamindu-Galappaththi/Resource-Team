@@ -55,7 +55,6 @@ class UserManagementController extends Controller
 
         $employee = User::query()
             ->where('service_id', $validated['employee_id'])
-            ->where('slt_employee', true)
             ->first();
 
         if (! $employee) {
