@@ -1,0 +1,444 @@
+/* =========================================================
+   RESOURCE CALENDAR
+   ========================================================= */
+
+.resource-calendar-wrapper {
+    width: 100%;
+    padding: 30px;
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   MAIN CARD
+   ========================================================= */
+
+.resource-calendar-card {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 18px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.resource-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 30px;
+    padding: 28px 30px 24px;
+    border-bottom: 1px solid #e8e8e8;
+    background: #ffffff;
+}
+
+.resource-calendar-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #25304a;
+}
+
+.resource-calendar-subtitle {
+    margin: 7px 0 0;
+    font-size: 14px;
+    color: #7b8498;
+}
+
+
+/* =========================================================
+   FILTERS
+   ========================================================= */
+
+.resource-calendar-filters {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.calendar-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.calendar-filter label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #697386;
+}
+
+.calendar-filter select {
+    min-width: 170px;
+    height: 40px;
+    padding: 0 35px 0 12px;
+    border: 1px solid #dfe3eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #30384d;
+    font-size: 13px;
+    outline: none;
+}
+
+.calendar-filter select:focus {
+    border-color: #6c8cff;
+    box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.12);
+}
+
+
+/* =========================================================
+   CALENDAR AREA
+   ========================================================= */
+
+.calendar-main {
+    padding: 25px 30px 30px;
+    background: #ffffff;
+}
+
+
+/* =========================================================
+   FULLCALENDAR
+   ========================================================= */
+
+#resourceCalendar {
+    width: 100%;
+}
+
+
+/* Toolbar */
+
+.fc .fc-toolbar {
+    margin-bottom: 22px;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #25304a;
+}
+
+
+/* Buttons */
+
+.fc .fc-button {
+    border: none !important;
+    border-radius: 7px !important;
+    padding: 8px 13px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+}
+
+.fc .fc-button-primary {
+    background: #6c8cff !important;
+    border-color: #6c8cff !important;
+}
+
+.fc .fc-button-primary:hover {
+    background: #5879ef !important;
+}
+
+.fc .fc-button-primary:disabled {
+    opacity: 0.55;
+}
+
+.fc .fc-button-active {
+    background: #4f6fe4 !important;
+}
+
+
+/* Day headings */
+
+.fc .fc-col-header-cell {
+    background: #f7f8fb;
+}
+
+.fc .fc-col-header-cell-cushion {
+    padding: 12px 5px;
+    color: #697386;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+
+/* Calendar cells */
+
+.fc .fc-daygrid-day {
+    background: #ffffff;
+}
+
+.fc .fc-daygrid-day:hover {
+    background: #fafbff;
+}
+
+.fc .fc-daygrid-day-number {
+    padding: 9px;
+    color: #596275;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+
+/* Today */
+
+.fc .fc-day-today {
+    background: rgba(108, 140, 255, 0.07) !important;
+}
+
+.fc .fc-day-today .fc-daygrid-day-number {
+    color: #526fdc;
+    font-weight: 800;
+}
+
+
+/* Events */
+
+.fc .fc-event {
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 4px 7px !important;
+    margin: 2px 4px !important;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.fc .fc-event:hover {
+    opacity: 0.88;
+}
+
+.fc .fc-event-title {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+/* Week / Day time slots */
+
+.fc .fc-timegrid-slot {
+    height: 45px;
+}
+
+.fc .fc-timegrid-slot-label {
+    color: #7b8498;
+    font-size: 12px;
+}
+
+.fc .fc-timegrid-axis {
+    background: #fafbfc;
+}
+
+.fc .fc-timegrid-col.fc-day-today {
+    background: rgba(108, 140, 255, 0.04);
+}
+
+
+/* More events */
+
+.fc .fc-daygrid-more-link {
+    color: #5b73d6;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+
+/* Scrollbars */
+
+.fc-scroller::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb {
+    background: #d4d9e4;
+    border-radius: 10px;
+}
+
+
+/* =========================================================
+   RESERVATION MODAL
+   ========================================================= */
+
+.reservation-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.reservation-modal.show {
+    display: flex;
+}
+
+.reservation-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(24, 30, 45, 0.55);
+    backdrop-filter: blur(3px);
+}
+
+.reservation-modal-box {
+    position: relative;
+    z-index: 2;
+    width: 520px;
+    max-width: calc(100% - 30px);
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+
+
+/* Modal header */
+
+.reservation-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 25px;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.reservation-modal-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 11px;
+    background: rgba(108, 140, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5c76df;
+    font-size: 21px;
+}
+
+.reservation-modal-header h2 {
+    margin: 0;
+    color: #293149;
+    font-size: 20px;
+}
+
+.reservation-modal-header p {
+    margin: 4px 0 0;
+    color: #8991a3;
+    font-size: 13px;
+}
+
+
+/* Close button */
+
+.reservation-modal-close {
+    position: absolute;
+    right: 15px;
+    top: 13px;
+    z-index: 5;
+    border: none;
+    background: transparent;
+    color: #8991a3;
+    font-size: 27px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.reservation-modal-close:hover {
+    color: #30384d;
+}
+
+
+/* Details */
+
+.reservation-details {
+    padding: 10px 25px 25px;
+}
+
+.reservation-detail-row {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 15px;
+    padding: 14px 0;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.reservation-detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: #858da0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.detail-value {
+    color: #30384d;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .resource-calendar-wrapper {
+        padding: 15px;
+    }
+
+    .resource-calendar-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .resource-calendar-filters {
+        flex-wrap: wrap;
+    }
+
+    .calendar-filter select {
+        min-width: 150px;
+    }
+
+    .calendar-main {
+        padding: 15px;
+    }
+
+    .fc .fc-toolbar {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .resource-calendar-title {
+        font-size: 23px;
+    }
+
+    .resource-calendar-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .calendar-filter select {
+        width: 100%;
+    }
+
+    .fc .fc-toolbar-title {
+        font-size: 18px;
+    }
+
+    .reservation-detail-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
+}
