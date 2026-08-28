@@ -8,10 +8,7 @@
     box-sizing: border-box;
 }
 
-
-/* =========================================================
-   MAIN CARD
-   ========================================================= */
+/* MAIN CARD */
 
 .resource-calendar-card {
     width: 100%;
@@ -21,10 +18,7 @@
     overflow: hidden;
 }
 
-
-/* =========================================================
-   HEADER
-   ========================================================= */
+/* HEADER */
 
 .resource-calendar-header {
     display: flex;
@@ -49,10 +43,7 @@
     color: #7b8498;
 }
 
-
-/* =========================================================
-   FILTERS
-   ========================================================= */
+/* FILTERS */
 
 .resource-calendar-filters {
     display: flex;
@@ -89,27 +80,18 @@
     box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.12);
 }
 
-
-/* =========================================================
-   CALENDAR AREA
-   ========================================================= */
+/* CALENDAR AREA */
 
 .calendar-main {
     padding: 25px 30px 30px;
     background: #ffffff;
 }
 
-
-/* =========================================================
-   FULLCALENDAR
-   ========================================================= */
-
 #resourceCalendar {
     width: 100%;
 }
 
-
-/* Toolbar */
+/* FULLCALENDAR OVERRIDES */
 
 .fc .fc-toolbar {
     margin-bottom: 22px;
@@ -120,9 +102,6 @@
     font-weight: 700;
     color: #25304a;
 }
-
-
-/* Buttons */
 
 .fc .fc-button {
     border: none !important;
@@ -150,9 +129,6 @@
     background: #4f6fe4 !important;
 }
 
-
-/* Day headings */
-
 .fc .fc-col-header-cell {
     background: #f7f8fb;
 }
@@ -164,9 +140,6 @@
     font-weight: 700;
     text-decoration: none;
 }
-
-
-/* Calendar cells */
 
 .fc .fc-daygrid-day {
     background: #ffffff;
@@ -184,9 +157,6 @@
     text-decoration: none;
 }
 
-
-/* Today */
-
 .fc .fc-day-today {
     background: rgba(108, 140, 255, 0.07) !important;
 }
@@ -195,9 +165,6 @@
     color: #526fdc;
     font-weight: 800;
 }
-
-
-/* Events */
 
 .fc .fc-event {
     border: none !important;
@@ -217,9 +184,6 @@
     font-weight: 600;
 }
 
-
-/* Week / Day time slots */
-
 .fc .fc-timegrid-slot {
     height: 45px;
 }
@@ -237,17 +201,11 @@
     background: rgba(108, 140, 255, 0.04);
 }
 
-
-/* More events */
-
 .fc .fc-daygrid-more-link {
     color: #5b73d6;
     font-weight: 600;
     font-size: 12px;
 }
-
-
-/* Scrollbars */
 
 .fc-scroller::-webkit-scrollbar {
     width: 7px;
@@ -259,10 +217,7 @@
     border-radius: 10px;
 }
 
-
-/* =========================================================
-   RESERVATION MODAL
-   ========================================================= */
+/* MODAL */
 
 .reservation-modal {
     position: fixed;
@@ -294,9 +249,6 @@
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
     overflow: hidden;
 }
-
-
-/* Modal header */
 
 .reservation-modal-header {
     display: flex;
@@ -330,9 +282,6 @@
     font-size: 13px;
 }
 
-
-/* Close button */
-
 .reservation-modal-close {
     position: absolute;
     right: 15px;
@@ -349,9 +298,6 @@
 .reservation-modal-close:hover {
     color: #30384d;
 }
-
-
-/* Details */
 
 .reservation-details {
     padding: 10px 25px 25px;
@@ -381,13 +327,9 @@
     font-weight: 600;
 }
 
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
+/* RESPONSIVE */
 
 @media (max-width: 900px) {
-
     .resource-calendar-wrapper {
         padding: 15px;
     }
@@ -413,12 +355,9 @@
         flex-wrap: wrap;
         gap: 10px;
     }
-
 }
 
-
 @media (max-width: 600px) {
-
     .resource-calendar-title {
         font-size: 23px;
     }
@@ -440,5 +379,4 @@
         grid-template-columns: 1fr;
         gap: 4px;
     }
-
 }

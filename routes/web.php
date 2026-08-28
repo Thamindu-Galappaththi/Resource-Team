@@ -95,6 +95,8 @@ Route::middleware('auth')->group(function () {
         return view('resources.index');
     })->name('resources.index');
 
+    
+
     Route::get('/approvals/special', function () {
         return view('approvals.special');
     })->name('approvals.special');
