@@ -37,6 +37,15 @@ Route::get('/resources', [ResourceController::class, 'index'])
  
 Route::post('/resources', [ResourceController::class, 'store'])
     ->name('resources.store');
+    
+Route::post('/resources/{resource}/request-delete', [ResourceController::class, 'requestDelete'])
+    ->name('resources.request-delete');
+
+Route::post('/resources/{resource}/approve-delete', [ResourceController::class, 'approveDelete'])
+    ->name('resources.approve-delete');
+
+Route::post('/resources/{resource}/reject-delete', [ResourceController::class, 'rejectDelete'])
+    ->name('resources.reject-delete');
 
 Route::get('/resource-lookups', [ResourceController::class, 'lookups'])
     ->name('resources.lookups');
