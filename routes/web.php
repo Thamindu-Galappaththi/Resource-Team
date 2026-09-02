@@ -20,6 +20,7 @@ use App\Http\Controllers\ResourceCategoryController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\ReservationController;
 
  
 Route::get('/resource-categories', [ResourceCategoryController::class, 'index'])
@@ -61,6 +62,7 @@ Route::get('/resource-lookups', [ResourceController::class, 'lookups'])
     Route::get('/resource-calendar', [ResourceCalendarController::class, 'index'])
     ->name('resources.calendar');
 
+
 Route::get('/', function () {
     return auth()->check()
         ? redirect()->route('dashboard')
@@ -85,9 +87,8 @@ Route::middleware('auth')->group(function () {
         return view('user-management.index');
     })->name('user.management');
 
-    Route::get('/reservations/calendar', function () {
-        return view('reservations.calendar');
-    })->name('reservations.calendar');
+    Route::get('/reservations/calendar', [ReservationController::class, 'calendar'])
+    ->name('reservations.calendar');
 
     Route::get('/reservations/create', function () {
         return view('reservations.create');
