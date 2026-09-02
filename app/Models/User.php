@@ -17,8 +17,17 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'service_id',
+        'slt_employee',
+        'nic',
         'email',
+        'phone',
+        'location',
         'password',
+        'user_role',
+        'designation',
+        'user_type',
+        'user_profile',
     ];
 
     /**
@@ -32,15 +41,13 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attribute type casts for the model.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'slt_employee' => 'boolean',
+        'password' => 'hashed',
+    ];
 }
