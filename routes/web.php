@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
- 
+use App\Http\Controllers\ResourceCalendarController;
 /**
  * These map 1:1 onto the fetch() calls already in create.blade.php:
  *   POST /resource-categories  -> categoryForm submit handler
@@ -39,6 +40,15 @@ Route::get('/resources', [ResourceController::class, 'index'])
  
 Route::post('/resources', [ResourceController::class, 'store'])
     ->name('resources.store');
+    
+Route::post('/resources/{resource}/request-delete', [ResourceController::class, 'requestDelete'])
+    ->name('resources.request-delete');
+
+Route::post('/resources/{resource}/approve-delete', [ResourceController::class, 'approveDelete'])
+    ->name('resources.approve-delete');
+
+Route::post('/resources/{resource}/reject-delete', [ResourceController::class, 'rejectDelete'])
+    ->name('resources.reject-delete');
 
 Route::get('/resource-lookups', [ResourceController::class, 'lookups'])
     ->name('resources.lookups');
@@ -48,7 +58,9 @@ Route::get('/resource-lookups', [ResourceController::class, 'lookups'])
 
     Route::get('/resource-list', [ResourceController::class, 'index'])
     ->name('resources.index');
-
+    
+    Route::get('/resource-calendar', [ResourceCalendarController::class, 'index'])
+    ->name('resources.calendar');
 
 
 Route::get('/', function () {
@@ -67,9 +79,9 @@ Route::middleware('auth')->group(function () {
         return view('dashboards.dashboard');
     })->name('dashboard');
 
-    Route::get('/user-management/create-user', function () {
-        return view('user-management.create-user');
-    })->name('create.user');
+    Route::get('/user-management/create-user', [UserManagementController::class, 'create'])->name('create.user');
+    Route::post('/user-management/create-user', [UserManagementController::class, 'store'])->name('create.user.store');
+    Route::get('/user-management/slt-employee', [UserManagementController::class, 'lookupSltEmployee'])->name('slt.employee.lookup');
 
     Route::get('/user-management', function () {
         return view('user-management.index');
@@ -93,6 +105,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/resources', function () {
         return view('resources.index');
     })->name('resources.index');
+
+    
 
     Route::get('/approvals/special', function () {
         return view('approvals.special');
