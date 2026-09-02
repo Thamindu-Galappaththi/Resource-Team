@@ -16,6 +16,7 @@
 
         $canCreateResource = RoleHelper::hasPermission($roleSource, 'resources.create');
         $canExistingResource = RoleHelper::hasPermission($roleSource, 'resources.index');
+        $canResourceCalendar = RoleHelper::hasPermission($roleSource, 'resources.calendar');
 
         $canSpecialApprovals = RoleHelper::hasPermission($roleSource, 'approvals.special');
     @endphp
@@ -102,7 +103,7 @@
                 @endif
             @endif
 
-            @if($canCreateResource || $canExistingResource)
+            @if($canCreateResource || $canExistingResource || $canResourceCalendar)
                 <li class="nav-small-cap">
                     <span class="nav-small-cap-text">RESOURCE MANAGEMENT</span>
                 </li>
@@ -125,6 +126,17 @@
                     </li>
                 @endif
             @endif
+
+            @if($canResourceCalendar)
+                 <li class="sidebar-item">
+                    <a class="sidebar-link {{ Route::currentRouteName() === 'resources.calendar' ? 'active' : '' }}" href="{{ route('resources.calendar') }}">
+                      <span><i class="ti ti-calendar-event"></i></span>
+                      <span class="hide-menu">Resource Calendar</span>
+                    </a>
+                </li>
+            @endif
+
+            
 
             @if($canSpecialApprovals)
                 <li class="nav-small-cap">
