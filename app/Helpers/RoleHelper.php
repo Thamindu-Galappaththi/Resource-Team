@@ -4,22 +4,38 @@ namespace App\Helpers;
 
 class RoleHelper
 {
+    /**
+     * Map legacy labels onto the BRD role slugs stored in the roles table.
+     */
     private const ROLE_ALIASES = [
         'developer' => 'developer',
         'developer@nebula.local' => 'developer',
-        'program administrator (level 01)' => 'super admin',
+        'program administrator (level 01)' => 'super_admin',
         'program administrator (level 02)' => 'admin',
-        'super admin' => 'super admin',
+        'pa-l1' => 'super_admin',
+        'pa-l2' => 'admin',
+        'super admin' => 'super_admin',
+        'super_admin' => 'super_admin',
         'admin' => 'admin',
-        'cordinator' => 'cordinator',
-        'coordinator' => 'cordinator',
-        'resource owner' => 'resource owner',
-        'nebula users' => 'nebula users',
+        'cordinator' => 'coordinator',
+        'coordinator' => 'coordinator',
+        'resource owner' => 'resource_owner',
+        'resource_owner' => 'resource_owner',
+        'slt employee' => 'slt_employee',
+        'slt_employee' => 'slt_employee',
+        'nebula users' => 'nebula_sms_user',
+        'nebula user' => 'nebula_sms_user',
+        'nebula_users' => 'nebula_sms_user',
+        'nebula_user' => 'nebula_sms_user',
+        'nebula_sms_user' => 'nebula_sms_user',
+        'management' => 'management',
+        'management role' => 'management',
+        'management_role' => 'management',
+        'canteen' => 'canteen',
+        'hostel manager' => 'hostel_manager',
+        'hostel_manager' => 'hostel_manager',
     ];
 
-    /**
-     * Check whether a role can access a specific permission key.
-     */
     public static function hasPermission(?string $role, ?string $permission): bool
     {
         $role = self::normalizeRole($role);
@@ -29,21 +45,13 @@ class RoleHelper
             return false;
         }
 
-        if (self::isDeveloper($role)) {
+        if (in_array($role, ['developer', 'super_admin'], true)) {
             return true;
         }
 
-        $permissionsConfig = config('role_permissions');
+        $allowed = config('rbac.role_permissions.'.$role, []);
 
-        // Safe fallback: when no mapping is configured, deny permission checks.
-        // This avoids rendering menu links for routes that may not exist yet.
-        if (!is_array($permissionsConfig) || $permissionsConfig === []) {
-            return false;
-        }
-
-        $allowed = $permissionsConfig[$role] ?? [];
-
-        if (!is_array($allowed) || $allowed === []) {
+        if (! is_array($allowed) || $allowed === []) {
             return false;
         }
 
@@ -52,7 +60,7 @@ class RoleHelper
         }
 
         foreach ($allowed as $entry) {
-            if (!is_string($entry) || !str_ends_with($entry, '*')) {
+            if (! is_string($entry) || ! str_ends_with($entry, '*')) {
                 continue;
             }
 
@@ -73,7 +81,7 @@ class RoleHelper
             return '';
         }
 
-        return self::ROLE_ALIASES[$normalized] ?? $normalized;
+        return self::ROLE_ALIASES[$normalized] ?? str_replace(' ', '_', $normalized);
     }
 
     public static function isDeveloper(?string $role): bool
@@ -84,6 +92,7 @@ class RoleHelper
     public static function hasAnyRole(?string $role, array $roles): bool
     {
         $normalizedRole = self::normalizeRole($role);
+
         if ($normalizedRole === '') {
             return false;
         }

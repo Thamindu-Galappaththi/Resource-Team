@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -10,9 +11,15 @@ class UserManagementControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolePermissionSeeder::class);
+    }
+
     public function test_user_can_be_created_via_form_submission(): void
     {
-        $response = $this->actingAs(User::factory()->create())
+        $response = $this->actingAs(User::factory()->role('admin')->create())
             ->post('/user-management/create-user', [
                 'slt_employee' => 'no',
                 'name' => 'Jane Doe',
@@ -29,12 +36,13 @@ class UserManagementControllerTest extends TestCase
             'name' => 'Jane Doe',
             'user_role' => 'admin',
             'slt_employee' => false,
+            'is_active' => true,
         ]);
     }
 
     public function test_slt_employee_details_can_be_looked_up_by_employee_id(): void
     {
-        $administrator = User::factory()->create();
+        $administrator = User::factory()->role('admin')->create();
         User::factory()->create([
             'service_id' => 'SLT-1001',
             'name' => 'Sam Perera',

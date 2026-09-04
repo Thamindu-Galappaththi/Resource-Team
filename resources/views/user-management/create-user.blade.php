@@ -54,21 +54,18 @@
                             <label for="phone" class="form-label">Phone No.</label>
                             <input type="tel" name="phone" id="phone" class="form-control form-control-lg" value="{{ old('phone') }}" placeholder="Enter phone number" required>
                         </div>
+                        <div class="mb-3">
+                            <label for="designation" class="form-label">Designation</label>
+                            <input type="text" name="designation" id="designation" class="form-control form-control-lg" value="{{ old('designation') }}" placeholder="Enter designation">
+                        </div>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <label for="user_role" class="form-label">Role</label>
                                 <select name="user_role" id="user_role" class="form-select form-select-lg" required>
                                     <option value="">Select role</option>
-                                    <option value="developer" @selected(old('user_role') === 'developer')>Developer</option>
-                                    <option value="super_admin" @selected(old('user_role') === 'super_admin')>Super Admin</option>
-                                    <option value="admin" @selected(old('user_role') === 'admin')>Admin</option>
-                                    <option value="coordinator" @selected(old('user_role') === 'coordinator')>Coordinator</option>
-                                    <option value="resource_owner" @selected(old('user_role') === 'resource_owner')>Resource Owner</option>
-                                    <option value="slt_employee" @selected(old('user_role') === 'slt_employee')>SLT Employee</option>
-                                    <option value="canteen" @selected(old('user_role') === 'canteen')>Canteen</option>
-                                    <option value="hostel_manager" @selected(old('user_role') === 'hostel_manager')>Hostel Manager</option>
-                                    <option value="management_role" @selected(old('user_role') === 'management_role')>Management Role</option>
-                                    <option value="nebula_users" @selected(old('user_role') === 'nebula_user')>Nebula User</option>
+                                    @foreach($roles as $role)
+                                        <option value="{{ $role->slug }}" @selected(old('user_role') === $role->slug)>{{ $role->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="col-md-6">

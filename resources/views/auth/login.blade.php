@@ -3,93 +3,65 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login | Nebula Resource</title>
+    <title>Login | Resource Reservation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ asset('css/login.css') }}">
 </head>
 <body>
-    <main class="login-shell">
+    <main class="login-page">
         <section class="login-card" aria-labelledby="login-title">
-            <div class="brand-pill">
-                <img src="{{ asset('images/logos/nebula.png') }}" alt="Nebula" class="brand-logo">
-                <span class="brand-label">Resource Extension</span>
-            </div>
+            <img src="{{ asset('images/logos/nebula.png') }}" alt="SLT Mobitel Nebula Institute of Technology" class="login-logo">
 
-            <h1 id="login-title">Welcome back</h1>
-            <p class="login-subtitle">Sign in to continue to your resource dashboard.</p>
-
-            @if(app()->environment('local') || config('app.debug'))
-                <div class="dev-note" role="note">
-                    <strong>Developer mode:</strong> developer@nebula.local / dev12345
-                </div>
-            @endif
+            <h1 id="login-title">Resource Reservation</h1>
+            <p class="login-subtitle">Sign in to manage your institutional assets</p>
 
             @if($errors->any())
-                <div class="alert alert-danger" role="alert">
-                    {{ $errors->first() }}
-                </div>
+                <div class="login-alert login-alert-error" role="alert">{{ $errors->first() }}</div>
             @endif
 
             @if(session('status'))
-                <div class="alert alert-success" role="alert">
-                    {{ session('status') }}
-                </div>
+                <div class="login-alert login-alert-success" role="alert">{{ session('status') }}</div>
             @endif
 
             <form id="loginForm" method="POST" action="{{ route('login.attempt') }}" novalidate>
                 @csrf
 
-                <div class="mb-3">
-                    <label class="form-label" for="email">Email</label>
+                <label class="field-label" for="username">Username</label>
+                <div class="field {{ $errors->has('username') ? 'is-invalid' : '' }}">
+                    <i class="bi bi-person field-icon" aria-hidden="true"></i>
                     <input
-                        type="email"
-                        class="form-control @error('email') is-invalid @enderror"
-                        id="email"
-                        name="email"
-                        value="{{ old('email') }}"
+                        type="text"
+                        id="username"
+                        name="username"
+                        value="{{ old('username') }}"
                         required
-                        autocomplete="email"
+                        autocomplete="username"
                         autofocus
-                        placeholder="name@nebula.edu">
-                    @error('email')
-                        <div class="error-message">{{ $message }}</div>
-                    @enderror
+                        placeholder="Enter your username">
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label" for="password">Password</label>
-                    <div class="password-wrap">
-                        <input
-                            type="password"
-                            class="form-control @error('password') is-invalid @enderror"
-                            id="password"
-                            name="password"
-                            required
-                            autocomplete="current-password"
-                            placeholder="Enter your password">
-                        <button class="btn-password" type="button" id="togglePassword" aria-label="Show password">
-                            <i class="bi bi-eye" id="togglePasswordIcon"></i>
-                        </button>
-                    </div>
-                    @error('password')
-                        <div class="error-message">{{ $message }}</div>
-                    @enderror
+                <label class="field-label" for="password">Password</label>
+                <div class="field {{ $errors->has('password') ? 'is-invalid' : '' }}">
+                    <i class="bi bi-lock field-icon" aria-hidden="true"></i>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        autocomplete="current-password"
+                        placeholder="••••••••">
+                    <button class="field-toggle" type="button" id="togglePassword" aria-label="Show password">
+                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                    </button>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="1" id="remember" name="remember" {{ old('remember') ? 'checked' : '' }}>
-                        <label class="form-check-label" for="remember">Remember me</label>
-                    </div>
-                    <span class="meta-text">Secure login</span>
-                </div>
-
-                <button type="submit" class="btn btn-primary login-btn w-100">Sign in</button>
+                <button type="submit" class="login-btn">Sign In</button>
             </form>
+
+            <a class="forgot-link" href="{{ route('password.request') }}">Forgot Password?</a>
         </section>
     </main>
 

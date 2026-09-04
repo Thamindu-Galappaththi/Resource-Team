@@ -1,24 +1,16 @@
 <div>
     @php
-        use App\Helpers\RoleHelper;
-
         $user = auth()->user();
-        $roleSource = $user->user_role ?? ($user->email ?? '');
-
-        $canDashboard = RoleHelper::hasPermission($roleSource, 'dashboard');
-
-        $canCreateUser = RoleHelper::hasPermission($roleSource, 'user.create');
-        $canManageUsers = RoleHelper::hasPermission($roleSource, 'user.management');
-
-        $canReservationCalendar = RoleHelper::hasPermission($roleSource, 'reservations.calendar');
-        $canCreateReservation = RoleHelper::hasPermission($roleSource, 'reservations.create');
-        $canExistingReservation = RoleHelper::hasPermission($roleSource, 'reservations.index');
-
-        $canCreateResource = RoleHelper::hasPermission($roleSource, 'resources.create');
-        $canExistingResource = RoleHelper::hasPermission($roleSource, 'resources.index');
-        $canResourceCalendar = RoleHelper::hasPermission($roleSource, 'resources.calendar');
-
-        $canSpecialApprovals = RoleHelper::hasPermission($roleSource, 'approvals.special');
+        $canDashboard = $user->hasPermission('dashboard');
+        $canCreateUser = $user->hasPermission('user.create');
+        $canManageUsers = $user->hasPermission('user.management');
+        $canReservationCalendar = $user->hasPermission('reservations.calendar');
+        $canCreateReservation = $user->hasPermission('reservations.create');
+        $canExistingReservation = $user->hasPermission('reservations.index');
+        $canCreateResource = $user->hasPermission('resources.create');
+        $canExistingResource = $user->hasPermission('resources.index');
+        $canResourceCalendar = $user->hasPermission('resources.calendar');
+        $canSpecialApprovals = $user->hasPermission('approvals.special');
     @endphp
 
     <div class="brand-logo d-flex align-items-center justify-content-center py-3 position-relative w-100">
@@ -125,18 +117,16 @@
                         </a>
                     </li>
                 @endif
-            @endif
 
-            @if($canResourceCalendar)
-                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() === 'resources.calendar' ? 'active' : '' }}" href="{{ route('resources.calendar') }}">
-                      <span><i class="ti ti-calendar-event"></i></span>
-                      <span class="hide-menu">Resource Calendar</span>
-                    </a>
-                </li>
+                @if($canResourceCalendar)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ Route::currentRouteName() === 'resources.calendar' ? 'active' : '' }}" href="{{ route('resources.calendar') }}">
+                            <span><i class="ti ti-calendar-event"></i></span>
+                            <span class="hide-menu">Resource Calendar</span>
+                        </a>
+                    </li>
+                @endif
             @endif
-
-            
 
             @if($canSpecialApprovals)
                 <li class="nav-small-cap">

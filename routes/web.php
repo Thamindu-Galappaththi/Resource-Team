@@ -1,120 +1,115 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\UserManagementController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ResourceCalendarController;
-/**
- * These map 1:1 onto the fetch() calls already in create.blade.php:
- *   POST /resource-categories  -> categoryForm submit handler
- *   POST /resource-types       -> typeForm submit handler
- *   POST /resources            -> resourceForm submit handler
- * The two GET routes aren't called by the current JS (which keeps
- * state in memory client-side) but are useful for re-fetching data,
- * building an "edit"/"list" page later, or feeding
- * window.__initialCategories / __initialTypes / __initialResources
- * from the controller that renders create.blade.php.
- */
-
-use App\Http\Controllers\ResourceCategoryController;
-use App\Http\Controllers\ResourceTypeController;
-use App\Http\Controllers\ResourceController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\ResourceCalendarController;
+use App\Http\Controllers\ResourceCategoryController;
+use App\Http\Controllers\ResourceController;
+use App\Http\Controllers\ResourceTypeController;
+use App\Http\Controllers\UserManagementController;
+use Illuminate\Support\Facades\Route;
 
- 
-Route::get('/resource-categories', [ResourceCategoryController::class, 'index'])
-    ->name('resource-categories.index');
- 
-Route::post('/resource-categories', [ResourceCategoryController::class, 'store'])
-    ->name('resource-categories.store');
- 
-Route::get('/resource-types', [ResourceTypeController::class, 'index'])
-    ->name('resource-types.index');
- 
-Route::post('/resource-types', [ResourceTypeController::class, 'store'])
-    ->name('resource-types.store');
- 
-Route::get('/resources', [ResourceController::class, 'index'])
-    ->name('resources.index');
- 
-Route::post('/resources', [ResourceController::class, 'store'])
-    ->name('resources.store');
-    
-Route::post('/resources/{resource}/request-delete', [ResourceController::class, 'requestDelete'])
-    ->name('resources.request-delete');
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
 
-Route::post('/resources/{resource}/approve-delete', [ResourceController::class, 'approveDelete'])
-    ->name('resources.approve-delete');
+// Entry
+Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : redirect()->route('login'));
 
-Route::post('/resources/{resource}/reject-delete', [ResourceController::class, 'rejectDelete'])
-    ->name('resources.reject-delete');
+// ===========================================================================
+// VIEW PAGES — HTML screens only
+// ===========================================================================
 
-Route::get('/resource-lookups', [ResourceController::class, 'lookups'])
-    ->name('resources.lookups');
-
-    Route::get('/locations', [LocationController::class, 'index'])
-    ->name('locations.index');
-
-    Route::get('/resource-list', [ResourceController::class, 'index'])
-    ->name('resources.index');
-    
-    Route::get('/resource-calendar', [ResourceCalendarController::class, 'index'])
-    ->name('resources.calendar');
-
-
-Route::get('/', function () {
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+Route::middleware('guest')->prefix('login')->controller(AuthController::class)->group(function () {
+    Route::get('/', 'showLogin')->name('login'); // login page
 });
 
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+Route::middleware('guest')->get('/forgot-password', function () {
+    return redirect()->route('login')->with('status', 'Please contact an administrator to reset your password.');
+})->name('password.request');
+
+Route::middleware(['auth', 'active'])->group(function () {
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('permission:dashboard')->name('dashboard');
+
+    Route::prefix('user-management')->controller(UserManagementController::class)->group(function () {
+        Route::get('/', 'index')->middleware('permission:user.management')->name('user.management');
+        Route::get('/create-user', 'create')->middleware('permission:user.create')->name('create.user');
+    });
+
+    Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
+        Route::get('/', fn () => view('reservations.index'))->middleware('permission:reservations.index')->name('index');
+        Route::get('/create', fn () => view('reservations.create'))->middleware('permission:reservations.create')->name('create');
+        Route::get('/calendar', 'calendar')->middleware('permission:reservations.calendar')->name('calendar');
+    });
+
+    Route::prefix('resources')->name('resources.')->group(function () {
+        Route::get('/', fn () => view('resources.index'))->middleware('permission:resources.index')->name('index');
+        Route::get('/create', fn () => view('resources.create'))->middleware('permission:resources.create')->name('create');
+    });
+
+    Route::prefix('resource-calendar')->name('resources.')->controller(ResourceCalendarController::class)->group(function () {
+        Route::get('/', 'index')->middleware('permission:resources.calendar')->name('calendar');
+    });
+
+    Route::prefix('approvals')->name('approvals.')->group(function () {
+        Route::get('/special', fn () => view('approvals.special'))->middleware('permission:approvals.special')->name('special');
+    });
+
+    Route::get('/profile', fn () => response('Profile page setup is pending.', 200))->name('user.profile');
 });
 
-Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboards.dashboard');
-    })->name('dashboard');
+// ===========================================================================
+// FUNCTIONING ROUTES — JSON, form submit, lookups
+// ===========================================================================
 
-    Route::get('/user-management/create-user', [UserManagementController::class, 'create'])->name('create.user');
-    Route::post('/user-management/create-user', [UserManagementController::class, 'store'])->name('create.user.store');
-    Route::get('/user-management/slt-employee', [UserManagementController::class, 'lookupSltEmployee'])->name('slt.employee.lookup');
+Route::middleware('guest')->prefix('login')->controller(AuthController::class)->group(function () {
+    Route::post('/', 'login')->name('login.attempt');
+});
 
-    Route::get('/user-management', function () {
-        return view('user-management.index');
-    })->name('user.management');
+Route::middleware(['auth', 'active'])->group(function () {
 
-    Route::get('/reservations/calendar', [ReservationController::class, 'calendar'])
-    ->name('reservations.calendar');
+    Route::prefix('resource-categories')->name('resource-categories.')->middleware('permission:resources.create')->controller(ResourceCategoryController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+    });
 
-    Route::get('/reservations/create', function () {
-        return view('reservations.create');
-    })->name('reservations.create');
+    Route::prefix('resource-types')->name('resource-types.')->middleware('permission:resources.create')->controller(ResourceTypeController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+    });
 
-    Route::get('/reservations', function () {
-        return view('reservations.index');
-    })->name('reservations.index');
+    Route::prefix('resource-list')->name('resources.')->middleware('permission:resources.index,resources.create')->controller(ResourceController::class)->group(function () {
+        Route::get('/', 'index')->name('list');
+    });
 
-    Route::get('/resources/create', function () {
-        return view('resources.create');
-    })->name('resources.create');
+    Route::prefix('resource-lookups')->name('resources.')->middleware('permission:resources.create')->controller(ResourceController::class)->group(function () {
+        Route::get('/', 'lookups')->name('lookups');
+    });
 
-    Route::get('/resources', function () {
-        return view('resources.index');
-    })->name('resources.index');
+    Route::prefix('resources')->name('resources.')->controller(ResourceController::class)->group(function () {
+        Route::post('/', 'store')->middleware('permission:resources.create')->name('store');
+        Route::post('/{resource}/request-delete', 'requestDelete')->middleware('permission:resources.index')->name('request-delete');
+        Route::post('/{resource}/approve-delete', 'approveDelete')->middleware('permission:resources.index')->name('approve-delete');
+        Route::post('/{resource}/reject-delete', 'rejectDelete')->middleware('permission:resources.index')->name('reject-delete');
+    });
 
-    
+    Route::prefix('locations')->name('locations.')->middleware('permission:resources.create')->controller(LocationController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+    });
 
-    Route::get('/approvals/special', function () {
-        return view('approvals.special');
-    })->name('approvals.special');
+    Route::prefix('user-management')->controller(UserManagementController::class)->group(function () {
+        Route::post('/create-user', 'store')->middleware('permission:user.create')->name('create.user.store');
+        Route::get('/slt-employee', 'lookupSltEmployee')->middleware('permission:user.create')->name('slt.employee.lookup');
+        Route::post('/{user}/toggle-active', 'toggleActive')->middleware('permission:user.management')->name('users.toggle-active');
+        Route::post('/{user}/reset-password', 'resetPassword')->middleware('permission:user.management')->name('users.reset-password');
+    });
 
-    Route::get('/profile', function () {
-        return response('Profile page setup is pending.', 200);
-    })->name('user.profile');
-
-    Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::prefix('logout')->controller(AuthController::class)->group(function () {
+        Route::match(['get', 'post'], '/', 'logout')->name('logout');
+    });
 });

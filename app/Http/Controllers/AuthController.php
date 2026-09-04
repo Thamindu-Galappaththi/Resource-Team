@@ -11,9 +11,6 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    private const DEV_EMAIL = 'developer@nebula.local';
-    private const DEV_PASSWORD = 'dev12345';
-
     public function showLogin(): View
     {
         return view('auth.login');
@@ -22,25 +19,35 @@ class AuthController extends Controller
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
+            'username' => ['required', 'string', 'max:100'],
             'password' => ['required', 'string'],
         ]);
 
-        $remember = $request->boolean('remember');
+        $username = trim($credentials['username']);
 
-        if (!Auth::attempt($credentials, $remember)) {
-            if ($this->tryDeveloperModeLogin($credentials['email'], $credentials['password'], $request, $remember)) {
-                return redirect()->intended(route('dashboard'));
-            }
+        $user = User::query()
+            ->where('nic', $username)
+            ->orWhere('email', $username)
+            ->first();
 
+        if (! $user || ! Hash::check($credentials['password'], $user->getAuthPassword())) {
             return back()
-                ->withErrors(['email' => 'Invalid email or password.'])
-                ->withInput($request->only('email', 'remember'));
+                ->withErrors(['username' => 'Invalid username or password.'])
+                ->withInput($request->only('username', 'remember'));
         }
 
+        if (! $user->is_active) {
+            return back()
+                ->withErrors(['username' => 'Your account is inactive. Please contact an administrator.'])
+                ->withInput($request->only('username', 'remember'));
+        }
+
+        Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()
+            ->intended(route('dashboard'))
+            ->with('status', 'Login successful');
     }
 
     public function logout(Request $request): RedirectResponse
@@ -51,33 +58,5 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
-    }
-
-    private function tryDeveloperModeLogin(string $email, string $password, Request $request, bool $remember): bool
-    {
-        $developerModeEnabled = app()->environment('local') || (bool) config('app.debug');
-
-        if (!$developerModeEnabled) {
-            return false;
-        }
-
-        $normalizedEmail = strtolower(trim($email));
-
-        if (!hash_equals(self::DEV_EMAIL, $normalizedEmail) || !hash_equals(self::DEV_PASSWORD, $password)) {
-            return false;
-        }
-
-        $user = User::firstOrCreate(
-            ['email' => self::DEV_EMAIL],
-            [
-                'name' => 'Developer Mode User',
-                'password' => Hash::make(self::DEV_PASSWORD),
-            ]
-        );
-
-        Auth::login($user, $remember);
-        $request->session()->regenerate();
-
-        return true;
     }
 }
