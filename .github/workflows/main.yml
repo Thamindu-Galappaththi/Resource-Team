@@ -1,5 +1,4 @@
 name: CI/CD
-
 on:
   push:
     branches:
@@ -26,6 +25,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install PHP dependencies
         uses: ramsey/composer-install@v3
@@ -40,7 +40,7 @@ jobs:
           php artisan key:generate
 
       - name: Install Node dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run Laravel tests
         env:
@@ -55,14 +55,35 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
+      - name: Upload built assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-assets
+          path: public/build
+          retention-days: 1
+
   deploy:
     name: Deploy to production
     needs: test
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Download built assets
+        uses: actions/download-artifact@v4
+        with:
+          name: build-assets
+          path: public/build
+
+      - name: Copy built assets to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "public/build/*"
+          target: "/var/www/html/Resource-Team/public/build"
+          strip_components: 2
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -74,11 +95,10 @@ jobs:
           script: |
             cd /var/www/html/Resource-Team
             git pull origin main
-            composer install --no-dev --prefer-dist --no-interaction --no-progress
-            npm install
-            npm run build
+            composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
             php artisan queue:restart
+            ls -la public/build
