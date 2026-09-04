@@ -12,12 +12,19 @@ body {
     font-family: Inter, "Segoe UI", sans-serif;
     color: #111827;
     background: #12081c url("../images/backgrounds/nebula.jpg") center / cover no-repeat fixed;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.login-page {
+.login-page,
+.login-shell {
+    width: 100%;
     min-height: 100vh;
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 2rem 1rem;
 }
 
@@ -147,7 +154,8 @@ h1 {
     cursor: pointer;
 }
 
-.login-btn {
+.login-card .login-btn,
+button.login-btn {
     width: 100%;
     min-height: 48px;
     margin-top: 0.35rem;
