@@ -95,9 +95,10 @@ jobs:
             cd /var/www/html/Resource-Team
             git pull origin main
             composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+            npm ci --prefer-offline --no-audit --no-fund
+            npm run build
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
             php artisan queue:restart
-            ls -la public/build
