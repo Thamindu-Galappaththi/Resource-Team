@@ -54,36 +54,12 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      - name: Upload built assets
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-assets
-          path: public/build
-          retention-days: 1
-
   deploy:
     name: Deploy to production
     needs: test
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     steps:
-      - name: Download built assets
-        uses: actions/download-artifact@v4
-        with:
-          name: build-assets
-          path: public/build
-
-      - name: Copy built assets to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          port: ${{ secrets.SERVER_PORT }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "public/build/*"
-          target: "/var/www/html/Resource-Team/public/build"
-          strip_components: 2
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
