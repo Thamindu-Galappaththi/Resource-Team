@@ -25,7 +25,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install PHP dependencies
         uses: ramsey/composer-install@v3
@@ -40,7 +39,7 @@ jobs:
           php artisan key:generate
 
       - name: Install Node dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run Laravel tests
         env:
