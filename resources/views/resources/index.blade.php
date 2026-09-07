@@ -4,99 +4,102 @@
 
 @section('content')
 <div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            {{-- ===================== CHANGED: everything now sits inside
+                 ONE outer white card, same as Create Resources page,
+                 so the title has a white background behind it ===================== --}}
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
 
-    <h4 class="mb-3">Existing Resources</h4>
+                    <h4 class="mb-3">Existing Resources</h4>
 
-    {{-- ===================== SUMMARY STAT CARDS ===================== --}}
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-muted small">Total Resources</div>
-                    <div class="fs-3 fw-bold" id="statTotal">0</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-success border-4">
-                <div class="card-body">
-                    <div class="text-muted small">Active</div>
-                    <div class="fs-3 fw-bold text-success" id="statActive">0</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-warning border-4">
-                <div class="card-body">
-                    <div class="text-muted small">Under Maintenance</div>
-                    <div class="fs-3 fw-bold text-warning" id="statMaintenance">0</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-danger border-4">
-                <div class="card-body">
-                    <div class="text-muted small">Pending Deletion</div>
-                    <div class="fs-3 fw-bold text-danger" id="statPending">0</div>
+                    {{-- ===================== SUMMARY STAT CARDS ===================== --}}
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="text-muted small">Total Resources</div>
+                                    <div class="fs-3 fw-bold" id="statTotal">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm h-100 border-start border-success border-4">
+                                <div class="card-body">
+                                    <div class="text-muted small">Active</div>
+                                    <div class="fs-3 fw-bold text-success" id="statActive">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm h-100 border-start border-warning border-4">
+                                <div class="card-body">
+                                    <div class="text-muted small">Under Maintenance</div>
+                                    <div class="fs-3 fw-bold text-warning" id="statMaintenance">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-0 shadow-sm h-100 border-start border-danger border-4">
+                                <div class="card-body">
+                                    <div class="text-muted small">Pending Deletion</div>
+                                    <div class="fs-3 fw-bold text-danger" id="statPending">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- ===================== SEARCH + FILTERS ===================== --}}
+                    <div class="row g-2 align-items-center mb-4">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="searchInput"
+                                placeholder="Search resource name or ID...">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="categoryFilter">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="statusFilter">
+                                <option value="">All Statuses</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="under_maintenance">Under Maintenance</option>
+                                <option value="decommissioned">Decommissioned</option>
+                                <option value="pending_deletion">Pending Deletion</option>
+                                <option value="deleted">Deleted</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" id="applyFiltersBtn">Apply Filters</button>
+                        </div>
+                    </div>
+
+                    {{-- ===================== RESOURCE TABLE ===================== --}}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="resourceTable">
+                            <thead>
+                                <tr class="text-muted small text-uppercase">
+                                    <th>Resource Name</th>
+                                    <th>Category</th>
+                                    <th>Type</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resourceTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0" id="resultCount"></p>
+
                 </div>
             </div>
         </div>
     </div>
-
-    {{-- ===================== SEARCH + FILTERS ===================== --}}
-    <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
-            <div class="row g-2 align-items-center">
-                <div class="col-md-4">
-                    <input type="text" class="form-control" id="searchInput"
-                        placeholder="Search resource name or ID...">
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="categoryFilter">
-                        <option value="">All Categories</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="statusFilter">
-                        <option value="">All Statuses</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="under_maintenance">Under Maintenance</option>
-                        <option value="decommissioned">Decommissioned</option>
-                        <option value="pending_deletion">Pending Deletion</option>
-                        <option value="deleted">Deleted</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button class="btn btn-primary w-100" id="applyFiltersBtn">Apply Filters</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- ===================== RESOURCE TABLE ===================== --}}
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="resourceTable">
-                    <thead>
-                        <tr class="text-muted small text-uppercase">
-                            <th>Resource Name</th>
-                            <th>Category</th>
-                            <th>Type</th>
-                            <th>Location</th>
-                            <th>Status</th>
-                            <th class="text-end">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resourceTableBody">
-                    </tbody>
-                </table>
-            </div>
-            <p class="text-muted small mt-2 mb-0" id="resultCount"></p>
-        </div>
-    </div>
-
 </div>
 
 <script>
@@ -163,12 +166,12 @@ function applyFilters() {
 
 function statusBadge(status) {
     const map = {
-        active: 'bg-success-subtle text-success',
-        inactive: 'bg-secondary-subtle text-secondary',
-        under_maintenance: 'bg-warning-subtle text-warning',
-        decommissioned: 'bg-dark-subtle text-dark',
-        pending_deletion: 'bg-danger-subtle text-danger',
-        deleted: 'bg-secondary-subtle text-secondary',
+        active: 'bg-light-success text-success',
+        inactive: 'bg-light-secondary text-secondary',
+        under_maintenance: 'bg-light-warning text-warning',
+        decommissioned: 'bg-dark-light text-white',
+        pending_deletion: 'bg-light-danger text-danger',
+        deleted: 'bg-light-secondary text-secondary',
     };
     const labels = {
         active: 'Active',
@@ -180,7 +183,7 @@ function statusBadge(status) {
     };
     const cls = map[status] || 'bg-light text-dark';
     const label = labels[status] || status;
-    return `<span class="badge rounded-pill ${cls} px-3 py-2">${label}</span>`;
+    return `<span class="badge ${cls}">${label}</span>`;
 }
 
 function renderTable(resources) {
