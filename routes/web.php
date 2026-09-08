@@ -36,6 +36,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('permission:dashboard')->name('dashboard');
 
+    // Canteen pages
+    Route::get('/canteens/create', [App\Http\Controllers\CanteenController::class, 'create'])->middleware('permission:canteen.create')->name('canteens.create');
+    Route::get('/canteen-reservations', [App\Http\Controllers\CanteenReservationController::class, 'index'])->middleware('permission:canteen.reservations.index')->name('canteen.reservations.index');
+    Route::get('/canteen-reservations/create', [App\Http\Controllers\CanteenReservationController::class, 'create'])->middleware('permission:canteen.reservations.create')->name('canteen.reservations.create');
+
     Route::prefix('user-management')->controller(UserManagementController::class)->group(function () {
         Route::get('/', 'index')->middleware('permission:user.management')->name('user.management');
         Route::get('/create-user', 'create')->middleware('permission:user.create')->name('create.user');
@@ -112,4 +117,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('logout')->controller(AuthController::class)->group(function () {
         Route::match(['get', 'post'], '/', 'logout')->name('logout');
     });
+});
+
+// FUNCTIONING ROUTES: canteen POST endpoints
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::post('/canteens', [App\Http\Controllers\CanteenController::class, 'store'])->middleware('permission:canteen.create')->name('canteens.store');
+    Route::post('/canteen-reservations', [App\Http\Controllers\CanteenReservationController::class, 'store'])->middleware('permission:canteen.reservations.create')->name('canteen.reservations.store');
 });

@@ -11,6 +11,9 @@
         $canExistingResource = $user->hasPermission('resources.index');
         $canResourceCalendar = $user->hasPermission('resources.calendar');
         $canSpecialApprovals = $user->hasPermission('approvals.special');
+        $canCreateCanteen = $user->hasPermission('canteen.create');
+        $canCreateCanteenReservation = $user->hasPermission('canteen.reservations.create');
+        $canCanteenReservations = $user->hasPermission('canteen.reservations.index');
     @endphp
 
     <div class="brand-logo d-flex align-items-center justify-content-center py-3 position-relative w-100">
@@ -138,6 +141,39 @@
                         <span class="hide-menu">Special Approvals</span>
                     </a>
                 </li>
+            @endif
+
+            @if($canCreateCanteen || $canCreateCanteenReservation || $canCanteenReservations)
+                <li class="nav-small-cap">
+                    <span class="nav-small-cap-text">CANTEEN MANAGEMENT</span>
+                </li>
+
+                @if($canCreateCanteen)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ Route::currentRouteName() === 'canteens.create' ? 'active' : '' }}" href="{{ route('canteens.create') }}">
+                            <span><i class="ti ti-restaurant"></i></span>
+                            <span class="hide-menu">Create Canteen</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canCreateCanteenReservation)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.reservations.create' ? 'active' : '' }}" href="{{ route('canteen.reservations.create') }}">
+                            <span><i class="ti ti-calendar-plus"></i></span>
+                            <span class="hide-menu">Create Canteen Reservation</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canCanteenReservations)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.reservations.index' ? 'active' : '' }}" href="{{ route('canteen.reservations.index') }}">
+                            <span><i class="ti ti-list-details"></i></span>
+                            <span class="hide-menu">Canteen Reservations</span>
+                        </a>
+                    </li>
+                @endif
             @endif
 
             <hr>
