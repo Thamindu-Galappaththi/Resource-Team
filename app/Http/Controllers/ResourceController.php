@@ -64,4 +64,40 @@ class ResourceController extends Controller
             201
         );
     }
+    
+    /**
+     * POST /resources/{resource}/request-delete
+     * Marks a resource as "pending_deletion". Does NOT delete the row.
+     */
+    public function requestDelete(Resource $resource): JsonResponse
+    {
+        $resource->update(['status' => 'pending_deletion']);
+
+        return response()->json($resource->load(['type.category', 'location']));
+    }
+
+    /**
+     * POST /resources/{resource}/approve-delete
+     * Marks a resource as "deleted". Still does NOT delete the row —
+     * the record stays in the database forever, just hidden from active use.
+     */
+    public function approveDelete(Resource $resource): JsonResponse
+    {
+        $resource->update(['status' => 'deleted']);
+
+        return response()->json($resource->load(['type.category', 'location']));
+    }
+
+    /**
+     * POST /resources/{resource}/reject-delete
+     * Sends the resource back to "active" status.
+     */
+    public function rejectDelete(Resource $resource): JsonResponse
+    {
+        $resource->update(['status' => 'active']);
+
+        return response()->json($resource->load(['type.category', 'location']));
+    }
+
+    
 }

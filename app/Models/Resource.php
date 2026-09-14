@@ -23,6 +23,8 @@ class Resource extends Model
         'inactive' => 'Inactive',
         'under_maintenance' => 'Under Maintenance',
         'decommissioned' => 'Decommissioned',
+        'pending_deletion' => 'Pending Deletion',
+        'deleted' => 'Deleted',
     ];
 
     /**
