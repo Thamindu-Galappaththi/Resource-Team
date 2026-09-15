@@ -4,102 +4,490 @@
 
 @section('content')
 
-<div class="container-fluid mt-4">
+<style>
 
-    <div class="card border-0 shadow-sm">
+    /* =========================================================
+       CALENDAR CONTAINER
+       ========================================================= */
+
+    .reservation-calendar-wrapper {
+        width: 100%;
+        padding: 35px 25px 50px 25px;
+    }
+
+
+    /* =========================================================
+       MONTH NAVIGATION
+       ========================================================= */
+
+    .calendar-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+
+        padding: 5px 10px 22px 10px;
+
+        background: rgba(255,255,255,0.75) !important;
+
+        border-radius: 10px;
+
+    }
+
+
+    /* Previous / Next buttons */
+
+    .nav-button {
+        min-width: 92px;
+        height: 38px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border: 1px solid #1769e8 !important;
+        border-radius: 8px !important;
+
+        background: rgba(255, 255, 255, 0.20) !important;
+
+        color: #1769d1 !important;
+
+        font-size: 14px;
+        font-weight: 500;
+
+        transition: 0.2s ease;
+    }
+
+
+    .nav-button:hover {
+        background: #1769d1 !important;
+        color: white !important;
+    }
+
+
+    /* Month title */
+
+    .month-title {
+        border: none !important;
+        border-radius: 6px !important;
+
+        background: rgba(255, 255, 255, 0.32) !important;
+
+        color: #1769e8 !important;
+
+        padding: 8px 18px;
+
+        font-size: 17px;
+        font-weight: 600;
+
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+
+        transition: 0.2s ease;
+
+
+    }
+
+
+    .month-title:hover {
+        background: rgba(255,255,255,0.95) !important;
+    }
+
+
+    /* =========================================================
+       MAIN CALENDAR CARD
+       ========================================================= */
+
+    .calendar-card {
+        border: none !important;
+        border-radius: 10px !important;
+
+        background: rgba(255,255,255,0.74) !important;
+
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08) !important;
+
+        overflow: hidden;
+    }
+
+
+    .calendar-card .card-body {
+        padding: 16px !important;
+    }
+
+
+    /* =========================================================
+       DAYS HEADER
+       ========================================================= */
+
+    .calendar-header {
+        margin: 0 !important;
+
+        background: rgba(238,243,250,0.75) !important;
+
+        border: none !important;
+
+        border-radius: 6px 6px 0 0;
+    }
+
+
+    .calendar-header .col {
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+
+        color: #111827;
+
+        font-size: 14px;
+        font-weight: 500;
+
+        background: transparent !important;
+
+        border: none !important;
+    }
+
+
+    /* =========================================================
+       CALENDAR ROWS
+       ========================================================= */
+
+    .calendar-row {
+        margin: 0 !important;
+    }
+
+
+    /* =========================================================
+       DATE CELLS
+       ========================================================= */
+
+    .calendar-date,
+    .empty-date {
+
+        min-height: 105px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        position: relative;
+
+        margin: 2px;
+
+        border: 2px solid rgba(235,238,244,0.80);
+
+        border-radius: 7px;
+
+        background: rgba(255,255,255,0.72);
+
+        transition: all 0.2s ease;
+    }
+
+
+    /* Actual date */
+
+    .calendar-date {
+        cursor: pointer;
+    }
+
+
+    .calendar-date:hover {
+        background: rgba(23, 105, 203, 0.95);
+
+        box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+
+        transform: translateY(-1px);
+    }
+
+    .date-number:hover{
+        color: white;
+    }
+
+
+    /* =========================================================
+       NORMAL DATE NUMBER
+       ========================================================= */
+
+    .date-number {
+
+        padding: 50px 50px 50px 50px;
+        width: 100%;
+
+        text-align: center;
+
+        color: #111827;
+
+        font-size: 14px;
+
+        font-weight: 500;
+    }
+
+    
+
+
+    /* =========================================================
+       TODAY
+       ========================================================= */
+
+    .today-circle {
+
+        width: 47px;
+        height: 47px;
+
+        display: flex;
+
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 50%;
+
+        background: #1769e8;
+
+        color: white;
+
+        font-size: 14px;
+
+        font-weight: 600;
+
+        box-shadow: 0 3px 8px rgba(23,105,232,0.25);
+    }
+
+    .today-circle:hover{
+        
+
+    }
+
+
+    /* =========================================================
+       EMPTY DATE CELLS
+       ========================================================= */
+
+    .empty-date {
+
+        cursor: default;
+
+        background: rgba(255,255,255,0.55);
+
+        border-color: rgba(235,238,244,0.65);
+    }
+
+
+    /* =========================================================
+       MONTH MODAL BUTTONS
+       ========================================================= */
+
+    .month-btn {
+
+        border-radius: 6px;
+
+        padding: 10px 5px;
+
+        font-size: 14px;
+    }
+
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @media (max-width: 992px) {
+
+        .reservation-calendar-wrapper {
+            padding: 25px 15px 40px 15px;
+        }
+
+        .calendar-date,
+        .empty-date {
+            min-height: 90px;
+        }
+
+    }
+
+
+    @media (max-width: 768px) {
+
+        .calendar-navigation {
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+
+        .nav-button {
+            min-width: 80px;
+            font-size: 13px;
+        }
+
+        .month-title {
+            font-size: 15px;
+        }
+
+        .calendar-date,
+        .empty-date {
+            min-height: 75px;
+        }
+
+        .calendar-header .col {
+            font-size: 12px;
+        }
+
+    }
+
+</style>
+
+
+<!-- =============================================================
+     MAIN CALENDAR
+     ============================================================= -->
+
+<div class="reservation-calendar-wrapper">
+
+
+    <!-- =========================================================
+         MONTH NAVIGATION
+         ========================================================= -->
+
+    <div class="calendar-navigation">
+
+
+        <!-- Previous Month -->
+
+        <a href="{{ route('reservations.calendar', [
+            'year' => $currentDate->copy()->subMonth()->year,
+            'month' => $currentDate->copy()->subMonth()->month
+        ]) }}"
+           class="btn nav-button">
+           &lt; Previous
+        </a>
+
+
+
+        <!-- Month Name -->
+
+        <button type="button"
+                class="btn month-title"
+                data-bs-toggle="modal"
+                data-bs-target="#monthModal">
+
+                {{ $currentDate->format('F Y') }}
+        </button>
+
+
+        <!-- Next Month -->
+
+        <a href="{{ route('reservations.calendar', [
+            'year' => $currentDate->copy()->addMonth()->year,
+            'month' => $currentDate->copy()->addMonth()->month
+        ]) }}"
+           class="btn nav-button">
+           Next &gt;
+        </a>
+
+
+    </div>
+
+
+
+    <!-- =========================================================
+         CALENDAR CARD
+         ========================================================= -->
+
+    <div class="card calendar-card">
 
         <div class="card-body">
 
-            <!-- Month Navigation -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
 
-                <a href="{{ route('reservations.calendar', [
-                    'year' => $currentDate->copy()->subMonth()->year,
-                    'month' => $currentDate->copy()->subMonth()->month
-                ]) }}"
-                   class="btn btn-outline-secondary">
+            <!-- =================================================
+                 DAYS
+                 ================================================= -->
 
-                    &lt; Previous
+            <div class="row text-center fw-bold calendar-header">
 
-                </a>
+                <div class="col"> Sunday </div>
 
+                <div class="col"> Monday </div>
 
-                <!-- Click Month Name -->
-                <button type="button"
-                        class="btn btn-light fw-bold fs-4 border-0"
-                        data-bs-toggle="modal"
-                        data-bs-target="#monthModal">
+                <div class="col"> Tuesday </div>
 
-                    {{ $currentDate->format('F Y') }}
+                <div class="col"> Wednesday </div>
 
-                </button>
+                <div class="col"> Thursday </div>
 
+                <div class="col"> Friday </div>
 
-                <a href="{{ route('reservations.calendar', [
-                    'year' => $currentDate->copy()->addMonth()->year,
-                    'month' => $currentDate->copy()->addMonth()->month
-                ]) }}"
-                   class="btn btn-outline-secondary">
-
-                    Next &gt;
-
-                </a>
+                <div class="col"> Saturday </div>
 
             </div>
 
 
-            <!-- Days -->
-            <div class="row text-center fw-bold bg-light border">
 
-                <div class="col py-3">Sunday</div>
-                <div class="col py-3">Monday</div>
-                <div class="col py-3">Tuesday</div>
-                <div class="col py-3">Wednesday</div>
-                <div class="col py-3">Thursday</div>
-                <div class="col py-3">Friday</div>
-                <div class="col py-3">Saturday</div>
+            <!-- =================================================
+                 CALENDAR DATES
+                 ================================================= -->
 
-            </div>
+            <div class="row calendar-row">
 
-
-            <!-- Calendar -->
-            <div class="row">
 
                 {{-- Empty cells before first day --}}
+
                 @for ($i = 0; $i < $startingDayOfWeek; $i++)
 
-                    <div class="col border p-3"
-                         style="min-height:120px;">
+                    <div class="col empty-date">
                     </div>
 
                 @endfor
 
 
+
                 {{-- Actual Dates --}}
+
                 @for ($day = 1; $day <= $daysInMonth; $day++)
 
                     @php
+
                         $date = $currentDate->copy()->day($day);
+
+                        $isToday = $date->isToday();
+
                     @endphp
 
-                    <div class="col border p-3"
-                         style="min-height:120px; cursor:pointer;"
+
+                    <div class="col calendar-date"
                          data-bs-toggle="modal"
                          data-bs-target="#eventModal"
                          data-display-date="{{ $date->format('F d, Y') }}">
 
-                        <strong>{{ $day }}</strong>
+
+                        @if ($isToday)
+
+                            <div class="today-circle">
+
+                                {{ $day }}
+
+                            </div>
+
+                        @else
+
+                            <div class="date-number">
+
+                                {{ $day }}
+
+                            </div>
+
+                        @endif
+
 
                     </div>
 
+
+
+                    {{-- Start new row after Saturday --}}
 
                     @if (($startingDayOfWeek + $day) % 7 == 0)
 
                         </div>
 
+
                         @if ($day < $daysInMonth)
 
-                            <div class="row">
+                            <div class="row calendar-row">
 
                         @endif
 
@@ -108,19 +496,24 @@
                 @endfor
 
 
+
                 {{-- Empty cells after last day --}}
+
                 @php
+
                     $remainingCells =
-                    (7-(($startingDayOfWeek+$daysInMonth)%7))%7;
+                        (7 - (($startingDayOfWeek + $daysInMonth) % 7)) % 7;
+
                 @endphp
+
 
                 @for ($i = 0; $i < $remainingCells; $i++)
 
-                    <div class="col border p-3"
-                         style="min-height:120px;">
+                    <div class="col empty-date">
                     </div>
 
                 @endfor
+
 
             </div>
 
@@ -132,7 +525,9 @@
 
 
 
-<!-- ================= EVENT MODAL ================= -->
+<!-- =============================================================
+     EVENT MODAL
+     ============================================================= -->
 
 <div class="modal fade"
      id="eventModal"
@@ -142,11 +537,13 @@
 
         <div class="modal-content">
 
+
             <div class="modal-header">
 
                 <h5 class="modal-title">
                     Events
                 </h5>
+
 
                 <button type="button"
                         class="btn-close"
@@ -155,17 +552,20 @@
 
             </div>
 
+
             <div class="modal-body">
 
                 <p id="selectedDate"
                    class="text-muted">
                 </p>
 
+
                 <p>
                     No events for this day.
                 </p>
 
             </div>
+
 
         </div>
 
@@ -175,7 +575,9 @@
 
 
 
-<!-- ================= MONTH MODAL ================= -->
+<!-- =============================================================
+     MONTH MODAL
+     ============================================================= -->
 
 <div class="modal fade"
      id="monthModal"
@@ -185,7 +587,13 @@
 
         <div class="modal-content">
 
+
+            <!-- Modal Header -->
+
             <div class="modal-header">
+
+
+                <!-- Previous Year -->
 
                 <button type="button"
                         class="btn btn-sm btn-outline-secondary"
@@ -196,6 +604,9 @@
                 </button>
 
 
+
+                <!-- Year -->
+
                 <h5 class="modal-title"
                     id="yearTitle">
 
@@ -203,6 +614,9 @@
 
                 </h5>
 
+
+
+                <!-- Next Year -->
 
                 <button type="button"
                         class="btn btn-sm btn-outline-secondary"
@@ -212,14 +626,20 @@
 
                 </button>
 
+
             </div>
 
+
+
+            <!-- Modal Body -->
 
             <div class="modal-body">
 
                 <div class="row g-2">
 
+
                     @php
+
                         $months = [
                             'January',
                             'February',
@@ -234,7 +654,9 @@
                             'November',
                             'December'
                         ];
+
                     @endphp
+
 
 
                     @foreach($months as $index => $monthName)
@@ -254,9 +676,11 @@
 
                     @endforeach
 
+
                 </div>
 
             </div>
+
 
         </div>
 
@@ -268,12 +692,14 @@
 
 <script>
 
-    /* Event Popup */
+    /* =========================================================
+       EVENT POPUP
+       ========================================================= */
 
     document.querySelectorAll('[data-bs-target="#eventModal"]')
-        .forEach(function(day){
+        .forEach(function(day) {
 
-            day.addEventListener('click',function(){
+            day.addEventListener('click', function() {
 
                 document.getElementById('selectedDate').textContent =
                     this.getAttribute('data-display-date');
@@ -284,15 +710,24 @@
 
 
 
-    /* Month Popup */
+    /* =========================================================
+       MONTH POPUP
+       ========================================================= */
 
     let selectedYear = {{ $currentDate->year }};
+
 
     const yearTitle =
         document.getElementById('yearTitle');
 
+
+
+    /* =========================================================
+       PREVIOUS YEAR
+       ========================================================= */
+
     document.getElementById('previousYear')
-        .addEventListener('click',function(){
+        .addEventListener('click', function() {
 
             selectedYear--;
 
@@ -301,8 +736,13 @@
         });
 
 
+
+    /* =========================================================
+       NEXT YEAR
+       ========================================================= */
+
     document.getElementById('nextYear')
-        .addEventListener('click',function(){
+        .addEventListener('click', function() {
 
             selectedYear++;
 
@@ -312,13 +752,18 @@
 
 
 
-    document.querySelectorAll('.month-btn')
-        .forEach(function(month){
+    /* =========================================================
+       SELECT MONTH
+       ========================================================= */
 
-            month.addEventListener('click',function(){
+    document.querySelectorAll('.month-btn')
+        .forEach(function(month) {
+
+            month.addEventListener('click', function() {
 
                 let selectedMonth =
                     this.getAttribute('data-month');
+
 
                 window.location.href =
                     "{{ route('reservations.calendar') }}"
