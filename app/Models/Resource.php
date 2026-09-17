@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Resource extends Model
 {
@@ -78,5 +79,10 @@ class Resource extends Model
             'resource_type_id',        // local key on THIS (resources) table
             'resource_category_id'     // local key on the intermediate (resource_types) table
         );
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
     }
 }

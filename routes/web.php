@@ -19,6 +19,7 @@ use App\Http\Controllers\ResourceCategoryController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\ReservationController;
  
 Route::get('/resource-categories', [ResourceCategoryController::class, 'index'])
     ->name('resource-categories.index');
@@ -76,21 +77,25 @@ Route::middleware('auth')->group(function () {
         return view('reservations.calendar');
     })->name('reservations.calendar');
 
-    Route::get('/reservations/create', function () {
-        return view('reservations.create');
-    })->name('reservations.create');
+    Route::get('/reservations/create', [ReservationController::class, 'create'])
+        ->name('reservations.create');
 
-    Route::get('/reservations', function () {
-        return view('reservations.index');
-    })->name('reservations.index');
+    Route::get('/reservations/available-resources', [ReservationController::class, 'availableResources'])
+        ->name('reservations.available-resources');
+
+    Route::post('/reservations', [ReservationController::class, 'store'])
+        ->name('reservations.store');
+
+    Route::get('/reservations', [ReservationController::class, 'index'])
+        ->name('reservations.index');
 
     Route::get('/resources/create', function () {
         return view('resources.create');
     })->name('resources.create');
 
-    Route::get('/resources', function () {
+    Route::get('/resources/list', function () {
         return view('resources.index');
-    })->name('resources.index');
+    })->name('resources.list');
 
     Route::get('/approvals/special', function () {
         return view('approvals.special');
@@ -99,6 +104,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', function () {
         return response('Profile page setup is pending.', 200);
     })->name('user.profile');
+
+    Route::get('/debug/categories', function () {
+        return response()->json([
+            'count' => \App\Models\ResourceCategory::count(),
+            'data' => \App\Models\ResourceCategory::all(),
+        ]);
+    });
+
+    Route::get('/debug/resources', function () {
+        return response()->json([
+            'count' => \App\Models\Resource::count(),
+            'data' => \App\Models\Resource::with('type.category', 'location')->get(),
+        ]);
+    });
 
     Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
 });
