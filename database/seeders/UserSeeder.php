@@ -18,19 +18,18 @@ class UserSeeder extends Seeder
                 'name' => 'Test User',
                 'email' => 'test@example.com',
                 'password' => Hash::make('password'),
+                'role' => 'nebula users',
             ],
             [
-                'name' => 'Admin User', 
+                'name' => 'Admin User',
                 'email' => 'admin@example.com',
                 'password' => Hash::make('password'),
+                'role' => 'admin',
             ],
         ];
 
         foreach ($users as $user) {
-            User::firstOrCreate(
-                ['email' => $user['email']],
-                $user
-            );
+            User::updateOrCreate(['email' => $user['email']], $user);
         }
     }
 }
