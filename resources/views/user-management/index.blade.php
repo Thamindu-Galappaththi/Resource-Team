@@ -42,7 +42,7 @@
                                 <td class="fw-semibold">{{ $managedUser->name }}</td>
                                 <td>{{ $managedUser->nic ?: '—' }}</td>
                                 <td>{{ $managedUser->email }}</td>
-                                <td>{{ $managedUser->role->name ?? $managedUser->user_role }}</td>
+                                <td>{{ $managedUser->roles->pluck('name')->join(', ') ?: ($managedUser->role->name ?? $managedUser->user_role) }}</td>
                                 <td>{{ $managedUser->location ?: '—' }}</td>
                                 <td>
                                     @if($managedUser->is_active)

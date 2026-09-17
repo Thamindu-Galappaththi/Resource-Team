@@ -63,29 +63,28 @@
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="designation" class="form-label">Designation</label>
-                                <input type="text" name="designation" id="designation" class="form-control" value="{{ old('designation') }}" placeholder="Enter designation">
+                                <div class="mb-3">
+                                    <label for="designation" class="form-label">Designation</label>
+                                    <input type="text" name="designation" id="designation" class="form-control" value="{{ old('designation') }}" placeholder="Enter designation">
+                                </div>
+                                <div>
+                                    <label for="location" class="form-label">Location</label>
+                                    <select name="location" id="location" class="form-select" required>
+                                        <option value="">Select location</option>
+                                        <option value="Nebula Institute of Technology - Welisara" @selected(old('location') === 'Nebula Institute of Technology - Welisara')>Nebula Institute of Technology - Welisara</option>
+                                        <option value="Nebula Institute of Technology - Moratuwa" @selected(old('location') === 'Nebula Institute of Technology - Moratuwa')>Nebula Institute of Technology - Moratuwa</option>
+                                        <option value="Nebula Institute of Technology - Peradeniya" @selected(old('location') === 'Nebula Institute of Technology - Peradeniya')>Nebula Institute of Technology - Peradeniya</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="user_role" class="form-label">Role</label>
-                                <select name="user_role" id="user_role" class="form-select" required>
-                                    <option value="">Select role</option>
+                            <div class="col-md-6 mb-4">
+                                <label for="user_roles" class="form-label">Roles</label>
+                                <select name="user_roles[]" id="user_roles" class="form-select" multiple required aria-describedby="roleHelp">
                                     @foreach($roles as $role)
-                                        <option value="{{ $role->slug }}" @selected(old('user_role') === $role->slug)>{{ $role->name }}</option>
+                                        <option value="{{ $role->slug }}" @selected(in_array($role->slug, old('user_roles', [])))>{{ $role->name }}</option>
                                     @endforeach
                                 </select>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-4">
-                                <label for="location" class="form-label">Location</label>
-                                <select name="location" id="location" class="form-select" required>
-                                    <option value="">Select location</option>
-                                    <option value="Nebula Institute of Technology - Welisara" @selected(old('location') === 'Nebula Institute of Technology - Welisara')>Nebula Institute of Technology - Welisara</option>
-                                    <option value="Nebula Institute of Technology - Moratuwa" @selected(old('location') === 'Nebula Institute of Technology - Moratuwa')>Nebula Institute of Technology - Moratuwa</option>
-                                    <option value="Nebula Institute of Technology - Peradeniya" @selected(old('location') === 'Nebula Institute of Technology - Peradeniya')>Nebula Institute of Technology - Peradeniya</option>
-                                </select>
+                                <small id="roleHelp" class="form-text text-muted">Hold Ctrl (Windows) or Command (Mac) to select more than one role.</small>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">Create User</button>
@@ -107,10 +106,12 @@
     function setSltEmployeeMode() {
         const isSltEmployee = sltEmployee.value === 'yes';
         employeeId.required = isSltEmployee;
+        employeeId.disabled = !isSltEmployee;
         document.getElementById('employeeIdRequired').classList.toggle('d-none', !isSltEmployee);
         lookupButton.classList.toggle('d-none', !isSltEmployee);
         employeeFields.forEach((field) => field.readOnly = isSltEmployee);
         if (!isSltEmployee) {
+            employeeId.value = '';
             lookupMessage.textContent = '';
             lookupMessage.className = 'form-text';
         }

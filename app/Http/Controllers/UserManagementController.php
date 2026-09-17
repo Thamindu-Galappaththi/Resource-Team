@@ -15,7 +15,7 @@ class UserManagementController extends Controller
     public function index(): View
     {
         $users = User::query()
-            ->with('role')
+            ->with(['role', 'roles'])
             ->latest()
             ->paginate(15);
 
@@ -37,16 +37,18 @@ class UserManagementController extends Controller
         $validated = $request->validate([
             'slt_employee' => ['required', 'in:yes,no'],
             'name' => ['required', 'string', 'max:50'],
-            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'string', 'max:20'],
+            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
             'nic' => ['required', 'string', 'size:12', 'unique:users,nic'],
             'email' => ['required', 'email', 'max:50', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20'],
             'location' => ['required', 'string', 'max:100'],
             'designation' => ['nullable', 'string', 'max:100'],
-            'user_role' => ['required', 'string', Rule::exists('roles', 'slug')->where('is_active', true)],
+            'user_roles' => ['required', 'array', 'min:1'],
+            'user_roles.*' => ['required', 'string', 'distinct', Rule::exists('roles', 'slug')->where('is_active', true)],
         ]);
 
-        $role = Role::query()->where('slug', $validated['user_role'])->firstOrFail();
+        $roles = Role::query()->whereIn('slug', $validated['user_roles'])->get();
+        $primaryRole = $roles->firstWhere('slug', $validated['user_roles'][0]);
 
         $user = User::create([
             'name' => $validated['name'],
@@ -58,10 +60,12 @@ class UserManagementController extends Controller
             'location' => $validated['location'],
             'designation' => $validated['designation'] ?? null,
             'password' => $validated['nic'],
-            'role_id' => $role->id,
-            'user_role' => $role->slug,
+            'role_id' => $primaryRole->id,
+            'user_role' => $primaryRole->slug,
             'is_active' => true,
         ]);
+
+        $user->roles()->sync($roles->modelKeys());
 
         return redirect()
             ->route('create.user')
