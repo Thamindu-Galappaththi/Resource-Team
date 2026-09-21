@@ -10,6 +10,7 @@ use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PasswordSetupController;
 
 /*
 |--------------------------------------------------------------------------
@@ -113,3 +114,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::match(['get', 'post'], '/', 'logout')->name('logout');
     });
 });
+
+// Password setup links carry a signed reset token. Keep these accessible when
+// an administrator is already authenticated, otherwise guest middleware would
+// redirect the link to the dashboard before the recipient can set a password.
+Route::get('/reset-password/{token}', [PasswordSetupController::class, 'showResetForm'])
+    ->name('password.reset');
+
+Route::post('/reset-password', [PasswordSetupController::class, 'reset'])
+    ->name('password.update');

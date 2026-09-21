@@ -9,6 +9,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 class UserManagementController extends Controller
 {
@@ -59,7 +61,7 @@ class UserManagementController extends Controller
             'phone' => $validated['phone'],
             'location' => $validated['location'],
             'designation' => $validated['designation'] ?? null,
-            'password' => $validated['nic'],
+            'password' => Str::random(40),
             'role_id' => $primaryRole->id,
             'user_role' => $primaryRole->slug,
             'is_active' => true,
@@ -67,9 +69,21 @@ class UserManagementController extends Controller
 
         $user->roles()->sync($roles->modelKeys());
 
+        $status = Password::sendResetLink([
+            'email' => $user->email,
+        ]);
+
+        if ($status !== Password::RESET_LINK_SENT) {
+            return redirect()
+                ->route('create.user')
+                ->withErrors([
+                    'email' => 'The user account was created, but the password setup email could not be sent.',
+                ]);
+        }
+
         return redirect()
             ->route('create.user')
-            ->with('status', 'User account created successfully for '.$user->name.'.');
+            ->with('status', 'User account created successfully. A password setup link was sent to '.$user->email.'.');
     }
 
     public function toggleActive(User $user): RedirectResponse
