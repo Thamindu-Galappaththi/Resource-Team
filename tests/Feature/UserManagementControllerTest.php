@@ -68,4 +68,45 @@ class UserManagementControllerTest extends TestCase
                 'phone' => '0712345678',
             ]);
     }
+
+    public function test_user_can_be_deleted_after_confirmation_submission(): void
+    {
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->create();
+
+        $this->actingAs($administrator)
+            ->delete(route('users.destroy', $user))
+            ->assertRedirect(route('user.management'));
+
+        $this->assertSoftDeleted('users', ['id' => $user->id]);
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+    }
+
+    public function test_user_cannot_delete_their_own_account(): void
+    {
+        $administrator = User::factory()->role('admin')->create();
+
+        $this->actingAs($administrator)
+            ->delete(route('users.destroy', $administrator))
+            ->assertRedirect(route('user.management'))
+            ->assertSessionHasErrors('status');
+
+        $this->assertDatabaseHas('users', ['id' => $administrator->id]);
+    }
+
+    public function test_soft_deleted_user_remains_visible_with_deleted_timestamp(): void
+    {
+        $administrator = User::factory()->role('admin')->create();
+        $deletedUser = User::factory()->create([
+            'name' => 'Deleted User',
+            'deleted_at' => now(),
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSee('Deleted User')
+            ->assertSee('Deleted')
+            ->assertSee($deletedUser->deleted_at->format('M d, Y'));
+    }
 }

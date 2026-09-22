@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -42,6 +43,7 @@ class User extends Authenticatable
             'slt_employee' => 'boolean',
             'is_active' => 'boolean',
             'password' => 'hashed',
+            'deleted_at' => 'datetime',
         ];
     }
 
