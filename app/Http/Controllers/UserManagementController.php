@@ -12,14 +12,39 @@ use Illuminate\View\View;
 
 class UserManagementController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $users = User::query()
-            ->with('role')
-            ->latest()
-            ->paginate(15);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'location' => ['nullable', 'string', 'max:100'],
+            'role' => ['nullable', 'integer', 'exists:roles,id'],
+            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+        ]);
 
-        return view('user-management.index', compact('users'));
+        $usersQuery = User::withTrashed()
+            ->with('role')
+            ->when($filters['search'] ?? null, function ($query, string $search) {
+                $query->where(function ($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('nic', 'like', "%{$search}%")
+                        ->orWhere('service_id', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($filters['location'] ?? null, fn ($query, string $location) => $query->where('location', $location))
+            ->when($filters['role'] ?? null, fn ($query, int $roleId) => $query->where('role_id', $roleId))
+            ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('is_active', $status === 'active'));
+
+        $users = $usersQuery->latest()->paginate(15)->withQueryString();
+        $statistics = [
+            'total' => User::withTrashed()->count(),
+            'active' => User::where('is_active', true)->count(),
+            'inactive' => User::where('is_active', false)->count(),
+        ];
+        $locations = User::withTrashed()->whereNotNull('location')->distinct()->orderBy('location')->pluck('location');
+        $roles = Role::query()->where('is_active', true)->orderBy('sort_order')->get();
+
+        return view('user-management.index', compact('users', 'statistics', 'locations', 'roles'));
     }
 
     public function create(): View
@@ -89,6 +114,18 @@ class UserManagementController extends Controller
         $user->update(['password' => $temporaryPassword]);
 
         return back()->with('status', 'Password reset successfully! Temporary password is the user NIC.');
+    }
+
+    public function destroy(User $user): RedirectResponse
+    {
+        if ($user->is(auth()->user())) {
+            return redirect()->route('user.management')->withErrors(['status' => 'You cannot delete your own account.']);
+        }
+
+        $deletedUserName = $user->name;
+        $user->delete();
+
+        return redirect()->route('user.management')->with('status', 'User account deleted successfully for '.$deletedUserName.'.');
     }
 
     public function lookupSltEmployee(Request $request): JsonResponse
