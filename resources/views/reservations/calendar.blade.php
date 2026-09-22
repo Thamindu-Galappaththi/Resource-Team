@@ -446,13 +446,22 @@
 
                         $isToday = $date->isToday();
 
+                        $dayReservations = $reservations->filter(function ($reservation) use ($date) {
+
+                            return $reservation->reservation_date->format('Y-m-d')
+                                === $date->format('Y-m-d');
+
+                        });
+
                     @endphp
 
 
                     <div class="col calendar-date"
                          data-bs-toggle="modal"
                          data-bs-target="#eventModal"
-                         data-display-date="{{ $date->format('F d, Y') }}">
+                         data-display-date="{{ $date->format('F d, Y') }}"
+                         data-date="{{ $date->format('Y-m-d') }}"
+                         data-reservations='@json($dayReservations->values())'>
 
 
                         @if ($isToday)
@@ -560,9 +569,7 @@
                 </p>
 
 
-                <p>
-                    No events for this day.
-                </p>
+                <div id="reservationList"></div>
 
             </div>
 
@@ -697,16 +704,75 @@
        ========================================================= */
 
     document.querySelectorAll('[data-bs-target="#eventModal"]')
-        .forEach(function(day) {
+    .forEach(function(day) {
 
-            day.addEventListener('click', function() {
+        day.addEventListener('click', function() {
 
-                document.getElementById('selectedDate').textContent =
-                    this.getAttribute('data-display-date');
+            // Get selected date
+            const displayDate =
+                this.getAttribute('data-display-date');
+
+            // Get reservations from data attribute
+            const reservations =
+                JSON.parse(this.getAttribute('data-reservations'));
+
+            // Show selected date
+            document.getElementById('selectedDate').textContent =
+                displayDate;
+
+
+            // Get reservation list container
+            const reservationList =
+                document.getElementById('reservationList');
+
+
+            // Clear previous reservations
+            reservationList.innerHTML = '';
+
+
+            // If there are no reservations
+            if (reservations.length === 0) {
+
+                reservationList.innerHTML = `
+                    <p>
+                        No events for this day.
+                    </p>
+                `;
+
+                return;
+            }
+
+
+            // Display reservations
+            reservations.forEach(function(reservation) {
+
+                reservationList.innerHTML += `
+
+                    <div class="border rounded p-3 mb-2">
+
+                        <h6 class="mb-1">
+                            ${reservation.title}
+                        </h6>
+
+                        <p class="mb-1">
+                            ${reservation.description ?? ''}
+                        </p>
+
+                        <small class="text-muted">
+                            ${reservation.start_time}
+                            -
+                            ${reservation.end_time}
+                        </small>
+
+                    </div>
+
+                `;
 
             });
 
         });
+
+    });
 
 
 
