@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Tests\TestCase;
 
 class UserManagementControllerTest extends TestCase
@@ -19,6 +20,8 @@ class UserManagementControllerTest extends TestCase
 
     public function test_user_can_be_created_via_form_submission(): void
     {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
         $response = $this->actingAs(User::factory()->role('admin')->create())
             ->post('/user-management/create-user', [
                 'slt_employee' => 'no',
@@ -26,7 +29,7 @@ class UserManagementControllerTest extends TestCase
                 'nic' => '200012345678',
                 'email' => 'jane@example.com',
                 'phone' => '0771234567',
-                'user_role' => 'admin',
+                'user_roles' => ['admin', 'coordinator'],
                 'location' => 'Nebula Institute of Technology - Welisara',
             ]);
 
@@ -37,6 +40,10 @@ class UserManagementControllerTest extends TestCase
             'user_role' => 'admin',
             'slt_employee' => false,
             'is_active' => true,
+        ]);
+        $this->assertDatabaseHas('role_user', [
+            'user_id' => User::query()->where('email', 'jane@example.com')->value('id'),
+            'role_id' => \App\Models\Role::query()->where('slug', 'coordinator')->value('id'),
         ]);
     }
 

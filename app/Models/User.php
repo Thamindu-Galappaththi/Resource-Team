@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Helpers\RoleHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -64,6 +65,15 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class);
     }
 
+    /**
+     * All roles assigned to this user. The singular role relation remains the
+     * primary role used by legacy data and dashboard selection.
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class);
+    }
+
     public function roleSlug(): string
     {
         return $this->role?->slug ?? RoleHelper::normalizeRole($this->user_role);
@@ -71,10 +81,13 @@ class User extends Authenticatable
 
     public function hasRole(string ...$roles): bool
     {
-        $slug = $this->roleSlug();
+        $assignedRoles = $this->roles()->pluck('slug')
+            ->push($this->roleSlug())
+            ->filter()
+            ->map(fn (string $slug) => RoleHelper::normalizeRole($slug));
 
         foreach ($roles as $role) {
-            if ($slug === RoleHelper::normalizeRole($role)) {
+            if ($assignedRoles->contains(RoleHelper::normalizeRole($role))) {
                 return true;
             }
         }
@@ -88,12 +101,16 @@ class User extends Authenticatable
             return false;
         }
 
-        $this->loadMissing('role.permissions');
+        $this->loadMissing('role.permissions', 'roles.permissions');
 
-        if ($this->role?->hasPermission($permission)) {
+        if ($this->roles->contains(fn (Role $role) => $role->hasPermission($permission))
+            || $this->role?->hasPermission($permission)) {
             return true;
         }
 
-        return RoleHelper::hasPermission($this->roleSlug(), $permission);
+        return $this->roles->pluck('slug')
+            ->push($this->roleSlug())
+            ->filter()
+            ->contains(fn (string $slug) => RoleHelper::hasPermission($slug, $permission));
     }
 }

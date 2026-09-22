@@ -9,11 +9,17 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 class UserManagementController extends Controller
 {
     public function index(Request $request): View
     {
+        $users = User::query()
+            ->with(['role', 'roles'])
+            ->latest()
+            ->paginate(15);
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'location' => ['nullable', 'string', 'max:100'],
@@ -62,16 +68,18 @@ class UserManagementController extends Controller
         $validated = $request->validate([
             'slt_employee' => ['required', 'in:yes,no'],
             'name' => ['required', 'string', 'max:50'],
-            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'string', 'max:20'],
+            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
             'nic' => ['required', 'string', 'size:12', 'unique:users,nic'],
             'email' => ['required', 'email', 'max:50', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20'],
             'location' => ['required', 'string', 'max:100'],
             'designation' => ['nullable', 'string', 'max:100'],
-            'user_role' => ['required', 'string', Rule::exists('roles', 'slug')->where('is_active', true)],
+            'user_roles' => ['required', 'array', 'min:1'],
+            'user_roles.*' => ['required', 'string', 'distinct', Rule::exists('roles', 'slug')->where('is_active', true)],
         ]);
 
-        $role = Role::query()->where('slug', $validated['user_role'])->firstOrFail();
+        $roles = Role::query()->whereIn('slug', $validated['user_roles'])->get();
+        $primaryRole = $roles->firstWhere('slug', $validated['user_roles'][0]);
 
         $user = User::create([
             'name' => $validated['name'],
@@ -82,15 +90,29 @@ class UserManagementController extends Controller
             'phone' => $validated['phone'],
             'location' => $validated['location'],
             'designation' => $validated['designation'] ?? null,
-            'password' => $validated['nic'],
-            'role_id' => $role->id,
-            'user_role' => $role->slug,
+            'password' => Str::random(40),
+            'role_id' => $primaryRole->id,
+            'user_role' => $primaryRole->slug,
             'is_active' => true,
         ]);
 
+        $user->roles()->sync($roles->modelKeys());
+
+        $status = Password::sendResetLink([
+            'email' => $user->email,
+        ]);
+
+        if ($status !== Password::RESET_LINK_SENT) {
+            return redirect()
+                ->route('create.user')
+                ->withErrors([
+                    'email' => 'The user account was created, but the password setup email could not be sent.',
+                ]);
+        }
+
         return redirect()
             ->route('create.user')
-            ->with('status', 'User account created successfully for '.$user->name.'.');
+            ->with('status', 'User account created successfully. A password setup link was sent to '.$user->email.'.');
     }
 
     public function toggleActive(User $user): RedirectResponse

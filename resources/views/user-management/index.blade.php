@@ -74,6 +74,7 @@
                                 <td class="fw-semibold text-dark"><i class="ti ti-user-circle text-primary me-2"></i>{{ $managedUser->name }}</td>
                                 <td>{{ $managedUser->nic ?: '—' }}</td>
                                 <td>{{ $managedUser->email }}</td>
+                                <td>{{ $managedUser->roles->pluck('name')->join(', ') ?: ($managedUser->role->name ?? $managedUser->user_role) }}</td>
                                 <td>{{ $managedUser->location ?: '—' }}</td>
                                 <td><span class="badge text-bg-primary-subtle text-primary">{{ strtoupper($managedUser->role->name ?? $managedUser->user_role ?? 'Unassigned') }}</span></td>
                                 <td>
