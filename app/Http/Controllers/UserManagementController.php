@@ -21,7 +21,7 @@ class UserManagementController extends Controller
             'status' => ['nullable', Rule::in(['active', 'inactive'])],
         ]);
 
-        $usersQuery = User::query()
+        $usersQuery = User::withTrashed()
             ->with('role')
             ->when($filters['search'] ?? null, function ($query, string $search) {
                 $query->where(function ($userQuery) use ($search) {
@@ -37,11 +37,11 @@ class UserManagementController extends Controller
 
         $users = $usersQuery->latest()->paginate(15)->withQueryString();
         $statistics = [
-            'total' => User::count(),
+            'total' => User::withTrashed()->count(),
             'active' => User::where('is_active', true)->count(),
             'inactive' => User::where('is_active', false)->count(),
         ];
-        $locations = User::query()->whereNotNull('location')->distinct()->orderBy('location')->pluck('location');
+        $locations = User::withTrashed()->whereNotNull('location')->distinct()->orderBy('location')->pluck('location');
         $roles = Role::query()->where('is_active', true)->orderBy('sort_order')->get();
 
         return view('user-management.index', compact('users', 'statistics', 'locations', 'roles'));
@@ -114,6 +114,18 @@ class UserManagementController extends Controller
         $user->update(['password' => $temporaryPassword]);
 
         return back()->with('status', 'Password reset successfully! Temporary password is the user NIC.');
+    }
+
+    public function destroy(User $user): RedirectResponse
+    {
+        if ($user->is(auth()->user())) {
+            return redirect()->route('user.management')->withErrors(['status' => 'You cannot delete your own account.']);
+        }
+
+        $deletedUserName = $user->name;
+        $user->delete();
+
+        return redirect()->route('user.management')->with('status', 'User account deleted successfully for '.$deletedUserName.'.');
     }
 
     public function lookupSltEmployee(Request $request): JsonResponse

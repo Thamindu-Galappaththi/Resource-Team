@@ -64,6 +64,7 @@
                             <th>Location</th>
                             <th>Role</th>
                             <th>Status</th>
+                            <th>Deleted At</th>
                             <th class="text-end">Actions</th>
                         </tr>
                     </thead>
@@ -76,28 +77,38 @@
                                 <td>{{ $managedUser->location ?: '—' }}</td>
                                 <td><span class="badge text-bg-primary-subtle text-primary">{{ strtoupper($managedUser->role->name ?? $managedUser->user_role ?? 'Unassigned') }}</span></td>
                                 <td>
-                                    @if($managedUser->is_active)
+                                    @if($managedUser->trashed())
+                                        <span class="badge text-bg-danger">Deleted</span>
+                                    @elseif($managedUser->is_active)
                                         <span class="badge text-bg-success">Active</span>
                                     @else
                                         <span class="badge text-bg-secondary">Inactive</span>
                                     @endif
                                 </td>
+                                <td>{{ $managedUser->deleted_at?->format('M d, Y h:i A') ?? '—' }}</td>
                                 <td class="text-end">
-                                    <form method="POST" action="{{ route('users.reset-password', $managedUser) }}" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-outline-primary">Reset password</button>
-                                    </form>
-                                    <form method="POST" action="{{ route('users.toggle-active', $managedUser) }}" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
-                                            {{ $managedUser->is_active ? 'Deactivate' : 'Activate' }}
+                                    @unless($managedUser->trashed())
+                                        <form method="POST" action="{{ route('users.reset-password', $managedUser) }}" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Reset password</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('users.toggle-active', $managedUser) }}" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                {{ $managedUser->is_active ? 'Deactivate' : 'Activate' }}
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger d-block ms-auto mt-1" data-bs-toggle="modal" data-bs-target="#deleteUserModal" data-delete-url="{{ route('users.destroy', $managedUser) }}" data-user-name="{{ $managedUser->name }}">
+                                            <i class="ti ti-trash me-1"></i>Delete
                                         </button>
-                                    </form>
+                                    @else
+                                        <span class="text-muted">No actions available</span>
+                                    @endunless
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">No users found.</td>
+                                <td colspan="8" class="text-center text-muted py-4">No users found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -110,4 +121,41 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteUserModalLabel">Confirm user deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Are you sure you want to permanently delete <strong id="deleteUserName"></strong>?</p>
+                <small class="text-danger">This action cannot be undone.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="deleteUserForm">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger"><i class="ti ti-trash me-1"></i>Yes, delete user</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    const deleteUserModal = document.getElementById('deleteUserModal');
+    const deleteUserForm = document.getElementById('deleteUserForm');
+    const deleteUserName = document.getElementById('deleteUserName');
+
+    deleteUserModal.addEventListener('show.bs.modal', (event) => {
+        const button = event.relatedTarget;
+        deleteUserForm.action = button.dataset.deleteUrl;
+        deleteUserName.textContent = button.dataset.userName;
+    });
+</script>
+@endpush
 @endsection
