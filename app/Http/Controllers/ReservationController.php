@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
+use App\Models\Reservation;
+
 
 class ReservationController extends Controller
 {
@@ -30,12 +32,19 @@ class ReservationController extends Controller
 
         $startingDayOfWeek = $firstDayOfMonth->dayOfWeek;
 
+        $reservations = Reservation::whereYear('reservation_date', $year)
+            ->whereMonth('reservation_date', $month)
+            ->get();
+
+        
+    
         return view('reservations.calendar', compact(
             'currentDate',
             'year',
             'month',
             'daysInMonth',
-            'startingDayOfWeek'
+            'startingDayOfWeek',
+            'reservations'
         ));
     }
 }
