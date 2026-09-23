@@ -11,6 +11,7 @@
         $canExistingResource = $user->hasPermission('resources.index');
         $canResourceCalendar = $user->hasPermission('resources.calendar');
         $canSpecialApprovals = $user->hasPermission('approvals.special');
+        $canCanteen = $user->hasPermission('canteen.view');
     @endphp
 
     <div class="brand-logo d-flex align-items-center justify-content-center py-3 position-relative w-100">
@@ -136,6 +137,30 @@
                     <a class="sidebar-link {{ Route::currentRouteName() === 'approvals.special' ? 'active' : '' }}" href="{{ route('approvals.special') }}">
                         <span><i class="ti ti-check"></i></span>
                         <span class="hide-menu">Special Approvals</span>
+                    </a>
+                </li>
+            @endif
+
+            @if($canCanteen)
+                <li class="nav-small-cap">
+                    <span class="nav-small-cap-text">CANTEEN</span>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.dashboard' ? 'active' : '' }}" href="{{ route('canteen.dashboard') }}">
+                        <span><i class="ti ti-soup"></i></span>
+                        <span class="hide-menu">Create Canteen</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.reservations.create' ? 'active' : '' }}" href="{{ route('canteen.reservations.create') }}">
+                        <span><i class="ti ti-plus"></i></span>
+                        <span class="hide-menu">Create Canteen Reservation</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.reservations.index' ? 'active' : '' }}" href="{{ route('canteen.reservations.index') }}">
+                        <span><i class="ti ti-list-check"></i></span>
+                        <span class="hide-menu">Canteen Reservations</span>
                     </a>
                 </li>
             @endif

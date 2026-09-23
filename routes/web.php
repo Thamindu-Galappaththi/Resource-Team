@@ -62,6 +62,19 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::get('/profile', fn () => response('Profile page setup is pending.', 200))->name('user.profile');
+
+    Route::prefix('canteen')->name('canteen.')->controller(\App\Http\Controllers\CanteenReservationController::class)->group(function () {
+        Route::get('/', 'dashboard')->name('dashboard');
+        Route::get('/forecast/{date}', 'forecast')->name('forecast');
+        Route::get('/reservations', 'index')->name('reservations.index');
+        Route::get('/reservations/create', 'create')->name('reservations.create');
+        Route::post('/reservations', 'store')->name('reservations.store');
+        Route::get('/reservations/{reservation}', 'show')->name('reservations.show');
+        Route::get('/reservations/{reservation}/edit', 'edit')->name('reservations.edit');
+        Route::put('/reservations/{reservation}', 'update')->name('reservations.update');
+        Route::patch('/reservations/{reservation}/status', 'updateStatus')->name('reservations.status');
+        Route::delete('/reservations/{reservation}', 'destroy')->name('reservations.destroy');
+    });
 });
 
 // ===========================================================================
