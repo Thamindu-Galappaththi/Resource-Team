@@ -62,6 +62,9 @@ return [
         'approvals.special' => ['name' => 'Special approvals', 'module' => 'approvals'],
         'payments.view' => ['name' => 'View payments', 'module' => 'payments'],
         'canteen.view' => ['name' => 'Canteen dashboard', 'module' => 'canteen'],
+        'canteen.reservations.index' => ['name' => 'Canteen reservations view', 'module' => 'canteen'],
+        'canteen.reservations.create' => ['name' => 'Create canteen reservations', 'module' => 'canteen'],
+        'canteen.reservations.manage' => ['name' => 'Manage canteen reservations', 'module' => 'canteen'],
         'hostel.view' => ['name' => 'Hostel reservations', 'module' => 'hostel'],
     ],
 
@@ -83,6 +86,10 @@ return [
             'resources.calendar',
             'approvals.special',
             'payments.view',
+            'canteen.view',
+            'canteen.reservations.index',
+            'canteen.reservations.create',
+            'canteen.reservations.manage',
         ],
         'coordinator' => [
             'dashboard',
@@ -90,6 +97,10 @@ return [
             'reservations.calendar',
             'reservations.create',
             'reservations.index',
+            'canteen.view',
+            'canteen.reservations.index',
+            'canteen.reservations.create',
+            'canteen.reservations.manage',
         ],
         'resource_owner' => [
             'dashboard',
@@ -120,6 +131,16 @@ return [
         'canteen' => [
             'dashboard',
             'canteen.view',
+            'canteen.reservations.index',
+        ],
+        'slt_employee' => [
+            'dashboard',
+            'reservations.calendar',
+            'reservations.create',
+            'reservations.index',
+            'canteen.view',
+            'canteen.reservations.index',
+            'canteen.reservations.create',
         ],
         'hostel_manager' => [
             'dashboard',
