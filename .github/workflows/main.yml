@@ -1,4 +1,5 @@
 name: CI/CD
+
 on:
   push:
     branches:
@@ -25,6 +26,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install PHP dependencies
         uses: ramsey/composer-install@v3
@@ -39,7 +41,14 @@ jobs:
           php artisan key:generate
 
       - name: Install Node dependencies
-        run: npm install
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Run database migrations (test DB)
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+        run: php artisan migrate --force
 
       - name: Run Laravel tests
         env:
@@ -68,13 +77,37 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
             cd /var/www/html/Resource-Team
-            git pull origin main
+
+            echo ">>> Syncing code with origin/main"
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+
+            echo ">>> Installing PHP dependencies"
             composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+
+            echo ">>> Installing Node dependencies and building assets"
             npm ci --prefer-offline --no-audit --no-fund
             npm run build
+
+            echo ">>> Running migrations"
             php artisan migrate --force
+
+            echo ">>> Rebuilding caches"
+            php artisan config:clear
             php artisan config:cache
+            php artisan route:clear
             php artisan route:cache
+            php artisan view:clear
             php artisan view:cache
+
+            echo ">>> Restarting queue workers"
             php artisan queue:restart
+
+            echo ">>> Deploy finished successfully"
+
+      - name: Verify deployment
+        run: |
+          curl -f -k https://dpdlab1.slt.lk:4444/login || exit 1
