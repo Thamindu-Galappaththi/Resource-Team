@@ -120,6 +120,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/create-user', 'store')->middleware('permission:user.create')->name('create.user.store');
         Route::get('/slt-employee', 'lookupSltEmployee')->middleware('permission:user.create')->name('slt.employee.lookup');
         Route::delete('/{user}', 'destroy')->middleware('permission:user.management')->name('users.destroy');
+        Route::put('/{user}', 'update')
+        ->middleware('permission:user.management')
+        ->name('users.update');
         Route::post('/{user}/toggle-active', 'toggleActive')->middleware('permission:user.management')->name('users.toggle-active');
         Route::post('/{user}/reset-password', 'resetPassword')->middleware('permission:user.management')->name('users.reset-password');
     });
