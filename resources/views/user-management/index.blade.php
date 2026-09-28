@@ -64,7 +64,6 @@
                             <th>Location</th>
                             <th>Role</th>
                             <th>Status</th>
-                            <th>Deleted At</th>
                             <th class="text-end">Actions</th>
                         </tr>
                     </thead>
@@ -74,7 +73,6 @@
                                 <td class="fw-semibold text-dark"><i class="ti ti-user-circle text-primary me-2"></i>{{ $managedUser->name }}</td>
                                 <td>{{ $managedUser->nic ?: '—' }}</td>
                                 <td>{{ $managedUser->email }}</td>
-                                <td>{{ $managedUser->roles->pluck('name')->join(', ') ?: ($managedUser->role->name ?? $managedUser->user_role) }}</td>
                                 <td>{{ $managedUser->location ?: '—' }}</td>
                                 <td><span class="badge text-bg-primary-subtle text-primary">{{ strtoupper($managedUser->role->name ?? $managedUser->user_role ?? 'Unassigned') }}</span></td>
                                 <td>
@@ -86,7 +84,6 @@
                                         <span class="badge text-bg-secondary">Inactive</span>
                                     @endif
                                 </td>
-                                <td>{{ $managedUser->deleted_at?->format('M d, Y h:i A') ?? '—' }}</td>
                                 <td class="text-end">
                                     @unless($managedUser->trashed())
 
