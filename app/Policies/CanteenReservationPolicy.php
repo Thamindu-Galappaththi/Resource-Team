@@ -35,7 +35,7 @@ class CanteenReservationPolicy
     public function create(User $user): bool
     {
         return $user->hasRole('super_admin', 'admin', 'coordinator', 'slt_employee')
-            || $user->hasPermission('canteen.reservations.create');
+            || $user->hasPermission('canteen.create');
     }
 
     public function update(User $user, CanteenReservation $reservation): bool

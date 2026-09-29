@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CanteenReservation::class, CanteenReservationPolicy::class);
 
         View::composer('components.sidebar', function () {
-            auth()->user()?->loadMissing('role.permissions');
+            auth()->user()?->loadMissing('role.permissions', 'roles.permissions');
         });
     }
 }

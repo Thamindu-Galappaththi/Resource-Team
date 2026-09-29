@@ -10,8 +10,15 @@
         $canCreateResource = $user->hasPermission('resources.create');
         $canExistingResource = $user->hasPermission('resources.index');
         $canResourceCalendar = $user->hasPermission('resources.calendar');
+        $canApprovals = $user->hasPermission('approvals.index');
         $canSpecialApprovals = $user->hasPermission('approvals.special');
-        $canCanteen = $user->hasPermission('canteen.view');
+        $canHostelIndex = $user->hasPermission('hostel.index');
+        $canHostelCreate = $user->hasPermission('hostel.create');
+        $canCanteenDashboard = $user->hasPermission('canteen.view');
+        $canCanteenCreate = $user->hasPermission('canteen.create');
+        $canCanteenIndex = $user->hasPermission('canteen.index');
+        $canPayments = $user->hasPermission('payments.view');
+        $canReports = $user->hasPermission('reports.view');
     @endphp
 
     <div class="brand-logo d-flex align-items-center justify-content-center py-3 position-relative w-100">
@@ -32,7 +39,7 @@
                     <span class="nav-small-cap-text">HOME</span>
                 </li>
                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() === 'dashboard' ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                    <a class="sidebar-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                         <span><i class="ti ti-layout-dashboard"></i></span>
                         <span class="hide-menu">Dashboard</span>
                     </a>
@@ -46,7 +53,7 @@
 
                 @if($canCreateUser)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ Route::currentRouteName() === 'create.user' ? 'active' : '' }}" href="{{ route('create.user') }}">
+                        <a class="sidebar-link {{ request()->routeIs('create.user') ? 'active' : '' }}" href="{{ route('create.user') }}">
                             <span><i class="ti ti-user-plus"></i></span>
                             <span class="hide-menu">Create User</span>
                         </a>
@@ -55,7 +62,7 @@
 
                 @if($canManageUsers)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ Route::currentRouteName() === 'user.management' ? 'active' : '' }}" href="{{ route('user.management') }}">
+                        <a class="sidebar-link {{ request()->routeIs('user.management') ? 'active' : '' }}" href="{{ route('user.management') }}">
                             <span><i class="ti ti-users"></i></span>
                             <span class="hide-menu">User Management</span>
                         </a>
@@ -70,7 +77,7 @@
 
                 @if($canReservationCalendar)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ Route::currentRouteName() === 'reservations.calendar' ? 'active' : '' }}" href="{{ route('reservations.calendar') }}">
+                        <a class="sidebar-link {{ request()->routeIs('reservations.calendar') ? 'active' : '' }}" href="{{ route('reservations.calendar') }}">
                             <span><i class="ti ti-calendar-event"></i></span>
                             <span class="hide-menu">Reservation Calendar</span>
                         </a>
@@ -79,7 +86,7 @@
 
                 @if($canCreateReservation)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ Route::currentRouteName() === 'reservations.create' ? 'active' : '' }}" href="{{ route('reservations.create') }}">
+                        <a class="sidebar-link {{ request()->routeIs('reservations.create') ? 'active' : '' }}" href="{{ route('reservations.create') }}">
                             <span><i class="ti ti-calendar-plus"></i></span>
                             <span class="hide-menu">Create Reservations</span>
                         </a>
@@ -88,7 +95,7 @@
 
                 @if($canExistingReservation)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ Route::currentRouteName() === 'reservations.index' ? 'active' : '' }}" href="{{ route('reservations.index') }}">
+                        <a class="sidebar-link {{ request()->routeIs('reservations.index') ? 'active' : '' }}" href="{{ route('reservations.index') }}">
                             <span><i class="ti ti-list-details"></i></span>
                             <span class="hide-menu">Existing Reservations</span>
                         </a>
@@ -103,7 +110,7 @@
 
                 @if($canCreateResource)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ Route::currentRouteName() === 'resources.create' ? 'active' : '' }}" href="{{ route('resources.create') }}">
+                        <a class="sidebar-link {{ request()->routeIs('resources.create') ? 'active' : '' }}" href="{{ route('resources.create') }}">
                             <span><i class="ti ti-circle-plus"></i></span>
                             <span class="hide-menu">Create Resources</span>
                         </a>
@@ -112,7 +119,7 @@
 
                 @if($canExistingResource)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ Route::currentRouteName() === 'resources.index' ? 'active' : '' }}" href="{{ route('resources.index') }}">
+                        <a class="sidebar-link {{ request()->routeIs('resources.index') ? 'active' : '' }}" href="{{ route('resources.index') }}">
                             <span><i class="ti ti-archive"></i></span>
                             <span class="hide-menu">Existing Resources</span>
                         </a>
@@ -121,7 +128,7 @@
 
                 @if($canResourceCalendar)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ Route::currentRouteName() === 'resources.calendar' ? 'active' : '' }}" href="{{ route('resources.calendar') }}">
+                        <a class="sidebar-link {{ request()->routeIs('resources.calendar') ? 'active' : '' }}" href="{{ route('resources.calendar') }}">
                             <span><i class="ti ti-calendar-event"></i></span>
                             <span class="hide-menu">Resource Calendar</span>
                         </a>
@@ -129,38 +136,113 @@
                 @endif
             @endif
 
-            @if($canSpecialApprovals)
+            @if($canApprovals || $canSpecialApprovals)
                 <li class="nav-small-cap">
                     <span class="nav-small-cap-text">APPROVALS</span>
                 </li>
+
+                @if($canApprovals)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('approvals.index') ? 'active' : '' }}" href="{{ route('approvals.index') }}">
+                            <span><i class="ti ti-clipboard-check"></i></span>
+                            <span class="hide-menu">Approvals</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canSpecialApprovals)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('approvals.special') ? 'active' : '' }}" href="{{ route('approvals.special') }}">
+                            <span><i class="ti ti-check"></i></span>
+                            <span class="hide-menu">Special Approvals</span>
+                        </a>
+                    </li>
+                @endif
+            @endif
+
+            @if($canHostelIndex || $canHostelCreate)
+                <li class="nav-small-cap">
+                    <span class="nav-small-cap-text">HOSTEL</span>
+                </li>
+
+                @if($canHostelIndex)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('hostel.index') ? 'active' : '' }}" href="{{ route('hostel.index') }}">
+                            <span><i class="ti ti-building-community"></i></span>
+                            <span class="hide-menu">Hostel Reservations</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canHostelCreate)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('hostel.create') ? 'active' : '' }}" href="{{ route('hostel.create') }}">
+                            <span><i class="ti ti-bed"></i></span>
+                            <span class="hide-menu">Create Hostel Reservation</span>
+                        </a>
+                    </li>
+                @endif
+            @endif
+
+            @if($canCanteenDashboard || $canCanteenCreate || $canCanteenIndex)
+                <li class="nav-small-cap">
+                    <span class="nav-small-cap-text">CANTEEN</span>
+                </li>
+
+                @if($canCanteenDashboard)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('canteen.dashboard', 'canteen.forecast') ? 'active' : '' }}" href="{{ route('canteen.dashboard') }}">
+                            <span><i class="ti ti-soup"></i></span>
+                            <span class="hide-menu">Canteen Dashboard</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canCanteenCreate)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('canteen.create', 'canteen.edit') ? 'active' : '' }}" href="{{ route('canteen.create') }}">
+                            <span><i class="ti ti-plus"></i></span>
+                            <span class="hide-menu">Create Canteen Reservation</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canCanteenIndex)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('canteen.index', 'canteen.show') ? 'active' : '' }}" href="{{ route('canteen.index') }}">
+                            <span><i class="ti ti-list-check"></i></span>
+                            <span class="hide-menu">Existing Canteen Reservations</span>
+                        </a>
+                    </li>
+                @endif
+            @endif
+
+            @if($canPayments)
+                <li class="nav-small-cap">
+                    <span class="nav-small-cap-text">PAYMENTS</span>
+                </li>
                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() === 'approvals.special' ? 'active' : '' }}" href="{{ route('approvals.special') }}">
-                        <span><i class="ti ti-check"></i></span>
-                        <span class="hide-menu">Special Approvals</span>
+                    <a class="sidebar-link {{ request()->routeIs('payments.lecture-fees') ? 'active' : '' }}" href="{{ route('payments.lecture-fees') }}">
+                        <span><i class="ti ti-cash"></i></span>
+                        <span class="hide-menu">Lecture Fees</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ request()->routeIs('payments.resources') ? 'active' : '' }}" href="{{ route('payments.resources') }}">
+                        <span><i class="ti ti-receipt"></i></span>
+                        <span class="hide-menu">Resource Payments</span>
                     </a>
                 </li>
             @endif
 
-            @if($canCanteen)
+            @if($canReports)
                 <li class="nav-small-cap">
-                    <span class="nav-small-cap-text">CANTEEN</span>
+                    <span class="nav-small-cap-text">REPORTS</span>
                 </li>
                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.dashboard' ? 'active' : '' }}" href="{{ route('canteen.dashboard') }}">
-                        <span><i class="ti ti-soup"></i></span>
-                        <span class="hide-menu">Create Canteen</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.reservations.create' ? 'active' : '' }}" href="{{ route('canteen.reservations.create') }}">
-                        <span><i class="ti ti-plus"></i></span>
-                        <span class="hide-menu">Create Canteen Reservation</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.reservations.index' ? 'active' : '' }}" href="{{ route('canteen.reservations.index') }}">
-                        <span><i class="ti ti-list-check"></i></span>
-                        <span class="hide-menu">Canteen Reservations</span>
+                    <a class="sidebar-link {{ request()->routeIs('reports.index') ? 'active' : '' }}" href="{{ route('reports.index') }}">
+                        <span><i class="ti ti-chart-bar"></i></span>
+                        <span class="hide-menu">Reports & Analytics</span>
                     </a>
                 </li>
             @endif

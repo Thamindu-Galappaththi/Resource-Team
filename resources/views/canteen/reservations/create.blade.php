@@ -9,7 +9,7 @@
             <h4 class="mb-0">Create Canteen Reservation</h4>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ route('canteen.reservations.store') }}">
+            <form method="POST" action="{{ route('canteen.store') }}">
                 @csrf
 
                 <div class="row g-3">
