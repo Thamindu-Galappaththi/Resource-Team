@@ -23,7 +23,7 @@ class CanteenReservationTest extends TestCase
     {
         $user = User::factory()->role('slt_employee')->create();
 
-        $response = $this->actingAs($user)->post(route('canteen.reservations.store'), [
+        $response = $this->actingAs($user)->post(route('canteen.store'), [
             'reservation_name' => 'Team lunch',
             'requested_by_user_id' => $user->id,
             'meal_type' => 'lunch',
@@ -47,8 +47,8 @@ class CanteenReservationTest extends TestCase
         $user = User::factory()->role('slt_employee')->create();
 
         $this->actingAs($user)
-            ->from(route('canteen.reservations.create'))
-            ->post(route('canteen.reservations.store'), [
+            ->from(route('canteen.create'))
+            ->post(route('canteen.store'), [
                 'reservation_name' => 'Past booking',
                 'requested_by_user_id' => $user->id,
                 'meal_type' => 'breakfast',
@@ -64,7 +64,7 @@ class CanteenReservationTest extends TestCase
         $user = User::factory()->role('slt_employee')->create();
 
         $this->actingAs($user)
-            ->post(route('canteen.reservations.store'), [
+            ->post(route('canteen.store'), [
                 'reservation_name' => 'Bad order',
                 'requested_by_user_id' => $user->id,
                 'meal_type' => 'snacks',
@@ -74,7 +74,7 @@ class CanteenReservationTest extends TestCase
             ->assertSessionHasErrors('number_of_orders');
 
         $this->actingAs($user)
-            ->post(route('canteen.reservations.store'), [
+            ->post(route('canteen.store'), [
                 'reservation_name' => 'Bad order',
                 'requested_by_user_id' => $user->id,
                 'meal_type' => 'snacks',
@@ -89,7 +89,7 @@ class CanteenReservationTest extends TestCase
     {
         $user = User::factory()->role('slt_employee')->create();
 
-        $this->actingAs($user)->post(route('canteen.reservations.store'), [
+        $this->actingAs($user)->post(route('canteen.store'), [
             'reservation_name' => 'Large event lunch',
             'requested_by_user_id' => $user->id,
             'meal_type' => 'event_catering',
@@ -117,7 +117,7 @@ class CanteenReservationTest extends TestCase
         ]);
 
         $this->actingAs($approver)
-            ->patch(route('canteen.reservations.status', $reservation), [
+            ->patch(route('canteen.status', $reservation), [
                 'status' => 'confirmed',
                 'approval_comments' => 'Approved',
             ])
@@ -138,7 +138,7 @@ class CanteenReservationTest extends TestCase
         ]);
 
         $this->actingAs($approver)
-            ->patch(route('canteen.reservations.status', $reservation), [
+            ->patch(route('canteen.status', $reservation), [
                 'status' => 'rejected',
             ])
             ->assertSessionHasErrors('approval_comments');
@@ -154,7 +154,7 @@ class CanteenReservationTest extends TestCase
         ]);
 
         $this->actingAs($requester)
-            ->delete(route('canteen.reservations.destroy', $reservation))
+            ->delete(route('canteen.destroy', $reservation))
             ->assertRedirect();
 
         $this->assertDatabaseHas('canteen_reservations', [
@@ -169,7 +169,7 @@ class CanteenReservationTest extends TestCase
         ]);
 
         $this->actingAs($requester)
-            ->delete(route('canteen.reservations.destroy', $completed))
+            ->delete(route('canteen.destroy', $completed))
             ->assertForbidden();
     }
 
@@ -188,7 +188,7 @@ class CanteenReservationTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get(route('canteen.reservations.index', ['status' => 'pending']))
+            ->get(route('canteen.index', ['status' => 'pending']))
             ->assertOk()
             ->assertSee('pending');
     }
@@ -198,7 +198,7 @@ class CanteenReservationTest extends TestCase
         $user = User::factory()->role('canteen')->create();
 
         $this->actingAs($user)
-            ->get(route('canteen.reservations.create'))
+            ->get(route('canteen.create'))
             ->assertForbidden();
     }
 
@@ -212,11 +212,11 @@ class CanteenReservationTest extends TestCase
         ]);
 
         $this->actingAs($other)
-            ->get(route('canteen.reservations.show', $reservation))
+            ->get(route('canteen.show', $reservation))
             ->assertForbidden();
 
         $this->actingAs($other)
-            ->get(route('canteen.reservations.edit', $reservation))
+            ->get(route('canteen.edit', $reservation))
             ->assertForbidden();
     }
 }

@@ -9,7 +9,9 @@
             <h2 class="mb-1">Canteen Dashboard</h2>
             <p class="text-muted mb-0">Meal forecast and expected demand overview.</p>
         </div>
-        <a href="{{ route('reservations.calendar') }}" class="btn btn-primary">Open Reservation Calendar</a>
+        @if(auth()->user()->hasPermission('canteen.index'))
+            <a href="{{ route('canteen.index') }}" class="btn btn-primary">Existing Canteen Reservations</a>
+        @endif
     </div>
 
     <div class="row g-3 mb-4">

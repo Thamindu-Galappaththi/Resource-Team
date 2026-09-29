@@ -8,12 +8,10 @@ use App\Http\Requests\StoreCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationStatusRequest;
 use App\Models\CanteenReservation;
-use App\Models\Role;
 use App\Models\User;
 use App\Notifications\CanteenReservationCreated;
 use App\Notifications\CanteenReservationStatusUpdated;
 use App\Notifications\NewCanteenReservationPending;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -138,7 +136,7 @@ class CanteenReservationController extends Controller
             return $reservation;
         });
 
-        return redirect()->route('canteen.reservations.index')->with('success', 'Canteen reservation created successfully.');
+        return redirect()->route('canteen.index')->with('success', 'Canteen reservation created successfully.');
     }
 
     public function show(CanteenReservation $reservation): View
@@ -174,7 +172,7 @@ class CanteenReservationController extends Controller
 
         $reservation->update($data);
 
-        return redirect()->route('canteen.reservations.index')->with('success', 'Reservation updated successfully.');
+        return redirect()->route('canteen.index')->with('success', 'Reservation updated successfully.');
     }
 
     public function updateStatus(UpdateCanteenReservationStatusRequest $request, CanteenReservation $reservation): RedirectResponse
@@ -211,6 +209,6 @@ class CanteenReservationController extends Controller
             ]);
         });
 
-        return redirect()->route('canteen.reservations.index')->with('success', 'Reservation cancelled.');
+        return redirect()->route('canteen.index')->with('success', 'Reservation cancelled.');
     }
 }

@@ -2,7 +2,10 @@
 
 /**
  * Source of truth for roles, permissions, and role-based dashboard placeholders.
- * RolePermissionSeeder reads this file. BRD sections 5, 7.2.1–7.2.4, 8.1–8.2, 11.2.
+ * RolePermissionSeeder reads this file.
+ *
+ * BRD: sections 5, 7.2.1–7.2.13, 8.1–8.9, 11.2 (RRS modules only).
+ * Appendix 11.2 student/SMS rows (courses, exams, clearance) are out of scope.
  */
 return [
 
@@ -59,17 +62,22 @@ return [
         'resources.create' => ['name' => 'Create resource', 'module' => 'resources'],
         'resources.index' => ['name' => 'Existing resources', 'module' => 'resources'],
         'resources.calendar' => ['name' => 'Resource calendar', 'module' => 'resources'],
+        'approvals.index' => ['name' => 'Reservation approvals', 'module' => 'approvals'],
         'approvals.special' => ['name' => 'Special approvals', 'module' => 'approvals'],
-        'payments.view' => ['name' => 'View payments', 'module' => 'payments'],
+        'hostel.index' => ['name' => 'Hostel reservations', 'module' => 'hostel'],
+        'hostel.create' => ['name' => 'Create hostel reservation', 'module' => 'hostel'],
+        'hostel.manage' => ['name' => 'Manage hostel reservations', 'module' => 'hostel'],
         'canteen.view' => ['name' => 'Canteen dashboard', 'module' => 'canteen'],
-        'canteen.reservations.index' => ['name' => 'Canteen reservations view', 'module' => 'canteen'],
-        'canteen.reservations.create' => ['name' => 'Create canteen reservations', 'module' => 'canteen'],
-        'canteen.reservations.manage' => ['name' => 'Manage canteen reservations', 'module' => 'canteen'],
-        'hostel.view' => ['name' => 'Hostel reservations', 'module' => 'hostel'],
+        'canteen.index' => ['name' => 'Canteen reservations view', 'module' => 'canteen'],
+        'canteen.create' => ['name' => 'Create canteen reservations', 'module' => 'canteen'],
+        'canteen.manage' => ['name' => 'Manage canteen reservations', 'module' => 'canteen'],
+        'payments.view' => ['name' => 'View payments', 'module' => 'payments'],
+        'reports.view' => ['name' => 'Reports and analytics', 'module' => 'reports'],
     ],
 
     /*
-    | Developer receives every permission. Other roles follow the BRD module actors.
+    | Developer and Super Admin receive every permission.
+    | Other roles follow BRD actors in sections 5, 7.2, and 8.
     */
     'role_permissions' => [
         'developer' => ['*'],
@@ -84,12 +92,17 @@ return [
             'resources.create',
             'resources.index',
             'resources.calendar',
+            'approvals.index',
             'approvals.special',
-            'payments.view',
+            'hostel.index',
+            'hostel.create',
+            'hostel.manage',
             'canteen.view',
-            'canteen.reservations.index',
-            'canteen.reservations.create',
-            'canteen.reservations.manage',
+            'canteen.index',
+            'canteen.create',
+            'canteen.manage',
+            'payments.view',
+            'reports.view',
         ],
         'coordinator' => [
             'dashboard',
@@ -97,10 +110,12 @@ return [
             'reservations.calendar',
             'reservations.create',
             'reservations.index',
+            'hostel.index',
+            'hostel.create',
             'canteen.view',
-            'canteen.reservations.index',
-            'canteen.reservations.create',
-            'canteen.reservations.manage',
+            'canteen.index',
+            'canteen.create',
+            'canteen.manage',
         ],
         'resource_owner' => [
             'dashboard',
@@ -110,12 +125,18 @@ return [
             'resources.create',
             'resources.index',
             'resources.calendar',
+            'approvals.index',
         ],
         'slt_employee' => [
             'dashboard',
             'reservations.calendar',
             'reservations.create',
             'reservations.index',
+            'hostel.index',
+            'hostel.create',
+            'canteen.view',
+            'canteen.index',
+            'canteen.create',
         ],
         'nebula_sms_user' => [
             'dashboard',
@@ -127,25 +148,19 @@ return [
             'reservations.calendar',
             'resources.index',
             'payments.view',
+            'reports.view',
         ],
         'canteen' => [
             'dashboard',
             'canteen.view',
-            'canteen.reservations.index',
-        ],
-        'slt_employee' => [
-            'dashboard',
-            'reservations.calendar',
-            'reservations.create',
-            'reservations.index',
-            'canteen.view',
-            'canteen.reservations.index',
-            'canteen.reservations.create',
+            'canteen.index',
+            'canteen.manage',
         ],
         'hostel_manager' => [
             'dashboard',
-            'hostel.view',
             'reservations.calendar',
+            'hostel.index',
+            'hostel.manage',
         ],
     ],
 
