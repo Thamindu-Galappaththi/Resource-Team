@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CanteenReservationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\PasswordSetupController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ResourceCalendarController;
 use App\Http\Controllers\ResourceCategoryController;
@@ -10,7 +12,6 @@ use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PasswordSetupController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,23 +59,32 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('approvals')->name('approvals.')->group(function () {
+        Route::get('/', fn () => view('approvals.index'))->middleware('permission:approvals.index')->name('index');
         Route::get('/special', fn () => view('approvals.special'))->middleware('permission:approvals.special')->name('special');
     });
 
-    Route::get('/profile', fn () => response('Profile page setup is pending.', 200))->name('user.profile');
-
-    Route::prefix('canteen')->name('canteen.')->controller(\App\Http\Controllers\CanteenReservationController::class)->group(function () {
-        Route::get('/', 'dashboard')->name('dashboard');
-        Route::get('/forecast/{date}', 'forecast')->name('forecast');
-        Route::get('/reservations', 'index')->name('reservations.index');
-        Route::get('/reservations/create', 'create')->name('reservations.create');
-        Route::post('/reservations', 'store')->name('reservations.store');
-        Route::get('/reservations/{reservation}', 'show')->name('reservations.show');
-        Route::get('/reservations/{reservation}/edit', 'edit')->name('reservations.edit');
-        Route::put('/reservations/{reservation}', 'update')->name('reservations.update');
-        Route::patch('/reservations/{reservation}/status', 'updateStatus')->name('reservations.status');
-        Route::delete('/reservations/{reservation}', 'destroy')->name('reservations.destroy');
+    Route::prefix('hostel')->name('hostel.')->group(function () {
+        Route::get('/', fn () => view('hostel.index'))->middleware('permission:hostel.index')->name('index');
+        Route::get('/create', fn () => view('hostel.create'))->middleware('permission:hostel.create')->name('create');
     });
+
+    Route::prefix('canteen')->name('canteen.')->controller(CanteenReservationController::class)->group(function () {
+        Route::get('/', 'dashboard')->middleware('permission:canteen.view')->name('dashboard');
+        Route::get('/forecast/{date}', 'forecast')->middleware('permission:canteen.view')->name('forecast');
+        Route::get('/reservations', 'index')->middleware('permission:canteen.index')->name('index');
+        Route::get('/reservations/create', 'create')->middleware('permission:canteen.create')->name('create');
+        Route::get('/reservations/{reservation}', 'show')->middleware('permission:canteen.index')->name('show');
+        Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
+    });
+
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('/lecture-fees', fn () => view('payments.lecture-fees'))->middleware('permission:payments.view')->name('lecture-fees');
+        Route::get('/resources', fn () => view('payments.resources'))->middleware('permission:payments.view')->name('resources');
+    });
+
+    Route::get('/reports', fn () => view('reports.index'))->middleware('permission:reports.view')->name('reports.index');
+
+    Route::get('/profile', fn () => response('Profile page setup is pending.', 200))->name('user.profile');
 });
 
 // ===========================================================================
@@ -114,6 +124,13 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('locations')->name('locations.')->middleware('permission:resources.create')->controller(LocationController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+    });
+
+    Route::prefix('canteen')->name('canteen.')->controller(CanteenReservationController::class)->group(function () {
+        Route::post('/reservations', 'store')->middleware('permission:canteen.create')->name('store');
+        Route::put('/reservations/{reservation}', 'update')->middleware('permission:canteen.create')->name('update');
+        Route::patch('/reservations/{reservation}/status', 'updateStatus')->middleware('permission:canteen.manage')->name('status');
+        Route::delete('/reservations/{reservation}', 'destroy')->middleware('permission:canteen.create,canteen.manage')->name('destroy');
     });
 
     Route::prefix('user-management')->controller(UserManagementController::class)->group(function () {
