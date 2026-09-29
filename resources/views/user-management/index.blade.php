@@ -64,7 +64,6 @@
                             <th>Location</th>
                             <th>Role</th>
                             <th>Status</th>
-                            <th>Deleted At</th>
                             <th class="text-end">Actions</th>
                         </tr>
                     </thead>
@@ -74,7 +73,6 @@
                                 <td class="fw-semibold text-dark"><i class="ti ti-user-circle text-primary me-2"></i>{{ $managedUser->name }}</td>
                                 <td>{{ $managedUser->nic ?: '—' }}</td>
                                 <td>{{ $managedUser->email }}</td>
-                                <td>{{ $managedUser->roles->pluck('name')->join(', ') ?: ($managedUser->role->name ?? $managedUser->user_role) }}</td>
                                 <td>{{ $managedUser->location ?: '—' }}</td>
                                 <td><span class="badge text-bg-primary-subtle text-primary">{{ strtoupper($managedUser->role->name ?? $managedUser->user_role ?? 'Unassigned') }}</span></td>
                                 <td>
@@ -86,9 +84,28 @@
                                         <span class="badge text-bg-secondary">Inactive</span>
                                     @endif
                                 </td>
-                                <td>{{ $managedUser->deleted_at?->format('M d, Y h:i A') ?? '—' }}</td>
                                 <td class="text-end">
                                     @unless($managedUser->trashed())
+
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editUserModal"
+
+                                            data-user-id="{{ $managedUser->id }}"
+                                            data-user-name="{{ $managedUser->name }}"
+                                            data-user-nic="{{ $managedUser->nic }}"
+                                            data-user-email="{{ $managedUser->email }}"
+                                            data-user-phone="{{ $managedUser->phone }}"
+                                            data-user-location="{{ $managedUser->location }}"
+                                            data-user-designation="{{ $managedUser->designation }}"
+                                            data-user-service-id="{{ $managedUser->service_id }}"
+                                            data-user-role="{{ $managedUser->role?->slug }}">
+
+                                            <i class="ti ti-edit me-1"></i>Edit
+                                        </button>
+
                                         <form method="POST" action="{{ route('users.reset-password', $managedUser) }}" class="d-inline">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-outline-primary">Reset password</button>
@@ -123,6 +140,173 @@
     </div>
 </div>
 
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">
+                    Edit User
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+            </div>
+
+            <form method="POST" id="editUserForm">
+                @csrf
+                @method('PUT')
+
+                <div class="modal-body">
+
+                    <div class="row g-3">
+
+                        <!-- Name -->
+                        <div class="col-md-6">
+                            <label for="editName" class="form-label">
+                                Name
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="editName"
+                                name="name"
+                                required>
+                        </div>
+
+                        <!-- NIC -->
+                        <div class="col-md-6">
+                            <label for="editNic" class="form-label">
+                                NIC
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="editNic"
+                                name="nic"
+                                required>
+                        </div>
+
+                        <!-- Employee ID -->
+                        <div class="col-md-6">
+                            <label for="editServiceId" class="form-label">
+                                Employee ID
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="editServiceId"
+                                name="service_id">
+                        </div>
+
+                        <!-- Email -->
+                        <div class="col-md-6">
+                            <label for="editEmail" class="form-label">
+                                Email
+                            </label>
+
+                            <input
+                                type="email"
+                                class="form-control"
+                                id="editEmail"
+                                name="email"
+                                required>
+                        </div>
+
+                        <!-- Phone -->
+                        <div class="col-md-6">
+                            <label for="editPhone" class="form-label">
+                                Phone
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="editPhone"
+                                name="phone"
+                                required>
+                        </div>
+
+                        <!-- Location -->
+                        <div class="col-md-6">
+                            <label for="editLocation" class="form-label">
+                                Location
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="editLocation"
+                                name="location"
+                                required>
+                        </div>
+
+                        <!-- Designation -->
+                        <div class="col-md-6">
+                            <label for="editDesignation" class="form-label">
+                                Designation
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="editDesignation"
+                                name="designation">
+                        </div>
+
+                        <!-- Role -->
+                        <div class="col-md-6">
+                            <label for="editRole" class="form-label">
+                                Role
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="editRole"
+                                name="user_role"
+                                required>
+
+                                @foreach($roles as $role)
+                                    <option value="{{ $role->slug }}">
+                                        {{ $role->name }}
+                                    </option>
+                                @endforeach
+
+                            </select>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-light"
+                            data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        <i class="ti ti-device-floppy me-1"></i>
+                        Save Changes
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -148,6 +332,43 @@
 
 @push('scripts')
 <script>
+
+    const editUserModal = document.getElementById('editUserModal');
+    const editUserForm = document.getElementById('editUserForm');
+
+    editUserModal.addEventListener('show.bs.modal', (event) => {
+
+        const button = event.relatedTarget;
+
+        // Get user data from the Edit button
+        const userId = button.dataset.userId;
+        const name = button.dataset.userName;
+        const nic = button.dataset.userNic;
+        const email = button.dataset.userEmail;
+        const phone = button.dataset.userPhone;
+        const location = button.dataset.userLocation;
+        const designation = button.dataset.userDesignation;
+        const serviceId = button.dataset.userServiceId;
+        const roleSlug = button.dataset.userRole;
+
+        // Fill the form
+        document.getElementById('editName').value = name || '';
+        document.getElementById('editNic').value = nic || '';
+        document.getElementById('editEmail').value = email || '';
+        document.getElementById('editPhone').value = phone || '';
+        document.getElementById('editLocation').value = location || '';
+        document.getElementById('editDesignation').value = designation || '';
+        document.getElementById('editServiceId').value = serviceId || '';
+
+        // Select current role
+        document.getElementById('editRole').value = roleSlug || '';
+
+        // Set form action
+        editUserForm.action = `/user-management/${userId}`;
+
+    });
+
+
     const deleteUserModal = document.getElementById('deleteUserModal');
     const deleteUserForm = document.getElementById('deleteUserForm');
     const deleteUserName = document.getElementById('deleteUserName');
