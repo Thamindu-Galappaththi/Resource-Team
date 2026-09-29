@@ -65,6 +65,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('canteen')->name('canteen.')->controller(\App\Http\Controllers\CanteenReservationController::class)->group(function () {
         Route::get('/', 'dashboard')->name('dashboard');
+        Route::get('/maintenance', 'maintenance')->name('maintenance');
         Route::get('/forecast/{date}', 'forecast')->name('forecast');
         Route::get('/reservations', 'index')->name('reservations.index');
         Route::get('/reservations/create', 'create')->name('reservations.create');

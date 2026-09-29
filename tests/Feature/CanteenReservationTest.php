@@ -42,6 +42,26 @@ class CanteenReservationTest extends TestCase
         ]);
     }
 
+    public function test_reservation_uses_authenticated_user_as_requester(): void
+    {
+        $user = User::factory()->role('slt_employee')->create();
+        $otherUser = User::factory()->role('slt_employee')->create();
+
+        $this->actingAs($user)->post(route('canteen.reservations.store'), [
+            'reservation_name' => 'Team lunch',
+            'requested_by_user_id' => $otherUser->id,
+            'meal_type' => 'lunch',
+            'reservation_date' => now()->addDay()->toDateString(),
+            'reservation_time' => '12:30',
+            'number_of_orders' => 12,
+        ])->assertRedirect(route('canteen.reservations.index'));
+
+        $this->assertDatabaseHas('canteen_reservations', [
+            'reservation_name' => 'Team lunch',
+            'requested_by_user_id' => $user->id,
+        ]);
+    }
+
     public function test_past_date_is_rejected_with_validation_error(): void
     {
         $user = User::factory()->role('slt_employee')->create();
@@ -200,6 +220,38 @@ class CanteenReservationTest extends TestCase
         $this->actingAs($user)
             ->get(route('canteen.reservations.create'))
             ->assertForbidden();
+    }
+
+    public function test_canteen_pages_render_for_authorized_users(): void
+    {
+        $user = User::factory()->role('canteen')->create();
+
+        $this->actingAs($user)
+            ->get(route('canteen.dashboard'))
+            ->assertOk()
+            ->assertSee('Orders expected today')
+            ->assertDontSee('Kitchen Readiness');
+
+        $this->get(route('canteen.reservations.index'))
+            ->assertOk()
+            ->assertSee('Reservation register');
+
+        $this->get(route('canteen.maintenance'))
+            ->assertOk()
+            ->assertSee('Maintenance queue')
+            ->assertSee('No resources in maintenance');
+    }
+
+    public function test_reservation_form_renders_for_requesters(): void
+    {
+        $user = User::factory()->role('slt_employee')->create();
+
+        $this->actingAs($user)
+            ->get(route('canteen.reservations.create'))
+            ->assertOk()
+            ->assertSee('New reservation')
+            ->assertSee('Order requirements')
+            ->assertSee('location_id');
     }
 
     public function test_requester_cannot_view_or_edit_another_users_reservation(): void

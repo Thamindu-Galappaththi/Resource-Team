@@ -148,7 +148,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.dashboard' ? 'active' : '' }}" href="{{ route('canteen.dashboard') }}">
                         <span><i class="ti ti-soup"></i></span>
-                        <span class="hide-menu">Create Canteen</span>
+                        <span class="hide-menu">Canteen Overview</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
@@ -161,6 +161,12 @@
                     <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.reservations.index' ? 'active' : '' }}" href="{{ route('canteen.reservations.index') }}">
                         <span><i class="ti ti-list-check"></i></span>
                         <span class="hide-menu">Canteen Reservations</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.maintenance' ? 'active' : '' }}" href="{{ route('canteen.maintenance') }}">
+                        <span><i class="ti ti-tool"></i></span>
+                        <span class="hide-menu">Maintenance</span>
                     </a>
                 </li>
             @endif
