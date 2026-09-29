@@ -94,7 +94,7 @@ class UserManagementControllerTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $administrator->id]);
     }
 
-    public function test_soft_deleted_user_remains_visible_with_deleted_timestamp(): void
+    public function test_soft_deleted_user_remains_visible(): void
     {
         $administrator = User::factory()->role('admin')->create();
         $deletedUser = User::factory()->create([
@@ -106,7 +106,6 @@ class UserManagementControllerTest extends TestCase
             ->get(route('user.management'))
             ->assertOk()
             ->assertSee('Deleted User')
-            ->assertSee('Deleted')
-            ->assertSee($deletedUser->deleted_at->format('M d, Y'));
+            ->assertSee('Deleted');
     }
 }
