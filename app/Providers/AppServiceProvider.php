@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\CanteenReservation;
 use App\Policies\CanteenReservationPolicy;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -25,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
+        Paginator::useBootstrapFive();
 
         Gate::policy(CanteenReservation::class, CanteenReservationPolicy::class);
 

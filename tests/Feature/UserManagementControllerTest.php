@@ -94,6 +94,18 @@ class UserManagementControllerTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $administrator->id]);
     }
 
+    public function test_user_management_pagination_uses_bootstrap_links(): void
+    {
+        $administrator = User::factory()->role('admin')->create();
+        User::factory()->count(16)->create();
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSee('page-link', false)
+            ->assertDontSee('Showing 1 to 15 of 16 results');
+    }
+
     public function test_soft_deleted_user_remains_visible(): void
     {
         $administrator = User::factory()->role('admin')->create();
