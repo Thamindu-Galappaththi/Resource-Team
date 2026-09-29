@@ -115,6 +115,55 @@ class UserManagementController extends Controller
             ->with('status', 'User account created successfully. A password setup link was sent to '.$user->email.'.');
     }
 
+    public function update(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:50'],
+            'service_id' => ['nullable', 'string', 'max:20'],
+            'nic' => [
+                'required',
+                'string',
+                'size:12',
+                Rule::unique('users', 'nic')->ignore($user->id),
+            ],
+            'email' => [
+                'required',
+                'email',
+                'max:50',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
+            'phone' => ['required', 'string', 'max:20'],
+            'location' => ['required', 'string', 'max:100'],
+            'designation' => ['nullable', 'string', 'max:100'],
+            'user_role' => [
+                'required',
+                'string',
+                Rule::exists('roles', 'slug')->where('is_active', true),
+            ],
+        ]);
+
+        $role = Role::query()
+            ->where('slug', $validated['user_role'])
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $user->update([
+            'name' => $validated['name'],
+            'service_id' => $validated['service_id'] ?? null,
+            'nic' => $validated['nic'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'location' => $validated['location'],
+            'designation' => $validated['designation'] ?? null,
+            'role_id' => $role->id,
+            'user_role' => $role->slug,
+        ]);
+
+        return redirect()
+            ->route('user.management')
+            ->with('status', 'User updated successfully!');
+    }
+
     public function toggleActive(User $user): RedirectResponse
     {
         if ($user->is(auth()->user())) {

@@ -137,6 +137,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/create-user', 'store')->middleware('permission:user.create')->name('create.user.store');
         Route::get('/slt-employee', 'lookupSltEmployee')->middleware('permission:user.create')->name('slt.employee.lookup');
         Route::delete('/{user}', 'destroy')->middleware('permission:user.management')->name('users.destroy');
+        Route::put('/{user}', 'update')->middleware('permission:user.management')->name('users.update');
         Route::post('/{user}/toggle-active', 'toggleActive')->middleware('permission:user.management')->name('users.toggle-active');
         Route::post('/{user}/reset-password', 'resetPassword')->middleware('permission:user.management')->name('users.reset-password');
     });
@@ -149,8 +150,6 @@ Route::middleware(['auth', 'active'])->group(function () {
 // Password setup links carry a signed reset token. Keep these accessible when
 // an administrator is already authenticated, otherwise guest middleware would
 // redirect the link to the dashboard before the recipient can set a password.
-Route::get('/reset-password/{token}', [PasswordSetupController::class, 'showResetForm'])
-    ->name('password.reset');
+Route::get('/reset-password/{token}', [PasswordSetupController::class, 'showResetForm'])->name('password.reset');
 
-Route::post('/reset-password', [PasswordSetupController::class, 'reset'])
-    ->name('password.update');
+Route::post('/reset-password', [PasswordSetupController::class, 'reset'])->name('password.update');
