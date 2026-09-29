@@ -16,6 +16,8 @@
     .user-management-page .form-control, .user-management-page .form-select { border-color: #cbd3da; min-height: 42px; }.user-management-page .input-group-text { background: #fff; border-color: #cbd3da; color: #717980; }
     .user-management-page .table { --bs-table-hover-bg: #f5f9fd; }.user-management-page .table thead th { background: #f4f6f8; color: #505860; font-size: .73rem; letter-spacing: .03em; font-weight: 700; padding: 1.05rem 1.25rem; white-space: nowrap; border-bottom-width: 1px; }.user-management-page .table tbody td { padding: 1.1rem 1.25rem; border-color: var(--um-border); color: #4d5358; }
     .user-management-page .badge { border-radius: 99px; padding: .4rem .65rem; }.user-management-page .btn-sm { border-radius: .45rem; }.user-management-page .card-footer { border-top-color: var(--um-border); }
+    .user-management-page .pagination { margin-bottom: 0; }
+    .user-management-page .table-responsive { min-height: 0; }
     @media (max-width: 767.98px) { .user-management-page .table thead th, .user-management-page .table tbody td { padding-left: .8rem; padding-right: .8rem; } }
 </style>
 <div class="container-fluid mt-4 user-management-page">
@@ -135,7 +137,9 @@
         </div>
         <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3 px-3 px-md-4">
             <small class="text-muted">Showing {{ $users->firstItem() ?? 0 }} to {{ $users->lastItem() ?? 0 }} of {{ number_format($users->total()) }} users</small>
-            @if($users->hasPages()){{ $users->links() }}@endif
+            @if($users->hasPages())
+                <div>{{ $users->onEachSide(1)->links() }}</div>
+            @endif
         </div>
     </div>
 </div>
