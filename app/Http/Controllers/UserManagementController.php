@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class UserManagementController extends Controller
@@ -179,12 +180,32 @@ class UserManagementController extends Controller
         return back()->with('status', $message);
     }
 
-    public function resetPassword(User $user): RedirectResponse
+    public function resetPassword(Request $request, User $user): RedirectResponse
     {
-        $temporaryPassword = $user->nic ?: 'Password@123';
-        $user->update(['password' => $temporaryPassword]);
+        $validated = $request->validate([
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
 
-        return back()->with('status', 'Password reset successfully! Temporary password is the user NIC.');
+        // User's password cast hashes the value before it is stored.
+        $user->update(['password' => $validated['password']]);
+
+        try {
+            Mail::raw(
+                "Hello {$user->name},\n\nAn administrator has reset your account password. Your new password is:\n\n{$validated['password']}\n\nPlease sign in and change it as soon as possible.",
+                function ($message) use ($user) {
+                    $message->to($user->email, $user->name)
+                        ->subject('Your account password has been reset');
+                }
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors([
+                'password' => 'The password was updated, but the notification email could not be sent.',
+            ]);
+        }
+
+        return back()->with('status', 'Password reset successfully and the new password was emailed to '.$user->email.'.');
     }
 
     public function destroy(User $user): RedirectResponse
