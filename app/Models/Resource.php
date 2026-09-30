@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Resource extends Model
@@ -59,6 +60,12 @@ class Resource extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function linkedResources(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'resource_links', 'resource_id', 'linked_resource_id')
+            ->withTimestamps();
     }
 
     /**

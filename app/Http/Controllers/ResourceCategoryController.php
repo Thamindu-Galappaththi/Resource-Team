@@ -6,6 +6,8 @@ use App\Http\Requests\StoreResourceCategoryRequest;
 use App\Models\ResourceCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ResourceCategoryController extends Controller
 {
@@ -73,5 +75,29 @@ class ResourceCategoryController extends Controller
             $category->load('features'),
             201 // HTTP 201 Created
         );
+    }
+
+    public function update(Request $request, ResourceCategory $category): JsonResponse
+    {
+        $validated = $request->validate([
+            'category_name' => ['required', 'string', 'max:255', Rule::unique('resource_categories', 'name')->ignore($category->id)],
+        ]);
+        $category->update(['name' => $validated['category_name']]);
+
+        return response()->json($category->fresh()->load('features'));
+    }
+
+    public function deleteCheck(ResourceCategory $category): JsonResponse
+    {
+        $linkedResources = $category->types()->withCount('resources')->get()->sum('resources_count');
+
+        return response()->json(['linked_resources' => $linkedResources]);
+    }
+
+    public function destroy(ResourceCategory $category): JsonResponse
+    {
+        $category->delete();
+
+        return response()->json(['message' => 'Category soft deleted.']);
     }
 }

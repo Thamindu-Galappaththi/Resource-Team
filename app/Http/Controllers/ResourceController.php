@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreResourceRequest;
 use App\Models\Resource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ResourceController extends Controller
 {
@@ -64,7 +65,27 @@ class ResourceController extends Controller
             201
         );
     }
-    
+
+    /**
+     * POST /resource-links
+     * Links one resource to another.
+     */
+    public function storeLink(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'resource_id' => ['required', 'integer', 'exists:resources,id'],
+            'linked_resource_id' => ['required', 'integer', 'different:resource_id', 'exists:resources,id'],
+        ]);
+
+        $resource = Resource::findOrFail($validated['resource_id']);
+        $resource->linkedResources()->syncWithoutDetaching([$validated['linked_resource_id']]);
+
+        return response()->json([
+            'resource_id' => $resource->id,
+            'linked_resource_id' => (int) $validated['linked_resource_id'],
+        ], 201);
+    }
+
     /**
      * POST /resources/{resource}/request-delete
      * Marks a resource as "pending_deletion". Does NOT delete the row.
@@ -99,5 +120,5 @@ class ResourceController extends Controller
         return response()->json($resource->load(['type.category', 'location']));
     }
 
-    
+
 }
