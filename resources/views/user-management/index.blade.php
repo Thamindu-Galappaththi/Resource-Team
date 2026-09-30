@@ -110,15 +110,10 @@
                                             <i class="ti ti-edit me-1"></i>Edit
                                         </button>
 
-                                        <button
-                                            type="button"
-                                            class="btn btn-sm btn-outline-primary"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#resetPasswordModal"
-                                            data-reset-url="{{ route('users.reset-password', $managedUser) }}"
-                                            data-user-name="{{ $managedUser->name }}">
-                                            Reset password
-                                        </button>
+                                        <form method="POST" action="{{ route('users.reset-password', $managedUser) }}" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Reset password</button>
+                                        </form>
                                         <form method="POST" action="{{ route('users.toggle-active', $managedUser) }}" class="d-inline">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-outline-secondary">
@@ -318,36 +313,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form method="POST" id="resetPasswordForm">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title" id="resetPasswordModalLabel">Reset user password</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Set a new password for <strong id="resetPasswordUserName"></strong>. The user will receive it by email.</p>
-                    <div class="mb-3">
-                        <label for="newPassword" class="form-label">New password</label>
-                        <input type="password" class="form-control" id="newPassword" name="password" minlength="8" autocomplete="new-password" required>
-                        <div class="form-text">Must be at least 8 characters.</div>
-                    </div>
-                    <div>
-                        <label for="newPasswordConfirmation" class="form-label">Confirm new password</label>
-                        <input type="password" class="form-control" id="newPasswordConfirmation" name="password_confirmation" minlength="8" autocomplete="new-password" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save and email password</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -418,17 +383,6 @@
         const button = event.relatedTarget;
         deleteUserForm.action = button.dataset.deleteUrl;
         deleteUserName.textContent = button.dataset.userName;
-    });
-
-    const resetPasswordModal = document.getElementById('resetPasswordModal');
-    const resetPasswordForm = document.getElementById('resetPasswordForm');
-    const resetPasswordUserName = document.getElementById('resetPasswordUserName');
-
-    resetPasswordModal.addEventListener('show.bs.modal', (event) => {
-        const button = event.relatedTarget;
-        resetPasswordForm.action = button.dataset.resetUrl;
-        resetPasswordUserName.textContent = button.dataset.userName;
-        resetPasswordForm.reset();
     });
 </script>
 @endpush
