@@ -12,16 +12,18 @@
     .user-management-page .um-stat-icon { width: 45px; height: 45px; border-radius: .65rem; display: inline-flex; align-items: center; justify-content: center; background: var(--stat-icon-bg); color: var(--stat-color); font-size: 1.4rem; }
     .user-management-page .um-stat-label { color: #4f555b; font-size: .92rem; }.user-management-page .um-stat-number { font-size: 2rem; font-weight: 700; line-height: 1.05; }
     .user-management-page .um-panel { border: 1px solid var(--um-border) !important; border-radius: .9rem; overflow: hidden; box-shadow: 0 .3rem 1rem rgba(24,39,75,.09) !important; background: rgba(255,255,255,.98); }
-    .user-management-page .um-toolbar { border-bottom: 1px solid var(--um-border); }.user-management-page .um-search { min-width: min(100%, 360px); }
+    .user-management-page .um-header {background: #fff; border: 1px solid var(--um-border); border-radius: .9rem; padding: 1.5rem 1.75rem; box-shadow: 0 .3rem 1rem rgba(24,39,75,.09);}
+    .user-management-page .um-toolbar { border-bottom: 1px solid var(--um-border); }.user-management-page .um-search { width: 280px; min-width: 280px; }
     .user-management-page .form-control, .user-management-page .form-select { border-color: #cbd3da; min-height: 42px; }.user-management-page .input-group-text { background: #fff; border-color: #cbd3da; color: #717980; }
     .user-management-page .table { --bs-table-hover-bg: #f5f9fd; }.user-management-page .table thead th { background: #f4f6f8; color: #505860; font-size: .73rem; letter-spacing: .03em; font-weight: 700; padding: 1.05rem 1.25rem; white-space: nowrap; border-bottom-width: 1px; }.user-management-page .table tbody td { padding: 1.1rem 1.25rem; border-color: var(--um-border); color: #4d5358; }
     .user-management-page .badge { border-radius: 99px; padding: .4rem .65rem; }.user-management-page .btn-sm { border-radius: .45rem; }.user-management-page .card-footer { border-top-color: var(--um-border); }
     .user-management-page .pagination { margin-bottom: 0; }
+    .user-management-page .card-footer nav > div.d-none > div:first-child { display: none; }
     .user-management-page .table-responsive { min-height: 0; }
     @media (max-width: 767.98px) { .user-management-page .table thead th, .user-management-page .table tbody td { padding-left: .8rem; padding-right: .8rem; } }
 </style>
 <div class="container-fluid mt-4 user-management-page">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 um-header">
         <div>
             <h1 class="um-title mb-1">User Management</h1>
             <p class="um-subtitle mb-0">Control access, roles, and profiles for Nebula RRS users.</p>
