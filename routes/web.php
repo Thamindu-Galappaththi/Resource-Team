@@ -128,6 +128,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('resources')->name('resources.')->controller(ResourceController::class)->group(function () {
+        Route::get('/{resource}', 'show')->middleware('permission:resources.index,resources.create')->name('show');
+        Route::put('/{resource}', 'update')->middleware('permission:resources.create')->name('update');
+        Route::delete('/{resource}', 'destroy')->middleware('permission:resources.index')->name('destroy');
         Route::post('/', 'store')->middleware('permission:resources.create')->name('store');
         Route::post('/{resource}/request-delete', 'requestDelete')->middleware('permission:resources.index')->name('request-delete');
         Route::post('/{resource}/approve-delete', 'approveDelete')->middleware('permission:resources.index')->name('approve-delete');
