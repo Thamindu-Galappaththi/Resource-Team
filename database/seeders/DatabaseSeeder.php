@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             LocationSeeder::class,
             RolePermissionSeeder::class,
             UserSeeder::class,
+            HostelRoomSeeder::class,
         ]);
     }
 }

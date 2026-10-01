@@ -20,60 +20,73 @@
             <h1 class="h3 text-white mb-2">Hostel Reservations</h1>
             <p class="text-white mb-0">Manage student and guest accommodation logistics across the Nebula campus.</p>
         </div>
-        @if(auth()->user()->hasPermission('hostel.create'))
+        @can('createHostel', \App\Models\Reservation::class)
             <a href="{{ route('hostel.create') }}" class="btn btn-primary">
                 <i class="ti ti-circle-plus me-2" aria-hidden="true"></i>New Reservation
             </a>
-        @endif
+        @endcan
     </div>
+
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
 
     <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-            {{-- Database-backed totals and records will be connected with the booking backend. --}}
             <div class="row g-3 mb-4">
-                @foreach(['Total Bookings', 'Check-ins Today', 'Available Rooms', 'Pending Requests'] as $label)
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <div class="summary-card {{ $label === 'Check-ins Today' ? 'check-ins' : '' }}">
-                            <div class="summary-label mb-1">{{ $label }}</div>
-                            <div class="summary-value"><span aria-hidden="true">—</span><span class="visually-hidden">Not available</span></div>
-                        </div>
-                    </div>
-                @endforeach
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="summary-card"><div class="summary-label mb-1">Total Bookings</div><div class="summary-value">{{ $summary['total'] }}</div></div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="summary-card check-ins"><div class="summary-label mb-1">Check-ins Today</div><div class="summary-value">{{ $summary['check_ins_today'] }}</div></div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="summary-card"><div class="summary-label mb-1">Available Rooms</div><div class="summary-value">{{ $summary['available_rooms'] }}</div></div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="summary-card"><div class="summary-label mb-1">Pending Requests</div><div class="summary-value">{{ $summary['pending'] }}</div></div>
+                </div>
             </div>
 
-            <div class="filter-panel p-3 mb-4">
-                <fieldset disabled aria-describedby="hostel-data-note">
-                    <legend class="visually-hidden">Filter hostel reservations</legend>
-                    <div class="row g-3 align-items-end">
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label for="hostel-check-in-from" class="form-label">Check-in From</label>
-                            <input type="date" id="hostel-check-in-from" name="check_in_from" class="form-control">
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label for="hostel-check-in-to" class="form-label">Check-in To</label>
-                            <input type="date" id="hostel-check-in-to" name="check_in_to" class="form-control">
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label for="hostel-room-category" class="form-label">Room Category</label>
-                            <select id="hostel-room-category" name="room_category" class="form-select">
-                                <option value="">All Categories</option>
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label for="hostel-reservation-status" class="form-label">Reservation Status</label>
-                            <select id="hostel-reservation-status" name="status" class="form-select">
-                                <option value="">All Statuses</option>
-                            </select>
-                        </div>
-                        <div class="col-12 d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-light">Reset</button>
-                            <button type="button" class="btn btn-primary">Apply Filters</button>
-                        </div>
+            <form method="GET" action="{{ route('hostel.index') }}" class="filter-panel p-3 mb-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" id="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="ID or guest">
                     </div>
-                </fieldset>
-            </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="check_in_from" class="form-label">Check-in From</label>
+                        <input type="date" id="check_in_from" name="check_in_from" class="form-control" value="{{ request('check_in_from') }}">
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="check_in_to" class="form-label">Check-in To</label>
+                        <input type="date" id="check_in_to" name="check_in_to" class="form-control" value="{{ request('check_in_to') }}">
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="room_type_id" class="form-label">Room Category</label>
+                        <select id="room_type_id" name="room_type_id" class="form-select">
+                            <option value="">All Categories</option>
+                            @foreach($roomTypes as $type)
+                                <option value="{{ $type->id }}" @selected(request('room_type_id') == $type->id)>{{ $type->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="status" class="form-label">Reservation Status</label>
+                        <select id="status" name="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            @foreach($statuses as $status)
+                                <option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end gap-2">
+                        <a href="{{ route('hostel.index') }}" class="btn btn-light">Reset</a>
+                        <button class="btn btn-primary">Apply Filters</button>
+                    </div>
+                </div>
+            </form>
 
-            <p id="hostel-data-note" class="small text-muted">Reservation data is not connected yet. Totals and filters will be available when booking data is connected.</p>
             <div class="table-responsive border rounded">
                 <table class="table align-middle mb-0">
                     <caption class="visually-hidden">Hostel reservations</caption>
@@ -89,16 +102,60 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-5">
-                                <i class="ti ti-bed d-block fs-7 mb-2" aria-hidden="true"></i>
-                                No reservation data to display.
-                            </td>
-                        </tr>
+                        @forelse($reservations as $reservation)
+                            <tr>
+                                <td>{{ $reservation->reference }}</td>
+                                <td>{{ $reservation->hostelStay?->guest_name ?? '—' }}</td>
+                                <td>{{ $reservation->hostelStay?->roomType?->name ?? '—' }}</td>
+                                <td>{{ $reservation->hostelStay?->check_in_at?->timezone(config('reservations.display_timezone'))->format('d M Y') }}</td>
+                                <td>{{ $reservation->hostelStay?->check_out_at?->timezone(config('reservations.display_timezone'))->format('d M Y') }}</td>
+                                <td><span class="badge bg-light text-dark">{{ $reservation->statusEnum()->label() }}</span></td>
+                                <td class="text-end text-nowrap">
+                                    @can('viewHostel', $reservation)
+                                        <a href="{{ route('hostel.show', $reservation) }}" class="btn btn-sm btn-outline-secondary">View</a>
+                                    @endcan
+                                    @can('cancelHostel', $reservation)
+                                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal-{{ $reservation->id }}">Cancel</button>
+                                    @endcan
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    <i class="ti ti-bed d-block fs-7 mb-2" aria-hidden="true"></i>
+                                    No reservations found.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
+            <div class="mt-3">{{ $reservations->links() }}</div>
         </div>
     </div>
 </div>
+
+@foreach($reservations as $reservation)
+    @can('cancelHostel', $reservation)
+        <div class="modal fade" id="cancelModal-{{ $reservation->id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <form method="POST" action="{{ route('hostel.cancel', $reservation) }}" class="modal-content">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title">Cancel {{ $reservation->reference }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label class="form-label">Cancellation reason</label>
+                        <textarea name="cancellation_reason" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button class="btn btn-danger">Cancel reservation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endcan
+@endforeach
 @endsection
