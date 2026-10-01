@@ -33,7 +33,10 @@ return new class extends Migration
 
             // "Serial Number" field. Unique because two physical
             // resources should never share the same serial number.
-            $table->string('serial_number')->unique();
+            $table->string('serial_number')->nullable()->unique();
+
+            $table->boolean('is_deleted')->default(false);
+            $table->timestamp('deleted_at')->nullable();
 
             $table->timestamps();
         });

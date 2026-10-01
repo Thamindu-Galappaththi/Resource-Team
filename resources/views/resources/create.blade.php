@@ -102,69 +102,9 @@
                         <div class="tab-pane fade" id="resource-pane" role="tabpanel">
                             <form id="resourceForm">
                                 @csrf
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="resourceCategorySelect" class="form-label">Category</label>
-                                        <select class="form-select category-select" id="resourceCategorySelect" name="category_id" required>
-                                            <option value="" selected disabled>-- Select Category --</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label for="resourceTypeSelect" class="form-label">Type</label>
-                                        <select class="form-select" id="resourceTypeSelect" name="resource_type_id" required disabled>
-                                            <option value="" selected disabled>-- Select Category First --</option>
-                                        </select>
-                                    </div>
-                                </div>
+                                @include('resources.partials.resource-fields')
 
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="resourceLocationSelect" class="form-label">Location</label>
-                                        <select class="form-select location-select" id="resourceLocationSelect" name="location_id" required>
-                                            <option value="" selected disabled>-- Select Location --</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label for="resourceOwnerSelect" class="form-label">Resource Owner</label>
-                                        {{--
-                                            NOTE: Resource Owner management (its own table/CRUD) is a
-                                            separate task being built by someone else. For now this is
-                                            just a hardcoded display name — nothing here is validated
-                                            or persisted by the backend (see StoreResourceRequest /
-                                            ResourceController, which don't reference resource_owner_id
-                                            at all right now). Swap the option text/value below for
-                                            whatever placeholder name you want, or wire this up to a
-                                            real endpoint later the same way Location was done.
-                                        --}}
-                                        <input type="text" class="form-control" id="resourceOwnerSelect" value="">
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="resourceNameModel" class="form-label">Resource Name / Model</label>
-                                    <input type="text" class="form-control" id="resourceNameModel" name="name_model" required>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="serialNumber" class="form-label">Serial Number</label>
-                                    <input type="text" class="form-control" id="serialNumber" name="serial_number" required>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="resourceStatusSelect" class="form-label">Status</label>
-                                    {{-- Fixed, small option set — not database-driven like
-                                         Location/Resource Owner, so the values are just
-                                         hardcoded here. Keep this list in sync with the
-                                         Resource::STATUSES constant on the backend. --}}
-                                    <select class="form-select" id="resourceStatusSelect" name="status" required>
-                                        <option value="active" selected>Active</option>
-                                        <option value="inactive">Inactive</option>
-                                        <option value="under_maintenance">Under Maintenance</option>
-                                        <option value="decommissioned">Decommissioned</option>
-                                    </select>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary">Create Resource</button>
+                                <button type="submit" class="btn btn-primary" id="saveResourceButton">Create Resource</button>
                             </form>
                         </div>
 
@@ -215,6 +155,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
         ?? document.querySelector('input[name="_token"]')?.value;
+    const editResourceId = new URLSearchParams(window.location.search).get('edit');
 
     // ---------------------------------------------------------------
     // In-memory state used to populate dropdowns across tabs without
@@ -335,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function () {
             state.resources.forEach(r => {
                 const opt = document.createElement('option');
                 opt.value = r.id;
-                opt.textContent = `${r.name_model} (${r.serial_number})`;
+                opt.textContent = `${r.name_model}${r.serial_number ? ` (${r.serial_number})` : ''}`;
                 opt.setAttribute('data-dynamic', '1');
                 select.appendChild(opt);
             });
@@ -397,14 +338,18 @@ document.addEventListener('DOMContentLoaded', function () {
         typeSelect.querySelectorAll('option').forEach(o => o.remove());
 
         if (!categoryId) {
-            addSelectOption(typeSelect, '', '-- Select Category First --');
+            addSelectOption(typeSelect, '', 'Select a resource type (e.g., Laptop)');
+            typeSelect.options[0].disabled = true;
+            typeSelect.options[0].selected = true;
             typeSelect.disabled = true;
             return;
         }
 
         const filtered = state.types.filter(t => String(t.category_id) === String(categoryId));
         typeSelect.disabled = false;
-        addSelectOption(typeSelect, '', filtered.length ? '-- Select Type --' : '-- No Types For This Category --');
+        addSelectOption(typeSelect, '', filtered.length ? 'Select a resource type (e.g., Laptop)' : 'No resource types available for this category');
+        typeSelect.options[0].disabled = true;
+        typeSelect.options[0].selected = true;
         filtered.forEach(t => addSelectOption(typeSelect, t.id, t.name));
     }
 
@@ -482,7 +427,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             await success('Category created successfully.', 'categoryForm');
         } catch (err) {
-            await Swal.fire({ icon: 'error', title: 'Create failed', text: err.message });
+            await Swal.fire({ icon: 'error', title: editResourceId ? 'Save failed' : 'Create failed', text: err.message });
         }
     });
 
@@ -528,23 +473,31 @@ document.addEventListener('DOMContentLoaded', function () {
         const typeId = document.getElementById('resourceTypeSelect').value;
         const locationId = document.getElementById('resourceLocationSelect').value;
         const nameModel = document.getElementById('resourceNameModel').value.trim();
-        const serialNumber = document.getElementById('serialNumber').value.trim();
+        const serialNumber = document.getElementById('serialNumber').value.trim() || null;
         const status = document.getElementById('resourceStatusSelect').value;
         // Resource Owner is just a hardcoded display name right now —
         // nothing is read from it or sent to the backend for it.
 
         try {
             // Adjust to your actual route, e.g. route('resources.store')
-            const result = await postJSON('/resources', {
+            const resourcePayload = {
                 category_id: categoryId,
                 resource_type_id: typeId,
                 location_id: locationId,
                 name_model: nameModel,
                 serial_number: serialNumber,
                 status
-            });
+            };
+            const result = editResourceId
+                ? await requestJSON(`/resources/${editResourceId}`, 'PUT', resourcePayload)
+                : await postJSON('/resources', resourcePayload);
 
-            state.resources.push({ id: result.id, name_model: nameModel, serial_number: serialNumber });
+            if (editResourceId) {
+                await Swal.fire({ icon: 'success', title: 'Resource updated', text: 'Resource changes were saved.' });
+                window.location.assign('/resources');
+                return;
+            }
+            state.resources.push({ id: result.id, name_model: nameModel, serial_number: serialNumber || '' });
             refreshResourceSelects();
 
             await success('Resource created successfully.', 'resourceForm');
@@ -606,6 +559,17 @@ document.addEventListener('DOMContentLoaded', function () {
         return res.json();
     }
 
+    async function requestJSON(url, method, data) {
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify(data)
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.message || Object.values(payload.errors || {}).flat()[0] || 'Request failed');
+        return payload;
+    }
+
     async function loadInitialData() {
         // Each of these runs independently — if one endpoint 404s or
         // errors, the others still load fine and console.error tells
@@ -653,6 +617,23 @@ document.addEventListener('DOMContentLoaded', function () {
             refreshLocationSelects();
         } catch (err) {
             console.error('Failed to load /locations:', err);
+        }
+
+        if (editResourceId) {
+            try {
+                const resource = await fetchJSON(`/resources/${editResourceId}`);
+                document.getElementById('resourceCategorySelect').value = resource.type?.resource_category_id || resource.type?.category?.id || '';
+                refreshTypeSelectForCategory(document.getElementById('resourceCategorySelect').value);
+                document.getElementById('resourceTypeSelect').value = resource.resource_type_id;
+                document.getElementById('resourceLocationSelect').value = resource.location_id;
+                document.getElementById('resourceNameModel').value = resource.name_model || '';
+                document.getElementById('serialNumber').value = resource.serial_number || '';
+                document.getElementById('resourceStatusSelect').value = resource.status || '';
+                document.getElementById('saveResourceButton').textContent = 'Save Changes';
+                bootstrap.Tab.getOrCreateInstance(document.getElementById('resource-tab')).show();
+            } catch (error) {
+                await Swal.fire({ icon: 'error', title: 'Could not load resource', text: error.message });
+            }
         }
 
         // Resource Owner has no backend endpoint at all right now —
