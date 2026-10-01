@@ -100,6 +100,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('resource-categories')->name('resource-categories.')->middleware('permission:resources.create')->controller(ResourceCategoryController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
+        Route::put('/{category}', 'update')->name('update');
+        Route::get('/{category}/delete-check', 'deleteCheck')->name('delete-check');
+        Route::delete('/{category}', 'destroy')->name('destroy');
     });
 
     Route::prefix('resource-types')->name('resource-types.')->middleware('permission:resources.create')->controller(ResourceTypeController::class)->group(function () {
@@ -110,6 +113,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('resource-list')->name('resources.')->middleware('permission:resources.index,resources.create')->controller(ResourceController::class)->group(function () {
         Route::get('/', 'index')->name('list');
     });
+
+    Route::post('/resource-links', [ResourceController::class, 'storeLink'])
+        ->middleware('permission:resources.create')
+        ->name('resource-links.store');
 
     Route::prefix('resource-lookups')->name('resources.')->middleware('permission:resources.create')->controller(ResourceController::class)->group(function () {
         Route::get('/', 'lookups')->name('lookups');
