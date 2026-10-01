@@ -43,9 +43,9 @@
                         @error('resource_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12" id="linkedWrap" style="display:none;">
-                        <label class="form-label">Add-on resources</label>
+                        <label class="form-label">Additional resources</label>
                         <div id="linkedResources" class="border rounded p-3 bg-light"></div>
-                        <small class="text-muted">Linked equipment is booked in the same time slot, in one transaction.</small>
+                        <small class="text-muted">Selected resources are booked in the same time slot and checked together.</small>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="reservation_date">Reservation Date <span class="text-danger">*</span></label>
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const lookupsUrl = @json(route('reservations.lookups'));
     const availabilityUrl = @json(route('reservations.availability'));
     const prefillResourceId = @json(old('resource_id', $prefillResourceId));
-    const oldResourceIds = @json(old('resource_ids', []));
+    const oldResourceIds = @json(old('resource_ids', $prefillResourceIds));
 
     const locationSelect = document.getElementById('location_id');
     const categorySelect = document.getElementById('category_id');
@@ -146,17 +146,36 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderLinked() {
         const resource = lookups.resources.find((row) => String(row.id) === String(resourceSelect.value));
         linkedBox.innerHTML = '';
-        if (!resource || !resource.linked_resources?.length) {
+        if (!resource) {
+            linkedWrap.style.display = 'none';
+            return;
+        }
+        const linkedResources = (resource.linked_resources || []).filter((row) => row.status === 'active');
+        const linkedIds = linkedResources.map((row) => String(row.id));
+        const extraResources = oldResourceIds.map(String)
+            .filter((id) => id !== String(resource.id) && !linkedIds.includes(id))
+            .map((id) => lookups.resources.find((row) => String(row.id) === id && row.status === 'active'))
+            .filter(Boolean);
+        if (!linkedResources.length && !extraResources.length) {
             linkedWrap.style.display = 'none';
             return;
         }
         linkedWrap.style.display = 'block';
-        resource.linked_resources.filter((row) => row.status === 'active').forEach((linked) => {
+        [...linkedResources, ...extraResources].forEach((linked) => {
             const wrap = document.createElement('div');
             wrap.className = 'form-check';
-            const checked = oldResourceIds.map(String).includes(String(linked.id)) ? 'checked' : '';
-            wrap.innerHTML = `<input class="form-check-input" type="checkbox" name="resource_ids[]" value="${linked.id}" id="linked-${linked.id}" ${checked}>
-                <label class="form-check-label" for="linked-${linked.id}">${linked.name_model} (${linked.serial_number})</label>`;
+            const input = document.createElement('input');
+            input.className = 'form-check-input';
+            input.type = 'checkbox';
+            input.name = 'resource_ids[]';
+            input.value = linked.id;
+            input.id = `linked-${linked.id}`;
+            input.checked = oldResourceIds.map(String).includes(String(linked.id));
+            const label = document.createElement('label');
+            label.className = 'form-check-label';
+            label.htmlFor = input.id;
+            label.textContent = `${linked.name_model} (${linked.serial_number})`;
+            wrap.append(input, label);
             linkedBox.appendChild(wrap);
         });
         linkedBox.querySelectorAll('input').forEach((el) => el.addEventListener('change', checkAvailability));
