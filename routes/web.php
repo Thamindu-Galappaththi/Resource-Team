@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CanteenReservationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HostelReservationController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PasswordSetupController;
 use App\Http\Controllers\ReservationController;
@@ -44,9 +45,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
-        Route::get('/', fn () => view('reservations.index'))->middleware('permission:reservations.index')->name('index');
-        Route::get('/create', fn () => view('reservations.create'))->middleware('permission:reservations.create')->name('create');
+        Route::get('/', 'index')->middleware('permission:reservations.index')->name('index');
+        Route::get('/create', 'create')->middleware('permission:reservations.create')->name('create');
         Route::get('/calendar', 'calendar')->middleware('permission:reservations.calendar')->name('calendar');
+        Route::get('/lookups', 'lookups')->middleware('permission:reservations.create')->name('lookups');
+        Route::get('/availability', 'availability')->middleware('permission:reservations.create')->name('availability');
+        Route::get('/{reservation}', 'show')->middleware('permission:reservations.index')->name('show');
     });
 
     Route::prefix('resources')->name('resources.')->group(function () {
@@ -63,9 +67,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/special', fn () => view('approvals.special'))->middleware('permission:approvals.special')->name('special');
     });
 
-    Route::prefix('hostel')->name('hostel.')->group(function () {
-        Route::get('/', fn () => view('hostel.index'))->middleware('permission:hostel.index')->name('index');
-        Route::get('/create', fn () => view('hostel.create'))->middleware('permission:hostel.create')->name('create');
+    Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
+        Route::get('/', 'index')->middleware('permission:hostel.index')->name('index');
+        Route::get('/create', 'create')->middleware('permission:hostel.create')->name('create');
+        Route::get('/{reservation}', 'show')->middleware('permission:hostel.index')->name('show');
     });
 
     Route::prefix('canteen')->name('canteen.')->controller(CanteenReservationController::class)->group(function () {
@@ -147,6 +152,16 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/{user}', 'update')->middleware('permission:user.management')->name('users.update');
         Route::post('/{user}/toggle-active', 'toggleActive')->middleware('permission:user.management')->name('users.toggle-active');
         Route::post('/{user}/reset-password', 'resetPassword')->middleware('permission:user.management')->name('users.reset-password');
+    });
+
+    Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
+        Route::post('/', 'store')->middleware('permission:reservations.create')->name('store');
+        Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:reservations.index,reservations.create')->name('cancel');
+    });
+
+    Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
+        Route::post('/', 'store')->middleware('permission:hostel.create')->name('store');
+        Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:hostel.index,hostel.create,hostel.manage')->name('cancel');
     });
 
     Route::prefix('logout')->controller(AuthController::class)->group(function () {

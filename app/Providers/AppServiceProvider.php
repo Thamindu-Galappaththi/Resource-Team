@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\CanteenReservation;
+use App\Models\Reservation;
 use App\Policies\CanteenReservationPolicy;
+use App\Policies\ReservationPolicy;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
@@ -30,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
 
         Gate::policy(CanteenReservation::class, CanteenReservationPolicy::class);
+        Gate::policy(Reservation::class, ReservationPolicy::class);
 
         View::composer('components.sidebar', function () {
             auth()->user()?->loadMissing('role.permissions', 'roles.permissions');

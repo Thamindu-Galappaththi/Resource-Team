@@ -30,55 +30,76 @@
         </nav>
     </div>
 
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+        </div>
+    @endif
+
     <div class="row g-4 align-items-start">
         <div class="col-12 col-lg-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-body booking-card">
                     <h2 class="h4 booking-heading"><i class="ti ti-bed me-2 text-primary" aria-hidden="true"></i>Booking Details</h2>
-                    {{-- Static BRD preview. No submission endpoint is connected. --}}
-                    <form id="hostel-booking-form" novalidate onsubmit="return false;">
-                        <div id="booking-feedback" class="alert d-none" role="status" aria-live="polite"></div>
+                    <form method="POST" action="{{ route('hostel.store') }}" id="hostel-booking-form">
+                        @csrf
                         <div class="row g-4">
                             <div class="col-12">
-                                <label for="reservation-name" class="form-label">Reservation Name</label>
-                                <input type="text" id="reservation-name" name="reservation_name" class="form-control"
+                                <label for="reservation_name" class="form-label">Reservation Name</label>
+                                <input type="text" id="reservation_name" name="reservation_name" class="form-control"
+                                       value="{{ old('reservation_name') }}"
                                        placeholder="e.g. Summer Internship 2026 Group" required>
                             </div>
-                            <div class="col-12 col-sm-6">
-                                <label for="check-in-date" class="form-label">Check-in Date</label>
-                                <input type="date" id="check-in-date" name="check_in_date" class="form-control" required>
+                            <div class="col-12">
+                                <label for="guest_name" class="form-label">Guest Name</label>
+                                <input type="text" id="guest_name" name="guest_name" class="form-control"
+                                       value="{{ old('guest_name') }}" placeholder="e.g. Kasun Madushanka" required>
                             </div>
                             <div class="col-12 col-sm-6">
-                                <label for="check-out-date" class="form-label">Check-out Date</label>
-                                <input type="date" id="check-out-date" name="check_out_date" class="form-control" required>
+                                <label for="check_in_date" class="form-label">Check-in Date</label>
+                                <input type="date" id="check_in_date" name="check_in_date" class="form-control"
+                                       value="{{ old('check_in_date') }}" min="{{ $minCheckIn }}" required>
                             </div>
                             <div class="col-12 col-sm-6">
-                                <label for="room-category" class="form-label">Room Category</label>
-                                <select id="room-category" name="room_category" class="form-select" required>
-                                    <option value="single">Single</option>
+                                <label for="check_out_date" class="form-label">Check-out Date</label>
+                                <input type="date" id="check_out_date" name="check_out_date" class="form-control"
+                                       value="{{ old('check_out_date') }}" required>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="room_type_id" class="form-label">Room Category</label>
+                                <select id="room_type_id" name="room_type_id" class="form-select" required>
+                                    <option value="">Select category</option>
+                                    @foreach($roomTypes as $type)
+                                        <option value="{{ $type->id }}" @selected(old('room_type_id') == $type->id)>{{ $type->name }}</option>
+                                    @endforeach
                                 </select>
+                                @if($roomTypes->isEmpty())
+                                    <small class="text-muted">Create a “Hostel Room” category and room types (Single, Double) under Create Resources first.</small>
+                                @endif
                             </div>
                             <div class="col-12 col-sm-6">
-                                <label for="number-of-guests" class="form-label">Number of Guests</label>
-                                <input type="number" id="number-of-guests" name="number_of_guests" class="form-control" min="1" step="1" value="1" required>
+                                <label for="number_of_guests" class="form-label">Number of Guests</label>
+                                <input type="number" id="number_of_guests" name="number_of_guests" class="form-control" min="1" step="1" value="{{ old('number_of_guests', 1) }}" required>
                             </div>
                             <div class="col-12">
-                                <label for="hostel-location" class="form-label">Hostel Location</label>
-                                <select id="hostel-location" name="hostel_location" class="form-select" required>
-                                    <option value="nebula-central-residence">Nebula Central Residence</option>
+                                <label for="location_id" class="form-label">Hostel Location</label>
+                                <select id="location_id" name="location_id" class="form-select" required>
+                                    <option value="">Select location</option>
+                                    @foreach($locations as $location)
+                                        <option value="{{ $location->id }}" @selected(old('location_id') == $location->id)>{{ $location->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="col-12">
-                                <label for="special-requirements" class="form-label">Special Requirements</label>
-                                <textarea id="special-requirements" name="special_requirements" rows="4" class="form-control"
-                                          placeholder="Mention any medical needs, accessibility requirements, or preference for floor level..."></textarea>
+                                <label for="special_requirements" class="form-label">Special Requirements</label>
+                                <textarea id="special_requirements" name="special_requirements" rows="4" class="form-control"
+                                          placeholder="Mention any medical needs, accessibility requirements, or preference for floor level...">{{ old('special_requirements') }}</textarea>
                             </div>
                             <div class="col-12 mt-4">
-                                <button type="button" id="create-hostel-reservation" class="btn btn-primary create-button w-100" aria-describedby="preview-note">
+                                <button type="submit" class="btn btn-primary create-button w-100">
                                     <i class="ti ti-circle-check-filled me-2" aria-hidden="true"></i>Create Reservation
                                 </button>
-                                <p id="preview-note" class="small text-muted mt-2 mb-0">Preview only. Room details are sample values from the BRD. This form checks details but does not save bookings or check availability.</p>
-                                <noscript><p class="text-danger mt-2">Enable JavaScript to check booking details.</p></noscript>
+                                <p class="small text-muted mt-2 mb-0">The system assigns a free room of the selected category and blocks overlapping dates. Check-in {{ config('hostel.check_in_time') }}, check-out {{ config('hostel.check_out_time') }}.</p>
                             </div>
                         </div>
                     </form>
@@ -109,61 +130,4 @@
         </div>
     </div>
 </div>
-@endsection
-
-@section('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const form = document.getElementById('hostel-booking-form');
-        const name = document.getElementById('reservation-name');
-        const checkIn = document.getElementById('check-in-date');
-        const checkOut = document.getElementById('check-out-date');
-        const feedback = document.getElementById('booking-feedback');
-        const inputs = Array.from(form.querySelectorAll('[required]'));
-
-        function validateDates() {
-            checkOut.setCustomValidity('');
-            if (checkIn.value) checkOut.min = checkIn.value;
-            else checkOut.removeAttribute('min');
-            if (checkIn.value && checkOut.value && checkOut.value <= checkIn.value) {
-                checkOut.setCustomValidity('Check-out must be after check-in.');
-            }
-        }
-
-        function checkDetails(event) {
-            event.preventDefault();
-            name.setCustomValidity(name.value.trim() ? '' : 'Enter a reservation name.');
-            validateDates();
-            let firstInvalid = null;
-            inputs.forEach(function (input) {
-                const valid = input.checkValidity();
-                input.classList.toggle('is-invalid', !valid);
-                input.setAttribute('aria-invalid', String(!valid));
-                if (!valid && !firstInvalid) firstInvalid = input;
-            });
-            if (firstInvalid) {
-                feedback.className = 'alert alert-danger';
-                feedback.textContent = 'Please correct the highlighted booking details.';
-                firstInvalid.focus();
-                firstInvalid.reportValidity();
-                return;
-            }
-            feedback.className = 'alert alert-info';
-            feedback.textContent = 'Booking details are valid. This is a preview: availability has not been checked and no reservation has been saved or submitted for approval.';
-        }
-
-        form.addEventListener('submit', checkDetails);
-        document.getElementById('create-hostel-reservation').addEventListener('click', checkDetails);
-        inputs.forEach(function (input) {
-            input.addEventListener('input', function () {
-                input.classList.remove('is-invalid');
-                input.removeAttribute('aria-invalid');
-                input.setCustomValidity('');
-                feedback.classList.add('d-none');
-                feedback.textContent = '';
-                validateDates();
-            });
-        });
-    });
-</script>
 @endsection

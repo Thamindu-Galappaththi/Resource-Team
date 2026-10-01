@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -87,5 +88,14 @@ class Resource extends Model
             'resource_type_id',        // local key on THIS (resources) table
             'resource_category_id'     // local key on the intermediate (resource_types) table
         );
+    }
+
+    public function scopeHostelRooms(Builder $query): Builder
+    {
+        return $query
+            ->where('status', 'active')
+            ->whereHas('type.category', function (Builder $category) {
+                $category->where('name', config('hostel.category_name', 'Hostel Room'));
+            });
     }
 }

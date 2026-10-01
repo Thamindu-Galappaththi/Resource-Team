@@ -339,6 +339,52 @@
 
 <div class="reservation-calendar-wrapper">
 
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="h4 mb-1">Reservation Calendar</h2>
+            <p class="text-muted mb-0">Click a date to view bookings or create one for that slot.</p>
+        </div>
+        @if($canCreate)
+            <a href="{{ route('reservations.create') }}" class="btn btn-primary">Create Reservation</a>
+        @endif
+    </div>
+
+    <form method="GET" action="{{ route('reservations.calendar') }}" class="card border-0 shadow-sm mb-3">
+        <div class="card-body row g-2 align-items-end">
+            <input type="hidden" name="year" value="{{ $year }}">
+            <input type="hidden" name="month" value="{{ $month }}">
+            <div class="col-md-3">
+                <label class="form-label">Location</label>
+                <select name="location_id" class="form-select">
+                    <option value="">All</option>
+                    @foreach($locations as $location)
+                        <option value="{{ $location->id }}" @selected(request('location_id') == $location->id)>{{ $location->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Category</label>
+                <select name="resource_category_id" class="form-select">
+                    <option value="">All</option>
+                    @foreach($categories as $category)
+                        <option value="{{ $category->id }}" @selected(request('resource_category_id') == $category->id)>{{ $category->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All</option>
+                    @foreach($statuses as $status)
+                        <option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-3 d-grid">
+                <button class="btn btn-outline-primary">Apply filters</button>
+            </div>
+        </div>
+    </form>
 
     <!-- =========================================================
          MONTH NAVIGATION
@@ -349,10 +395,10 @@
 
         <!-- Previous Month -->
 
-        <a href="{{ route('reservations.calendar', [
+        <a href="{{ route('reservations.calendar', array_merge(request()->except(['year', 'month']), [
             'year' => $currentDate->copy()->subMonth()->year,
             'month' => $currentDate->copy()->subMonth()->month
-        ]) }}"
+        ])) }}"
            class="btn nav-button">
            &lt; Previous
         </a>
@@ -372,10 +418,10 @@
 
         <!-- Next Month -->
 
-        <a href="{{ route('reservations.calendar', [
+        <a href="{{ route('reservations.calendar', array_merge(request()->except(['year', 'month']), [
             'year' => $currentDate->copy()->addMonth()->year,
             'month' => $currentDate->copy()->addMonth()->month
-        ]) }}"
+        ])) }}"
            class="btn nav-button">
            Next &gt;
         </a>
@@ -446,12 +492,9 @@
 
                         $isToday = $date->isToday();
 
-                        $dayReservations = $reservations->filter(function ($reservation) use ($date) {
-
-                            return $reservation->reservation_date->format('Y-m-d')
-                                === $date->format('Y-m-d');
-
-                        });
+                        $dayReservations = $calendarReservations
+                            ->where('reservation_date', $date->format('Y-m-d'))
+                            ->values();
 
                     @endphp
 
@@ -461,7 +504,7 @@
                          data-bs-target="#eventModal"
                          data-display-date="{{ $date->format('F d, Y') }}"
                          data-date="{{ $date->format('Y-m-d') }}"
-                         data-reservations='@json($dayReservations->values())'>
+                         data-reservations='@json($dayReservations)'>
 
 
                         @if ($isToday)
@@ -480,6 +523,12 @@
 
                             </div>
 
+                        @endif
+
+                        @if($dayReservations->count())
+                            <span class="position-absolute bottom-0 start-50 translate-middle-x mb-1 badge rounded-pill text-bg-primary">
+                                {{ $dayReservations->count() }}
+                            </span>
                         @endif
 
 
@@ -731,44 +780,37 @@
 
 
             // If there are no reservations
+            const selectedIsoDate = this.getAttribute('data-date');
+            const canCreate = @json($canCreate);
+            const createUrl = @json(route('reservations.create'));
+
             if (reservations.length === 0) {
-
                 reservationList.innerHTML = `
-                    <p>
-                        No events for this day.
-                    </p>
+                    <p>No bookings for this day.</p>
+                    ${canCreate ? `<a class="btn btn-primary btn-sm" href="${createUrl}?date=${selectedIsoDate}">Create reservation</a>` : ''}
                 `;
-
                 return;
             }
 
-
-            // Display reservations
             reservations.forEach(function(reservation) {
-
                 reservationList.innerHTML += `
-
                     <div class="border rounded p-3 mb-2">
-
-                        <h6 class="mb-1">
-                            ${reservation.title}
-                        </h6>
-
-                        <p class="mb-1">
-                            ${reservation.description ?? ''}
-                        </p>
-
-                        <small class="text-muted">
-                            ${reservation.start_time}
-                            -
-                            ${reservation.end_time}
-                        </small>
-
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1">${reservation.reference ?? reservation.title}</h6>
+                            <span class="badge bg-light text-dark">${reservation.status_label ?? ''}</span>
+                        </div>
+                        <p class="mb-1">${reservation.title ?? ''}</p>
+                        <small class="text-muted d-block">${reservation.resources ?? ''}</small>
+                        <small class="text-muted d-block">${reservation.requester ?? ''} · ${reservation.location ?? ''}</small>
+                        <small class="text-muted d-block">${reservation.start_time} - ${reservation.end_time}</small>
+                        ${reservation.url ? `<a class="btn btn-sm btn-outline-primary mt-2" href="${reservation.url}">View details</a>` : ''}
                     </div>
-
                 `;
-
             });
+
+            if (canCreate) {
+                reservationList.innerHTML += `<a class="btn btn-primary btn-sm" href="${createUrl}?date=${selectedIsoDate}">Create reservation</a>`;
+            }
 
         });
 
