@@ -42,6 +42,9 @@
 
                         {{-- ===================== TAB 1: RESOURCE CATEGORY ===================== --}}
                         <div class="tab-pane fade show active" id="category-pane" role="tabpanel">
+                            <div class="card category-section-card mb-4" style="background:#fff; border:1px solid #d9e2ef; border-radius:12px; box-shadow:0 4px 16px rgba(42,53,71,.12); overflow:hidden;">
+                                <div class="card-header bg-white border-bottom-0 px-4 pt-4"><h4 class="mb-0">Create Resource Category</h4></div>
+                                <div class="card-body px-4 pb-4">
                             <form id="categoryForm">
                                 @csrf
                                 <div class="mb-3">
@@ -64,6 +67,8 @@
 
                                 <button type="submit" class="btn btn-primary mt-3">Create Category</button>
                             </form>
+                                </div>
+                            </div>
                         </div>
 
                         {{-- ===================== TAB 2: RESOURCE TYPE ===================== --}}
@@ -131,9 +136,7 @@
                                             whatever placeholder name you want, or wire this up to a
                                             real endpoint later the same way Location was done.
                                         --}}
-                                        <select class="form-select" id="resourceOwnerSelect">
-                                            <option value="Nadun" selected>Nadun</option>
-                                        </select>
+                                        <input type="text" class="form-control" id="resourceOwnerSelect" value="">
                                     </div>
                                 </div>
 
@@ -190,12 +193,24 @@
                     </div>
                 </div>
             </div>
+            <div class="card border-0 shadow-sm overflow-hidden mt-4" id="existingCategoriesCard">
+                <div class="card-header border-0 px-4 py-3" style="background:#d4e2ff; color:#164f73;"><h4 class="h6 mb-0"><i class="ti ti-info-circle me-2" aria-hidden="true"></i>Existing Categories</h4></div>
+                <div class="card-body p-4">
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead><tr><th>Category</th><th>Features</th><th class="text-end">Actions</th></tr></thead>
+                            <tbody id="existingCategoriesBody"><tr><td colspan="3" class="text-muted">Loading categories…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
@@ -212,6 +227,17 @@ document.addEventListener('DOMContentLoaded', function () {
         resources: [],    // { id, name_model, serial_number }
         locations: []     // { id, name }
     };
+
+    const nextTab = { categoryForm: 'type-tab', typeForm: 'resource-tab', resourceForm: 'linked-tab' };
+    const existingCategoriesCard = document.getElementById('existingCategoriesCard');
+    document.getElementById('resourceTabs').addEventListener('shown.bs.tab', event => {
+        existingCategoriesCard.hidden = event.target.id !== 'category-tab';
+    });
+
+    async function success(message, formId) {
+        const result = await Swal.fire({ icon: 'success', title: 'Success', text: message, confirmButtonText: 'OK' });
+        if (result.isConfirmed && nextTab[formId]) bootstrap.Tab.getOrCreateInstance(document.getElementById(nextTab[formId])).show();
+    }
 
     async function postJSON(url, data) {
         const res = await fetch(url, {
@@ -250,7 +276,57 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             if (current) select.value = current;
         });
+        renderExistingCategories();
     }
+
+    function renderExistingCategories() {
+        const body = document.getElementById('existingCategoriesBody');
+        if (!body) return;
+        body.replaceChildren();
+        if (!state.categories.length) {
+            body.innerHTML = '<tr><td colspan="3" class="text-muted">No active categories found.</td></tr>';
+            return;
+        }
+        state.categories.forEach(category => {
+            const row = document.createElement('tr');
+            const name = document.createElement('td'); name.textContent = category.name;
+            const features = document.createElement('td'); features.textContent = (category.features || []).map(feature => feature.name).join(', ') || '—';
+            const actions = document.createElement('td'); actions.className = 'text-end';
+            actions.innerHTML = `<button type="button" class="btn btn-sm btn-outline-primary me-2" data-edit-id="${category.id}">Edit</button><button type="button" class="btn btn-sm btn-outline-danger" data-delete-id="${category.id}">Delete</button>`;
+            row.append(name, features, actions); body.appendChild(row);
+        });
+    }
+
+    document.getElementById('existingCategoriesBody').addEventListener('click', async event => {
+        const editButton = event.target.closest('[data-edit-id]');
+        const deleteButton = event.target.closest('[data-delete-id]');
+        const id = editButton?.dataset.editId || deleteButton?.dataset.deleteId;
+        if (!id) return;
+        const category = state.categories.find(item => String(item.id) === String(id));
+        if (!category) return;
+        if (editButton) {
+            const result = await Swal.fire({ title: 'Edit Category', input: 'text', inputValue: category.name, showCancelButton: true, inputValidator: value => !value?.trim() ? 'Enter a category name.' : undefined });
+            if (!result.isConfirmed) return;
+            try {
+                const response = await fetch(`/resource-categories/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken }, body: JSON.stringify({ category_name: result.value.trim() }) });
+                const updated = await response.json(); if (!response.ok) throw new Error(updated.message || 'Update failed');
+                category.name = updated.name; refreshCategorySelects();
+                await Swal.fire({ icon: 'success', title: 'Updated', text: 'Category updated successfully.' });
+            } catch (error) { await Swal.fire({ icon: 'error', title: 'Update failed', text: error.message }); }
+            return;
+        }
+        try {
+            const checkResponse = await fetch(`/resource-categories/${id}/delete-check`, { headers: { 'Accept': 'application/json' } });
+            const check = await checkResponse.json(); if (!checkResponse.ok) throw new Error(check.message || 'Could not check linked resources');
+            const warning = check.linked_resources ? ` This category has ${check.linked_resources} linked resource(s).` : '';
+            const confirmation = await Swal.fire({ icon: 'warning', title: 'Delete category?', text: `“${category.name}” will be soft deleted and hidden from active lists.${warning}`, showCancelButton: true, confirmButtonText: 'Soft delete', confirmButtonColor: '#dc3545' });
+            if (!confirmation.isConfirmed) return;
+            const response = await fetch(`/resource-categories/${id}`, { method: 'DELETE', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken } });
+            const result = await response.json(); if (!response.ok) throw new Error(result.message || 'Delete failed');
+            state.categories = state.categories.filter(item => String(item.id) !== String(id)); refreshCategorySelects();
+            await Swal.fire({ icon: 'success', title: 'Deleted', text: 'Category soft deleted.' });
+        } catch (error) { await Swal.fire({ icon: 'error', title: 'Delete failed', text: error.message }); }
+    });
 
     function refreshResourceSelects() {
         document.querySelectorAll('.resource-select').forEach(select => {
@@ -404,12 +480,9 @@ document.addEventListener('DOMContentLoaded', function () {
             state.categories.push(newCategory);
             refreshCategorySelects();
 
-            this.reset();
-            featuresContainer.innerHTML = '';
-            addFeatureRow();
-            alert('Category created successfully.');
+            await success('Category created successfully.', 'categoryForm');
         } catch (err) {
-            alert('Failed to create category: ' + err.message);
+            await Swal.fire({ icon: 'error', title: 'Create failed', text: err.message });
         }
     });
 
@@ -436,11 +509,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             state.types.push({ id: result.id, category_id: categoryId, name: typeName });
 
-            this.reset();
-            renderCategoryFeatures(null);
-            alert('Resource type created successfully.');
+            await success('Resource type created successfully.', 'typeForm');
         } catch (err) {
-            alert('Failed to create resource type: ' + err.message);
+            await Swal.fire({ icon: 'error', title: 'Create failed', text: err.message });
         }
     });
 
@@ -476,11 +547,9 @@ document.addEventListener('DOMContentLoaded', function () {
             state.resources.push({ id: result.id, name_model: nameModel, serial_number: serialNumber });
             refreshResourceSelects();
 
-            this.reset();
-            refreshTypeSelectForCategory(null);
-            alert('Resource created successfully.');
+            await success('Resource created successfully.', 'resourceForm');
         } catch (err) {
-            alert('Failed to create resource: ' + err.message);
+            await Swal.fire({ icon: 'error', title: 'Create failed', text: err.message });
         }
     });
 
@@ -493,21 +562,19 @@ document.addEventListener('DOMContentLoaded', function () {
         const linkedResourceId = document.getElementById('linkedResourceSelect').value;
 
         if (resourceId === linkedResourceId) {
-            alert('A resource cannot be linked to itself.');
+            await Swal.fire({ icon: 'warning', title: 'Invalid link', text: 'A resource cannot be linked to itself.' });
             return;
         }
 
         try {
-            // Adjust to your actual route, e.g. route('resource-links.store')
-            await postJSON('/resource-links', {
+            await postJSON(@json(route('resource-links.store')), {
                 resource_id: resourceId,
                 linked_resource_id: linkedResourceId
             });
 
-            this.reset();
-            alert('Linked resource created successfully.');
+            await Swal.fire({ icon: 'success', title: 'Success', text: 'Linked resource created successfully.', confirmButtonText: 'OK' });
         } catch (err) {
-            alert('Failed to create linked resource: ' + err.message);
+            await Swal.fire({ icon: 'error', title: 'Create failed', text: err.message });
         }
     });
 

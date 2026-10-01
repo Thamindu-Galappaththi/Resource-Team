@@ -5,10 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ResourceCategory extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     /**
      * Mass-assignable fields.
@@ -34,6 +36,6 @@ class ResourceCategory extends Model
      */
     public function types(): HasMany
     {
-        return $this->hasMany(ResourceType::class);
+        return $this->hasMany(ResourceType::class, 'resource_category_id');
     }
 }
