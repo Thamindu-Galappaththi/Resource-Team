@@ -43,7 +43,24 @@ class Resource extends Model
         'name_model',
         'serial_number',
         'status',
+        'is_deleted',
+        'deleted_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_deleted' => 'boolean',
+            'deleted_at' => 'datetime',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('not_deleted', function (Builder $query) {
+            $query->where($query->getModel()->qualifyColumn('is_deleted'), false);
+        });
+    }
 
     /**
      * Inverse of ResourceType::resources(). Each resource belongs to
