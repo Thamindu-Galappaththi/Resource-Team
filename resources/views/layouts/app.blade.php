@@ -17,7 +17,7 @@
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/sidebar-responsive.css') }}?v=9" rel="stylesheet">
-    
+    @stack('styles')
 
     <!-- JS -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
