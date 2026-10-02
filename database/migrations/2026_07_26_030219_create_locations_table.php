@@ -8,7 +8,6 @@ return new class extends Migration
 {
     /**
      * Lookup table for the Location dropdown on resources and reservations.
-     * Created before resources so resources.location_id can be a foreign key.
      */
     public function up(): void
     {
@@ -17,10 +16,17 @@ return new class extends Migration
             $table->string('name')->unique();
             $table->timestamps();
         });
+
+        Schema::table('resources', function (Blueprint $table) {
+            $table->foreign('location_id')->references('id')->on('locations')->cascadeOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('resources', function (Blueprint $table) {
+            $table->dropForeign(['location_id']);
+        });
         Schema::dropIfExists('locations');
     }
 };
