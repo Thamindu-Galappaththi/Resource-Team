@@ -16,7 +16,7 @@
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/sidebar-responsive.css') }}?v=7" rel="stylesheet">
+    <link href="{{ asset('css/sidebar-responsive.css') }}?v=9" rel="stylesheet">
     
 
     <!-- JS -->
@@ -134,10 +134,9 @@
                 @yield('content')
             </div>
             <div class="footer-wrapper mt-auto">
-                <footer class="footer bg-dark text-light text-center py-3">
+                <footer class="footer bg-dark text-center py-3">
                     <div class="container">
-                        <p class="mb-1 text-muted">© 2026 SLT Mobitel Nebula Institute of Technology</p>
-                        <p class="mb-0 text-muted">Resource Reservation System (NRRS) All Rights Reserved.</p>
+                        <p class="mb-0 text-white">© {{ now()->year }} Nebula Institute of Technology. All rights reserved.</p>
                     </div>
                 </footer>
             </div>
