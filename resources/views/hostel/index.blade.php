@@ -105,8 +105,8 @@
                         @forelse($reservations as $reservation)
                             <tr>
                                 <td>{{ $reservation->reference }}</td>
-                                <td>{{ $reservation->hostelStay?->guest_name ?? '—' }}</td>
-                                <td>{{ $reservation->hostelStay?->roomType?->name ?? '—' }}</td>
+                                <td>{{ $reservation->hostelStay?->guest_name ?? 'ï¿½' }}</td>
+                                <td>{{ $reservation->hostelStay?->roomType?->name ?? 'ï¿½' }}</td>
                                 <td>{{ $reservation->hostelStay?->check_in_at?->timezone(config('reservations.display_timezone'))->format('d M Y') }}</td>
                                 <td>{{ $reservation->hostelStay?->check_out_at?->timezone(config('reservations.display_timezone'))->format('d M Y') }}</td>
                                 <td><span class="badge bg-light text-dark">{{ $reservation->statusEnum()->label() }}</span></td>
