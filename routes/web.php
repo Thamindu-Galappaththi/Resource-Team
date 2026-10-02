@@ -97,7 +97,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 // ===========================================================================
 
 Route::middleware('guest')->prefix('login')->controller(AuthController::class)->group(function () {
-    Route::post('/', 'login')->name('login.attempt');
+        Route::post('/', 'login')->middleware('throttle:5,1')->name('login.attempt');
 });
 
 Route::middleware(['auth', 'active'])->group(function () {

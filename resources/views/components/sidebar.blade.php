@@ -23,7 +23,7 @@
 
     <div class="brand-logo d-flex align-items-center justify-content-center py-3 position-relative w-100">
         <a href="javascript:void(0)" aria-label="Close sidebar"
-            class="nav-link sidebartoggler d-xl-none position-absolute top-0 end-0 mt-1 me-3">
+            class="nav-link sidebartoggler d-lg-none position-absolute top-0 end-0 mt-1 me-3">
             <i class="ti ti-x fs-5"></i>
         </a>
 
@@ -32,7 +32,7 @@
         </a>
     </div>
 
-    <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
+    <nav class="sidebar-nav scroll-sidebar" aria-label="Main">
         <ul class="metismenu" id="menu">
             @if($canDashboard)
                 <li class="nav-small-cap">
@@ -247,13 +247,12 @@
                 </li>
             @endif
 
-            <hr>
-            <div class="px-3 pb-3">
-                <div class="bg-light rounded p-3 d-flex flex-column gap-2 align-items-center">
-                    <a href="{{ route('user.profile') }}" class="btn w-100" style="background-color: #6c8cff; color: #fff; font-weight: 500;">My Profile</a>
-                    <a href="{{ route('logout') }}" class="btn w-100" style="background-color: #ff8c7a; color: #fff; font-weight: 500;">Logout</a>
-                </div>
-            </div>
         </ul>
+        <div class="sidebar-footer">
+            <div class="bg-light rounded p-3 d-flex flex-column gap-2 align-items-center">
+                <a href="{{ route('user.profile') }}" class="btn w-100" style="background-color: #6c8cff; color: #fff; font-weight: 500;">My Profile</a>
+                <a href="{{ route('logout') }}" class="btn w-100" style="background-color: #ff8c7a; color: #fff; font-weight: 500;">Logout</a>
+            </div>
+        </div>
     </nav>
 </div>
