@@ -16,7 +16,7 @@
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/sidebar-responsive.css') }}?v=6" rel="stylesheet">
+    <link href="{{ asset('css/sidebar-responsive.css') }}?v=7" rel="stylesheet">
     
 
     <!-- JS -->
@@ -24,7 +24,7 @@
     <script src="{{ asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('libs/simplebar/dist/simplebar.js') }}"></script>
     <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
-    <script src="{{ asset('js/app.min.js') }}?v=6"></script>
+    <script src="{{ asset('js/app.min.js') }}?v=8"></script>
     <script src="{{ asset('js/sidebarmenu.js') }}"></script>
     <!-- Global utilities -->
     <script src="{{ asset('js/global-utilities.js') }}"></script>
