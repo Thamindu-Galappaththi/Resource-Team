@@ -41,6 +41,8 @@ class LoginTest extends TestCase
         ])->assertRedirect(route('dashboard'));
 
         $this->assertAuthenticatedAs($user);
+        $this->get(route('dashboard'))->assertOk();
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_user_can_login_with_email(): void
