@@ -16,6 +16,7 @@
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/sidebar-responsive.css') }}?v=6" rel="stylesheet">
     
 
     <!-- JS -->
@@ -23,7 +24,7 @@
     <script src="{{ asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('libs/simplebar/dist/simplebar.js') }}"></script>
     <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
-    <script src="{{ asset('js/app.min.js') }}"></script>
+    <script src="{{ asset('js/app.min.js') }}?v=6"></script>
     <script src="{{ asset('js/sidebarmenu.js') }}"></script>
     <!-- Global utilities -->
     <script src="{{ asset('js/global-utilities.js') }}"></script>
@@ -69,40 +70,19 @@
     <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
         data-sidebar-position="fixed" data-header-position="fixed">
         <!-- Sidebar Start -->
-        <aside class="left-sidebar">
-            <!-- Sidebar scroll-->
+        <aside class="left-sidebar" id="leftSidebar">
             @include('components.sidebar')
-            <!-- End Sidebar scroll-->
         </aside>
-        <div x-data x-init="
-    $nextTick(() => {
-        const sidebar = document.querySelector('.scroll-sidebar');
-        const activeLink = sidebar?.querySelector('.sidebar-link.active');
-        if (activeLink && sidebar) {
-            activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    })">
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const sidebar = document.querySelector('.scroll-sidebar');
-        const activeLink = sidebar?.querySelector('.sidebar-link.active');
-        if (activeLink && sidebar) {
-            activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    });
-</script>
+        <div class="sidebar-backdrop" aria-hidden="true"></div>
 
-
-        <!--  Sidebar End -->
-        <!--  Main wrapper -->
         <div class="body-wrapper d-flex flex-column min-vh-100">
             <!--  Header Start -->
             <header class="app-header">
                 <nav class="navbar navbar-expand-lg navbar-light">
                     <ul class="navbar-nav">
-                        <li class="nav-item d-block d-xl-none">
+                        <li class="nav-item d-block d-lg-none">
                             <a class="nav-link sidebartoggler nav-icon-hover" id="headerCollapse"
-                                href="javascript:void(0)">
+                                href="javascript:void(0)" aria-label="Open menu" aria-controls="leftSidebar">
                                 <i class="ti ti-menu-2"></i>
                             </a>
                         </li>
