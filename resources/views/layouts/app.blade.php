@@ -16,15 +16,15 @@
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/sidebar-responsive.css') }}?v=6" rel="stylesheet">
-    
+    <link href="{{ asset('css/sidebar-responsive.css') }}?v=9" rel="stylesheet">
+    @stack('styles')
 
     <!-- JS -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
     <script src="{{ asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('libs/simplebar/dist/simplebar.js') }}"></script>
     <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
-    <script src="{{ asset('js/app.min.js') }}?v=6"></script>
+    <script src="{{ asset('js/app.min.js') }}?v=8"></script>
     <script src="{{ asset('js/sidebarmenu.js') }}"></script>
     <!-- Global utilities -->
     <script src="{{ asset('js/global-utilities.js') }}"></script>
@@ -109,7 +109,7 @@
                             <li class="nav-item dropdown">
                                 <a class="nav-link nav-icon-hover" href="javascript:void(0)" id="drop2"
                                     data-bs-toggle="dropdown" aria-expanded="false">
-                                    <img id="headerAvatar" src="{{ (auth()->check() && !empty(auth()->user()->user_profile)) ? asset('storage/' . auth()->user()->user_profile) : asset('images/profile/user-1.jpg') }}" alt="User avatar"
+                                    <img id="headerAvatar" src="{{ auth()->user()->avatarUrl() }}" alt="User avatar"
                                         width="35" height="35" class="rounded-circle">
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up outline-shadow"
@@ -134,10 +134,9 @@
                 @yield('content')
             </div>
             <div class="footer-wrapper mt-auto">
-                <footer class="footer bg-dark text-light text-center py-3">
+                <footer class="footer bg-dark text-center py-3">
                     <div class="container">
-                        <p class="mb-1 text-muted">© 2026 SLT Mobitel Nebula Institute of Technology</p>
-                        <p class="mb-0 text-muted">Resource Reservation System (NRRS) All Rights Reserved.</p>
+                        <p class="mb-0 text-white">© {{ now()->year }} Nebula Institute of Technology. All rights reserved.</p>
                     </div>
                 </footer>
             </div>
