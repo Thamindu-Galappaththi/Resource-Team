@@ -28,9 +28,7 @@ return new class extends Migration
                 ->constrained('resource_types')
                 ->cascadeOnDelete();
 
-            $table->foreignId('location_id')
-                ->constrained('locations')
-                ->cascadeOnDelete();
+            $table->foreignId('location_id')->index();
 
             // "Resource Name / Model" field.
             $table->string('name_model');

@@ -31,10 +31,17 @@ return new class extends Migration
             $table->foreignId('role_id')->constrained('roles')->cascadeOnDelete();
             $table->primary(['permission_id', 'role_id']);
         });
+
+        Schema::table('users', function (Blueprint $table) {
+            $table->foreign('role_id')->references('id')->on('roles')->nullOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropForeign(['role_id']);
+        });
         Schema::dropIfExists('permission_role');
         Schema::dropIfExists('permissions');
         Schema::dropIfExists('roles');

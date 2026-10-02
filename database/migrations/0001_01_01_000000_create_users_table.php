@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('user_role')->nullable();
-            $table->foreignId('role_id')->nullable()->constrained('roles')->nullOnDelete();
+            $table->foreignId('role_id')->nullable()->index();
             $table->string('designation')->nullable();
             $table->string('user_type')->nullable();
             $table->string('user_profile')->nullable();
