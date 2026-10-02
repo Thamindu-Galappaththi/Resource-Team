@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HostelReservationController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PasswordSetupController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ResourceCalendarController;
 use App\Http\Controllers\ResourceCategoryController;
@@ -89,7 +90,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/reports', fn () => view('reports.index'))->middleware('permission:reports.view')->name('reports.index');
 
-    Route::get('/profile', fn () => response('Profile page setup is pending.', 200))->name('user.profile');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('user.profile');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('user.profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('user.profile.password');
 });
 
 // ===========================================================================

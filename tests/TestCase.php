@@ -48,10 +48,13 @@ abstract class TestCase extends BaseTestCase
 
     private function forgetConfigurationCache(): void
     {
-        $cached = dirname(__DIR__).DIRECTORY_SEPARATOR.'bootstrap'.DIRECTORY_SEPARATOR.'cache'.DIRECTORY_SEPARATOR.'config.php';
+        $cacheDir = dirname(__DIR__).DIRECTORY_SEPARATOR.'bootstrap'.DIRECTORY_SEPARATOR.'cache';
 
-        if (is_file($cached)) {
-            @unlink($cached);
+        foreach (['config.php', 'routes-v7.php', 'routes.php'] as $file) {
+            $cached = $cacheDir.DIRECTORY_SEPARATOR.$file;
+            if (is_file($cached)) {
+                @unlink($cached);
+            }
         }
     }
 }
