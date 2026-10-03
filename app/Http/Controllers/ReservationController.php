@@ -20,16 +20,14 @@ use Illuminate\View\View;
 
 class ReservationController extends Controller
 {
-    public function __construct(private readonly ReservationBookingService $bookings)
-    {
-    }
+    public function __construct(private readonly ReservationBookingService $bookings) {}
 
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Reservation::class);
 
         $query = Reservation::query()
-            ->with(['requester', 'location', 'items'])
+            ->with(['requester', 'createdBy', 'location', 'items.resource.type.category', 'statusHistory.actor'])
             ->latest('reservation_date')
             ->latest('start_time');
 
