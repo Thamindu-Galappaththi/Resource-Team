@@ -162,6 +162,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
         Route::post('/', 'store')->middleware('permission:hostel.create')->name('store');
         Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:hostel.index,hostel.create,hostel.manage')->name('cancel');
+        Route::post('/{reservation}/approval', 'updateApproval')->middleware('permission:hostel.manage')->name('approval');
     });
 
     Route::prefix('logout')->controller(AuthController::class)->group(function () {

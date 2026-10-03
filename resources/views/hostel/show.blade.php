@@ -10,7 +10,7 @@
             <p class="text-white mb-0">{{ $reservation->title }}</p>
         </div>
         <div class="d-flex gap-2 align-items-center">
-            <span class="badge bg-light text-dark fs-6">{{ $reservation->statusEnum()->label() }}</span>
+            <span class="badge rounded-pill px-3 {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
             <a href="{{ route('hostel.index') }}" class="btn btn-outline-light">Back to list</a>
         </div>
     </div>

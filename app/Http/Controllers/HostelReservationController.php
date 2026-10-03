@@ -21,9 +21,7 @@ use Illuminate\View\View;
 /** Hostel list/create/show/cancel. Interns: copy this + HostelReservationService, not a new booking stack. */
 class HostelReservationController extends Controller
 {
-    public function __construct(private readonly HostelReservationService $hostel)
-    {
-    }
+    public function __construct(private readonly HostelReservationService $hostel) {}
 
     public function index(Request $request): View
     {
@@ -31,7 +29,7 @@ class HostelReservationController extends Controller
 
         $query = Reservation::query()
             ->where('type', ReservationType::HOSTEL->value)
-            ->with(['requester', 'location', 'hostelStay.roomType', 'items'])
+            ->with(['requester', 'location', 'hostelStay.roomType', 'items.resource', 'statusHistory.actor'])
             ->latest('reservation_date');
 
         $this->restrictToOwnUnlessStaff($query);
@@ -76,7 +74,13 @@ class HostelReservationController extends Controller
                 'pending' => $pending,
             ],
             'roomTypes' => $this->roomTypes(),
-            'statuses' => ReservationStatus::cases(),
+            'statuses' => [
+                ReservationStatus::PENDING_APPROVAL,
+                ReservationStatus::APPROVED,
+                ReservationStatus::REJECTED,
+                ReservationStatus::CANCELLED,
+                ReservationStatus::EXPIRED,
+            ],
         ]);
     }
 
@@ -141,6 +145,33 @@ class HostelReservationController extends Controller
         return redirect()
             ->route('hostel.index')
             ->with('success', 'Hostel reservation cancelled successfully.');
+    }
+
+    public function updateApproval(Request $request, Reservation $reservation): RedirectResponse
+    {
+        abort_unless($reservation->type === ReservationType::HOSTEL->value, 404);
+        $this->authorize('manageHostel', $reservation);
+
+        $data = $request->validate([
+            'status' => ['required', 'in:'.ReservationStatus::APPROVED->value.','.ReservationStatus::REJECTED->value],
+            'reason' => ['nullable', 'required_if:status,'.ReservationStatus::REJECTED->value, 'string', 'max:1000'],
+        ]);
+
+        try {
+            $updatedReservation = $this->hostel->updateApproval($reservation, $request->user(), $data['status'], $data['reason'] ?? null);
+        } catch (ReservationConflictException $exception) {
+            return back()->withInput()->withErrors(['status' => 'This room is no longer available for the selected dates.']);
+        } catch (ValidationException $exception) {
+            return back()->withInput()->withErrors($exception->errors());
+        }
+
+        if ($updatedReservation->status === ReservationStatus::EXPIRED->value) {
+            return back()->with('success', 'Reservation expired at check-in; the held room was released and was not approved.');
+        }
+
+        return back()->with('success', $data['status'] === ReservationStatus::APPROVED->value
+            ? 'Hostel reservation approved.'
+            : 'Hostel reservation rejected.');
     }
 
     private function roomTypes()

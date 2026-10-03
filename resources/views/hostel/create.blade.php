@@ -53,7 +53,17 @@
                             <div class="col-12">
                                 <label for="guest_name" class="form-label">Guest Name</label>
                                 <input type="text" id="guest_name" name="guest_name" class="form-control"
-                                       value="{{ old('guest_name') }}" placeholder="e.g. Kasun Madushanka" required>
+                                       value="{{ old('guest_name') }}" placeholder="e.g. Guest Name" required>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="guest_phone" class="form-label">Guest Phone Number</label>
+                                <input type="tel" id="guest_phone" name="guest_phone" class="form-control"
+                                       value="{{ old('guest_phone') }}" autocomplete="tel" placeholder="e.g. +94 77 123 4567">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="guest_identity_number" class="form-label">Guest ID / Passport Number</label>
+                                <input type="text" id="guest_identity_number" name="guest_identity_number" class="form-control"
+                                       value="{{ old('guest_identity_number') }}" autocomplete="off">
                             </div>
                             <div class="col-12 col-sm-6">
                                 <label for="check_in_date" class="form-label">Check-in Date</label>

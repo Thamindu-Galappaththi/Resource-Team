@@ -23,10 +23,24 @@ enum ReservationStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::PENDING_APPROVAL => 'Pending approval',
+            self::PENDING_APPROVAL => 'Pending',
             self::CHANGES_REQUESTED => 'Changes requested',
             self::IN_PROGRESS => 'In progress',
             default => str_replace('_', ' ', ucfirst($this->value)),
+        };
+    }
+
+    public function badgeClass(): string
+    {
+        return match ($this) {
+            self::PENDING_APPROVAL, self::CHANGES_REQUESTED => 'bg-warning text-dark',
+            self::APPROVED => 'status-approved',
+            self::CONFIRMED => 'bg-success',
+            self::REJECTED => 'bg-danger',
+            self::IN_PROGRESS => 'bg-info text-dark',
+            self::COMPLETED => 'bg-primary',
+            self::CANCELLED => 'bg-secondary',
+            self::DRAFT, self::EXPIRED => 'bg-light text-dark border',
         };
     }
 
