@@ -23,10 +23,29 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+        }
+
+        #starfield {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            mix-blend-mode: screen;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #starfield {
+                display: none;
+            }
         }
 
         .login-page,
         .login-shell {
+            position: relative;
+            z-index: 1;
             width: 100%;
             min-height: 100vh;
             display: flex;
@@ -175,6 +194,7 @@
     </style>
 </head>
 <body>
+    <canvas id="starfield" aria-hidden="true"></canvas>
     <main class="login-page login-shell">
         <section class="login-card" aria-labelledby="login-title">
             <img src="{{ url('images/logos/nebula.png') }}" alt="SLT Mobitel Nebula Institute of Technology" class="login-logo">
@@ -229,6 +249,12 @@
         </section>
     </main>
 
+    @php
+        $nebulaStars = json_decode(@file_get_contents(public_path('js/nebula-stars.json')) ?: '{}');
+    @endphp
+    <script>
+        window.NEBULA_STARS = @json($nebulaStars);
+    </script>
     <script src="{{ url('js/login.js') }}?v={{ @filemtime(public_path('js/login.js')) ?: time() }}"></script>
 </body>
 </html>

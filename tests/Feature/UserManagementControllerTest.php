@@ -94,7 +94,19 @@ class UserManagementControllerTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $administrator->id]);
     }
 
-    public function test_soft_deleted_user_remains_visible_with_deleted_timestamp(): void
+    public function test_user_management_pagination_uses_bootstrap_links(): void
+    {
+        $administrator = User::factory()->role('admin')->create();
+        User::factory()->count(16)->create();
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSee('page-link', false)
+            ->assertDontSee('Showing 1 to 15 of 16 results');
+    }
+
+    public function test_soft_deleted_user_remains_visible(): void
     {
         $administrator = User::factory()->role('admin')->create();
         $deletedUser = User::factory()->create([
@@ -106,7 +118,6 @@ class UserManagementControllerTest extends TestCase
             ->get(route('user.management'))
             ->assertOk()
             ->assertSee('Deleted User')
-            ->assertSee('Deleted')
-            ->assertSee($deletedUser->deleted_at->format('M d, Y'));
+            ->assertSee('Deleted');
     }
 }

@@ -16,6 +16,9 @@
     @if($errors->any())
         <div class="alert alert-danger" role="alert"><strong>Please check the form.</strong> Some details need your attention.</div>
     @endif
+        <div class="card-body">
+            <form method="POST" action="{{ route('canteen.store') }}">
+                @csrf
 
     <form method="POST" action="{{ route('canteen.reservations.store') }}">
         @csrf

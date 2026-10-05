@@ -25,7 +25,10 @@ class LoginTest extends TestCase
             ->assertSee('Sign in to manage your institutional assets')
             ->assertSee('Username')
             ->assertSee('Sign In')
-            ->assertSee('Forgot Password?');
+            ->assertSee('Forgot Password?')
+            ->assertSee('id="starfield"', false)
+            ->assertSee('NEBULA_STARS', false)
+            ->assertSee('js/login.js', false);
     }
 
     public function test_user_can_login_with_nic(): void
@@ -40,6 +43,8 @@ class LoginTest extends TestCase
             'password' => 'secret-pass',
         ])->assertRedirect(route('dashboard'));
 
+        $this->assertAuthenticatedAs($user);
+        $this->get(route('dashboard'))->assertOk();
         $this->assertAuthenticatedAs($user);
     }
 

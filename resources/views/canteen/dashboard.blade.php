@@ -16,6 +16,9 @@
                 <a href="{{ route('canteen.reservations.create') }}" class="btn btn-primary"><i class="ti ti-plus me-1"></i>New reservation</a>
             @endcan
         </div>
+        @if(auth()->user()->hasPermission('canteen.index'))
+            <a href="{{ route('canteen.index') }}" class="btn btn-primary">Existing Canteen Reservations</a>
+        @endif
     </div>
 
     <div class="row g-3 mb-4">

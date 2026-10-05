@@ -7,32 +7,26 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
-     *
-     * Standalone lookup table for the "Location" dropdown on Tab 3.
-     * Kept intentionally minimal (just a name) since no creation form
-     * exists for it yet — rows are added via LocationSeeder (or
-     * directly) until a management screen is built. No foreign keys
-     * of its own.
+     * Lookup table for the Location dropdown on resources and reservations.
      */
     public function up(): void
     {
         Schema::create('locations', function (Blueprint $table) {
             $table->id();
-
-            // e.g. "Welisara", "Moratuwa", "Peradeniya". Unique so the
-            // same location can't be duplicated by mistake.
             $table->string('name')->unique();
-
             $table->timestamps();
+        });
+
+        Schema::table('resources', function (Blueprint $table) {
+            $table->foreign('location_id')->references('id')->on('locations')->cascadeOnDelete();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
+        Schema::table('resources', function (Blueprint $table) {
+            $table->dropForeign(['location_id']);
+        });
         Schema::dropIfExists('locations');
     }
 };

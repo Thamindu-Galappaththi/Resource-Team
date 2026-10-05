@@ -9,7 +9,7 @@
             <h4 class="mb-0">Edit Canteen Reservation</h4>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ route('canteen.reservations.update', $reservation) }}">
+            <form method="POST" action="{{ route('canteen.update', $reservation) }}">
                 @csrf
                 @method('PUT')
                 <div class="row g-3">

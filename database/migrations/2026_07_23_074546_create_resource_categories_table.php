@@ -20,7 +20,8 @@ return new class extends Migration
             // Kept unique so the same category can't be created twice by mistake.
             $table->string('name')->unique();
 
-            $table->timestamps(); // created_at / updated_at, useful for auditing
+            $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Resource extends Model
@@ -41,7 +43,24 @@ class Resource extends Model
         'name_model',
         'serial_number',
         'status',
+        'is_deleted',
+        'deleted_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_deleted' => 'boolean',
+            'deleted_at' => 'datetime',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('not_deleted', function (Builder $query) {
+            $query->where($query->getModel()->qualifyColumn('is_deleted'), false);
+        });
+    }
 
     /**
      * Inverse of ResourceType::resources(). Each resource belongs to
@@ -59,6 +78,12 @@ class Resource extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function linkedResources(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'resource_links', 'resource_id', 'linked_resource_id')
+            ->withTimestamps();
     }
 
     /**
@@ -80,5 +105,14 @@ class Resource extends Model
             'resource_type_id',        // local key on THIS (resources) table
             'resource_category_id'     // local key on the intermediate (resource_types) table
         );
+    }
+
+    public function scopeHostelRooms(Builder $query): Builder
+    {
+        return $query
+            ->where('status', 'active')
+            ->whereHas('type.category', function (Builder $category) {
+                $category->where('name', config('hostel.category_name', 'Hostel Room'));
+            });
     }
 }

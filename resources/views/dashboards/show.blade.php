@@ -1,39 +1,108 @@
 @extends('layouts.app')
 
-@section('title', $dashboard['title'] ?? 'Dashboard')
+@section('title', $title ?? 'Dashboard')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/dashboard-role.css') }}?v={{ @filemtime(public_path('css/dashboard-role.css')) ?: time() }}">
+@endpush
 
 @section('content')
-<div class="container-fluid py-4">
+<div class="rs-dash">
     @if(session('status'))
-        <div class="alert alert-success">{{ session('status') }}</div>
+        <div class="alert alert-success border-0 shadow-sm">{{ session('status') }}</div>
     @endif
 
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-4">
-            <p class="text-muted mb-1 text-uppercase small fw-semibold">{{ $role->name ?? 'Unassigned role' }}</p>
-            <h2 class="fw-bold mb-2">{{ $dashboard['title'] }}</h2>
-            <p class="text-muted mb-0">{{ $dashboard['subtitle'] }}</p>
+    <header class="rs-dash-hero">
+        <div class="rs-dash-hero__copy">
+            <p class="rs-dash-kicker">{{ $role->name ?? 'Workspace' }} · {{ $as_of }}</p>
+            <h1>{{ $title }}</h1>
+            <p class="rs-dash-lead">{{ $subtitle }}</p>
         </div>
-    </div>
+        @if(!empty($actions))
+            <div class="rs-dash-actions">
+                @foreach($actions as $action)
+                    <a class="rs-dash-action {{ $action['variant'] === 'primary' ? 'is-primary' : '' }}" href="{{ $action['href'] }}">
+                        <i class="{{ $action['icon'] }}"></i>
+                        <span>{{ $action['label'] }}</span>
+                    </a>
+                @endforeach
+            </div>
+        @endif
+    </header>
 
-    @if(empty($dashboard['widgets']))
-        <div class="alert alert-warning border-0 shadow-sm">
-            No dashboard widgets are assigned for this role yet.
-        </div>
-    @else
-        <div class="row g-3">
-            @foreach($dashboard['widgets'] as $widget)
-                <div class="col-md-6 col-xl-4">
-                    <div class="card border-0 shadow-sm rounded-4 h-100">
-                        <div class="card-body p-4">
-                            <div class="text-muted small mb-2">{{ $widget }}</div>
-                            <div class="fs-4 fw-semibold">—</div>
-                            <p class="text-muted small mb-0 mt-2">Placeholder. This widget will be connected in a later module.</p>
+    @if(!empty($kpis))
+        <section class="rs-dash-kpis" aria-label="Key figures">
+            @foreach($kpis as $kpi)
+                @php $tag = !empty($kpi['href']) ? 'a' : 'div'; @endphp
+                <{{ $tag }} class="rs-dash-kpi tone-{{ $kpi['tone'] }}" @if(!empty($kpi['href'])) href="{{ $kpi['href'] }}" @endif>
+                    <span class="rs-dash-kpi__icon" aria-hidden="true"><i class="{{ $kpi['icon'] }}"></i></span>
+                    <span class="rs-dash-kpi__label">{{ $kpi['label'] }}</span>
+                    <span class="rs-dash-kpi__value">{{ $kpi['value'] }}</span>
+                    <span class="rs-dash-kpi__hint">{{ $kpi['hint'] }}</span>
+                </{{ $tag }}>
+            @endforeach
+        </section>
+    @endif
+
+    <div class="rs-dash-grid">
+        <section class="rs-dash-panel">
+            <div class="rs-dash-panel__head">
+                <h2>{{ $chart['title'] ?? 'This week' }}</h2>
+            </div>
+            <div class="rs-chart" role="img" aria-label="{{ $chart['title'] ?? 'Weekly volume' }}">
+                @forelse($chart['points'] ?? [] as $point)
+                    <div class="rs-chart__col">
+                        <span class="rs-chart__n">{{ $point['value'] }}</span>
+                        <div class="rs-chart__track">
+                            <div class="rs-chart__bar" style="height: {{ $point['pct'] }}%"></div>
                         </div>
+                        <span class="rs-chart__d">{{ $point['label'] }}</span>
+                    </div>
+                @empty
+                    <p class="rs-dash-empty mb-0">No volume to chart yet.</p>
+                @endforelse
+            </div>
+        </section>
+
+        <section class="rs-dash-panel">
+            <div class="rs-dash-panel__head">
+                <h2>{{ $breakdown['title'] ?? 'Breakdown' }}</h2>
+            </div>
+            @forelse($breakdown['items'] ?? [] as $item)
+                <div class="rs-mix">
+                    <div class="rs-mix__row">
+                        <span>{{ $item['label'] }}</span>
+                        <strong>{{ $item['value'] }}</strong>
+                    </div>
+                    <div class="rs-mix__track">
+                        <div class="rs-mix__fill tone-{{ $item['tone'] }}" style="width: {{ $item['pct'] }}%"></div>
                     </div>
                 </div>
-            @endforeach
-        </div>
+            @empty
+                <p class="rs-dash-empty mb-0">No status data yet.</p>
+            @endforelse
+        </section>
+    </div>
+
+    <div class="rs-dash-grid rs-dash-grid--lists">
+        @include('dashboards.partials.list', ['list' => $queue])
+        @include('dashboards.partials.list', ['list' => $upcoming])
+    </div>
+
+    @if(! empty($spotlight['items'] ?? []))
+        <section class="rs-dash-panel">
+            <div class="rs-dash-panel__head">
+                <h2>{{ $spotlight['title'] }}</h2>
+            </div>
+            <ul class="rs-spot">
+                @foreach($spotlight['items'] as $item)
+                    <li>
+                        <span>{{ $item['label'] }}</span>
+                        <strong>{{ $item['value'] }}</strong>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
     @endif
 </div>
 @endsection

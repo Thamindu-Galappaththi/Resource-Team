@@ -12,6 +12,7 @@
         </div>
         @can('create', \App\Models\CanteenReservation::class)
             <a href="{{ route('canteen.reservations.create') }}" class="btn btn-primary"><i class="ti ti-plus me-1"></i>New reservation</a>
+            <a href="{{ route('canteen.create') }}" class="btn btn-primary">New Reservation</a>
         @endcan
     </div>
 
@@ -48,6 +49,12 @@
                 <div class="col-md-4 col-xl-3">
                     <label class="form-label" for="search">Search</label>
                     <input id="search" type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Reference, reservation, requester">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ route('canteen.index') }}" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" value="{{ request('search') }}" placeholder="Reservation or person">
                 </div>
                 <div class="col-sm-6 col-md-2">
                     <label class="form-label" for="from_date">From</label>
@@ -140,6 +147,13 @@
                                         @endcan
                                         @can('cancel', $reservation)
                                             <form action="{{ route('canteen.reservations.destroy', $reservation) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel this reservation?')">
+                                            <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-sm btn-outline-secondary">View</a>
+                                        @endcan
+                                        @can('update', $reservation)
+                                            <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        @endcan
+                                        @can('cancel', $reservation)
+                                            <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button class="btn btn-sm btn-outline-danger" title="Cancel reservation" aria-label="Cancel {{ $reservation->reservation_ref }}"><i class="ti ti-x"></i></button>
