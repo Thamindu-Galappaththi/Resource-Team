@@ -32,6 +32,12 @@ class ResourceController extends Controller
         return response()->json($resources);
     }
 
+    /** GET /resources/{resource}: details for the read-only view. */
+    public function show(Resource $resource): JsonResponse
+    {
+        return response()->json($resource->load(['type.category', 'location', 'linkedResources.type.category', 'linkedResources.location']));
+    }
+
     /**
      * POST /resources
      *
@@ -54,7 +60,7 @@ class ResourceController extends Controller
             // display name, nothing is sent to or stored by the
             // backend for it.
             'name_model' => $validated['name_model'],
-            'serial_number' => $validated['serial_number'],
+            'serial_number' => $validated['serial_number'] ?? null,
             'status' => $validated['status'],
         ]);
 
@@ -64,6 +70,21 @@ class ResourceController extends Controller
             $resource->load(['type.category', 'location']),
             201
         );
+    }
+
+    /** PUT /resources/{resource}: update using the Create Resource form payload. */
+    public function update(StoreResourceRequest $request, Resource $resource): JsonResponse
+    {
+        $validated = $request->validated();
+        $resource->update([
+            'resource_type_id' => $validated['resource_type_id'],
+            'location_id' => $validated['location_id'],
+            'name_model' => $validated['name_model'],
+            'serial_number' => $validated['serial_number'] ?? null,
+            'status' => $validated['status'],
+        ]);
+
+        return response()->json($resource->fresh()->load(['type.category', 'location']));
     }
 
     /**
@@ -120,5 +141,14 @@ class ResourceController extends Controller
         return response()->json($resource->load(['type.category', 'location']));
     }
 
+    /** DELETE /resources/{resource}: soft delete without removing the row. */
+    public function destroy(Resource $resource): JsonResponse
+    {
+        $resource->update([
+            'is_deleted' => true,
+            'deleted_at' => now(),
+        ]);
 
+        return response()->json(['message' => 'Resource soft deleted.']);
+    }
 }

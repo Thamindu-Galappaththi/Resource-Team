@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HostelReservationController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PasswordSetupController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ResourceCalendarController;
 use App\Http\Controllers\ResourceCategoryController;
@@ -89,7 +90,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/reports', fn () => view('reports.index'))->middleware('permission:reports.view')->name('reports.index');
 
-    Route::get('/profile', fn () => response('Profile page setup is pending.', 200))->name('user.profile');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('user.profile');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('user.profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('user.profile.password');
 });
 
 // ===========================================================================
@@ -97,7 +100,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 // ===========================================================================
 
 Route::middleware('guest')->prefix('login')->controller(AuthController::class)->group(function () {
-    Route::post('/', 'login')->name('login.attempt');
+        Route::post('/', 'login')->middleware('throttle:5,1')->name('login.attempt');
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
@@ -128,6 +131,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('resources')->name('resources.')->controller(ResourceController::class)->group(function () {
+        Route::get('/{resource}', 'show')->middleware('permission:resources.index,resources.create')->name('show');
+        Route::put('/{resource}', 'update')->middleware('permission:resources.create')->name('update');
+        Route::delete('/{resource}', 'destroy')->middleware('permission:resources.index')->name('destroy');
         Route::post('/', 'store')->middleware('permission:resources.create')->name('store');
         Route::post('/{resource}/request-delete', 'requestDelete')->middleware('permission:resources.index')->name('request-delete');
         Route::post('/{resource}/approve-delete', 'approveDelete')->middleware('permission:resources.index')->name('approve-delete');

@@ -16,14 +16,15 @@
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
-    
+    <link href="{{ asset('css/sidebar-responsive.css') }}?v=9" rel="stylesheet">
+    @stack('styles')
 
     <!-- JS -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
     <script src="{{ asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('libs/simplebar/dist/simplebar.js') }}"></script>
     <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
-    <script src="{{ asset('js/app.min.js') }}"></script>
+    <script src="{{ asset('js/app.min.js') }}?v=8"></script>
     <script src="{{ asset('js/sidebarmenu.js') }}"></script>
     <!-- Global utilities -->
     <script src="{{ asset('js/global-utilities.js') }}"></script>
@@ -74,40 +75,19 @@
     <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
         data-sidebar-position="fixed" data-header-position="fixed">
         <!-- Sidebar Start -->
-        <aside class="left-sidebar">
-            <!-- Sidebar scroll-->
+        <aside class="left-sidebar" id="leftSidebar">
             @include('components.sidebar')
-            <!-- End Sidebar scroll-->
         </aside>
-        <div x-data x-init="
-    $nextTick(() => {
-        const sidebar = document.querySelector('.scroll-sidebar');
-        const activeLink = sidebar?.querySelector('.sidebar-link.active');
-        if (activeLink && sidebar) {
-            activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    })">
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const sidebar = document.querySelector('.scroll-sidebar');
-        const activeLink = sidebar?.querySelector('.sidebar-link.active');
-        if (activeLink && sidebar) {
-            activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    });
-</script>
+        <div class="sidebar-backdrop" aria-hidden="true"></div>
 
-
-        <!--  Sidebar End -->
-        <!--  Main wrapper -->
         <div class="body-wrapper d-flex flex-column min-vh-100">
             <!--  Header Start -->
             <header class="app-header">
                 <nav class="navbar navbar-expand-lg navbar-light">
                     <ul class="navbar-nav">
-                        <li class="nav-item d-block d-xl-none">
+                        <li class="nav-item d-block d-lg-none">
                             <a class="nav-link sidebartoggler nav-icon-hover" id="headerCollapse"
-                                href="javascript:void(0)">
+                                href="javascript:void(0)" aria-label="Open menu" aria-controls="leftSidebar">
                                 <i class="ti ti-menu-2"></i>
                             </a>
                         </li>
@@ -134,7 +114,7 @@
                             <li class="nav-item dropdown">
                                 <a class="nav-link nav-icon-hover" href="javascript:void(0)" id="drop2"
                                     data-bs-toggle="dropdown" aria-expanded="false">
-                                    <img id="headerAvatar" src="{{ (auth()->check() && !empty(auth()->user()->user_profile)) ? asset('storage/' . auth()->user()->user_profile) : asset('images/profile/user-1.jpg') }}" alt="User avatar"
+                                    <img id="headerAvatar" src="{{ auth()->user()->avatarUrl() }}" alt="User avatar"
                                         width="35" height="35" class="rounded-circle">
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up outline-shadow"
@@ -159,10 +139,9 @@
                 @yield('content')
             </div>
             <div class="footer-wrapper mt-auto">
-                <footer class="footer bg-dark text-light text-center py-3">
+                <footer class="footer bg-dark text-center py-3">
                     <div class="container">
-                        <p class="mb-1 text-muted">© 2026 SLT Mobitel Nebula Institute of Technology</p>
-                        <p class="mb-0 text-muted">Resource Reservation System (NRRS) All Rights Reserved.</p>
+                        <p class="mb-0 text-white">© {{ now()->year }} Nebula Institute of Technology. All rights reserved.</p>
                     </div>
                 </footer>
             </div>

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Resource;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,6 +27,8 @@ class StoreResourceRequest extends FormRequest
      */
     public function rules(): array
     {
+        $resource = $this->route('resource');
+
         return [
             'category_id' => ['required', 'integer', Rule::exists('resource_categories', 'id')],
 
@@ -55,9 +58,11 @@ class StoreResourceRequest extends FormRequest
 
             'name_model' => ['required', 'string', 'max:255'],
 
-            // Unique across ALL resources, matching the DB unique
-            // constraint on serial_number.
-            'serial_number' => ['required', 'string', 'max:255', Rule::unique('resources', 'serial_number')],
+            // Optional serials are normalized to null before validation.
+            'serial_number' => [
+                'nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9-]+$/',
+                Rule::unique('resources', 'serial_number')->ignore($resource instanceof Model ? $resource->getKey() : null),
+            ],
 
             // Must be one of the fixed keys defined on Resource::STATUSES
             // (e.g. "active", "under_maintenance") — keeps the frontend
@@ -65,6 +70,15 @@ class StoreResourceRequest extends FormRequest
             // of truth instead of two separate hardcoded lists.
             'status' => ['required', 'string', Rule::in(array_keys(Resource::STATUSES))],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $serialNumber = $this->input('serial_number');
+        if (is_string($serialNumber)) {
+            $serialNumber = trim($serialNumber);
+            $this->merge(['serial_number' => $serialNumber === '' ? null : $serialNumber]);
+        }
     }
 
     public function attributes(): array

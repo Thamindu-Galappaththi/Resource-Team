@@ -28,12 +28,19 @@ return new class extends Migration
                 ->constrained('resource_types')
                 ->cascadeOnDelete();
 
+            $table->foreignId('location_id')->index();
+
             // "Resource Name / Model" field.
             $table->string('name_model');
 
-            // "Serial Number" field. Unique because two physical
-            // resources should never share the same serial number.
-            $table->string('serial_number')->unique();
+            // "Serial Number" field. Unique when present; nullable for
+            // items that do not have a serial (rooms, spaces, etc.).
+            $table->string('serial_number')->nullable()->unique();
+
+            $table->string('status')->default('active');
+
+            $table->boolean('is_deleted')->default(false);
+            $table->timestamp('deleted_at')->nullable();
 
             $table->timestamps();
         });

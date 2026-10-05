@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -112,5 +113,18 @@ class User extends Authenticatable
             ->push($this->roleSlug())
             ->filter()
             ->contains(fn (string $slug) => RoleHelper::hasPermission($slug, $permission));
+    }
+
+    public function avatarUrl(): string
+    {
+        if (! filled($this->user_profile)) {
+            return asset('images/profile/user-1.jpg');
+        }
+
+        if (str_starts_with($this->user_profile, 'http://') || str_starts_with($this->user_profile, 'https://')) {
+            return $this->user_profile;
+        }
+
+        return Storage::disk('public')->url($this->user_profile);
     }
 }

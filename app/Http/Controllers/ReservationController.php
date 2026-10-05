@@ -286,6 +286,11 @@ class ReservationController extends Controller
             'prefillStart' => $request->query('start_time', '09:00'),
             'prefillEnd' => $request->query('end_time', '10:00'),
             'prefillResourceId' => $request->query('resource_id'),
+            'prefillResourceIds' => collect($request->query('resource_ids', []))
+                ->filter(fn ($id) => is_scalar($id) && ctype_digit((string) $id))
+                ->map(fn ($id) => (string) $id)
+                ->unique()
+                ->values(),
         ];
     }
 }

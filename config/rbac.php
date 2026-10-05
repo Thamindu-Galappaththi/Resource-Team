@@ -165,8 +165,7 @@ return [
     ],
 
     /*
-    | Placeholder widgets only — dashboards are not fully built yet.
-    | DashboardController + permission middleware use this metadata.
+    | Role dashboard copy. Metrics and shortcuts are built by DashboardService.
     */
     'dashboards' => [
         'developer' => [
