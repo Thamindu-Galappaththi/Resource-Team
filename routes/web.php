@@ -74,10 +74,19 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/{reservation}', 'show')->middleware('permission:hostel.index')->name('show');
     });
 
+    // Canteen pages. Each reservation route is registered under two names
+    // (short + "reservations.*") because views, controllers and tests use both.
     Route::prefix('canteen')->name('canteen.')->controller(CanteenReservationController::class)->group(function () {
         Route::get('/', 'dashboard')->middleware('permission:canteen.view')->name('dashboard');
         Route::get('/maintenance', 'maintenance')->middleware('permission:canteen.manage')->name('maintenance');
         Route::get('/forecast/{date}', 'forecast')->middleware('permission:canteen.view')->name('forecast');
+
+        Route::get('/reservations', 'index')->middleware('permission:canteen.index')->name('index');
+        Route::get('/reservations/create', 'create')->middleware('permission:canteen.create')->name('create');
+        Route::get('/reservations/{reservation}', 'show')->middleware('permission:canteen.index')->name('show');
+        Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
+
+        // Aliases (same URLs and permissions, alternate names)
         Route::get('/reservations', 'index')->middleware('permission:canteen.index')->name('reservations.index');
         Route::get('/reservations/create', 'create')->middleware('permission:canteen.create')->name('reservations.create');
         Route::get('/reservations/{reservation}', 'show')->middleware('permission:canteen.index')->name('reservations.show');
@@ -146,6 +155,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('canteen')->name('canteen.')->controller(CanteenReservationController::class)->group(function () {
+        Route::post('/reservations', 'store')->middleware('permission:canteen.create')->name('store');
+        Route::put('/reservations/{reservation}', 'update')->middleware('permission:canteen.create')->name('update');
+        Route::patch('/reservations/{reservation}/status', 'updateStatus')->middleware('permission:canteen.manage')->name('status');
+        Route::delete('/reservations/{reservation}', 'destroy')->middleware('permission:canteen.create,canteen.manage')->name('destroy');
+
+        // Aliases (same URLs and permissions, alternate names)
         Route::post('/reservations', 'store')->middleware('permission:canteen.create')->name('reservations.store');
         Route::put('/reservations/{reservation}', 'update')->middleware('permission:canteen.create')->name('reservations.update');
         Route::patch('/reservations/{reservation}/status', 'updateStatus')->middleware('permission:canteen.manage')->name('reservations.status');
