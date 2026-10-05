@@ -160,7 +160,8 @@
                         <select id="room_type_id" name="room_type_id" class="form-select">
                             <option value="">All Categories</option>
                             @foreach($roomTypes as $type)
-                            <option value="{{ $type->id }}" @selected(request('room_type_id') == $type->id)>{{ $type->name }}</option>
+                            <option value="{{ $type->id }}" @selected(request('room_type_id')==$type->
+                                id)>{{ $type->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -171,6 +172,8 @@
                             <button type="button" class="btn {{ request('status') ? 'btn-outline-primary' : 'btn-primary' }}" data-hostel-status="" aria-pressed="{{ request('status') ? 'false' : 'true' }}">All</button>
                             @foreach($statuses as $status)
                                 <button type="button" class="btn {{ request('status') === $status->value ? 'btn-primary' : 'btn-outline-primary' }}" data-hostel-status="{{ $status->value }}" aria-pressed="{{ request('status') === $status->value ? 'true' : 'false' }}">{{ $status->label() }}</button>
+                            <option value="{{ $status->value }}" @selected(request('status')===$status->
+                                value)>{{ $status->label() }}</option>
                             @endforeach
                         </div>
                     </div>
@@ -277,8 +280,8 @@
                         @forelse($reservations as $reservation)
                             <tr>
                                 <td>{{ $reservation->reference }}</td>
-                                <td>{{ $reservation->hostelStay?->guest_name ?? '—' }}</td>
-                                <td>{{ $reservation->hostelStay?->roomType?->name ?? '—' }}</td>
+                                <td>{{ $reservation->hostelStay?->guest_name ?? '�' }}</td>
+                                <td>{{ $reservation->hostelStay?->roomType?->name ?? '�' }}</td>
                                 <td>{{ $reservation->hostelStay?->check_in_at?->timezone(config('reservations.display_timezone'))->format('d M Y') }}</td>
                                 <td>{{ $reservation->hostelStay?->check_out_at?->timezone(config('reservations.display_timezone'))->format('d M Y') }}</td>
                                 <td><span class="badge rounded-pill px-3 {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span></td>
@@ -301,6 +304,27 @@
                                     </div>
                                 </td>
                             </tr>
+                        <tr>
+                            <td>{{ $reservation->reference }}</td>
+                            <td>{{ $reservation->hostelStay?->guest_name ?? '—' }}</td>
+                            <td>{{ $reservation->hostelStay?->roomType?->name ?? '—' }}</td>
+                            <td>{{ $reservation->hostelStay?->check_in_at?->timezone(config('reservations.display_timezone'))->format('d M Y') }}
+                            </td>
+                            <td>{{ $reservation->hostelStay?->check_out_at?->timezone(config('reservations.display_timezone'))->format('d M Y') }}
+                            </td>
+                            <td><span class="badge bg-light text-dark">{{ $reservation->statusEnum()->label() }}</span>
+                            </td>
+                            <td class="text-end text-nowrap">
+                                @can('viewHostel', $reservation)
+                                <a href="{{ route('hostel.show', $reservation) }}"
+                                    class="btn btn-sm btn-outline-secondary">View</a>
+                                @endcan
+                                @can('cancelHostel', $reservation)
+                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                                    data-bs-target="#cancelModal-{{ $reservation->id }}">Cancel</button>
+                                @endcan
+                            </td>
+                        </tr>
                         @empty
                         <tr>
                             <td colspan="7" class="text-center text-muted py-5">
@@ -451,9 +475,28 @@
                         <button class="btn btn-danger">Cancel reservation</button>
                     </div>
                 </form>
+@can('cancelHostel', $reservation)
+<div class="modal fade" id="cancelModal-{{ $reservation->id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ route('hostel.cancel', $reservation) }}" class="modal-content">
+            @csrf
+            <div class="modal-header">
+                <h5 class="modal-title">Cancel {{ $reservation->reference }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-        </div>
-    @endcan
+            <div class="modal-body">
+                <label class="form-label">Cancellation reason</label>
+                <textarea name="cancellation_reason" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-danger">Cancel reservation</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endcan
 @endforeach
 </div>
+@endsection
 @endsection
