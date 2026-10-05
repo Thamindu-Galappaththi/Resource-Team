@@ -2,13 +2,17 @@
 
 namespace App\Services;
 
+use App\Enums\ReservationItemStatus;
+use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Exceptions\ReservationConflictException;
 use App\Models\HostelStayDetail;
 use App\Models\Reservation;
+use App\Models\ReservationStatusHistory;
 use App\Models\Resource;
 use App\Models\ResourceType;
 use App\Models\User;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -21,9 +25,7 @@ use Illuminate\Validation\ValidationException;
  */
 class HostelReservationService
 {
-    public function __construct(private readonly ReservationBookingService $bookings)
-    {
-    }
+    public function __construct(private readonly ReservationBookingService $bookings) {}
 
     /**
      * @param  array{reservation_name:string,guest_name:string,check_in_date:string,check_out_date:string,room_type_id:int,location_id:int,number_of_guests:int,special_requirements?:string|null,requester_id?:int}  $payload
@@ -65,6 +67,13 @@ class HostelReservationService
             HostelStayDetail::query()->create([
                 'reservation_id' => $reservation->id,
                 'guest_name' => $payload['guest_name'],
+                'guest_identity_type' => filled($payload['guest_identity_number'] ?? null) ? 'id_number' : null,
+                'guest_identity_encrypted' => filled($payload['guest_identity_number'] ?? null)
+                    ? Crypt::encryptString($payload['guest_identity_number'])
+                    : null,
+                'guest_phone_encrypted' => filled($payload['guest_phone'] ?? null)
+                    ? Crypt::encryptString($payload['guest_phone'])
+                    : null,
                 'check_in_at' => $startsAt,
                 'check_out_at' => $endsAt,
                 'room_type_id' => $roomType->id,
@@ -80,6 +89,112 @@ class HostelReservationService
     public function cancel(Reservation $reservation, User $actor, string $reason): Reservation
     {
         return $this->bookings->cancel($reservation, $actor, $reason);
+    }
+
+    public function updateApproval(Reservation $reservation, User $actor, string $status, ?string $reason = null): Reservation
+    {
+        if (! in_array($status, [ReservationStatus::APPROVED->value, ReservationStatus::REJECTED->value], true)) {
+            throw ValidationException::withMessages([
+                'status' => 'Select a valid approval action.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($reservation, $actor, $status, $reason) {
+            $reservation = Reservation::query()->whereKey($reservation->id)->lockForUpdate()->firstOrFail();
+            if ($reservation->status !== ReservationStatus::PENDING_APPROVAL->value) {
+                throw ValidationException::withMessages([
+                    'status' => 'Only pending hostel reservations can be approved or rejected.',
+                ]);
+            }
+
+            if ($this->checkInHasPassed($reservation)) {
+                $this->expirePendingReservation($reservation);
+
+                return $reservation->load(['hostelStay.roomType', 'items', 'location', 'requester']);
+            }
+
+            $items = $reservation->items()->orderBy('resource_id')->lockForUpdate()->get();
+            if ($status === ReservationStatus::APPROVED->value) {
+                foreach ($items as $item) {
+                    $this->bookings->lockResourcesAndAssertNoOverlap(
+                        [$item->resource_id],
+                        $item->starts_at,
+                        $item->ends_at,
+                        $reservation->id,
+                        [ReservationItemStatus::CONFIRMED->value],
+                    );
+                }
+            }
+
+            $from = $reservation->status;
+            $reservation->update([
+                'status' => $status,
+                'approved_at' => $status === ReservationStatus::APPROVED->value ? now() : null,
+            ]);
+
+            $reservation->items()
+                ->whereIn('status', [ReservationItemStatus::HELD->value, ReservationItemStatus::CONFIRMED->value])
+                ->update([
+                    'status' => $status === ReservationStatus::APPROVED->value
+                        ? ReservationItemStatus::CONFIRMED->value
+                        : ReservationItemStatus::CANCELLED->value,
+                ]);
+
+            ReservationStatusHistory::query()->create([
+                'reservation_id' => $reservation->id,
+                'from_status' => $from,
+                'to_status' => $status,
+                'actor_id' => $actor->id,
+                'reason' => $reason,
+                'created_at' => now(),
+            ]);
+
+            return $reservation->load(['hostelStay.roomType', 'items', 'location', 'requester']);
+        });
+    }
+
+    public function expirePendingAtCheckIn(int $reservationId): bool
+    {
+        return DB::transaction(function () use ($reservationId): bool {
+            $reservation = Reservation::query()
+                ->whereKey($reservationId)
+                ->where('type', ReservationType::HOSTEL->value)
+                ->where('status', ReservationStatus::PENDING_APPROVAL->value)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $reservation || ! $this->checkInHasPassed($reservation)) {
+                return false;
+            }
+
+            $this->expirePendingReservation($reservation);
+
+            return true;
+        });
+    }
+
+    private function checkInHasPassed(Reservation $reservation): bool
+    {
+        $checkInAt = $reservation->hostelStay()->first()?->check_in_at;
+
+        return $checkInAt !== null && $checkInAt->lessThanOrEqualTo(now());
+    }
+
+    private function expirePendingReservation(Reservation $reservation): void
+    {
+        $reservation->update(['status' => ReservationStatus::EXPIRED->value]);
+        $reservation->items()
+            ->where('status', ReservationItemStatus::HELD->value)
+            ->update(['status' => ReservationItemStatus::CANCELLED->value]);
+
+        ReservationStatusHistory::query()->create([
+            'reservation_id' => $reservation->id,
+            'from_status' => ReservationStatus::PENDING_APPROVAL->value,
+            'to_status' => ReservationStatus::EXPIRED->value,
+            'actor_id' => null,
+            'reason' => 'Automatically expired because approval was still pending at the scheduled check-in time.',
+            'created_at' => now(),
+        ]);
     }
 
     public function stayRange(string $checkInDate, string $checkOutDate): array

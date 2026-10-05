@@ -178,6 +178,22 @@ class ReservationBookingService
         return $this->conflictingItems($resourceIds, $startsAt, $endsAt, $ignoreReservationId)->isNotEmpty();
     }
 
+    public function lockResourcesAndAssertNoOverlap(
+        Collection|array $resourceIds,
+        CarbonInterface $startsAt,
+        CarbonInterface $endsAt,
+        ?int $ignoreReservationId = null,
+        ?array $blockingStatuses = null,
+    ): void {
+        $ids = collect($resourceIds)->map(fn ($id) => (int) $id)->unique()->sort()->values();
+        if ($ids->isEmpty()) {
+            throw new ReservationConflictException('No room is assigned to this reservation.');
+        }
+
+        Resource::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
+        $this->lockDaysAndAssertNoOverlap($ids, $startsAt, $endsAt, $ignoreReservationId, $blockingStatuses);
+    }
+
     /**
      * @return array{0: Carbon, 1: Carbon}
      */
@@ -204,7 +220,13 @@ class ReservationBookingService
         return [$startsAt, $endsAt];
     }
 
-    private function lockDaysAndAssertNoOverlap(Collection $resourceIds, CarbonInterface $startsAt, CarbonInterface $endsAt): void
+    private function lockDaysAndAssertNoOverlap(
+        Collection $resourceIds,
+        CarbonInterface $startsAt,
+        CarbonInterface $endsAt,
+        ?int $ignoreReservationId = null,
+        ?array $blockingStatuses = null,
+    ): void
     {
         $pairs = $this->lockPairs($resourceIds, $startsAt, $endsAt);
         if ($pairs === []) {
@@ -241,7 +263,7 @@ class ReservationBookingService
 
         $lockQuery->orderBy('resource_id')->orderBy('lock_date')->lockForUpdate()->get();
 
-        $conflicts = $this->conflictingItems($resourceIds, $startsAt, $endsAt);
+        $conflicts = $this->conflictingItems($resourceIds, $startsAt, $endsAt, $ignoreReservationId, $blockingStatuses);
         if ($conflicts->isNotEmpty()) {
             throw new ReservationConflictException('Selected slot unavailable.');
         }
@@ -282,13 +304,19 @@ class ReservationBookingService
         return $pairs;
     }
 
-    private function conflictingItems(Collection|array $resourceIds, CarbonInterface $startsAt, CarbonInterface $endsAt, ?int $ignoreReservationId = null): Collection
+    private function conflictingItems(
+        Collection|array $resourceIds,
+        CarbonInterface $startsAt,
+        CarbonInterface $endsAt,
+        ?int $ignoreReservationId = null,
+        ?array $blockingStatuses = null,
+    ): Collection
     {
         $ids = collect($resourceIds)->map(fn ($id) => (int) $id)->unique()->values();
 
         return ReservationItem::query()
             ->whereIn('resource_id', $ids)
-            ->whereIn('status', ReservationStatus::blockingItemStatuses())
+            ->whereIn('status', $blockingStatuses ?? ReservationStatus::blockingItemStatuses())
             ->where('starts_at', '<', $endsAt)
             ->where('ends_at', '>', $startsAt)
             ->when($ignoreReservationId, fn ($query) => $query->where('reservation_id', '!=', $ignoreReservationId))

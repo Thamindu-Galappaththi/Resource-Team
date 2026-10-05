@@ -30,6 +30,11 @@
     <script src="{{ asset('js/global-utilities.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <style>
+        .status-approved {
+            background-color: #19c55b !important;
+            color: #fff !important;
+        }
+
         body {
             background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E') no-repeat center center fixed;
             background-size: cover;

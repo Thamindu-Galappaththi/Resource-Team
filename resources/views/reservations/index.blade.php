@@ -126,10 +126,10 @@
                                     <td>{{ $reservation->reservation_date?->format('d M Y') }}</td>
                                     <td>{{ substr((string) $reservation->start_time, 0, 5) }}–{{ substr((string) $reservation->end_time, 0, 5) }}</td>
                                     <td>{{ $reservation->location?->name ?? '—' }}</td>
-                                    <td><span class="badge bg-light text-dark">{{ $reservation->statusEnum()->label() }}</span></td>
+                                    <td><span class="badge rounded-pill px-3 {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span></td>
                                     <td class="text-nowrap">
                                         @can('view', $reservation)
-                                            <a href="{{ route('reservations.show', $reservation) }}" class="btn btn-sm btn-outline-secondary">View</a>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#viewModal-{{ $reservation->id }}" aria-label="View reservation {{ $reservation->reference }}">View</button>
                                         @endcan
                                         @can('cancel', $reservation)
                                             <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal-{{ $reservation->id }}">Cancel</button>
@@ -148,6 +148,97 @@
 </div>
 
 @foreach($reservations as $reservation)
+    @can('view', $reservation)
+        <div class="modal fade" id="viewModal-{{ $reservation->id }}" tabindex="-1" aria-labelledby="viewModalTitle-{{ $reservation->id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light">
+                        <div>
+                            <h2 class="modal-title fs-5 mb-1" id="viewModalTitle-{{ $reservation->id }}">{{ $reservation->reference }}</h2>
+                            <div class="small text-muted">{{ $reservation->title }}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge rounded-pill px-3 {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="row g-4">
+                            <div class="col-lg-7">
+                                <section aria-labelledby="reservationDetails-{{ $reservation->id }}">
+                                    <h3 class="fs-6 mb-3" id="reservationDetails-{{ $reservation->id }}">Reservation details</h3>
+                                    <div class="row g-3">
+                                        <div class="col-sm-6"><div class="small text-muted">Purpose</div><div class="fw-medium">{{ $reservation->purpose ?: '—' }}</div></div>
+                                        <div class="col-sm-6"><div class="small text-muted">Requester</div><div class="fw-medium">{{ $reservation->requester?->name ?? 'Unknown' }}</div></div>
+                                        <div class="col-sm-6"><div class="small text-muted">Created by</div><div class="fw-medium">{{ $reservation->createdBy?->name ?? 'Unknown' }}</div></div>
+                                        <div class="col-sm-6"><div class="small text-muted">Location</div><div class="fw-medium">{{ $reservation->location?->name ?? '—' }}</div></div>
+                                        <div class="col-sm-6"><div class="small text-muted">Date</div><div class="fw-medium">{{ $reservation->reservation_date?->format('d M Y') ?? '—' }}</div></div>
+                                        <div class="col-sm-6"><div class="small text-muted">Time</div><div class="fw-medium">{{ substr((string) $reservation->start_time, 0, 5) }}–{{ substr((string) $reservation->end_time, 0, 5) }} (Asia/Colombo)</div></div>
+                                        <div class="col-sm-6"><div class="small text-muted">Attendees</div><div class="fw-medium">{{ $reservation->attendee_count ?? '—' }}</div></div>
+                                        @if($reservation->cancellation_reason)
+                                            <div class="col-12"><div class="small text-muted">Cancellation reason</div><div class="fw-medium">{{ $reservation->cancellation_reason }}</div></div>
+                                        @endif
+                                    </div>
+                                </section>
+
+                                <section class="mt-4" aria-labelledby="bookedResources-{{ $reservation->id }}">
+                                    <h3 class="fs-6 mb-3" id="bookedResources-{{ $reservation->id }}">Booked resources</h3>
+                                    <div class="table-responsive border rounded">
+                                        <table class="table table-sm align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr><th scope="col">Resource</th><th scope="col">Category</th><th scope="col">Item status</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                @forelse($reservation->items as $item)
+                                                    <tr>
+                                                        <td>{{ $item->resource_name_snapshot }}</td>
+                                                        <td>{{ $item->resource?->type?->category?->name ?? '—' }}</td>
+                                                        <td>{{ ucfirst($item->status) }}</td>
+                                                    </tr>
+                                                @empty
+                                                    <tr><td colspan="3" class="text-muted">No resources recorded.</td></tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <aside class="col-lg-5">
+                                <section aria-labelledby="reservationHistory-{{ $reservation->id }}">
+                                    <h3 class="fs-6 mb-3" id="reservationHistory-{{ $reservation->id }}">Status history</h3>
+                                    @forelse($reservation->statusHistory as $history)
+                                        <div class="border-start border-2 ps-3 pb-3 mb-3">
+                                            <div class="fw-medium">{{ $history->from_status ? $history->from_status.' → ' : '' }}{{ $history->to_status }}</div>
+                                            <div class="small text-muted">{{ $history->actor?->name ?? 'System' }} · {{ $history->created_at?->timezone(config('reservations.display_timezone'))->format('d M Y H:i') }}</div>
+                                            @if($history->reason)<div class="small mt-1">{{ $history->reason }}</div>@endif
+                                        </div>
+                                    @empty
+                                        <p class="small text-muted mb-0">No history recorded.</p>
+                                    @endforelse
+                                </section>
+
+                                @can('cancel', $reservation)
+                                    <section class="border-top mt-4 pt-4" aria-labelledby="cancelReservation-{{ $reservation->id }}">
+                                        <h3 class="fs-6 mb-3" id="cancelReservation-{{ $reservation->id }}">Cancel reservation</h3>
+                                        <form method="POST" action="{{ route('reservations.cancel', $reservation) }}">
+                                            @csrf
+                                            <label for="cancellationReason-{{ $reservation->id }}" class="visually-hidden">Cancellation reason</label>
+                                            <textarea id="cancellationReason-{{ $reservation->id }}" name="cancellation_reason" class="form-control mb-2" rows="3" required placeholder="Reason is required"></textarea>
+                                            <button type="submit" class="btn btn-danger w-100">Cancel reservation</button>
+                                        </form>
+                                    </section>
+                                @endcan
+                            </aside>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endcan
     @can('cancel', $reservation)
         <div class="modal fade" id="cancelModal-{{ $reservation->id }}" tabindex="-1">
             <div class="modal-dialog">

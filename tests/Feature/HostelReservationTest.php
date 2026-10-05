@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ReservationItemStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Models\Location;
@@ -14,6 +15,7 @@ use App\Notifications\NewReservationPending;
 use App\Notifications\ReservationCreated;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -39,6 +41,8 @@ class HostelReservationTest extends TestCase
             ->post(route('hostel.store'), $this->payload($setup, [
                 'reservation_name' => 'Summer Internship 2026 Group',
                 'guest_name' => 'Kasun Madushanka',
+                'guest_phone' => '+94 77 123 4567',
+                'guest_identity_number' => 'ID1234567',
                 'special_requirements' => 'Ground floor if possible',
             ]))
             ->assertRedirect();
@@ -58,6 +62,10 @@ class HostelReservationTest extends TestCase
             'number_of_guests' => 1,
             'special_requirements' => 'Ground floor if possible',
         ]);
+        $stay = $reservation->hostelStay()->firstOrFail();
+        $this->assertSame('id_number', $stay->guest_identity_type);
+        $this->assertSame('ID1234567', Crypt::decryptString($stay->guest_identity_encrypted));
+        $this->assertSame('+94 77 123 4567', Crypt::decryptString($stay->guest_phone_encrypted));
         $this->assertDatabaseHas('reservation_items', [
             'reservation_id' => $reservation->id,
             'resource_id' => $setup['room']->id,
@@ -183,6 +191,81 @@ class HostelReservationTest extends TestCase
         ]);
     }
 
+    public function test_pending_hostel_row_shows_manager_approval_actions_and_approving_confirms_room(): void
+    {
+        $coordinator = User::factory()->role('coordinator')->create();
+        $manager = User::factory()->role('hostel_manager')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($coordinator)
+            ->post(route('hostel.store'), $this->payload($setup))
+            ->assertRedirect();
+
+        $reservation = Reservation::query()->firstOrFail();
+
+        $this->actingAs($manager)
+            ->get(route('hostel.index'))
+            ->assertOk()
+            ->assertSee('Approve')
+            ->assertSee('Reject');
+
+        $this->post(route('hostel.approval', $reservation), [
+            'status' => ReservationStatus::APPROVED->value,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'status' => ReservationStatus::APPROVED->value,
+        ]);
+        $this->assertDatabaseHas('reservation_items', [
+            'reservation_id' => $reservation->id,
+            'status' => 'confirmed',
+        ]);
+
+        $this->get(route('hostel.index'))
+            ->assertOk()
+            ->assertDontSee('id="approveModal-')
+            ->assertDontSee('id="rejectModal-');
+    }
+
+    public function test_hostel_approval_rejects_a_room_already_confirmed_for_overlapping_dates(): void
+    {
+        $coordinator = User::factory()->role('coordinator')->create();
+        $manager = User::factory()->role('hostel_manager')->create();
+        $setup = $this->hostelRoom();
+        $stayDates = [
+            'check_in_date' => now()->addDays(3)->toDateString(),
+            'check_out_date' => now()->addDays(6)->toDateString(),
+        ];
+
+        $this->actingAs($coordinator)->post(route('hostel.store'), $this->payload($setup, $stayDates))->assertRedirect();
+        $firstReservation = Reservation::query()->firstOrFail();
+        $firstItem = $firstReservation->items()->firstOrFail();
+        $firstItem->update(['status' => 'cancelled']);
+
+        $this->actingAs($coordinator)->post(route('hostel.store'), $this->payload($setup, $stayDates))->assertRedirect();
+        $secondReservation = Reservation::query()->whereKeyNot($firstReservation->id)->firstOrFail();
+
+        $firstItem->update(['status' => 'confirmed']);
+        $firstReservation->update(['status' => ReservationStatus::APPROVED->value]);
+
+        $this->actingAs($manager)
+            ->from(route('hostel.index'))
+            ->post(route('hostel.approval', $secondReservation), [
+                'status' => ReservationStatus::APPROVED->value,
+            ])
+            ->assertSessionHasErrors('status');
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $secondReservation->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+        ]);
+        $this->assertDatabaseHas('reservation_items', [
+            'reservation_id' => $secondReservation->id,
+            'status' => 'held',
+        ]);
+    }
+
     public function test_index_filters_by_guest_name_and_hides_standard_reservations(): void
     {
         $admin = User::factory()->role('admin')->create();
@@ -214,6 +297,74 @@ class HostelReservationTest extends TestCase
             ->assertSee('Kasun Madushanka')
             ->assertDontSee('Amali Fernando')
             ->assertDontSee('Hall booking must not appear');
+    }
+
+    public function test_pending_hostel_reservation_expires_at_checkin_and_releases_held_room(): void
+    {
+        $actor = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($actor)->post(route('hostel.store'), $this->payload($setup))->assertRedirect();
+        $reservation = Reservation::query()->firstOrFail();
+        $pastCheckIn = now('UTC')->subMinute();
+
+        $reservation->hostelStay()->update([
+            'check_in_at' => $pastCheckIn,
+            'check_out_at' => $pastCheckIn->copy()->addDay(),
+        ]);
+        $reservation->items()->update([
+            'starts_at' => $pastCheckIn,
+            'ends_at' => $pastCheckIn->copy()->addDay(),
+        ]);
+
+        $this->artisan('hostel:expire-pending-reservations')
+            ->expectsOutput('Expired 1 pending hostel reservation(s).')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'status' => ReservationStatus::EXPIRED->value,
+        ]);
+        $this->assertDatabaseHas('reservation_items', [
+            'reservation_id' => $reservation->id,
+            'status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('reservation_status_history', [
+            'reservation_id' => $reservation->id,
+            'from_status' => ReservationStatus::PENDING_APPROVAL->value,
+            'to_status' => ReservationStatus::EXPIRED->value,
+            'actor_id' => null,
+        ]);
+    }
+
+    public function test_approval_after_checkin_expires_pending_request_instead(): void
+    {
+        $coordinator = User::factory()->role('coordinator')->create();
+        $manager = User::factory()->role('hostel_manager')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($coordinator)->post(route('hostel.store'), $this->payload($setup))->assertRedirect();
+        $reservation = Reservation::query()->firstOrFail();
+        $reservation->hostelStay()->update(['check_in_at' => now()->subMinute()]);
+
+        $this->actingAs($manager)
+            ->from(route('hostel.index'))
+            ->post(route('hostel.approval', $reservation), ['status' => ReservationStatus::APPROVED->value])
+            ->assertRedirect(route('hostel.index'))
+            ->assertSessionHas('success', 'Reservation expired at check-in; the held room was released and was not approved.');
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'status' => ReservationStatus::EXPIRED->value,
+        ]);
+        $this->assertDatabaseHas('reservation_items', [
+            'reservation_id' => $reservation->id,
+            'status' => ReservationItemStatus::CANCELLED->value,
+        ]);
+        $this->assertDatabaseHas('reservation_status_history', [
+            'reservation_id' => $reservation->id,
+            'to_status' => ReservationStatus::EXPIRED->value,
+        ]);
     }
 
     public function test_create_page_lists_locations_in_campus_order(): void
@@ -248,7 +399,7 @@ class HostelReservationTest extends TestCase
     }
 
     /**
-     * @return array{location: Location, type: ResourceType, room: Resource}
+     * @return array{location: Location, type: ResourceType, room: resource}
      */
     private function hostelRoom(string $typeName = 'Single'): array
     {
@@ -271,7 +422,7 @@ class HostelReservationTest extends TestCase
     }
 
     /**
-     * @param  array{location: Location, type: ResourceType, room: Resource}  $setup
+     * @param  array{location: Location, type: ResourceType, room: resource}  $setup
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
      */
