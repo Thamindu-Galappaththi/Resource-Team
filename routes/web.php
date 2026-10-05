@@ -78,10 +78,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', 'dashboard')->middleware('permission:canteen.view')->name('dashboard');
         Route::get('/maintenance', 'maintenance')->middleware('permission:canteen.manage')->name('maintenance');
         Route::get('/forecast/{date}', 'forecast')->middleware('permission:canteen.view')->name('forecast');
-        Route::get('/reservations', 'index')->middleware('permission:canteen.index')->name('index');
-        Route::get('/reservations/create', 'create')->middleware('permission:canteen.create')->name('create');
-        Route::get('/reservations/{reservation}', 'show')->middleware('permission:canteen.index')->name('show');
-        Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
+        Route::get('/reservations', 'index')->middleware('permission:canteen.index')->name('reservations.index');
+        Route::get('/reservations/create', 'create')->middleware('permission:canteen.create')->name('reservations.create');
+        Route::get('/reservations/{reservation}', 'show')->middleware('permission:canteen.index')->name('reservations.show');
+        Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('reservations.edit');
     });
 
     Route::prefix('payments')->name('payments.')->group(function () {
@@ -146,10 +146,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('canteen')->name('canteen.')->controller(CanteenReservationController::class)->group(function () {
-        Route::post('/reservations', 'store')->middleware('permission:canteen.create')->name('store');
-        Route::put('/reservations/{reservation}', 'update')->middleware('permission:canteen.create')->name('update');
-        Route::patch('/reservations/{reservation}/status', 'updateStatus')->middleware('permission:canteen.manage')->name('status');
-        Route::delete('/reservations/{reservation}', 'destroy')->middleware('permission:canteen.create,canteen.manage')->name('destroy');
+        Route::post('/reservations', 'store')->middleware('permission:canteen.create')->name('reservations.store');
+        Route::put('/reservations/{reservation}', 'update')->middleware('permission:canteen.create')->name('reservations.update');
+        Route::patch('/reservations/{reservation}/status', 'updateStatus')->middleware('permission:canteen.manage')->name('reservations.status');
+        Route::delete('/reservations/{reservation}', 'destroy')->middleware('permission:canteen.create,canteen.manage')->name('reservations.destroy');
     });
 
     Route::prefix('user-management')->controller(UserManagementController::class)->group(function () {
