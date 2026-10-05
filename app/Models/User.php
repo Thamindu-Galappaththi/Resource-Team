@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -127,4 +128,15 @@ class User extends Authenticatable
 
         return Storage::disk('public')->url($this->user_profile);
     }
+
+    public function lectureSessions(): HasMany
+    {
+        return $this->hasMany(LectureSession::class, 'lecturer_id');
+    }
+
+    public function lecturerPayables(): HasMany
+    {
+        return $this->hasMany(LecturerPayable::class, 'lecturer_id');
+    }
+    
 }
