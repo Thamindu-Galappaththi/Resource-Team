@@ -28,6 +28,16 @@
                         @error('meal_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
+                        <label class="form-label" for="location_id">Location</label>
+                        <select id="location_id" class="form-select @error('location_id') is-invalid @enderror" name="location_id">
+                            <option value="">Select location (optional)</option>
+                            @foreach($locations as $location)
+                                <option value="{{ $location->id }}" {{ (string) old('location_id', $reservation->location_id) === (string) $location->id ? 'selected' : '' }}>{{ $location->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('location_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">Reservation Date</label>
                         <input type="date" class="form-control @error('reservation_date') is-invalid @enderror" name="reservation_date" value="{{ old('reservation_date', $reservation->reservation_date->format('Y-m-d')) }}" required>
                         @error('reservation_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror

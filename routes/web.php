@@ -83,6 +83,18 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
     });
 
+    Route::prefix('canteen')->name('canteen.')->controller(\App\Http\Controllers\CanteenReservationController::class)->group(function () {
+        Route::get('/', 'dashboard')->name('dashboard');
+        Route::get('/maintenance', 'maintenance')->name('maintenance');
+        Route::get('/forecast/{date}', 'forecast')->name('forecast');
+        Route::get('/reservations', 'index')->name('reservations.index');
+        Route::get('/reservations/create', 'create')->name('reservations.create');
+        Route::post('/reservations', 'store')->name('reservations.store');
+        Route::get('/reservations/{reservation}', 'show')->name('reservations.show');
+        Route::get('/reservations/{reservation}/edit', 'edit')->name('reservations.edit');
+        Route::put('/reservations/{reservation}', 'update')->name('reservations.update');
+        Route::patch('/reservations/{reservation}/status', 'updateStatus')->name('reservations.status');
+        Route::delete('/reservations/{reservation}', 'destroy')->name('reservations.destroy');
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/lecture-fees', fn () => view('payments.lecture-fees'))->middleware('permission:payments.view')->name('lecture-fees');
         Route::get('/resources', fn () => view('payments.resources'))->middleware('permission:payments.view')->name('resources');

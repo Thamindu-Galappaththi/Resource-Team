@@ -222,6 +222,9 @@
                     <span class="nav-small-cap-text">PAYMENTS</span>
                 </li>
                 <li class="sidebar-item">
+                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.dashboard' ? 'active' : '' }}" href="{{ route('canteen.dashboard') }}">
+                        <span><i class="ti ti-soup"></i></span>
+                        <span class="hide-menu">Canteen Overview</span>
                     <a class="sidebar-link {{ request()->routeIs('payments.lecture-fees') ? 'active' : '' }}" href="{{ route('payments.lecture-fees') }}">
                         <span><i class="ti ti-cash"></i></span>
                         <span class="hide-menu">Lecture Fees</span>
@@ -243,6 +246,12 @@
                     <a class="sidebar-link {{ request()->routeIs('reports.index') ? 'active' : '' }}" href="{{ route('reports.index') }}">
                         <span><i class="ti ti-chart-bar"></i></span>
                         <span class="hide-menu">Reports & Analytics</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.maintenance' ? 'active' : '' }}" href="{{ route('canteen.maintenance') }}">
+                        <span><i class="ti ti-tool"></i></span>
+                        <span class="hide-menu">Maintenance</span>
                     </a>
                 </li>
             @endif
