@@ -185,18 +185,17 @@
 }
 
 .cu-align-fields .cu-field-hint {
-    min-height: 2.5rem;
+    min-height: 2.4em;
     margin-bottom: .5rem;
 }
 
-.cu-align-fields .invalid-feedback {
-    min-height: 1.35rem;
-    display: block !important;
-    visibility: hidden;
+.cu-align-fields .cu-dropdown-toggle {
+    flex: 0 0 auto;
+    height: 48px;
 }
 
-.cu-align-fields .invalid-feedback.d-block {
-    visibility: visible;
+.cu-align-fields .invalid-feedback {
+    margin-top: .35rem;
 }
 
 @media (max-width: 767.98px) {

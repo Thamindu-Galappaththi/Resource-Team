@@ -3,7 +3,7 @@
 @section('title', 'Create User')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=11">
+    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=12">
 @endpush
 
 @section('content')
@@ -106,7 +106,7 @@
             <div class="row g-3 cu-align-fields">
                 <div class="col-12 col-lg-6">
                     <label class="form-label" for="rolesDropdown">Roles <span class="text-danger">*</span></label>
-                    <p class="text-muted small mb-2 cu-field-hint">Select one or more roles. Permissions follow the chosen roles.</p>
+                    <p class="text-muted small cu-field-hint">Select one or more roles. Permissions follow the chosen roles.</p>
                     <div class="dropdown">
                         <button id="rolesDropdown" class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <span id="rolesSummary" class="{{ old('user_roles') ? '' : 'text-muted' }}">Select roles</span>
@@ -124,7 +124,7 @@
                 </div>
                 <div class="col-12 col-lg-6">
                     <label class="form-label" for="permissionsDropdown">Permissions</label>
-                    <p class="text-muted small mb-2 cu-field-hint">Role access is locked. Extra access can be granted to this user only.</p>
+                    <p class="text-muted small cu-field-hint">Role access is locked. Extra access can be granted to this user only.</p>
                     <div class="dropdown">
                         <button id="permissionsDropdown" class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <span id="permissionsSummary" class="text-muted">Select extra permissions</span>
@@ -290,14 +290,15 @@
 
     function refreshPermissions() {
         const granted = grantedByRoles();
+        const extras = new Set([...document.querySelectorAll('.js-extra-permission')]
+            .filter((checkbox) => checkbox.checked && !checkbox.disabled)
+            .map((checkbox) => checkbox.value));
+
         document.querySelectorAll('.js-perm-row').forEach((row) => {
             const slug = row.dataset.permission;
             const checkbox = row.querySelector('.js-extra-permission');
             const source = row.querySelector('.js-perm-source');
             const fromRole = granted.has(slug);
-
-            row.classList.toggle('is-granted', fromRole);
-            row.classList.toggle('is-extra', !fromRole && checkbox.checked);
 
             if (fromRole) {
                 checkbox.checked = true;
@@ -305,8 +306,12 @@
                 source.textContent = 'Role';
             } else {
                 checkbox.disabled = false;
+                checkbox.checked = extras.has(slug);
                 source.textContent = checkbox.checked ? 'Extra' : 'Off';
             }
+
+            row.classList.toggle('is-granted', fromRole);
+            row.classList.toggle('is-extra', !fromRole && checkbox.checked);
         });
 
         updateRoleSummary();

@@ -3,7 +3,7 @@
 @section('title', 'User Management')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=11">
+    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=12">
     <link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=8">
 @endpush
 
@@ -244,7 +244,7 @@
                         <div class="row g-3 cu-align-fields">
                             <div class="col-12 col-lg-6">
                                 <label class="form-label" for="editRolesDropdown">Roles <span class="text-danger">*</span></label>
-                                <p class="text-muted small mb-2 cu-field-hint">Select one or more roles. Permissions follow the chosen roles.</p>
+                                <p class="text-muted small cu-field-hint">Select one or more roles. Permissions follow the chosen roles.</p>
                                 <div class="dropdown">
                                     <button id="editRolesDropdown" class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                         <span id="editRolesSummary" class="text-muted">Select roles</span>
@@ -262,7 +262,7 @@
                             </div>
                             <div class="col-12 col-lg-6">
                                 <label class="form-label" for="editPermissionsDropdown">Permissions</label>
-                                <p class="text-muted small mb-2 cu-field-hint">Role access is locked. Extra access can be granted to this user only.</p>
+                                <p class="text-muted small cu-field-hint">Role access is locked. Extra access can be granted to this user only.</p>
                                 <div class="dropdown">
                                     <button id="editPermissionsDropdown" class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                         <span id="editPermissionsSummary" class="text-muted">Select extra permissions</span>
