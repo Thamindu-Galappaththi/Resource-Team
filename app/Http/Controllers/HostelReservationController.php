@@ -185,7 +185,7 @@ class HostelReservationController extends Controller
     private function restrictToOwnUnlessStaff($query): void
     {
         $user = auth()->user();
-        if ($user?->hasRole('super_admin', 'admin', 'coordinator', 'hostel_manager')
+        if ($user?->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'hostel_manager')
             || $user?->hasPermission('hostel.manage')) {
             return;
         }

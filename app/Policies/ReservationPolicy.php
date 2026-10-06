@@ -9,7 +9,7 @@ class ReservationPolicy
 {
     public function before(User $user, string $ability): bool|null
     {
-        if ($ability !== 'manageHostel' && $user->hasRole('super_admin', 'admin')) {
+        if ($ability !== 'manageHostel' && $user->hasRole('developer', 'super_admin', 'admin')) {
             return true;
         }
 
@@ -69,7 +69,7 @@ class ReservationPolicy
 
     public function view(User $user, Reservation $reservation): bool
     {
-        if ($user->hasRole('coordinator', 'resource_owner')) {
+        if ($user->hasRole('developer', 'coordinator', 'resource_owner')) {
             return true;
         }
 
@@ -88,7 +88,7 @@ class ReservationPolicy
             return false;
         }
 
-        if ($user->hasRole('coordinator', 'resource_owner')) {
+        if ($user->hasRole('developer', 'coordinator', 'resource_owner')) {
             return true;
         }
 

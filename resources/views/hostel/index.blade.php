@@ -6,13 +6,11 @@
 <style>
     .hostel-reservations {
         max-width: 1440px;
-        min-height: 100vh;
         margin: 0 auto;
         padding: 24px;
         color: #111827;
-        background: #f3f4f6;
     }
-    .hostel-reservations h1 { color: #0f172a; font-size: 26px; font-weight: 800; }
+    .hostel-reservations h1 { font-size: 26px; font-weight: 800; }
     .hostel-reservations .page-subtitle { color: #6b7280; font-size: 14px; }
     .hostel-reservations > .card { background: transparent; box-shadow: none !important; }
     .hostel-reservations > .card > .card-body { padding: 0 !important; }
@@ -37,66 +35,16 @@
     .hostel-reservations .table thead th { background: #f9fafb; color: #374151; font-size: 12px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
     .hostel-reservations .table td, .hostel-reservations .table th { padding: 12px 16px; border-bottom-color: #e5e7eb; }
     .hostel-reservations .table tbody tr:hover { background: #f9fafb; }
+    .hostel-reservations .check-ins { border-top: 3px solid #13aacb; }
     @media (max-width: 575.98px) {
         .hostel-reservations { padding: 16px; }
     }
-.hostel-reservations {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.hostel-reservations .summary-card {
-    border: 1px solid #e8ebef;
-    border-radius: 10px;
-    padding: 20px;
-    height: 100%;
-}
-
-.hostel-reservations .summary-label {
-    font-size: 12px;
-    text-transform: uppercase;
-    color: #343a40;
-}
-
-.hostel-reservations .summary-value {
-    font-size: 28px;
-    font-weight: 600;
-    color: #172431;
-}
-
-.hostel-reservations .check-ins {
-    border-top: 3px solid #13aacb;
-}
-
-.hostel-reservations .filter-panel {
-    background: #f7f8fa;
-    border: 1px solid #edf0f3;
-    border-radius: 8px;
-}
-
-.hostel-reservations .filter-panel .form-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-.hostel-reservations .table thead th {
-    background: #f7f8fa;
-    font-size: 12px;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.hostel-reservations .table td,
-.hostel-reservations .table th {
-    padding: 16px;
-}
 </style>
 <div class="hostel-reservations py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h1 class="h3 mb-2">Hostel Reservations</h1>
-            <p class="page-subtitle mb-0">Manage student and guest accommodation logistics across the Nebula campus.</p>
+            <h1 class="h3 mb-2 text-white">Hostel Reservations</h1>
+            <p class="page-subtitle mb-0 text-white-50">Manage student and guest accommodation logistics across the Nebula campus.</p>
         </div>
         @can('createHostel', \App\Models\Reservation::class)
         <a href="{{ route('hostel.create') }}" class="btn btn-primary">

@@ -269,7 +269,7 @@ class ReservationController extends Controller
     private function restrictToOwnUnlessStaff($query): void
     {
         $user = auth()->user();
-        if ($user?->hasRole('super_admin', 'admin', 'coordinator', 'resource_owner')) {
+        if ($user?->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'resource_owner')) {
             return;
         }
 

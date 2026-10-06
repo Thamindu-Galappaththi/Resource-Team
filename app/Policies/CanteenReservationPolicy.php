@@ -10,7 +10,7 @@ class CanteenReservationPolicy
 {
     public function before(User $user, string $ability): bool|null
     {
-        if ($user->hasRole('super_admin', 'admin')) {
+        if ($user->hasRole('developer', 'super_admin', 'admin')) {
             return true;
         }
 
@@ -19,13 +19,13 @@ class CanteenReservationPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('super_admin', 'admin', 'coordinator', 'canteen', 'slt_employee')
+        return $user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'canteen', 'slt_employee')
             || $user->hasPermission('canteen.view');
     }
 
     public function view(User $user, CanteenReservation $reservation): bool
     {
-        if ($user->hasRole('super_admin', 'admin', 'coordinator', 'canteen')) {
+        if ($user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'canteen')) {
             return true;
         }
 
