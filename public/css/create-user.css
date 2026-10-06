@@ -175,6 +175,10 @@
     white-space: nowrap;
 }
 
+.cu-align-fields {
+    align-items: start;
+}
+
 .cu-align-fields > [class*="col-"] {
     display: flex;
     flex-direction: column;
@@ -185,8 +189,14 @@
     margin-bottom: .5rem;
 }
 
-.cu-align-fields .dropdown {
-    margin-top: auto;
+.cu-align-fields .invalid-feedback {
+    min-height: 1.35rem;
+    display: block !important;
+    visibility: hidden;
+}
+
+.cu-align-fields .invalid-feedback.d-block {
+    visibility: visible;
 }
 
 @media (max-width: 767.98px) {

@@ -3,7 +3,7 @@
 @section('title', 'Create User')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=10">
+    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=11">
 @endpush
 
 @section('content')
