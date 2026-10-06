@@ -124,6 +124,21 @@ h1 {
     margin-bottom: 1.05rem;
 }
 
+.field.is-invalid {
+    margin-bottom: 0.35rem;
+}
+
+.field-error {
+    display: none;
+    margin: 0 0 0.95rem;
+    font-size: 0.8rem;
+    color: #b91c1c;
+}
+
+.field.is-invalid + .field-error {
+    display: block;
+}
+
 .field-icon {
     position: absolute;
     left: 0.9rem;
