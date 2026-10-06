@@ -20,12 +20,12 @@
     </div>
 
     @if(session('status'))
-        <div class="alert alert-success">{{ session('status') }}</div>
+        <div class="alert alert-success um-auto-alert">{{ session('status') }}</div>
     @endif
     @if($errors->any())
-        <div class="alert alert-danger">{{ $errors->first() }}</div>
+        <div class="alert alert-danger um-auto-alert">{{ $errors->first() }}</div>
     @endif
-    <div id="um-flash" class="alert d-none" role="status"></div>
+    <div id="um-flash" class="alert um-auto-alert d-none" role="status"></div>
 
     <div class="row g-4 mb-4">
         <div class="col-12 col-sm-6 col-xl-4"><div class="um-stat p-4" style="--stat-color:#1769c2;--stat-icon-bg:#e8f0fa"><div class="d-flex justify-content-between"><span class="um-stat-icon"><i class="ti ti-users"></i></span><small class="text-muted">All accounts</small></div><div class="um-stat-label mt-3">Total Users</div><div class="um-stat-number" id="um-stat-total">{{ number_format($statistics['total']) }}</div></div></div>
@@ -335,6 +335,6 @@
         lookupUrl: @json(route('slt.employee.lookup')),
     };
 </script>
-<script src="{{ asset('js/user-management.js') }}?v=6"></script>
+<script src="{{ asset('js/user-management.js') }}?v=7"></script>
 @endpush
 @endsection
