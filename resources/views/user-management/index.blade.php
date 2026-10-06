@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=13">
-<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=11">
+<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=12">
 @endpush
 
 @section('content')
@@ -439,6 +439,6 @@ window.UM = {
     errors: @json(session('edit_user_id') ? $errors->toArray() : []),
 };
 </script>
-<script src="{{ asset('js/user-management.js') }}?v=12"></script>
+<script src="{{ asset('js/user-management.js') }}?v=13"></script>
 @endpush
 @endsection

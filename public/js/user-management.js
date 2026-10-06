@@ -497,6 +497,10 @@ $(function () {
     });
 
     $(document).on('click', '.js-delete-user', function () {
+        if ($(this).prop('disabled')) {
+            return;
+        }
+
         const user = rowUser(this);
         const name = user.name || 'this user';
 

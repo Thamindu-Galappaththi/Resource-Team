@@ -125,7 +125,7 @@
                                 <button type="button" class="um-icon-btn js-toggle-user" title="{{ $managedUser->is_active ? 'Deactivate' : 'Activate' }}" aria-label="{{ $managedUser->is_active ? 'Deactivate' : 'Activate' }} {{ $managedUser->name }}">
                                     <i class="ti {{ $managedUser->is_active ? 'ti-user-off' : 'ti-user-check' }}"></i>
                                 </button>
-                                <button type="button" class="um-icon-btn is-danger js-delete-user" title="Delete" aria-label="Delete {{ $managedUser->name }}">
+                                <button type="button" class="um-icon-btn is-danger js-delete-user" title="{{ $managedUser->is(auth()->user()) ? 'You cannot delete your own account' : 'Delete' }}" aria-label="{{ $managedUser->is(auth()->user()) ? 'You cannot delete your own account' : 'Delete '.$managedUser->name }}" @disabled($managedUser->is(auth()->user()))>
                                     <i class="ti ti-trash"></i>
                                 </button>
                             </div>

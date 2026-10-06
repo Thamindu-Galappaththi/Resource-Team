@@ -291,6 +291,11 @@ class UserManagementControllerTest extends TestCase
             ->assertSessionHasErrors('status');
 
         $this->assertDatabaseHas('users', ['id' => $administrator->id]);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSee('You cannot delete your own account', false);
     }
 
     public function test_user_list_shows_existing_user_permissions(): void

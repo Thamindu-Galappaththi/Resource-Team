@@ -247,7 +247,8 @@
     color: #8a959e;
 }
 
-.user-management-page .um-icon-btn:disabled:hover {
+.user-management-page .um-icon-btn:disabled:hover,
+.user-management-page .um-icon-btn.is-danger:disabled:hover {
     background: #f3f6f9;
     color: #8a959e;
 }
