@@ -2,6 +2,7 @@
     <table class="table table-striped table-hover align-middle mb-0 um-table">
         <thead>
             <tr>
+                <th class="um-col-id">ID</th>
                 <th>Name</th>
                 <th>NIC / ID</th>
                 <th>Email</th>
@@ -56,6 +57,7 @@
                     ];
                 @endphp
                 <tr class="um-row" data-user="{{ json_encode($userPayload, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) }}">
+                    <td class="um-col-id">{{ $managedUser->id }}</td>
                     <td>
                         <div class="um-name" title="{{ $managedUser->name }}">{{ \Illuminate\Support\Str::limit($managedUser->name, 30) }}</div>
                         @if($managedUser->designation)
@@ -131,7 +133,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-5">No users found.</td>
+                    <td colspan="9" class="text-center text-muted py-5">No users found.</td>
                 </tr>
             @endforelse
         </tbody>

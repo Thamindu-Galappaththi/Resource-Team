@@ -54,7 +54,7 @@ class UserManagementController extends Controller
             ->when($filters['role'] ?? null, fn ($query, int $roleId) => $query->where('role_id', $roleId))
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('is_active', $status === 'active'));
 
-        $users = $usersQuery->latest()->paginate(10)->withQueryString();
+        $users = $usersQuery->latest('id')->paginate(10)->withQueryString();
         $permissionGroups = config('rbac.permission_groups', []);
 
         if ($request->ajax()) {

@@ -263,7 +263,13 @@
 
 .user-management-page .um-table {
     width: 100%;
-    min-width: 1100px;
+    min-width: 1160px;
+}
+
+.user-management-page .um-col-id {
+    width: 1%;
+    color: #6c757d;
+    font-variant-numeric: tabular-nums;
 }
 
 .user-management-page .um-name {

@@ -230,6 +230,18 @@ class UserManagementControllerTest extends TestCase
             ->assertDontSee('Showing 1 to 15 of 16 results');
     }
 
+    public function test_user_list_shows_newest_users_first(): void
+    {
+        $administrator = User::factory()->role('admin')->create(['name' => 'Admin First']);
+        User::factory()->create(['name' => 'Older User']);
+        User::factory()->create(['name' => 'Newer User']);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSeeInOrder(['Newer User', 'Older User', 'Admin First']);
+    }
+
     public function test_user_list_can_be_filtered_with_ajax(): void
     {
         $administrator = User::factory()->role('admin')->create(['name' => 'Access Admin']);
