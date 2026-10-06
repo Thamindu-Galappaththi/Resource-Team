@@ -405,7 +405,6 @@
                             </button>
                         </div>
                         <div id="newPasswordError" class="invalid-feedback">Use at least 8 characters.</div>
-                        <div id="newPasswordHint" class="form-text">Must be at least 8 characters.</div>
                     </div>
                     <div>
                         <label for="newPasswordConfirmation" class="form-label">Re-enter password</label>
@@ -440,6 +439,6 @@ window.UM = {
     errors: @json(session('edit_user_id') ? $errors->toArray() : []),
 };
 </script>
-<script src="{{ asset('js/user-management.js') }}?v=10"></script>
+<script src="{{ asset('js/user-management.js') }}?v=11"></script>
 @endpush
 @endsection

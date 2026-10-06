@@ -472,4 +472,25 @@ class UserManagementControllerTest extends TestCase
                 && str_contains((string) ($mail->view ?? ''), 'emails.admin-reset-password');
         });
     }
+
+    public function test_reset_password_rejects_the_current_password(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('admin')->create([
+            'password' => 'old-password',
+        ]);
+
+        $this->actingAs($administrator)
+            ->postJson(route('users.reset-password', $user), [
+                'password' => 'old-password',
+                'password_confirmation' => 'old-password',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('password')
+            ->assertJsonPath('errors.password.0', 'Enter a new password. It cannot be the same as the current password.');
+
+        $this->assertTrue(Hash::check('old-password', $user->fresh()->password));
+    }
 }

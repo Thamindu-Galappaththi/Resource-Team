@@ -613,7 +613,6 @@ $(function () {
     function clearResetPasswordErrors() {
         $('#newPassword, #newPasswordConfirmation').removeClass('is-invalid');
         $('#newPasswordError, #newPasswordConfirmationError').removeClass('d-block');
-        $('#newPasswordHint').removeClass('d-none');
     }
 
     function showResetPasswordErrors(errors) {
@@ -621,7 +620,6 @@ $(function () {
         if (errors.password?.length) {
             $('#newPassword').addClass('is-invalid');
             $('#newPasswordError').text(errors.password[0]).addClass('d-block');
-            $('#newPasswordHint').addClass('d-none');
         }
         if (errors.password_confirmation?.length) {
             $('#newPasswordConfirmation').addClass('is-invalid');

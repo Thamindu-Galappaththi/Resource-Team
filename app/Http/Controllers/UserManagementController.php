@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -215,7 +216,17 @@ class UserManagementController extends Controller
     public function resetPassword(Request $request, User $user): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                function (string $attribute, mixed $value, \Closure $fail) use ($user): void {
+                    if (Hash::check((string) $value, $user->password)) {
+                        $fail('Enter a new password. It cannot be the same as the current password.');
+                    }
+                },
+            ],
         ], [
             'password.confirmed' => 'The passwords do not match.',
             'password.min' => 'Use at least 8 characters.',
