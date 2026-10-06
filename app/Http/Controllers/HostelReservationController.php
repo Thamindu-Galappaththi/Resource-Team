@@ -27,6 +27,9 @@ class HostelReservationController extends Controller
     {
         $this->authorize('viewAnyHostel', Reservation::class);
 
+        $this->hostel->expireOverduePendingReservations();
+        $this->hostel->completePastApprovedReservations();
+
         $query = Reservation::query()
             ->where('type', ReservationType::HOSTEL->value)
             ->with(['requester', 'location', 'hostelStay.roomType', 'items.resource', 'statusHistory.actor'])
@@ -77,6 +80,7 @@ class HostelReservationController extends Controller
             'statuses' => [
                 ReservationStatus::PENDING_APPROVAL,
                 ReservationStatus::APPROVED,
+                ReservationStatus::COMPLETED,
                 ReservationStatus::REJECTED,
                 ReservationStatus::CANCELLED,
                 ReservationStatus::EXPIRED,
@@ -118,6 +122,13 @@ class HostelReservationController extends Controller
     {
         abort_unless($reservation->type === ReservationType::HOSTEL->value, 404);
         $this->authorize('viewHostel', $reservation);
+
+        if ($this->hostel->expirePendingAtCheckIn($reservation->id)) {
+            $reservation->refresh();
+        }
+        if ($this->hostel->completeApprovedAtCheckout($reservation->id)) {
+            $reservation->refresh();
+        }
 
         $reservation->load([
             'requester',

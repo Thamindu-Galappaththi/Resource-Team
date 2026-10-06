@@ -104,7 +104,7 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('hostel_stay_details', 1);
     }
 
-    public function test_next_guest_can_check_in_on_checkout_day(): void
+    public function test_next_guest_can_check_in_on_the_day_after_checkout(): void
     {
         $user = User::factory()->role('coordinator')->create();
         $setup = $this->hostelRoom();
@@ -119,7 +119,7 @@ class HostelReservationTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('hostel.store'), $this->payload($setup, [
-                'check_in_date' => now()->addDays(4)->toDateString(),
+                'check_in_date' => now()->addDays(5)->toDateString(),
                 'check_out_date' => now()->addDays(6)->toDateString(),
                 'guest_name' => 'Arriving Guest',
             ]))
@@ -337,6 +337,45 @@ class HostelReservationTest extends TestCase
         ]);
     }
 
+    public function test_hostel_pages_expire_overdue_requests_without_running_the_scheduler(): void
+    {
+        $actor = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($actor)->post(route('hostel.store'), $this->payload($setup))->assertRedirect();
+        $reservation = Reservation::query()->firstOrFail();
+        $checkIn = $reservation->hostelStay()->firstOrFail()->check_in_at;
+
+        $this->travelTo($checkIn->copy()->subSecond());
+        $this->get(route('hostel.index'))->assertOk()->assertSee('Pending');
+        $this->assertSame(ReservationStatus::PENDING_APPROVAL->value, $reservation->fresh()->status);
+
+        $this->travelTo($checkIn);
+        $this->get(route('hostel.index', ['status' => ReservationStatus::EXPIRED->value]))
+            ->assertOk()->assertSee($reservation->reference)->assertSee('Expired')
+            ->assertDontSee('id="approveModal-');
+        $this->assertSame(ReservationStatus::EXPIRED->value, $reservation->fresh()->status);
+        $this->assertSame(ReservationItemStatus::CANCELLED->value, $reservation->items()->firstOrFail()->status);
+
+        $this->get(route('hostel.show', $reservation))->assertOk()->assertSee('Expired');
+        $this->get(route('hostel.index'))->assertOk();
+        $this->assertSame(1, $reservation->statusHistory()->where('to_status', ReservationStatus::EXPIRED->value)->count());
+    }
+
+    public function test_opening_hostel_details_expires_an_overdue_pending_request(): void
+    {
+        $actor = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($actor)->post(route('hostel.store'), $this->payload($setup))->assertRedirect();
+        $reservation = Reservation::query()->firstOrFail();
+        $this->travelTo($reservation->hostelStay()->firstOrFail()->check_in_at);
+
+        $this->get(route('hostel.show', $reservation))->assertOk()->assertSee('Expired');
+        $this->assertSame(ReservationStatus::EXPIRED->value, $reservation->fresh()->status);
+        $this->assertSame(ReservationItemStatus::CANCELLED->value, $reservation->items()->firstOrFail()->status);
+    }
+
     public function test_approval_after_checkin_expires_pending_request_instead(): void
     {
         $coordinator = User::factory()->role('coordinator')->create();
@@ -381,6 +420,43 @@ class HostelReservationTest extends TestCase
 
         $this->assertNotFalse($welisara);
         $this->assertTrue($welisara < $moratuwa && $moratuwa < $peradeniya);
+    }
+
+    public function test_approved_stays_complete_at_checkout_through_pages_and_command(): void
+    {
+        $actor = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+        $this->actingAs($actor)->post(route('hostel.store'), $this->payload($setup))->assertRedirect();
+        $reservation = Reservation::query()->firstOrFail();
+        $reservation->update(['status' => ReservationStatus::APPROVED->value]);
+        $reservation->items()->update(['status' => ReservationItemStatus::CONFIRMED->value]);
+        $checkout = $reservation->hostelStay()->firstOrFail()->check_out_at;
+
+        $this->travelTo($checkout->copy()->subSecond());
+        $this->artisan('hostel:complete-reservations')->expectsOutput('Completed 0 hostel reservation(s).')->assertSuccessful();
+        $this->get(route('hostel.show', $reservation))->assertOk();
+        $this->assertSame(ReservationStatus::APPROVED->value, $reservation->fresh()->status);
+
+        $this->travelTo($checkout);
+        $this->get(route('hostel.show', $reservation))->assertOk()->assertSee('Completed');
+        $this->assertSame(ReservationStatus::COMPLETED->value, $reservation->fresh()->status);
+        $this->get(route('hostel.index', ['status' => 'completed']))->assertOk()->assertSee($reservation->reference);
+        $this->artisan('hostel:complete-reservations')->expectsOutput('Completed 0 hostel reservation(s).')->assertSuccessful();
+        $this->assertSame(1, $reservation->statusHistory()->where('to_status', 'completed')->count());
+        $this->assertSame('confirmed', $reservation->items()->firstOrFail()->status);
+
+        // Verify the list and command can each perform the same transition.
+        $reservation->refresh()->update(['status' => 'approved']);
+        $this->get(route('hostel.index'))->assertOk();
+        $this->assertSame('completed', $reservation->fresh()->status);
+
+        $reservation->refresh()->update(['status' => 'approved']);
+        $this->artisan('hostel:complete-reservations')->expectsOutput('Completed 1 hostel reservation(s).')->assertSuccessful();
+        foreach (['cancelled', 'rejected', 'expired', 'pending_approval'] as $status) {
+            $reservation->update(['status' => $status]);
+            $this->artisan('hostel:complete-reservations')->expectsOutput('Completed 0 hostel reservation(s).')->assertSuccessful();
+            $this->assertSame($status, $reservation->fresh()->status);
+        }
     }
 
     public function test_checkout_must_be_after_checkin(): void

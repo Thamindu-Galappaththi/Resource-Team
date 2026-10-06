@@ -4,95 +4,115 @@
 
 @section('content')
 <style>
-    .hostel-reservations {
-        max-width: 1440px;
-        min-height: 100vh;
+    /* Scoped to hostel pages; follows the Resource Calendar's visual style. */
+    .hostel-page {
+        width: 100%;
         margin: 0 auto;
-        padding: 24px;
+        padding: 35px 25px 50px !important;
+        min-height: 100vh;
+        background: transparent;
         color: #111827;
-        background: #f3f4f6;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
-    .hostel-reservations h1 { color: #0f172a; font-size: 26px; font-weight: 800; }
-    .hostel-reservations .page-subtitle { color: #6b7280; font-size: 14px; }
-    .hostel-reservations > .card { background: transparent; box-shadow: none !important; }
-    .hostel-reservations > .card > .card-body { padding: 0 !important; }
-    .hostel-reservations .summary-card {
-        height: 100%;
-        padding: 16px;
-        background: #fff;
-        border: 1px solid #e5e7eb;
+    .hostel-page h1, .hostel-page > div > div > h2 {
+        color: #0f172a !important;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -.02em;
+    }
+    .hostel-page .page-subtitle, .hostel-page > div > div > p,
+    .hostel-page nav, .hostel-page nav a { color: #6b7280 !important; font-size: 14px; }
+    .hostel-reservations > .d-flex h1,
+    .hostel-reservations > .d-flex .page-subtitle,
+    .hostel-page.hostel-details > .d-flex > div > h2,
+    .hostel-page.hostel-details > .d-flex > div > p { color: #fff !important; }
+    .hostel-page.hostel-create > .mb-4 > h1,
+    .hostel-page.hostel-create > .mb-4 > nav,
+    .hostel-page.hostel-create > .mb-4 > nav a,
+    .hostel-page.hostel-create > .mb-4 > nav span,
+    .hostel-page.hostel-create > .mb-4 > nav i { color: #fff !important; }
+    .hostel-page .card, .hostel-page .summary-card {
+        background: rgba(255,255,255,.82);
+        border: 1px solid rgba(235,238,244,.8) !important;
         border-radius: 10px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+        box-shadow: 0 8px 25px rgba(0,0,0,.08) !important;
     }
-    .hostel-reservations .summary-label { color: #6b7280; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-    .hostel-reservations .summary-value { color: #0f172a; font-size: 26px; font-weight: 900; }
-    .hostel-reservations .filter-panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; }
-    .hostel-reservations .filter-panel .form-label { color: #374151; font-size: 12px; font-weight: 700; }
-    .hostel-reservations .form-control, .hostel-reservations .form-select { border-color: #d1d5db; }
-    .hostel-reservations .form-control:focus, .hostel-reservations .form-select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }
-    .hostel-reservations .status-capsules { display: flex; flex-wrap: wrap; gap: 8px; }
-    .hostel-reservations .status-capsules .btn { border-radius: 999px; }
-    .hostel-reservations .table-responsive { background: #fff; border-color: #e5e7eb !important; border-radius: 10px !important; }
-    .hostel-reservations .table { color: #111827; }
-    .hostel-reservations .table thead th { background: #f9fafb; color: #374151; font-size: 12px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
-    .hostel-reservations .table td, .hostel-reservations .table th { padding: 12px 16px; border-bottom-color: #e5e7eb; }
-    .hostel-reservations .table tbody tr:hover { background: #f9fafb; }
+    .hostel-reservations > .card { background: transparent; border: 0 !important; box-shadow: none !important; }
+    .hostel-reservations > .card > .card-body { padding: 0 !important; }
+    .hostel-page .summary-card { height: 100%; padding: 16px; transition: transform .22s ease, box-shadow .22s ease; }
+    .hostel-page .summary-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(23,105,232,.12) !important; }
+    .hostel-page .summary-label { font-size: 12px; color: #6b7280; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .hostel-page .summary-value { margin-top: 8px; font-size: 26px; font-weight: 900; color: #0f172a; }
+    .hostel-page .filter-panel {
+        background: rgba(255,255,255,.78);
+        border: 1px solid rgba(235,238,244,.8);
+        border-radius: 10px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+    }
+    .hostel-page .form-label, #hostel-reservation-modals .form-label { font-size: 12px; color: #374151; font-weight: 700; }
+    .hostel-page .form-control, .hostel-page .form-select,
+    #hostel-reservation-modals .form-control {
+        min-height: 38px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background-color: #fff;
+        color: #111827;
+        font-size: 13px;
+    }
+    .hostel-page .form-control:focus, .hostel-page .form-select:focus,
+    #hostel-reservation-modals .form-control:focus { border-color: #1769e8; box-shadow: 0 0 0 3px rgba(23,105,232,.14); }
+    .hostel-page .btn, #hostel-reservation-modals .btn { border-radius: 8px; font-size: 13px; font-weight: 600; padding: 8px 14px; transition: background .2s ease, color .2s ease; }
+    .hostel-page .btn-primary { background: #1769d1; border-color: #1769d1; color: #fff; }
+    .hostel-page .btn-primary:hover { background: #155bbb; border-color: #155bbb; }
+    .hostel-page .btn-outline-primary, .hostel-page .btn-outline-secondary,
+    .hostel-page .btn-outline-light, .hostel-page .btn-light,
+    #hostel-reservation-modals .btn-outline-secondary {
+        background: rgba(255,255,255,.35); border: 1px solid #1769e8; color: #1769d1;
+    }
+    .hostel-page .btn-outline-primary:hover, .hostel-page .btn-outline-secondary:hover,
+    .hostel-page .btn-outline-light:hover, .hostel-page .btn-light:hover,
+    #hostel-reservation-modals .btn-outline-secondary:hover { background: #1769d1; color: #fff; }
+    .hostel-page .status-capsules { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; width: fit-content; border: 1px solid #dbe5f6; border-radius: 9px; background: rgba(255,255,255,.78); }
+    .hostel-page .status-capsules .btn { border: 0; border-radius: 7px; }
+    .hostel-page .status-capsules .btn-outline-primary { background: transparent; }
+    .hostel-page .status-capsules .btn-outline-primary:hover { background: transparent; color: #0f172a; }
+    .hostel-page .status-capsules .btn-primary { box-shadow: 0 3px 9px rgba(23,105,232,.2); }
+    .hostel-page .table-responsive { padding: 16px; background: rgba(255,255,255,.82); border: 0 !important; border-radius: 10px !important; box-shadow: 0 8px 25px rgba(0,0,0,.08); }
+    .hostel-page .table { font-size: 13px; color: #111827; }
+    .hostel-page .table > :not(caption) > * > * { padding: 10px 12px; background: transparent; border-bottom-color: #e5e7eb; }
+    .hostel-page .table thead th { background: #f9fafb; color: #374151; font-weight: 800; white-space: nowrap; }
+    .hostel-page .table tbody tr:hover { background: #f9fafb; }
+    .hostel-page .table .btn { padding: 5px 10px; font-size: 12px; }
+    .hostel-page .badge, #hostel-reservation-modals .badge { font-size: 12px; font-weight: 600; }
+    .hostel-create .booking-card { padding: 28px; }
+    .hostel-create .booking-heading { color: #0f172a; font-size: 18px; font-weight: 800; border-bottom: 1px solid #e5e7eb; padding-bottom: 18px; margin-bottom: 24px; }
+    .hostel-create textarea.form-control { min-height: 120px; }
+    .hostel-create .features-heading { background: #eef3fa; color: #1769d1; padding: 18px 22px; }
+    .hostel-create .feature-list { list-style: none; padding: 0; margin: 0; }
+    .hostel-create .feature-list li { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .hostel-create .feature-list i { color: #1769d1; font-size: 21px; }
+    .hostel-create .help-panel { background: rgba(238,243,250,.65); border-top: 1px solid #e5e7eb; padding: 22px; }
+    .hostel-create .create-button { min-height: 44px; }
+    .hostel-details .card-body { padding: 24px; }
+    .hostel-details .card h5 { color: #0f172a; font-size: 18px; font-weight: 800; }
+    .hostel-details .card strong { display: block; margin-bottom: 5px; color: #6b7280; font-size: 12px; font-weight: 700; }
+    #hostel-reservation-modals .modal-content { border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; box-shadow: 0 18px 50px rgba(15,23,42,.2); color: #111827; overflow: hidden; }
+    #hostel-reservation-modals .modal-header { padding: 20px 24px; background: #eef3fa !important; border-bottom: 1px solid #e5e7eb; }
+    #hostel-reservation-modals .modal-title { color: #0f172a; font-weight: 800; }
+    #hostel-reservation-modals .modal-body { padding: 24px; }
+    #hostel-reservation-modals .modal-footer { border-top: 1px solid #e5e7eb; padding: 16px 24px; }
     @media (max-width: 575.98px) {
-        .hostel-reservations { padding: 16px; }
+        .hostel-page { padding: 24px 12px 32px !important; }
+        .hostel-create .booking-card, .hostel-details .card-body { padding: 20px; }
+        .hostel-details > .d-flex { flex-wrap: wrap; gap: 16px; }
+        .hostel-page .status-capsules { width: 100%; }
     }
-.hostel-reservations {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.hostel-reservations .summary-card {
-    border: 1px solid #e8ebef;
-    border-radius: 10px;
-    padding: 20px;
-    height: 100%;
-}
-
-.hostel-reservations .summary-label {
-    font-size: 12px;
-    text-transform: uppercase;
-    color: #343a40;
-}
-
-.hostel-reservations .summary-value {
-    font-size: 28px;
-    font-weight: 600;
-    color: #172431;
-}
-
-.hostel-reservations .check-ins {
-    border-top: 3px solid #13aacb;
-}
-
-.hostel-reservations .filter-panel {
-    background: #f7f8fa;
-    border: 1px solid #edf0f3;
-    border-radius: 8px;
-}
-
-.hostel-reservations .filter-panel .form-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-.hostel-reservations .table thead th {
-    background: #f7f8fa;
-    font-size: 12px;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.hostel-reservations .table td,
-.hostel-reservations .table th {
-    padding: 16px;
-}
+    @media (prefers-reduced-motion: reduce) {
+        .hostel-page .summary-card, .hostel-page .btn { transition: none; }
+        .hostel-page .summary-card:hover { transform: none; }
+    }
 </style>
-<div class="hostel-reservations py-4">
+<div class="hostel-page hostel-reservations py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
             <h1 class="h3 mb-2">Hostel Reservations</h1>
@@ -175,7 +195,7 @@
                         </div>
                     </div>
                     <div class="col-12 d-flex justify-content-end gap-2">
-                        <a href="{{ route('hostel.index') }}" class="btn btn-light">Reset</a>
+                        <button type="button" id="hostel-reset-filters" class="btn btn-light">Reset</button>
                         <button class="btn btn-primary">Apply Filters</button>
                     </div>
                 </div>
@@ -228,6 +248,20 @@
                         event.preventDefault();
                         window.clearTimeout(hostelSearchTimeout);
                         refreshHostelResults(hostelFilterUrl());
+                    });
+
+                    document.getElementById('hostel-reset-filters')?.addEventListener('click', () => {
+                        window.clearTimeout(hostelSearchTimeout);
+                        ['search', 'check_in_from', 'check_in_to', 'room_type_id', 'status'].forEach((name) => {
+                            hostelFilterForm.elements.namedItem(name).value = '';
+                        });
+                        hostelFilterForm.querySelectorAll('[data-hostel-status]').forEach((capsule) => {
+                            const selected = capsule.dataset.hostelStatus === '';
+                            capsule.classList.toggle('btn-primary', selected);
+                            capsule.classList.toggle('btn-outline-primary', !selected);
+                            capsule.setAttribute('aria-pressed', selected ? 'true' : 'false');
+                        });
+                        refreshHostelResults(hostelFilterForm.action);
                     });
 
                     hostelFilterForm?.querySelectorAll('[data-hostel-status]').forEach((button) => {
