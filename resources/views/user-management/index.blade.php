@@ -421,7 +421,7 @@ window.UM = {
     lookupUrl: @json(route('slt.employee.lookup')),
     editUpdateUrl: @json(session('edit_update_url')),
     oldInput: @json(session('edit_user_id') ? old() : null),
-    errors: @json(session('edit_user_id') ? $errors - > toArray() : []),
+    errors: @json(session('edit_user_id') ? $errors->toArray() : []),
 };
 </script>
 <script src="{{ asset('js/user-management.js') }}?v=9"></script>
