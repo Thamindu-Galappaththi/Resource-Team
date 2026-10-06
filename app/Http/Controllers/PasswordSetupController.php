@@ -14,9 +14,17 @@ class PasswordSetupController extends Controller
 {
     public function showResetForm(Request $request, string $token): View
     {
-        return view('auth.reset-password', [
+        $email = (string) $request->query('email', '');
+        $user = $email !== ''
+            ? User::query()->where('email', $email)->first()
+            : null;
+        $valid = $user && Password::broker()->tokenExists($user, $token);
+
+        return view('auth.setup-password', [
             'token' => $token,
-            'email' => $request->query('email'),
+            'email' => $email,
+            'expiresMinutes' => (int) config('auth.passwords.users.expire', 60),
+            'expired' => ! $valid,
         ]);
     }
 
@@ -26,6 +34,9 @@ class PasswordSetupController extends Controller
             'token' => ['required'],
             'email' => ['required', 'email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'password.confirmed' => 'The passwords do not match.',
+            'password.min' => 'Use at least 8 characters.',
         ]);
 
         $status = Password::reset(
@@ -34,6 +45,7 @@ class PasswordSetupController extends Controller
                 $user->forceFill([
                     'password' => $password,
                     'remember_token' => Str::random(60),
+                    'password_setup_at' => now(),
                 ])->save();
 
                 event(new PasswordReset($user));
@@ -43,11 +55,13 @@ class PasswordSetupController extends Controller
         if ($status === Password::PASSWORD_RESET) {
             return redirect()
                 ->route('login')
-                ->with('status', 'Password created successfully. You can now log in.');
+                ->with('status', 'Your password is ready. You can now sign in.');
         }
 
         return back()
             ->withInput($request->only('email'))
-            ->withErrors(['email' => __($status)]);
+            ->withErrors([
+                'password' => 'This setup link is invalid or has expired. Ask an administrator to send a new one.',
+            ]);
     }
 }

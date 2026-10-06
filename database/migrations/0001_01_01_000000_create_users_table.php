@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('location')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->timestamp('password_setup_at')->nullable();
             $table->string('user_role')->nullable();
             $table->foreignId('role_id')->nullable()->index();
             $table->string('designation')->nullable();

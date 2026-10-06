@@ -154,11 +154,12 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('user-management')->controller(UserManagementController::class)->group(function () {
         Route::post('/create-user', 'store')->middleware('permission:user.create')->name('create.user.store');
-        Route::get('/slt-employee', 'lookupSltEmployee')->middleware('permission:user.create')->name('slt.employee.lookup');
+        Route::get('/slt-employee', 'lookupSltEmployee')->middleware('permission:user.create,user.management')->name('slt.employee.lookup');
         Route::delete('/{user}', 'destroy')->middleware('permission:user.management')->name('users.destroy');
         Route::put('/{user}', 'update')->middleware('permission:user.management')->name('users.update');
         Route::post('/{user}/toggle-active', 'toggleActive')->middleware('permission:user.management')->name('users.toggle-active');
         Route::post('/{user}/reset-password', 'resetPassword')->middleware('permission:user.management')->name('users.reset-password');
+        Route::post('/{user}/resend-password-setup', 'resendPasswordSetup')->middleware('permission:user.management')->name('users.resend-password-setup');
     });
 
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
@@ -180,6 +181,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 // Password setup links carry a signed reset token. Keep these accessible when
 // an administrator is already authenticated, otherwise guest middleware would
 // redirect the link to the dashboard before the recipient can set a password.
-Route::get('/reset-password/{token}', [PasswordSetupController::class, 'showResetForm'])->name('password.reset');
-
-Route::post('/reset-password', [PasswordSetupController::class, 'reset'])->name('password.update');
+Route::get('/setup-password/{token}', [PasswordSetupController::class, 'showResetForm'])->name('password.reset');
+Route::post('/setup-password', [PasswordSetupController::class, 'reset'])->name('password.update');
+Route::get('/reset-password/{token}', function (string $token) {
+    return redirect()->route('password.reset', array_filter([
+        'token' => $token,
+        'email' => request()->query('email'),
+    ]));
+});

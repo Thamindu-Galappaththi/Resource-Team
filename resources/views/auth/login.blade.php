@@ -131,6 +131,21 @@
             margin-bottom: 1.05rem;
         }
 
+        .field.is-invalid {
+            margin-bottom: 0.35rem;
+        }
+
+        .field-error {
+            display: none;
+            margin: 0 0 0.95rem;
+            font-size: 0.8rem;
+            color: #b91c1c;
+        }
+
+        .field.is-invalid + .field-error {
+            display: block;
+        }
+
         .field-icon {
             position: absolute;
             left: 0.9rem;
@@ -202,10 +217,6 @@
             <h1 id="login-title">Resource Reservation</h1>
             <p class="login-subtitle">Sign in to manage your institutional assets</p>
 
-            @if($errors->any())
-                <div class="login-alert login-alert-error" role="alert">{{ $errors->first() }}</div>
-            @endif
-
             @if(session('status'))
                 <div class="login-alert login-alert-success" role="alert">{{ session('status') }}</div>
             @endif
@@ -224,8 +235,10 @@
                         required
                         autocomplete="username"
                         autofocus
-                        placeholder="Enter your username">
+                        placeholder="Enter your username"
+                        aria-describedby="usernameError">
                 </div>
+                <p class="field-error" id="usernameError">{{ $errors->first('username') ?: 'Username is required.' }}</p>
 
                 <label class="field-label" for="password">Password</label>
                 <div class="field {{ $errors->has('password') ? 'is-invalid' : '' }}">
@@ -236,11 +249,13 @@
                         name="password"
                         required
                         autocomplete="current-password"
-                        placeholder="••••••••">
+                        placeholder="••••••••"
+                        aria-describedby="passwordError">
                     <button class="field-toggle" type="button" id="togglePassword" aria-label="Show password">
                         <i class="bi bi-eye" id="togglePasswordIcon"></i>
                     </button>
                 </div>
+                <p class="field-error" id="passwordError">{{ $errors->first('password') ?: 'Password is required.' }}</p>
 
                 <button type="submit" class="login-btn">Sign In</button>
             </form>

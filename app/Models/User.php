@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use App\Helpers\RoleHelper;
+use App\Notifications\SetupPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
@@ -30,6 +33,7 @@ class User extends Authenticatable
         'user_type',
         'user_profile',
         'is_active',
+        'password_setup_at',
     ];
 
     protected $hidden = [
@@ -44,6 +48,7 @@ class User extends Authenticatable
             'slt_employee' => 'boolean',
             'is_active' => 'boolean',
             'password' => 'hashed',
+            'password_setup_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
     }
@@ -73,6 +78,74 @@ class User extends Authenticatable
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    /**
+     * Pivot roles plus the primary role, without duplicates or mutating relations.
+     *
+     * @return Collection<int, Role>
+     */
+    public function assignedRoles(): Collection
+    {
+        $this->loadMissing('role', 'roles');
+
+        return $this->roles
+            ->concat(collect([$this->role]))
+            ->filter()
+            ->unique('id')
+            ->values();
+    }
+
+    public function extraPermissions(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class);
+    }
+
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new SetupPasswordNotification($token));
+    }
+
+    public function hasSetPassword(): bool
+    {
+        return $this->password_setup_at !== null;
+    }
+
+    public function markPasswordSetupCompleted(): void
+    {
+        $this->forceFill(['password_setup_at' => now()])->save();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function grantedPermissionSlugs(): array
+    {
+        $all = array_keys(config('rbac.permissions', []));
+        $slugs = collect();
+
+        $this->loadMissing('role', 'roles.permissions');
+
+        foreach ($this->assignedRoles() as $role) {
+            if (in_array($role->slug, ['developer', 'super_admin'], true)) {
+                return $all;
+            }
+
+            $slugs = $slugs->merge($role->permissions->pluck('slug'));
+        }
+
+        if ($this->extraPermissionTableExists()) {
+            $this->loadMissing('extraPermissions');
+            $slugs = $slugs->merge($this->extraPermissions->pluck('slug'));
+        }
+
+        $fromConfig = collect([$this->roleSlug()])
+            ->filter()
+            ->flatMap(fn (string $slug) => in_array($slug, ['developer', 'super_admin'], true)
+                ? $all
+                : config('rbac.role_permissions.'.$slug, []));
+
+        return $slugs->merge($fromConfig)->unique()->values()->all();
     }
 
     public function roleSlug(): string
@@ -105,7 +178,9 @@ class User extends Authenticatable
         $this->loadMissing('role.permissions', 'roles.permissions');
 
         if ($this->roles->contains(fn (Role $role) => $role->hasPermission($permission))
-            || $this->role?->hasPermission($permission)) {
+            || $this->role?->hasPermission($permission)
+            || ($this->extraPermissionTableExists()
+                && $this->loadMissing('extraPermissions')->extraPermissions->contains('slug', $permission))) {
             return true;
         }
 
@@ -126,5 +201,12 @@ class User extends Authenticatable
         }
 
         return Storage::disk('public')->url($this->user_profile);
+    }
+
+    private function extraPermissionTableExists(): bool
+    {
+        static $exists;
+
+        return $exists ??= Schema::hasTable('permission_user');
     }
 }

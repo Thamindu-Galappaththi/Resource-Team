@@ -31,6 +31,20 @@ class LoginTest extends TestCase
             ->assertSee('js/login.js', false);
     }
 
+    public function test_empty_login_shows_required_field_messages(): void
+    {
+        $this->from(route('login'))
+            ->followingRedirects()
+            ->post(route('login.attempt'), [
+                'username' => '',
+                'password' => '',
+            ])
+            ->assertOk()
+            ->assertSee('Username is required.')
+            ->assertSee('Password is required.')
+            ->assertSee('field is-invalid', false);
+    }
+
     public function test_user_can_login_with_nic(): void
     {
         $user = User::factory()->role('admin')->create([

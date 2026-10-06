@@ -4,43 +4,78 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
+    const loginForm = document.getElementById('loginForm');
 
-    usernameInput.addEventListener('input', () => {
-        usernameInput.classList.remove('is-invalid');
-        usernameInput.closest('.field')?.classList.remove('is-invalid');
+    const usernameError = document.getElementById('usernameError');
+    const passwordError = document.getElementById('passwordError');
+
+    function setLoginFieldError(input, errorEl, message) {
+        const field = input?.closest('.field');
+        const invalid = Boolean(message);
+        input?.classList.toggle('is-invalid', invalid);
+        field?.classList.toggle('is-invalid', invalid);
+        if (errorEl && message) {
+            errorEl.textContent = message;
+        }
+    }
+
+    usernameInput?.addEventListener('input', () => {
+        setLoginFieldError(usernameInput, usernameError, '');
     });
 
-    passwordInput.addEventListener('input', () => {
-        passwordInput.classList.remove('is-invalid');
-        passwordInput.closest('.field')?.classList.remove('is-invalid');
+    passwordInput?.addEventListener('input', () => {
+        setLoginFieldError(passwordInput, passwordError, '');
     });
 
-    document.getElementById('loginForm').addEventListener('submit', function (e) {
+    loginForm?.addEventListener('submit', function (e) {
         let valid = true;
 
-        if (!usernameInput.value.trim()) {
-            usernameInput.classList.add('is-invalid');
-            usernameInput.closest('.field')?.classList.add('is-invalid');
+        if (usernameInput && !usernameInput.value.trim()) {
+            setLoginFieldError(usernameInput, usernameError, 'Username is required.');
             valid = false;
+        } else {
+            setLoginFieldError(usernameInput, usernameError, '');
         }
 
-        if (!passwordInput.value.trim()) {
-            passwordInput.classList.add('is-invalid');
-            passwordInput.closest('.field')?.classList.add('is-invalid');
+        if (passwordInput && !passwordInput.value.trim()) {
+            setLoginFieldError(passwordInput, passwordError, 'Password is required.');
             valid = false;
+        } else {
+            setLoginFieldError(passwordInput, passwordError, '');
         }
 
-        if (!valid) e.preventDefault();
+        if (!valid) {
+            e.preventDefault();
+            (usernameInput && !usernameInput.value.trim() ? usernameInput : passwordInput)?.focus();
+        }
     });
 
     const togglePassword = document.getElementById('togglePassword');
     const togglePasswordIcon = document.getElementById('togglePasswordIcon');
 
-    togglePassword.addEventListener('click', () => {
+    togglePassword?.addEventListener('click', () => {
+        if (!passwordInput || !togglePasswordIcon) {
+            return;
+        }
         const hidden = passwordInput.type === 'password';
         passwordInput.type = hidden ? 'text' : 'password';
         togglePasswordIcon.classList.toggle('bi-eye');
         togglePasswordIcon.classList.toggle('bi-eye-slash');
+    });
+
+    document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const input = document.getElementById(button.dataset.passwordToggle);
+            const icon = button.querySelector('i');
+            if (!input || !icon) {
+                return;
+            }
+            const showingPassword = input.type === 'text';
+            input.type = showingPassword ? 'password' : 'text';
+            icon.classList.toggle('bi-eye', showingPassword);
+            icon.classList.toggle('bi-eye-slash', !showingPassword);
+            button.setAttribute('aria-label', showingPassword ? 'Show password' : 'Hide password');
+        });
     });
 
     initStarfield();

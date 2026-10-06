@@ -2,25 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\AdminResetPasswordNotification;
+use App\Rules\SriLankanNic;
+use App\Services\SltEmployeeDirectory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class UserManagementController extends Controller
 {
     public function index(Request $request): View
     {
-        $users = User::query()
-            ->with(['role', 'roles'])
-            ->latest()
-            ->paginate(15);
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'location' => ['nullable', 'string', 'max:100'],
@@ -28,8 +31,13 @@ class UserManagementController extends Controller
             'status' => ['nullable', Rule::in(['active', 'inactive'])],
         ]);
 
-        $usersQuery = User::withTrashed()
-            ->with('role')
+        $with = ['role.permissions', 'roles.permissions'];
+        if (Schema::hasTable('permission_user')) {
+            $with[] = 'extraPermissions';
+        }
+
+        $usersQuery = User::query()
+            ->with($with)
             ->when($filters['search'] ?? null, function ($query, string $search) {
                 $query->where(function ($userQuery) use ($search) {
                     $userQuery->where('name', 'like', "%{$search}%")
@@ -38,48 +46,66 @@ class UserManagementController extends Controller
                         ->orWhere('email', 'like', "%{$search}%");
                 });
             })
-            ->when($filters['location'] ?? null, fn ($query, string $location) => $query->where('location', $location))
+            ->when($filters['location'] ?? null, function ($query, string $location) {
+                $campus = trim((string) strrchr($location, '-')) ?: $location;
+                $campus = ltrim($campus, '- ');
+                $query->where(function ($locationQuery) use ($location, $campus) {
+                    $locationQuery->where('location', $location)
+                        ->orWhere('location', 'like', '%'.$campus.'%');
+                });
+            })
             ->when($filters['role'] ?? null, fn ($query, int $roleId) => $query->where('role_id', $roleId))
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('is_active', $status === 'active'));
 
-        $users = $usersQuery->latest()->paginate(15)->withQueryString();
-        $statistics = [
-            'total' => User::withTrashed()->count(),
-            'active' => User::where('is_active', true)->count(),
-            'inactive' => User::where('is_active', false)->count(),
-        ];
-        $locations = User::withTrashed()->whereNotNull('location')->distinct()->orderBy('location')->pluck('location');
-        $roles = Role::query()->where('is_active', true)->orderBy('sort_order')->get();
+        $users = $usersQuery->latest('id')->paginate(10)->withQueryString();
+        $permissionGroups = config('rbac.permission_groups', []);
 
-        return view('user-management.index', compact('users', 'statistics', 'locations', 'roles'));
+        if ($request->ajax()) {
+            return view('user-management._users-table', [
+                'users' => $users,
+                'permissionGroups' => $permissionGroups,
+            ]);
+        }
+
+        $statistics = $this->userStatistics();
+        $locations = $this->campusLocations();
+        $roles = Role::query()->where('is_active', true)->with('permissions')->orderBy('sort_order')->get();
+
+        return view('user-management.index', [
+            'users' => $users,
+            'statistics' => $statistics,
+            'locations' => $locations,
+            'roles' => $roles,
+            'permissionGroups' => $permissionGroups,
+            'rolePermissions' => $this->rolePermissionMap($roles),
+        ]);
     }
 
     public function create(): View
     {
         $roles = Role::query()
             ->where('is_active', true)
+            ->with('permissions')
             ->orderBy('sort_order')
             ->get();
 
-        return view('user-management.create-user', compact('roles'));
+        return view('user-management.create-user', [
+            'roles' => $roles,
+            'permissionGroups' => config('rbac.permission_groups', []),
+            'rolePermissions' => $this->rolePermissionMap($roles),
+            'locations' => $this->campusLocations(),
+            'employeeLookupMock' => app(SltEmployeeDirectory::class)->usesMock(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'slt_employee' => ['required', 'in:yes,no'],
-            'name' => ['required', 'string', 'max:50'],
-            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
-            'nic' => ['required', 'string', 'size:12', 'unique:users,nic'],
-            'email' => ['required', 'email', 'max:50', 'unique:users,email'],
-            'phone' => ['required', 'string', 'max:20'],
-            'location' => ['required', 'string', 'max:100'],
-            'designation' => ['nullable', 'string', 'max:100'],
-            'user_roles' => ['required', 'array', 'min:1'],
-            'user_roles.*' => ['required', 'string', 'distinct', Rule::exists('roles', 'slug')->where('is_active', true)],
-        ]);
+        $validated = $this->validateManagedUser($request);
 
-        $roles = Role::query()->whereIn('slug', $validated['user_roles'])->get();
+        $roles = Role::query()
+            ->with('permissions')
+            ->whereIn('slug', $validated['user_roles'])
+            ->get();
         $primaryRole = $roles->firstWhere('slug', $validated['user_roles'][0]);
 
         $user = User::create([
@@ -95,9 +121,11 @@ class UserManagementController extends Controller
             'role_id' => $primaryRole->id,
             'user_role' => $primaryRole->slug,
             'is_active' => true,
+            'password_setup_at' => null,
         ]);
 
         $user->roles()->sync($roles->modelKeys());
+        $this->syncExtraPermissions($user, $roles, $validated['extra_permissions'] ?? []);
 
         $status = Password::sendResetLink([
             'email' => $user->email,
@@ -118,57 +146,55 @@ class UserManagementController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:50'],
-            'service_id' => ['nullable', 'string', 'max:20'],
-            'nic' => [
-                'required',
-                'string',
-                'size:12',
-                Rule::unique('users', 'nic')->ignore($user->id),
-            ],
-            'email' => [
-                'required',
-                'email',
-                'max:50',
-                Rule::unique('users', 'email')->ignore($user->id),
-            ],
-            'phone' => ['required', 'string', 'max:20'],
-            'location' => ['required', 'string', 'max:100'],
-            'designation' => ['nullable', 'string', 'max:100'],
-            'user_role' => [
-                'required',
-                'string',
-                Rule::exists('roles', 'slug')->where('is_active', true),
-            ],
-        ]);
+        try {
+            $validated = $this->validateManagedUser($request, $user);
+        } catch (ValidationException $exception) {
+            return redirect()
+                ->route('user.management')
+                ->withErrors($exception->validator)
+                ->withInput()
+                ->with('edit_user_id', $user->id)
+                ->with('edit_update_url', route('users.update', $user));
+        }
 
-        $role = Role::query()
-            ->where('slug', $validated['user_role'])
+        $roles = Role::query()
+            ->with('permissions')
+            ->whereIn('slug', $validated['user_roles'])
             ->where('is_active', true)
-            ->firstOrFail();
+            ->get();
+        $primaryRole = $roles->firstWhere('slug', $validated['user_roles'][0]);
 
         $user->update([
             'name' => $validated['name'],
             'service_id' => $validated['service_id'] ?? null,
+            'slt_employee' => $validated['slt_employee'] === 'yes',
             'nic' => $validated['nic'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'location' => $validated['location'],
             'designation' => $validated['designation'] ?? null,
-            'role_id' => $role->id,
-            'user_role' => $role->slug,
+            'role_id' => $primaryRole->id,
+            'user_role' => $primaryRole->slug,
         ]);
+
+        $user->roles()->sync($roles->modelKeys());
+        $this->syncExtraPermissions($user, $roles, $validated['extra_permissions'] ?? []);
 
         return redirect()
             ->route('user.management')
             ->with('status', 'User updated successfully!');
     }
 
-    public function toggleActive(User $user): RedirectResponse
+    public function toggleActive(Request $request, User $user): RedirectResponse|JsonResponse
     {
         if ($user->is(auth()->user())) {
-            return back()->withErrors(['status' => 'You cannot change the status of your own account.']);
+            $message = 'You cannot change the status of your own account.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->withErrors(['status' => $message]);
         }
 
         $user->update(['is_active' => ! $user->is_active]);
@@ -177,68 +203,236 @@ class UserManagementController extends Controller
             ? 'User account activated successfully!'
             : 'User account deactivated successfully!';
 
-        return back()->with('status', $message);
-    }
-
-    public function resetPassword(Request $request, User $user): RedirectResponse
-    {
-        $validated = $request->validate([
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        // User's password cast hashes the value before it is stored.
-        $user->update(['password' => $validated['password']]);
-
-        try {
-            Mail::raw(
-                "Hello {$user->name},\n\nAn administrator has reset your account password. Your new password is:\n\n{$validated['password']}\n\nPlease sign in and change it as soon as possible.",
-                function ($message) use ($user) {
-                    $message->to($user->email, $user->name)
-                        ->subject('Your account password has been reset');
-                }
-            );
-        } catch (\Throwable $exception) {
-            report($exception);
-
-            return back()->withErrors([
-                'password' => 'The password was updated, but the notification email could not be sent.',
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => $message,
+                'is_active' => $user->is_active,
+                'statistics' => $this->userStatistics(),
             ]);
         }
 
-        return back()->with('status', 'Password reset successfully and the new password was emailed to '.$user->email.'.');
+        return back()->with('status', $message);
     }
 
-    public function destroy(User $user): RedirectResponse
+    public function resetPassword(Request $request, User $user): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                function (string $attribute, mixed $value, \Closure $fail) use ($user): void {
+                    if (Hash::check((string) $value, $user->password)) {
+                        $fail('Enter a new password. It cannot be the same as the current password.');
+                    }
+                },
+            ],
+        ], [
+            'password.confirmed' => 'The passwords do not match.',
+            'password.min' => 'Use at least 8 characters.',
+        ]);
+
+        $user->update([
+            'password' => $validated['password'],
+            'password_setup_at' => now(),
+        ]);
+
+        try {
+            $user->notify(new AdminResetPasswordNotification($validated['password']));
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            $message = 'The password was updated, but the email could not be sent.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->withErrors(['password' => $message]);
+        }
+
+        $message = 'Password reset successfully and emailed to '.$user->email.'.';
+
+        if ($request->expectsJson()) {
+            return response()->json(['status' => $message]);
+        }
+
+        return back()->with('status', $message);
+    }
+
+    public function resendPasswordSetup(Request $request, User $user): JsonResponse
+    {
+        if ($user->hasSetPassword()) {
+            return response()->json([
+                'message' => 'This user has already set a password.',
+            ], 422);
+        }
+
+        $status = Password::sendResetLink([
+            'email' => $user->email,
+        ]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'status' => 'A new password setup link was sent to '.$user->email.'.',
+            ]);
+        }
+
+        if ($status === Password::RESET_THROTTLED) {
+            return response()->json([
+                'message' => 'Please wait a minute before sending another setup email.',
+            ], 429);
+        }
+
+        return response()->json([
+            'message' => 'The password setup email could not be sent.',
+        ], 422);
+    }
+
+    public function destroy(Request $request, User $user): RedirectResponse|JsonResponse
     {
         if ($user->is(auth()->user())) {
-            return redirect()->route('user.management')->withErrors(['status' => 'You cannot delete your own account.']);
+            $message = 'You cannot delete your own account.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return redirect()->route('user.management')->withErrors(['status' => $message]);
         }
 
         $deletedUserName = $user->name;
         $user->delete();
+        $message = 'User account deleted successfully for '.$deletedUserName.'.';
 
-        return redirect()->route('user.management')->with('status', 'User account deleted successfully for '.$deletedUserName.'.');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => $message,
+                'statistics' => $this->userStatistics(),
+            ]);
+        }
+
+        return redirect()->route('user.management')->with('status', $message);
     }
 
-    public function lookupSltEmployee(Request $request): JsonResponse
+    public function lookupSltEmployee(Request $request, SltEmployeeDirectory $directory): JsonResponse
     {
         $validated = $request->validate([
             'employee_id' => ['required', 'string', 'max:20'],
         ]);
 
-        $employee = User::query()
-            ->where('service_id', $validated['employee_id'])
-            ->first();
+        try {
+            return response()->json($directory->lookup($validated['employee_id']));
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 404);
+        }
+    }
 
-        if (! $employee) {
-            return response()->json(['message' => 'No SLT employee was found for that Employee ID.'], 404);
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateManagedUser(Request $request, ?User $user = null): array
+    {
+        $request->merge([
+            'nic' => SriLankanNic::normalize($request->input('nic')),
+        ]);
+
+        return $request->validate([
+            'slt_employee' => ['required', 'in:yes,no'],
+            'name' => ['required', 'string', 'max:100'],
+            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
+            'nic' => [
+                'required',
+                'string',
+                'max:12',
+                new SriLankanNic,
+                Rule::unique('users', 'nic')->ignore($user?->id),
+            ],
+            'email' => [
+                'required',
+                'email',
+                'max:50',
+                Rule::unique('users', 'email')->ignore($user?->id),
+            ],
+            'phone' => ['required', 'string', 'max:20'],
+            'location' => ['required', 'string', 'max:100'],
+            'designation' => ['nullable', 'string', 'max:100'],
+            'user_roles' => ['required', 'array', 'min:1'],
+            'user_roles.*' => ['required', 'string', 'distinct', Rule::exists('roles', 'slug')->where('is_active', true)],
+            'extra_permissions' => ['nullable', 'array'],
+            'extra_permissions.*' => ['string', Rule::exists('permissions', 'slug')],
+        ]);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Role>  $roles
+     * @param  array<int, string>  $extraSlugs
+     */
+    private function syncExtraPermissions(User $user, $roles, array $extraSlugs): void
+    {
+        if (! Schema::hasTable('permission_user')) {
+            return;
         }
 
-        return response()->json([
-            'name' => $employee->name,
-            'nic' => $employee->nic,
-            'email' => $employee->email,
-            'phone' => $employee->phone,
-        ]);
+        $grantedByRoles = $roles->flatMap(function (Role $role) {
+            if (in_array($role->slug, ['developer', 'super_admin'], true)) {
+                return array_keys(config('rbac.permissions', []));
+            }
+
+            return $role->permissions->pluck('slug');
+        })->unique()->all();
+
+        $extraIds = Permission::query()
+            ->whereIn('slug', $extraSlugs)
+            ->whereNotIn('slug', $grantedByRoles)
+            ->pluck('id');
+
+        $user->extraPermissions()->sync($extraIds);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Role>  $roles
+     * @return array<string, list<string>>
+     */
+    private function rolePermissionMap($roles): array
+    {
+        $allPermissionSlugs = array_keys(config('rbac.permissions', []));
+
+        return $roles->mapWithKeys(function (Role $role) use ($allPermissionSlugs) {
+            if (in_array($role->slug, ['developer', 'super_admin'], true)) {
+                return [$role->slug => $allPermissionSlugs];
+            }
+
+            $fromRole = $role->permissions->pluck('slug');
+            $fromConfig = collect(config('rbac.role_permissions.'.$role->slug, []))
+                ->reject(fn (string $slug) => $slug === '*');
+
+            return [$role->slug => $fromRole->merge($fromConfig)->unique()->values()->all()];
+        })->all();
+    }
+
+    /**
+     * @return array{total: int, active: int, inactive: int}
+     */
+    private function userStatistics(): array
+    {
+        return [
+            'total' => User::query()->count(),
+            'active' => User::where('is_active', true)->count(),
+            'inactive' => User::where('is_active', false)->count(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function campusLocations(): array
+    {
+        return [
+            'Nebula Institute of Technology - Welisara',
+            'Nebula Institute of Technology - Moratuwa',
+            'Nebula Institute of Technology - Peradeniya',
+        ];
     }
 }
