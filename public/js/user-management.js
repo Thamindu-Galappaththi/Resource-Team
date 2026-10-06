@@ -182,9 +182,9 @@ $(function () {
     }
 
     function updateEditRoleSummary() {
-        const names = [...document.querySelectorAll('.js-edit-user-role:checked')]
+        const names = [...new Set([...document.querySelectorAll('.js-edit-user-role:checked')]
             .map((input) => input.closest('label')?.querySelector('.js-edit-role-name')?.textContent.trim())
-            .filter(Boolean);
+            .filter(Boolean))];
         const summary = document.getElementById('editRolesSummary');
         if (!summary) {
             return;
@@ -266,7 +266,7 @@ $(function () {
         $('#viewPhone').val(user.phone || '—');
         $('#viewDesignation').val(user.designation || '—');
         $('#viewLocation').val(user.location || '—');
-        $('#viewRoles').val((user.role_names || []).join(', ') || 'Unassigned');
+        $('#viewRoles').val([...new Set(user.role_names || [])].join(', ') || 'Unassigned');
         const permissions = user.permissions || [];
         $('#viewPermissions').html(permissions.length
             ? permissions.map((item) => `<div>${$('<div>').text(item).html()}</div>`).join('')
@@ -294,7 +294,7 @@ $(function () {
         }
 
         $('.js-edit-user-role').prop('checked', false);
-        (user.role_slugs || []).forEach((slug) => {
+        [...new Set(user.role_slugs || [])].forEach((slug) => {
             $(`.js-edit-user-role[value="${slug}"]`).prop('checked', true);
         });
         refreshEditPermissions(user.extras || []);

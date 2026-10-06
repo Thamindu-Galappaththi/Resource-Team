@@ -306,6 +306,26 @@ class UserManagementControllerTest extends TestCase
         ]);
     }
 
+    public function test_edit_payload_does_not_repeat_the_primary_role(): void
+    {
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('hostel_manager')->create(['name' => 'Hostel User']);
+        $user->roles()->sync([$user->role_id]);
+
+        $countBefore = $user->roles()->count();
+        $user->load(['role', 'roles']);
+        $user->grantedPermissionSlugs();
+
+        $this->assertSame($countBefore, $user->roles->count());
+        $this->assertCount(1, $user->assignedRoles());
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSee('Hostel User')
+            ->assertDontSee('Hostel Manager, Hostel Manager');
+    }
+
     public function test_deleted_user_is_hidden_from_the_list(): void
     {
         $administrator = User::factory()->role('admin')->create();

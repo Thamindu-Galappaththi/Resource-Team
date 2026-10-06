@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -76,6 +77,22 @@ class User extends Authenticatable
         return $this->belongsToMany(Role::class);
     }
 
+    /**
+     * Pivot roles plus the primary role, without duplicates or mutating relations.
+     *
+     * @return Collection<int, Role>
+     */
+    public function assignedRoles(): Collection
+    {
+        $this->loadMissing('role', 'roles');
+
+        return $this->roles
+            ->concat(collect([$this->role]))
+            ->filter()
+            ->unique('id')
+            ->values();
+    }
+
     public function extraPermissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class);
@@ -91,7 +108,7 @@ class User extends Authenticatable
 
         $this->loadMissing('role', 'roles.permissions');
 
-        foreach ($this->roles->push($this->role)->filter() as $role) {
+        foreach ($this->assignedRoles() as $role) {
             if (in_array($role->slug, ['developer', 'super_admin'], true)) {
                 return $all;
             }

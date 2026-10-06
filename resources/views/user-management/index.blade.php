@@ -250,7 +250,7 @@
                                         <span id="editRolesSummary" class="text-muted">Select roles</span>
                                     </button>
                                     <div class="dropdown-menu cu-dropdown-menu">
-                                        @foreach($roles as $role)
+                                        @foreach($roles->unique('id') as $role)
                                             <label class="dropdown-item cu-check-item">
                                                 <input type="checkbox" name="user_roles[]" value="{{ $role->slug }}" class="form-check-input mt-0 js-edit-user-role">
                                                 <span class="js-edit-role-name">{{ $role->name }}</span>
@@ -335,6 +335,6 @@
         lookupUrl: @json(route('slt.employee.lookup')),
     };
 </script>
-<script src="{{ asset('js/user-management.js') }}?v=7"></script>
+<script src="{{ asset('js/user-management.js') }}?v=8"></script>
 @endpush
 @endsection

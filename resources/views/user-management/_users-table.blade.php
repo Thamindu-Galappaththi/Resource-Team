@@ -20,13 +20,11 @@
                     $extras = $managedUser->relationLoaded('extraPermissions')
                         ? $managedUser->extraPermissions->pluck('slug')->values()
                         : collect();
-                    $roleSlugs = $managedUser->roles->pluck('slug')->filter()->values();
-                    if ($roleSlugs->isEmpty() && $managedUser->role) {
-                        $roleSlugs = collect([$managedUser->role->slug]);
-                    }
-                    $roleNames = $managedUser->roles->pluck('name')->filter()->values();
+                    $assignedRoles = $managedUser->assignedRoles();
+                    $roleSlugs = $assignedRoles->pluck('slug')->filter()->values();
+                    $roleNames = $assignedRoles->pluck('name')->filter()->values();
                     if ($roleNames->isEmpty()) {
-                        $roleNames = collect([$managedUser->role->name ?? $managedUser->user_role ?? 'Unassigned']);
+                        $roleNames = collect([$managedUser->user_role ?? 'Unassigned']);
                     }
                     $permissionLabels = [];
                     foreach ($permissionGroups as $group) {
