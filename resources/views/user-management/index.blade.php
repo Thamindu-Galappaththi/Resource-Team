@@ -76,7 +76,6 @@
                     </ul>
                 </div>
                 <div class="um-toolbar-btns">
-                    <button class="btn btn-outline-primary px-3" type="submit"><i class="ti ti-filter me-1"></i>Filter</button>
                     <button class="btn btn-outline-secondary px-3" type="button" id="um-clear" @disabled(! request()->hasAny(['search', 'location', 'role', 'status']))>Clear</button>
                 </div>
             </div>

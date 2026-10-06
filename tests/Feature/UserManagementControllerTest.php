@@ -211,10 +211,12 @@ class UserManagementControllerTest extends TestCase
             ->assertSee('Find employee')
             ->assertSee('sweetalert2', false)
             ->assertSee('um-table-wrap', false)
+            ->assertSee('id="um-clear"', false)
             ->assertSee('>Save</button>', false)
             ->assertDontSee('deleteUserModal')
             ->assertDontSee('Confirm user deletion')
-            ->assertDontSee('Save and email password');
+            ->assertDontSee('Save and email password')
+            ->assertDontSee('ti-filter');
     }
 
     public function test_user_management_pagination_uses_bootstrap_links(): void
