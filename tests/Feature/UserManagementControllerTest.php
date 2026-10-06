@@ -3,9 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Notifications\AdminResetPasswordNotification;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class UserManagementControllerTest extends TestCase
@@ -310,10 +313,11 @@ class UserManagementControllerTest extends TestCase
             ->assertSee('sweetalert2', false)
             ->assertSee('um-table-wrap', false)
             ->assertSee('id="um-clear"', false)
-            ->assertSee('>Save</button>', false)
+            ->assertSee('Save changes')
+            ->assertSee('Save and email password')
+            ->assertSee('data-password-toggle="newPassword"', false)
             ->assertDontSee('deleteUserModal')
             ->assertDontSee('Confirm user deletion')
-            ->assertDontSee('Save and email password')
             ->assertDontSee('ti-filter');
     }
 
@@ -437,5 +441,35 @@ class UserManagementControllerTest extends TestCase
             ->get(route('user.management'))
             ->assertOk()
             ->assertDontSee('Deleted User');
+    }
+
+    public function test_resetting_a_password_emails_the_new_password_to_the_user(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+        Notification::fake();
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('admin')->create([
+            'email' => 'resetme@nebula.local',
+            'password' => 'old-password',
+        ]);
+
+        $this->actingAs($administrator)
+            ->postJson(route('users.reset-password', $user), [
+                'password' => 'new-secret8',
+                'password_confirmation' => 'new-secret8',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'Password reset successfully and emailed to resetme@nebula.local.');
+
+        $this->assertTrue(Hash::check('new-secret8', $user->fresh()->password));
+
+        Notification::assertSentTo($user, AdminResetPasswordNotification::class, function (AdminResetPasswordNotification $notification) use ($user) {
+            $mail = $notification->toMail($user);
+
+            return $mail->subject === 'Your Resource Reservation password was reset'
+                && ($mail->viewData['password'] ?? null) === 'new-secret8'
+                && str_contains((string) ($mail->view ?? ''), 'emails.admin-reset-password');
+        });
     }
 }

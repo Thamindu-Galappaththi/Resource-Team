@@ -588,11 +588,98 @@ $(function () {
         }
     });
 
+    function bindPasswordToggles(scope) {
+        $(scope).find('[data-password-toggle]').each(function () {
+            const $button = $(this);
+            if ($button.data('umBound')) {
+                return;
+            }
+            $button.data('umBound', true);
+            $button.on('click', function () {
+                const input = document.getElementById($button.data('passwordToggle'));
+                const icon = $button.find('i')[0];
+                if (!input || !icon) {
+                    return;
+                }
+                const showing = input.type === 'text';
+                input.type = showing ? 'password' : 'text';
+                icon.classList.toggle('ti-eye', showing);
+                icon.classList.toggle('ti-eye-off', !showing);
+                $button.attr('aria-label', showing ? 'Show password' : 'Hide password');
+            });
+        });
+    }
+
+    function clearResetPasswordErrors() {
+        $('#newPassword, #newPasswordConfirmation').removeClass('is-invalid');
+        $('#newPasswordError, #newPasswordConfirmationError').removeClass('d-block');
+        $('#newPasswordHint').removeClass('d-none');
+    }
+
+    function showResetPasswordErrors(errors) {
+        clearResetPasswordErrors();
+        if (errors.password?.length) {
+            $('#newPassword').addClass('is-invalid');
+            $('#newPasswordError').text(errors.password[0]).addClass('d-block');
+            $('#newPasswordHint').addClass('d-none');
+        }
+        if (errors.password_confirmation?.length) {
+            $('#newPasswordConfirmation').addClass('is-invalid');
+            $('#newPasswordConfirmationError').text(errors.password_confirmation[0]).addClass('d-block');
+        }
+    }
+
     $('#resetPasswordModal').on('show.bs.modal', function (event) {
         const user = userFromModalEvent(event);
         $('#resetPasswordForm').attr('action', user.reset_url);
         $('#resetPasswordUserName').text(user.name || '');
+        $('#resetPasswordUserEmail').text(user.email || '');
         $('#resetPasswordForm')[0].reset();
+        $('#newPassword, #newPasswordConfirmation').attr('type', 'password');
+        $('#resetPasswordForm .um-password-toggle i').attr('class', 'ti ti-eye');
+        $('#resetPasswordForm .um-password-toggle').attr('aria-label', 'Show password');
+        clearResetPasswordErrors();
+        bindPasswordToggles('#resetPasswordModal');
+    });
+
+    $('#resetPasswordForm').on('submit', function (event) {
+        event.preventDefault();
+        const $form = $(this);
+        const $submit = $('#resetPasswordSubmit');
+        const password = $('#newPassword').val();
+        const confirmation = $('#newPasswordConfirmation').val();
+
+        if (password.length < 8) {
+            showResetPasswordErrors({ password: ['Use at least 8 characters.'] });
+            return;
+        }
+        if (password !== confirmation) {
+            showResetPasswordErrors({ password_confirmation: ['The passwords do not match.'] });
+            return;
+        }
+
+        clearResetPasswordErrors();
+        $submit.prop('disabled', true);
+
+        $.ajax({
+            url: $form.attr('action'),
+            method: 'POST',
+            data: $form.serialize(),
+            headers: csrfHeaders(),
+        }).done(function (response) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal'));
+            modal?.hide();
+            showFlash(response.status, 'success');
+        }).fail(function (xhr) {
+            const errors = xhr.responseJSON?.errors;
+            if (errors) {
+                showResetPasswordErrors(errors);
+                return;
+            }
+            showFlash(xhr.responseJSON?.message || 'The password could not be reset.', 'error');
+        }).always(function () {
+            $submit.prop('disabled', false);
+        });
     });
 
     $('#viewUserModal, #editUserModal, #resetPasswordModal').appendTo(document.body);

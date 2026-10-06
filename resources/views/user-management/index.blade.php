@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=13">
-<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=9">
+<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=10">
 @endpush
 
 @section('content')
@@ -385,27 +385,43 @@
                 <div class="modal-header">
                     <div>
                         <h5 class="modal-title mb-0" id="resetPasswordModalLabel">Reset password</h5>
-                        <small class="text-muted">A new password will be emailed to the user</small>
+                        <small class="text-muted">The new password will be emailed to this user</small>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-3">Set a new password for <strong id="resetPasswordUserName"></strong>.</p>
+                    <div class="um-reset-user">
+                        <div class="um-reset-user-label">Account</div>
+                        <div class="fw-semibold" id="resetPasswordUserName"></div>
+                        <div class="text-muted small" id="resetPasswordUserEmail"></div>
+                    </div>
                     <div class="mb-3">
                         <label for="newPassword" class="form-label">New password</label>
-                        <input type="password" class="form-control" id="newPassword" name="password" minlength="8"
-                            autocomplete="new-password" required>
-                        <div class="form-text">Must be at least 8 characters.</div>
+                        <div class="input-group um-password-field">
+                            <input type="password" class="form-control" id="newPassword" name="password" minlength="8"
+                                autocomplete="new-password" required placeholder="At least 8 characters">
+                            <button class="btn btn-outline-secondary um-password-toggle" type="button" data-password-toggle="newPassword" aria-label="Show password">
+                                <i class="ti ti-eye"></i>
+                            </button>
+                        </div>
+                        <div id="newPasswordError" class="invalid-feedback">Use at least 8 characters.</div>
+                        <div id="newPasswordHint" class="form-text">Must be at least 8 characters.</div>
                     </div>
                     <div>
-                        <label for="newPasswordConfirmation" class="form-label">Confirm new password</label>
-                        <input type="password" class="form-control" id="newPasswordConfirmation"
-                            name="password_confirmation" minlength="8" autocomplete="new-password" required>
+                        <label for="newPasswordConfirmation" class="form-label">Re-enter password</label>
+                        <div class="input-group um-password-field">
+                            <input type="password" class="form-control" id="newPasswordConfirmation"
+                                name="password_confirmation" minlength="8" autocomplete="new-password" required placeholder="Repeat the new password">
+                            <button class="btn btn-outline-secondary um-password-toggle" type="button" data-password-toggle="newPasswordConfirmation" aria-label="Show password">
+                                <i class="ti ti-eye"></i>
+                            </button>
+                        </div>
+                        <div id="newPasswordConfirmationError" class="invalid-feedback">The passwords do not match.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="submit" class="btn btn-primary" id="resetPasswordSubmit">Save and email password</button>
                 </div>
             </form>
         </div>
@@ -424,6 +440,6 @@ window.UM = {
     errors: @json(session('edit_user_id') ? $errors->toArray() : []),
 };
 </script>
-<script src="{{ asset('js/user-management.js') }}?v=9"></script>
+<script src="{{ asset('js/user-management.js') }}?v=10"></script>
 @endpush
 @endsection

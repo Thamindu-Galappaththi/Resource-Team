@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\AdminResetPasswordNotification;
 use App\Rules\SriLankanNic;
 use App\Services\SltEmployeeDirectory;
 use Illuminate\Http\JsonResponse;
@@ -14,7 +15,6 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -212,32 +212,38 @@ class UserManagementController extends Controller
         return back()->with('status', $message);
     }
 
-    public function resetPassword(Request $request, User $user): RedirectResponse
+    public function resetPassword(Request $request, User $user): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'password.confirmed' => 'The passwords do not match.',
+            'password.min' => 'Use at least 8 characters.',
         ]);
 
-        // User's password cast hashes the value before it is stored.
         $user->update(['password' => $validated['password']]);
 
         try {
-            Mail::raw(
-                "Hello {$user->name},\n\nAn administrator has reset your account password. Your new password is:\n\n{$validated['password']}\n\nPlease sign in and change it as soon as possible.",
-                function ($message) use ($user) {
-                    $message->to($user->email, $user->name)
-                        ->subject('Your account password has been reset');
-                }
-            );
+            $user->notify(new AdminResetPasswordNotification($validated['password']));
         } catch (\Throwable $exception) {
             report($exception);
 
-            return back()->withErrors([
-                'password' => 'The password was updated, but the notification email could not be sent.',
-            ]);
+            $message = 'The password was updated, but the email could not be sent.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->withErrors(['password' => $message]);
         }
 
-        return back()->with('status', 'Password reset successfully and the new password was emailed to '.$user->email.'.');
+        $message = 'Password reset successfully and emailed to '.$user->email.'.';
+
+        if ($request->expectsJson()) {
+            return response()->json(['status' => $message]);
+        }
+
+        return back()->with('status', $message);
     }
 
     public function destroy(Request $request, User $user): RedirectResponse|JsonResponse

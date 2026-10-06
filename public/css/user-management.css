@@ -368,6 +368,44 @@
     min-height: 48px;
 }
 
+.um-reset-user {
+    background: #f4f8fc;
+    border: 1px solid #e4edf5;
+    border-radius: .75rem;
+    padding: .85rem 1rem;
+    margin-bottom: 1.15rem;
+}
+
+.um-reset-user-label {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: .2rem;
+}
+
+.um-password-field .form-control {
+    border-right: 0;
+}
+
+.um-password-toggle {
+    min-height: 48px;
+    border-color: #ced4da;
+    color: #6c757d;
+}
+
+.um-password-toggle:hover,
+.um-password-toggle:focus {
+    color: #1769c2;
+    background: #fff;
+    border-color: #ced4da;
+}
+
+.um-password-field .form-control.is-invalid {
+    border-right: 1px solid #dc3545;
+}
+
 .um-view-permissions {
     min-height: 48px;
     height: auto;
