@@ -384,11 +384,11 @@ $(function () {
         const name = user.name || 'this user';
 
         const confirmDelete = typeof Swal === 'undefined'
-            ? Promise.resolve({ isConfirmed: window.confirm('Remove ' + name + ' from the active list?') })
+            ? Promise.resolve({ isConfirmed: window.confirm('Delete ' + name + '? This cannot be undone.') })
             : Swal.fire({
                 icon: 'warning',
                 title: 'Delete this user?',
-                text: name + ' will be soft deleted and shown as Deleted in the list.',
+                text: name + ' will be permanently deleted. This cannot be undone.',
                 showCancelButton: true,
                 confirmButtonText: 'Yes, delete',
                 cancelButtonText: 'Cancel',

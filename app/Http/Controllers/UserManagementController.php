@@ -33,7 +33,7 @@ class UserManagementController extends Controller
             $with[] = 'extraPermissions';
         }
 
-        $usersQuery = User::withTrashed()
+        $usersQuery = User::query()
             ->with($with)
             ->when($filters['search'] ?? null, function ($query, string $search) {
                 $query->where(function ($userQuery) use ($search) {
@@ -357,7 +357,7 @@ class UserManagementController extends Controller
     private function userStatistics(): array
     {
         return [
-            'total' => User::withTrashed()->count(),
+            'total' => User::query()->count(),
             'active' => User::where('is_active', true)->count(),
             'inactive' => User::where('is_active', false)->count(),
         ];

@@ -336,6 +336,6 @@
         lookupUrl: @json(route('slt.employee.lookup')),
     };
 </script>
-<script src="{{ asset('js/user-management.js') }}?v=4"></script>
+<script src="{{ asset('js/user-management.js') }}?v=6"></script>
 @endpush
 @endsection

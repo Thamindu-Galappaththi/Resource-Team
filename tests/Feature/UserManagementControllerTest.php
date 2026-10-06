@@ -292,10 +292,10 @@ class UserManagementControllerTest extends TestCase
         ]);
     }
 
-    public function test_soft_deleted_user_remains_visible(): void
+    public function test_deleted_user_is_hidden_from_the_list(): void
     {
         $administrator = User::factory()->role('admin')->create();
-        $deletedUser = User::factory()->create([
+        User::factory()->create([
             'name' => 'Deleted User',
             'deleted_at' => now(),
         ]);
@@ -303,7 +303,6 @@ class UserManagementControllerTest extends TestCase
         $this->actingAs($administrator)
             ->get(route('user.management'))
             ->assertOk()
-            ->assertSee('Deleted User')
-            ->assertSee('Deleted');
+            ->assertDontSee('Deleted User');
     }
 }
