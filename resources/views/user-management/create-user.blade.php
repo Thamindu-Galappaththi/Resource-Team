@@ -3,7 +3,7 @@
 @section('title', 'Create User')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=7">
 @endpush
 
 @section('content')
@@ -52,14 +52,14 @@
                 </div>
                 <div class="col-12 col-md-6">
                     <label for="service_id" class="form-label">Employee ID <span id="employeeIdRequired" class="text-danger {{ old('slt_employee') === 'yes' ? '' : 'd-none' }}">*</span></label>
-                    <div class="input-group">
+                    <div class="input-group flex-nowrap">
                         <input type="text" name="service_id" id="service_id" class="form-control" value="{{ old('slt_employee') === 'yes' ? old('service_id') : '' }}" placeholder="{{ old('slt_employee') === 'yes' ? 'e.g. 010375' : 'Enabled when SLT employee is Yes' }}" inputmode="numeric" autocomplete="off" @disabled(old('slt_employee') !== 'yes')>
                         <button id="lookupEmployee" class="btn btn-outline-primary cu-lookup d-none" type="button">Find employee</button>
                     </div>
                     <small id="lookupMessage" class="form-text"></small>
                 </div>
-                <div class="col-12">
-                    <div id="employeeDetails" class="cu-details border rounded-3 p-3 bg-light">
+                <div id="employeeDetails" class="col-12 cu-details">
+                    <div class="border rounded-3 p-3 bg-light">
                         <div class="fw-semibold mb-2">Directory record</div>
                         <div class="row g-2 small" id="employeeDetailsBody"></div>
                     </div>
