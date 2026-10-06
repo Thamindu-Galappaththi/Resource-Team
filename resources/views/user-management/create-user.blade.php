@@ -65,8 +65,7 @@
                             value="{{ old('slt_employee') === 'yes' ? old('service_id') : '' }}"
                             placeholder="{{ old('slt_employee') === 'yes' ? 'e.g. 010375' : 'Enabled when SLT employee is Yes' }}"
                             inputmode="numeric" autocomplete="off" @disabled(old('slt_employee') !=='yes' )>
-                        <button id="lookupEmployee" class="btn btn-outline-primary cu-lookup d-none" type="button">Find
-                            employee</button>
+                        <button id="lookupEmployee" class="btn btn-outline-primary cu-lookup d-none" type="button">Find employee</button>
                     </div>
                     @error('service_id')
                     <div class="invalid-feedback d-block">{{ $message }}</div>
