@@ -47,6 +47,27 @@ class UserManagementControllerTest extends TestCase
         ]);
     }
 
+    public function test_create_user_success_message_auto_dismisses(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs(User::factory()->role('admin')->create())
+            ->followingRedirects()
+            ->post('/user-management/create-user', [
+                'slt_employee' => 'no',
+                'name' => 'Flash User',
+                'nic' => '200012345679',
+                'email' => 'flash@example.com',
+                'phone' => '0771234567',
+                'user_roles' => ['admin'],
+                'location' => 'Nebula Institute of Technology - Welisara',
+            ])
+            ->assertOk()
+            ->assertSee('User account created successfully')
+            ->assertSee('cu-auto-alert', false)
+            ->assertSee('10000', false);
+    }
+
     public function test_old_format_nic_is_accepted_when_creating_a_user(): void
     {
         $this->withoutMiddleware(ValidateCsrfToken::class);

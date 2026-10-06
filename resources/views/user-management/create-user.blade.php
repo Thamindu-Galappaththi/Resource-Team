@@ -20,7 +20,7 @@
     </div>
 
     @if(session('status'))
-    <div class="alert alert-success">{{ session('status') }}</div>
+    <div class="alert alert-success cu-auto-alert">{{ session('status') }}</div>
     @endif
 
     @if($employeeLookupMock)
@@ -424,6 +424,14 @@ document.getElementById('create-user-form').addEventListener('submit', (event) =
 bindSelectDropdowns();
 setSltEmployeeMode();
 refreshPermissions();
+
+document.querySelectorAll('.cu-auto-alert').forEach((alert) => {
+    setTimeout(() => {
+        alert.style.transition = 'opacity .3s ease';
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 300);
+    }, 10000);
+});
 </script>
 @endpush
 @endsection
