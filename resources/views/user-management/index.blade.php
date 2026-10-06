@@ -3,7 +3,7 @@
 @section('title', 'User Management')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=9">
+    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=10">
     <link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=7">
 @endpush
 
@@ -76,7 +76,7 @@
                     </ul>
                 </div>
                 <div class="um-toolbar-btns">
-                    <button class="btn btn-outline-primary px-3" type="submit">Filter</button>
+                    <button class="btn btn-outline-primary px-3" type="submit"><i class="ti ti-filter me-1"></i>Filter</button>
                     <button class="btn btn-outline-secondary px-3" type="button" id="um-clear" @disabled(! request()->hasAny(['search', 'location', 'role', 'status']))>Clear</button>
                 </div>
             </div>
@@ -242,10 +242,10 @@
                         </div>
                     </section>
                     <section>
-                        <div class="row g-3">
+                        <div class="row g-3 cu-align-fields">
                             <div class="col-12 col-lg-6">
                                 <label class="form-label" for="editRolesDropdown">Roles <span class="text-danger">*</span></label>
-                                <p class="text-muted small mb-2">Select one or more roles. Permissions follow the chosen roles.</p>
+                                <p class="text-muted small mb-2 cu-field-hint">Select one or more roles. Permissions follow the chosen roles.</p>
                                 <div class="dropdown">
                                     <button id="editRolesDropdown" class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                         <span id="editRolesSummary" class="text-muted">Select roles</span>
@@ -263,7 +263,7 @@
                             </div>
                             <div class="col-12 col-lg-6">
                                 <label class="form-label" for="editPermissionsDropdown">Permissions</label>
-                                <p class="text-muted small mb-2">Role access is locked. Extra access can be granted to this user only.</p>
+                                <p class="text-muted small mb-2 cu-field-hint">Role access is locked. Extra access can be granted to this user only.</p>
                                 <div class="dropdown">
                                     <button id="editPermissionsDropdown" class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                         <span id="editPermissionsSummary" class="text-muted">Select extra permissions</span>
