@@ -4,68 +4,25 @@
 
 @section('content')
 <div class="container-fluid py-4">
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-0">
-            <h4 class="mb-0">Edit Canteen Reservation</h4>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+        <div>
+            <h1 class="h3 text-white mb-2">Edit Canteen Reservation</h1>
+            <p class="text-white-50 mb-0">{{ $reservation->reservation_ref }} · {{ $reservation->reservation_name }}</p>
         </div>
-        <div class="card-body">
-            <form method="POST" action="{{ route('canteen.update', $reservation) }}">
-                @csrf
-                @method('PUT')
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Reservation Name</label>
-                        <input type="text" class="form-control @error('reservation_name') is-invalid @enderror" name="reservation_name" value="{{ old('reservation_name', $reservation->reservation_name) }}" required>
-                        @error('reservation_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Meal Type</label>
-                        <select class="form-select @error('meal_type') is-invalid @enderror" name="meal_type" required>
-                            @foreach(\App\Enums\MealType::values() as $mealType)
-                                <option value="{{ $mealType }}" {{ old('meal_type', $reservation->meal_type) === $mealType ? 'selected' : '' }}>{{ ucfirst(str_replace('_', ' ', $mealType)) }}</option>
-                            @endforeach
-                        </select>
-                        @error('meal_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="location_id">Location</label>
-                        <select id="location_id" class="form-select @error('location_id') is-invalid @enderror" name="location_id">
-                            <option value="">Select location (optional)</option>
-                            @foreach($locations as $location)
-                                <option value="{{ $location->id }}" {{ (string) old('location_id', $reservation->location_id) === (string) $location->id ? 'selected' : '' }}>{{ $location->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('location_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Reservation Date</label>
-                        <input type="date" class="form-control @error('reservation_date') is-invalid @enderror" name="reservation_date" value="{{ old('reservation_date', $reservation->reservation_date->format('Y-m-d')) }}" required>
-                        @error('reservation_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Reservation Time</label>
-                        <input type="time" class="form-control @error('reservation_time') is-invalid @enderror" name="reservation_time" value="{{ old('reservation_time', $reservation->reservation_time) }}" required>
-                        @error('reservation_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Number of Orders</label>
-                        <input type="number" min="1" class="form-control @error('number_of_orders') is-invalid @enderror" name="number_of_orders" value="{{ old('number_of_orders', $reservation->number_of_orders) }}" required>
-                        @error('number_of_orders')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">Order Details</label>
-                        <textarea class="form-control @error('order_details') is-invalid @enderror" name="order_details" rows="4">{{ old('order_details', $reservation->order_details) }}</textarea>
-                        @error('order_details')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">Special Remarks</label>
-                        <textarea class="form-control @error('special_remarks') is-invalid @enderror" name="special_remarks" rows="3">{{ old('special_remarks', $reservation->special_remarks) }}</textarea>
-                        @error('special_remarks')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                </div>
+        <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-outline-light"><i class="ti ti-arrow-left me-1"></i>Back to details</a>
+    </div>
 
-                <div class="d-flex justify-content-end mt-4">
-                    <button type="submit" class="btn btn-primary">Update Reservation</button>
+    @if($errors->any())
+        <div class="alert alert-danger" role="alert"><strong>Please check the form.</strong> Some details need your attention.</div>
+    @endif
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <form method="POST" action="{{ route('canteen.update', $reservation) }}">
+                @include('canteen.reservations._form', ['reservation' => $reservation])
+                <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 pt-4 mt-2 border-top">
+                    <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Update reservation</button>
                 </div>
             </form>
         </div>

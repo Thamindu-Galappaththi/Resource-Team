@@ -112,7 +112,8 @@ class NavigationAccessTest extends TestCase
             ->assertSee('Existing Canteen Reservations')
             ->assertSee('Lecture Fees')
             ->assertSee('Resource Payments')
-            ->assertSee('Reports & Analytics', false);
+            ->assertSee('Reports & Analytics', false)
+            ->assertDontSee('hide-menu">Maintenance', false);
     }
 
     public function test_canteen_sidebar_does_not_show_create_canteen_reservation(): void

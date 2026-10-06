@@ -14,4 +14,24 @@ enum CanteenReservationStatus: string
     {
         return array_map(fn (self $case) => $case->value, self::cases());
     }
+
+    public static function kitchen(): array
+    {
+        return [self::PENDING->value, self::CONFIRMED->value];
+    }
+
+    public function label(): string
+    {
+        return ucfirst($this->value);
+    }
+
+    public function badgeClass(): string
+    {
+        return match ($this) {
+            self::CONFIRMED => 'bg-success-subtle text-success',
+            self::PENDING => 'bg-warning-subtle text-dark',
+            self::REJECTED, self::CANCELLED => 'bg-danger-subtle text-danger',
+            self::COMPLETED => 'bg-secondary-subtle text-secondary',
+        };
+    }
 }

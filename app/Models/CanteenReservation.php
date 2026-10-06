@@ -7,7 +7,6 @@ use App\Enums\MealType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Str;
 
 class CanteenReservation extends Model
 {
@@ -43,12 +42,13 @@ class CanteenReservation extends Model
                 $reservation->reservation_ref = self::generateReservationRef();
             }
 
-            if ($reservation->number_of_orders !== null && $reservation->number_of_orders > config('canteen.large_group_threshold', 50)) {
-                $reservation->status = CanteenReservationStatus::PENDING->value;
-            }
-
             if (empty($reservation->status)) {
-                $reservation->status = CanteenReservationStatus::CONFIRMED->value;
+                $reservation->status = (
+                    $reservation->number_of_orders !== null
+                    && $reservation->number_of_orders > config('canteen.large_group_threshold', 50)
+                )
+                    ? CanteenReservationStatus::PENDING->value
+                    : CanteenReservationStatus::CONFIRMED->value;
             }
         });
     }
@@ -85,6 +85,33 @@ class CanteenReservation extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function statusEnum(): CanteenReservationStatus
+    {
+        return CanteenReservationStatus::from($this->status);
+    }
+
+    public function mealTypeLabel(): string
+    {
+        return MealType::tryFrom((string) $this->meal_type)?->label()
+            ?? ucfirst(str_replace('_', ' ', (string) $this->meal_type));
+    }
+
+    public function serviceTimeInput(): string
+    {
+        return substr((string) $this->reservation_time, 0, 5);
+    }
+
+    public function serviceTimeLabel(): string
+    {
+        $time = $this->serviceTimeInput();
+
+        if ($time === '') {
+            return '—';
+        }
+
+        return \Illuminate\Support\Facades\Date::createFromFormat('H:i', $time)?->format('g:i A') ?? $time;
     }
 
     public function isLargeGroupOrder(): bool

@@ -14,4 +14,12 @@ enum MealType: string
     {
         return array_map(fn (self $case) => $case->value, self::cases());
     }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::EVENT_CATERING => 'Event catering',
+            default => ucfirst($this->value),
+        };
+    }
 }

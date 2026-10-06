@@ -245,12 +245,6 @@
                         <span class="hide-menu">Reports & Analytics</span>
                     </a>
                 </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() === 'canteen.maintenance' ? 'active' : '' }}" href="{{ route('canteen.maintenance') }}">
-                        <span><i class="ti ti-tool"></i></span>
-                        <span class="hide-menu">Maintenance</span>
-                    </a>
-                </li>
             @endif
 
         </ul>
