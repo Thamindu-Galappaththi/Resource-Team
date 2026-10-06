@@ -143,8 +143,24 @@
     margin-bottom: 0;
 }
 
-.user-management-page .um-pagination nav > div.d-none {
+.user-management-page .um-pagination nav {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.user-management-page .um-pagination nav > div.d-sm-none {
     display: none !important;
+}
+
+.user-management-page .um-pagination nav > div.d-none {
+    display: flex !important;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.user-management-page .um-pagination p {
+    display: none;
 }
 
 .user-management-page .page-link {

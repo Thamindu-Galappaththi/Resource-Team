@@ -327,6 +327,7 @@ class UserManagementControllerTest extends TestCase
             ->assertOk()
             ->assertSee('page-link', false)
             ->assertSee('Showing 1 to 10 of 12 users')
+            ->assertSee('page=2', false)
             ->assertDontSee('Showing 1 to 15 of 16 results');
     }
 

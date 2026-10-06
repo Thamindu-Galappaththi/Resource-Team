@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=13">
-<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=8">
+<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=9">
 @endpush
 
 @section('content')
