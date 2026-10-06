@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -209,4 +210,14 @@ class User extends Authenticatable
 
         return $exists ??= Schema::hasTable('permission_user');
     }
+    public function lectureSessions(): HasMany
+    {
+        return $this->hasMany(LectureSession::class, 'lecturer_id');
+    }
+
+    public function lecturerPayables(): HasMany
+    {
+        return $this->hasMany(LecturerPayable::class, 'lecturer_id');
+    }
+    
 }
