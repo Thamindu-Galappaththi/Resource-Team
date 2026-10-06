@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Rules\SriLankanNic;
 use App\Services\SltEmployeeDirectory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Mail;
@@ -97,20 +99,7 @@ class UserManagementController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'slt_employee' => ['required', 'in:yes,no'],
-            'name' => ['required', 'string', 'max:100'],
-            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
-            'nic' => ['required', 'string', 'size:12', 'unique:users,nic'],
-            'email' => ['required', 'email', 'max:50', 'unique:users,email'],
-            'phone' => ['required', 'string', 'max:20'],
-            'location' => ['required', 'string', 'max:100'],
-            'designation' => ['nullable', 'string', 'max:100'],
-            'user_roles' => ['required', 'array', 'min:1'],
-            'user_roles.*' => ['required', 'string', 'distinct', Rule::exists('roles', 'slug')->where('is_active', true)],
-            'extra_permissions' => ['nullable', 'array'],
-            'extra_permissions.*' => ['string', Rule::exists('permissions', 'slug')],
-        ]);
+        $validated = $this->validateManagedUser($request);
 
         $roles = Role::query()
             ->with('permissions')
@@ -155,30 +144,16 @@ class UserManagementController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
-        $validated = $request->validate([
-            'slt_employee' => ['required', 'in:yes,no'],
-            'name' => ['required', 'string', 'max:100'],
-            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
-            'nic' => [
-                'required',
-                'string',
-                'size:12',
-                Rule::unique('users', 'nic')->ignore($user->id),
-            ],
-            'email' => [
-                'required',
-                'email',
-                'max:50',
-                Rule::unique('users', 'email')->ignore($user->id),
-            ],
-            'phone' => ['required', 'string', 'max:20'],
-            'location' => ['required', 'string', 'max:100'],
-            'designation' => ['nullable', 'string', 'max:100'],
-            'user_roles' => ['required', 'array', 'min:1'],
-            'user_roles.*' => ['required', 'string', 'distinct', Rule::exists('roles', 'slug')->where('is_active', true)],
-            'extra_permissions' => ['nullable', 'array'],
-            'extra_permissions.*' => ['string', Rule::exists('permissions', 'slug')],
-        ]);
+        try {
+            $validated = $this->validateManagedUser($request, $user);
+        } catch (ValidationException $exception) {
+            return redirect()
+                ->route('user.management')
+                ->withErrors($exception->validator)
+                ->withInput()
+                ->with('edit_user_id', $user->id)
+                ->with('edit_update_url', route('users.update', $user));
+        }
 
         $roles = Role::query()
             ->with('permissions')
@@ -302,6 +277,42 @@ class UserManagementController extends Controller
         } catch (RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], 404);
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateManagedUser(Request $request, ?User $user = null): array
+    {
+        $request->merge([
+            'nic' => SriLankanNic::normalize($request->input('nic')),
+        ]);
+
+        return $request->validate([
+            'slt_employee' => ['required', 'in:yes,no'],
+            'name' => ['required', 'string', 'max:100'],
+            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
+            'nic' => [
+                'required',
+                'string',
+                'max:12',
+                new SriLankanNic,
+                Rule::unique('users', 'nic')->ignore($user?->id),
+            ],
+            'email' => [
+                'required',
+                'email',
+                'max:50',
+                Rule::unique('users', 'email')->ignore($user?->id),
+            ],
+            'phone' => ['required', 'string', 'max:20'],
+            'location' => ['required', 'string', 'max:100'],
+            'designation' => ['nullable', 'string', 'max:100'],
+            'user_roles' => ['required', 'array', 'min:1'],
+            'user_roles.*' => ['required', 'string', 'distinct', Rule::exists('roles', 'slug')->where('is_active', true)],
+            'extra_permissions' => ['nullable', 'array'],
+            'extra_permissions.*' => ['string', Rule::exists('permissions', 'slug')],
+        ]);
     }
 
     /**

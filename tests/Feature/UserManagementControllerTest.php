@@ -47,6 +47,83 @@ class UserManagementControllerTest extends TestCase
         ]);
     }
 
+    public function test_old_format_nic_is_accepted_when_creating_a_user(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs(User::factory()->role('admin')->create())
+            ->post('/user-management/create-user', [
+                'slt_employee' => 'no',
+                'name' => 'Old Nic User',
+                'nic' => '962664303v',
+                'email' => 'oldnic@example.com',
+                'phone' => '0771234567',
+                'user_roles' => ['admin'],
+                'location' => 'Nebula Institute of Technology - Welisara',
+            ])
+            ->assertRedirect(route('create.user'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'oldnic@example.com',
+            'nic' => '962664303V',
+        ]);
+    }
+
+    public function test_create_user_shows_validation_errors_under_fields(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+
+        $html = $this->actingAs($administrator)
+            ->from(route('create.user'))
+            ->followingRedirects()
+            ->post('/user-management/create-user', [
+                'slt_employee' => 'no',
+                'name' => 'Jane Doe',
+                'nic' => '12345',
+                'email' => 'jane-invalid@example.com',
+                'phone' => '0771234567',
+                'user_roles' => ['admin'],
+                'location' => 'Nebula Institute of Technology - Welisara',
+            ])
+            ->assertOk()
+            ->getContent();
+
+        $this->assertMatchesRegularExpression('/id="nic"[^>]*\bis-invalid\b/', $html);
+        $this->assertStringContainsString('Enter a valid NIC: 12 digits, or 9 digits followed by V or X.', $html);
+        $this->assertStringNotContainsString('The nic field must be 12 characters.', $html);
+        $this->assertStringNotContainsString('alert alert-danger', $html);
+    }
+
+    public function test_user_can_be_updated_with_old_nic_format(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('hostel_manager')->create();
+        $user->roles()->sync([$user->role_id]);
+
+        $this->actingAs($administrator)
+            ->from(route('user.management'))
+            ->put(route('users.update', $user), [
+                'slt_employee' => 'no',
+                'name' => $user->name,
+                'nic' => '962664303v',
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'location' => 'Nebula Institute of Technology - Welisara',
+                'user_roles' => ['hostel_manager'],
+            ])
+            ->assertRedirect(route('user.management'))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'nic' => '962664303V',
+        ]);
+    }
+
     public function test_create_user_page_lists_roles_and_grouped_permissions(): void
     {
         $administrator = User::factory()->role('admin')->create();

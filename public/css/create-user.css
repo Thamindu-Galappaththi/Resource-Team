@@ -198,6 +198,10 @@
     margin-top: .35rem;
 }
 
+.cu-page .invalid-feedback.d-block {
+    display: block;
+}
+
 @media (max-width: 767.98px) {
     .cu-page .cu-actions {
         width: 100%;

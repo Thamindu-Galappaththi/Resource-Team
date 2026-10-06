@@ -48,6 +48,8 @@ $(function () {
                 $label.text(label);
                 $label.toggleClass('text-muted', !$input.val());
                 $input.trigger('change');
+                $wrap.find('.cu-dropdown-toggle').removeClass('is-invalid');
+                $wrap.parent().find('.invalid-feedback').removeClass('d-block');
             });
         });
     }
@@ -241,6 +243,76 @@ $(function () {
         updateEditPermissionSummary();
     }
 
+    function clearEditFieldErrors() {
+        $('#editUserForm .is-invalid').removeClass('is-invalid');
+        $('#editUserForm .invalid-feedback').removeClass('d-block');
+        $('#editRolesError').text('Select at least one role.');
+        $('#editSltEmployeeError').text('Select whether this person is an SLT employee.');
+        $('#editLocationError').text('Select a location.');
+        $('#editServiceIdError').text('Enter an employee ID.');
+    }
+
+    function applyEditFieldErrors(errors) {
+        const fields = {
+            name: '#editName',
+            nic: '#editNic',
+            email: '#editEmail',
+            phone: '#editPhone',
+            designation: '#editDesignation',
+            service_id: '#edit_service_id',
+        };
+
+        Object.entries(fields).forEach(([key, selector]) => {
+            const messages = errors[key];
+            if (!messages?.length) {
+                return;
+            }
+            const $input = $(selector);
+            $input.addClass('is-invalid');
+            $input.closest('[class*="col-"]').find('.invalid-feedback').first().text(messages[0]).addClass('d-block');
+        });
+
+        if (errors.slt_employee?.length) {
+            $('#edit_slt_employee').closest('.dropdown').find('.cu-dropdown-toggle').addClass('is-invalid');
+            $('#editSltEmployeeError').text(errors.slt_employee[0]).addClass('d-block');
+        }
+        if (errors.location?.length) {
+            $('#editLocation').closest('.dropdown').find('.cu-dropdown-toggle').addClass('is-invalid');
+            $('#editLocationError').text(errors.location[0]).addClass('d-block');
+        }
+        if (errors.user_roles?.length) {
+            $('#editRolesDropdown').addClass('is-invalid');
+            $('#editRolesError').text(errors.user_roles[0]).addClass('d-block');
+        }
+    }
+
+    function restoreEditValidation() {
+        const old = config.oldInput;
+        if (!config.editUpdateUrl || !old) {
+            return;
+        }
+
+        fillEditModal({
+            update_url: config.editUpdateUrl,
+            name: old.name,
+            nic: old.nic,
+            email: old.email,
+            phone: old.phone,
+            designation: old.designation,
+            service_id: old.service_id,
+            slt_employee: old.slt_employee,
+            location: old.location,
+            role_slugs: old.user_roles || [],
+            extras: old.extra_permissions || [],
+        });
+        applyEditFieldErrors(config.errors || {});
+
+        const modalEl = document.getElementById('editUserModal');
+        if (modalEl && window.bootstrap?.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    }
+
     function setEditSltMode() {
         const isSltEmployee = $('#edit_slt_employee').val() === 'yes';
         const $employeeId = $('#edit_service_id');
@@ -274,6 +346,7 @@ $(function () {
     }
 
     function fillEditModal(user) {
+        clearEditFieldErrors();
         $('#editUserForm').attr('action', user.update_url);
         $('#editName').val(user.name || '');
         $('#editNic').val(user.nic || '');
@@ -500,6 +573,8 @@ $(function () {
             $('#edit_slt_employee').closest('.dropdown').find('.cu-dropdown-toggle').toggleClass('is-invalid', missingSlt);
             $('#editLocation').closest('.dropdown').find('.cu-dropdown-toggle').toggleClass('is-invalid', missingLocation);
             $('#editRolesDropdown').toggleClass('is-invalid', missingRole);
+            $('#editSltEmployeeError').toggleClass('d-block', missingSlt);
+            $('#editLocationError').toggleClass('d-block', missingLocation);
             $('#editRolesError').toggleClass('d-block', missingRole);
             return;
         }
@@ -524,6 +599,7 @@ $(function () {
 
     bindSelectDropdowns();
     toggleClear();
+    restoreEditValidation();
 
     $('.um-auto-alert').each(function () {
         const $alert = $(this);
