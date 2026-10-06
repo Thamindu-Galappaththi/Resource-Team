@@ -4,27 +4,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
+    const loginForm = document.getElementById('loginForm');
 
-    usernameInput.addEventListener('input', () => {
+    usernameInput?.addEventListener('input', () => {
         usernameInput.classList.remove('is-invalid');
         usernameInput.closest('.field')?.classList.remove('is-invalid');
     });
 
-    passwordInput.addEventListener('input', () => {
+    passwordInput?.addEventListener('input', () => {
         passwordInput.classList.remove('is-invalid');
         passwordInput.closest('.field')?.classList.remove('is-invalid');
     });
 
-    document.getElementById('loginForm').addEventListener('submit', function (e) {
+    loginForm?.addEventListener('submit', function (e) {
         let valid = true;
 
-        if (!usernameInput.value.trim()) {
+        if (usernameInput && !usernameInput.value.trim()) {
             usernameInput.classList.add('is-invalid');
             usernameInput.closest('.field')?.classList.add('is-invalid');
             valid = false;
         }
 
-        if (!passwordInput.value.trim()) {
+        if (passwordInput && !passwordInput.value.trim()) {
             passwordInput.classList.add('is-invalid');
             passwordInput.closest('.field')?.classList.add('is-invalid');
             valid = false;
@@ -36,11 +37,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const togglePassword = document.getElementById('togglePassword');
     const togglePasswordIcon = document.getElementById('togglePasswordIcon');
 
-    togglePassword.addEventListener('click', () => {
+    togglePassword?.addEventListener('click', () => {
+        if (!passwordInput || !togglePasswordIcon) {
+            return;
+        }
         const hidden = passwordInput.type === 'password';
         passwordInput.type = hidden ? 'text' : 'password';
         togglePasswordIcon.classList.toggle('bi-eye');
         togglePasswordIcon.classList.toggle('bi-eye-slash');
+    });
+
+    document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const input = document.getElementById(button.dataset.passwordToggle);
+            const icon = button.querySelector('i');
+            if (!input || !icon) {
+                return;
+            }
+            const showingPassword = input.type === 'text';
+            input.type = showingPassword ? 'password' : 'text';
+            icon.classList.toggle('bi-eye', showingPassword);
+            icon.classList.toggle('bi-eye-slash', !showingPassword);
+            button.setAttribute('aria-label', showingPassword ? 'Show password' : 'Hide password');
+        });
     });
 
     initStarfield();

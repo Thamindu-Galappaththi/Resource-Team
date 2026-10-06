@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\RoleHelper;
+use App\Notifications\SetupPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -96,6 +97,11 @@ class User extends Authenticatable
     public function extraPermissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class);
+    }
+
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new SetupPasswordNotification($token));
     }
 
     /**

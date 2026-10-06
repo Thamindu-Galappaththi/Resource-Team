@@ -180,6 +180,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 // Password setup links carry a signed reset token. Keep these accessible when
 // an administrator is already authenticated, otherwise guest middleware would
 // redirect the link to the dashboard before the recipient can set a password.
-Route::get('/reset-password/{token}', [PasswordSetupController::class, 'showResetForm'])->name('password.reset');
-
-Route::post('/reset-password', [PasswordSetupController::class, 'reset'])->name('password.update');
+Route::get('/setup-password/{token}', [PasswordSetupController::class, 'showResetForm'])->name('password.reset');
+Route::post('/setup-password', [PasswordSetupController::class, 'reset'])->name('password.update');
+Route::get('/reset-password/{token}', function (string $token) {
+    return redirect()->route('password.reset', array_filter([
+        'token' => $token,
+        'email' => request()->query('email'),
+    ]));
+});
