@@ -2,6 +2,10 @@
 
 @section('title', 'User Management')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=3">
+@endpush
+
 @section('content')
 <style>
     .user-management-page { --um-blue: #1769c2; --um-border: #dfe5ea; }
@@ -13,14 +17,20 @@
     .user-management-page .um-stat-label { color: #4f555b; font-size: .92rem; }.user-management-page .um-stat-number { font-size: 2rem; font-weight: 700; line-height: 1.05; }
     .user-management-page .um-panel { border: 1px solid var(--um-border) !important; border-radius: .9rem; overflow: hidden; box-shadow: 0 .3rem 1rem rgba(24,39,75,.09) !important; background: rgba(255,255,255,.98); }
     .user-management-page .um-header {background: #fff; border: 1px solid var(--um-border); border-radius: .9rem; padding: 1.5rem 1.75rem; box-shadow: 0 .3rem 1rem rgba(24,39,75,.09);}
-    .user-management-page .um-toolbar { border-bottom: 1px solid var(--um-border); }.user-management-page .um-search { width: 280px; min-width: 280px; }
+    .user-management-page .um-toolbar { border-bottom: 1px solid var(--um-border); }
+    .user-management-page .um-search { width: 280px; min-width: 280px; }
     .user-management-page .form-control, .user-management-page .form-select { border-color: #cbd3da; min-height: 42px; }.user-management-page .input-group-text { background: #fff; border-color: #cbd3da; color: #717980; }
     .user-management-page .table { --bs-table-hover-bg: #f5f9fd; }.user-management-page .table thead th { background: #f4f6f8; color: #505860; font-size: .73rem; letter-spacing: .03em; font-weight: 700; padding: 1.05rem 1.25rem; white-space: nowrap; border-bottom-width: 1px; }.user-management-page .table tbody td { padding: 1.1rem 1.25rem; border-color: var(--um-border); color: #4d5358; }
     .user-management-page .badge { border-radius: 99px; padding: .4rem .65rem; }.user-management-page .btn-sm { border-radius: .45rem; }.user-management-page .card-footer { border-top-color: var(--um-border); }
     .user-management-page .pagination { margin-bottom: 0; }
     .user-management-page .card-footer nav > div.d-none > div:first-child { display: none; }
     .user-management-page .table-responsive { min-height: 0; }
-    @media (max-width: 767.98px) { .user-management-page .table thead th, .user-management-page .table tbody td { padding-left: .8rem; padding-right: .8rem; } }
+    .user-management-page .um-access { min-width: 9rem; }
+    .user-management-page .cu-dropdown-toggle { min-height: 42px; min-width: 10.5rem; }
+    @media (max-width: 767.98px) {
+        .user-management-page .um-search,
+        .user-management-page .cu-dropdown-toggle { width: 100%; min-width: 0; }
+    }
 </style>
 <div class="container-fluid mt-4 user-management-page">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 um-header">
@@ -50,9 +60,41 @@
         <form method="GET" action="{{ route('user.management') }}" class="um-toolbar p-4">
             <div class="d-flex flex-wrap gap-2 align-items-center">
                 <div class="input-group um-search me-auto"><span class="input-group-text border-end-0"><i class="ti ti-search"></i></span><input class="form-control border-start-0 ps-0" name="search" value="{{ request('search') }}" placeholder="Search by name, ID or email..." aria-label="Search users"></div>
-                <select class="form-select w-auto" name="location" aria-label="Filter by location"><option value="">All Locations</option>@foreach($locations as $location)<option value="{{ $location }}" @selected(request('location') === $location)>{{ $location }}</option>@endforeach</select>
-                <select class="form-select w-auto" name="role" aria-label="Filter by role"><option value="">All Roles</option>@foreach($roles as $role)<option value="{{ $role->id }}" @selected((string) request('role') === (string) $role->id)>{{ $role->name }}</option>@endforeach</select>
-                <select class="form-select w-auto" name="status" aria-label="Filter by status"><option value="">All Statuses</option><option value="active" @selected(request('status') === 'active')>Active</option><option value="inactive" @selected(request('status') === 'inactive')>Inactive</option></select>
+                <div class="dropdown cu-select" data-cu-select>
+                    <input type="hidden" name="location" value="{{ request('location') }}">
+                    <button class="btn cu-dropdown-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="Filter by location">
+                        <span class="js-select-label">{{ request('location') ?: 'All Locations' }}</span>
+                    </button>
+                    <ul class="dropdown-menu cu-dropdown-menu">
+                        <li><button type="button" class="dropdown-item" data-value="" data-label="All Locations">All Locations</button></li>
+                        @foreach($locations as $location)
+                            <li><button type="button" class="dropdown-item text-wrap" data-value="{{ $location }}" data-label="{{ $location }}">{{ $location }}</button></li>
+                        @endforeach
+                    </ul>
+                </div>
+                <div class="dropdown cu-select" data-cu-select>
+                    <input type="hidden" name="role" value="{{ request('role') }}">
+                    <button class="btn cu-dropdown-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="Filter by role">
+                        <span class="js-select-label">{{ optional($roles->firstWhere('id', (int) request('role')))->name ?? 'All Roles' }}</span>
+                    </button>
+                    <ul class="dropdown-menu cu-dropdown-menu">
+                        <li><button type="button" class="dropdown-item" data-value="" data-label="All Roles">All Roles</button></li>
+                        @foreach($roles as $role)
+                            <li><button type="button" class="dropdown-item" data-value="{{ $role->id }}" data-label="{{ $role->name }}">{{ $role->name }}</button></li>
+                        @endforeach
+                    </ul>
+                </div>
+                <div class="dropdown cu-select" data-cu-select>
+                    <input type="hidden" name="status" value="{{ request('status') }}">
+                    <button class="btn cu-dropdown-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-label="Filter by status">
+                        <span class="js-select-label">{{ request('status') === 'active' ? 'Active' : (request('status') === 'inactive' ? 'Inactive' : 'All Statuses') }}</span>
+                    </button>
+                    <ul class="dropdown-menu cu-dropdown-menu">
+                        <li><button type="button" class="dropdown-item" data-value="" data-label="All Statuses">All Statuses</button></li>
+                        <li><button type="button" class="dropdown-item" data-value="active" data-label="Active">Active</button></li>
+                        <li><button type="button" class="dropdown-item" data-value="inactive" data-label="Inactive">Inactive</button></li>
+                    </ul>
+                </div>
                 <button class="btn btn-outline-primary px-3" type="submit"><i class="ti ti-adjustments-horizontal me-1"></i>Filter</button>
                 @if(request()->hasAny(['search', 'location', 'role', 'status']))<a class="btn btn-link text-decoration-none" href="{{ route('user.management') }}">Clear</a>@endif
             </div>
@@ -67,6 +109,7 @@
                             <th>Email</th>
                             <th>Location</th>
                             <th>Role</th>
+                            <th>Access</th>
                             <th>Status</th>
                             <th class="text-end">Actions</th>
                         </tr>
@@ -79,6 +122,29 @@
                                 <td>{{ $managedUser->email }}</td>
                                 <td>{{ $managedUser->location ?: '—' }}</td>
                                 <td><span class="badge text-bg-primary-subtle text-primary">{{ strtoupper($managedUser->role->name ?? $managedUser->user_role ?? 'Unassigned') }}</span></td>
+                                <td class="um-access">
+                                    @php
+                                        $granted = $managedUser->grantedPermissionSlugs();
+                                    @endphp
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            {{ count($granted) }} permissions
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end cu-dropdown-menu">
+                                            @if(count($granted) === 0)
+                                                <div class="dropdown-item-text text-muted">No permissions assigned</div>
+                                            @else
+                                                @foreach($permissionGroups as $group)
+                                                    @php
+                                                        $actions = collect($group['actions'])->filter(fn ($action) => in_array($action['slug'], $granted, true));
+                                                    @endphp
+                                                    @continue($actions->isEmpty())
+                                                    <div class="dropdown-item-text small">{{ $group['section'] }}: {{ $actions->pluck('action')->join(', ') }}</div>
+                                                @endforeach
+                                            @endif
+                                        </div>
+                                    </div>
+                                </td>
                                 <td>
                                     @if($managedUser->trashed())
                                         <span class="badge text-bg-danger">Deleted</span>
@@ -105,7 +171,8 @@
                                             data-user-location="{{ $managedUser->location }}"
                                             data-user-designation="{{ $managedUser->designation }}"
                                             data-user-service-id="{{ $managedUser->service_id }}"
-                                            data-user-role="{{ $managedUser->role?->slug }}">
+                                            data-user-role="{{ $managedUser->role?->slug }}"
+                                            data-user-extras="{{ e(json_encode($managedUser->relationLoaded('extraPermissions') ? $managedUser->extraPermissions->pluck('slug')->values() : [])) }}">
 
                                             <i class="ti ti-edit me-1"></i>Edit
                                         </button>
@@ -135,7 +202,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">No users found.</td>
+                                <td colspan="8" class="text-center text-muted py-4">No users found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -152,7 +219,7 @@
 </div>
 
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
 
             <div class="modal-header">
@@ -276,20 +343,43 @@
                             <label for="editRole" class="form-label">
                                 Role
                             </label>
+                            <div class="dropdown cu-select" data-cu-select>
+                                <input type="hidden" name="user_role" id="editRole" required>
+                                <button class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="js-select-label" id="editRoleLabel">Select role</span>
+                                </button>
+                                <ul class="dropdown-menu cu-dropdown-menu w-100">
+                                    @foreach($roles as $role)
+                                        <li>
+                                            <button type="button" class="dropdown-item js-edit-role-option" data-value="{{ $role->slug }}" data-label="{{ $role->name }}">
+                                                {{ $role->name }}
+                                            </button>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
 
-                            <select
-                                class="form-select"
-                                id="editRole"
-                                name="user_role"
-                                required>
-
-                                @foreach($roles as $role)
-                                    <option value="{{ $role->slug }}">
-                                        {{ $role->name }}
-                                    </option>
-                                @endforeach
-
-                            </select>
+                        <div class="col-12">
+                            <label class="form-label" for="editPermissionsDropdown">Permissions</label>
+                            <p class="small text-muted mb-2">Role access is locked; extra access can be granted to this user only.</p>
+                            <div class="dropdown">
+                                <button id="editPermissionsDropdown" class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    <span id="editPermissionsSummary" class="text-muted">Select extra permissions</span>
+                                </button>
+                                <div class="dropdown-menu cu-dropdown-menu w-100">
+                                    @foreach($permissionGroups as $group)
+                                        <h6 class="dropdown-header">{{ $group['section'] }}</h6>
+                                        @foreach($group['actions'] as $action)
+                                            <label class="dropdown-item cu-check-item js-edit-perm-row" data-permission="{{ $action['slug'] }}">
+                                                <input type="checkbox" name="extra_permissions[]" value="{{ $action['slug'] }}" class="form-check-input mt-0 js-edit-extra-permission">
+                                                <span>{{ $action['action'] }}</span>
+                                                <small class="js-edit-perm-source">Off</small>
+                                            </label>
+                                        @endforeach
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
 
                     </div>
@@ -372,16 +462,70 @@
 </div>
 
 @push('scripts')
+<script src="{{ asset('js/cu-dropdowns.js') }}?v=2"></script>
 <script>
+
+    function bindSelectDropdowns() {
+        document.querySelectorAll('[data-cu-select]').forEach((wrap) => {
+            const input = wrap.querySelector('select, input[type="hidden"]');
+            const label = wrap.querySelector('.js-select-label');
+            wrap.querySelectorAll('[data-value]').forEach((item) => {
+                item.addEventListener('click', () => {
+                    input.value = item.dataset.value;
+                    label.textContent = item.dataset.label || item.textContent.trim();
+                    label.classList.toggle('text-muted', !input.value);
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
+        });
+    }
 
     const editUserModal = document.getElementById('editUserModal');
     const editUserForm = document.getElementById('editUserForm');
+    const rolePermissions = @json($rolePermissions);
+
+    function updateEditPermissionSummary() {
+        const granted = document.querySelectorAll('.js-edit-extra-permission:checked').length;
+        const extra = [...document.querySelectorAll('.js-edit-extra-permission')]
+            .filter((checkbox) => checkbox.checked && !checkbox.disabled).length;
+        const summary = document.getElementById('editPermissionsSummary');
+        if (!granted) {
+            summary.textContent = 'Select extra permissions';
+            summary.classList.add('text-muted');
+            return;
+        }
+        summary.textContent = extra
+            ? `${granted} selected (${extra} extra)`
+            : `${granted} from selected role`;
+        summary.classList.remove('text-muted');
+    }
+
+    function refreshEditPermissions(roleSlug, extras) {
+        const granted = new Set(rolePermissions[roleSlug] || []);
+        const extraSet = new Set(extras || []);
+
+        document.querySelectorAll('.js-edit-perm-row').forEach((row) => {
+            const slug = row.dataset.permission;
+            const checkbox = row.querySelector('.js-edit-extra-permission');
+            const source = row.querySelector('.js-edit-perm-source');
+            const fromRole = granted.has(slug);
+
+            checkbox.checked = fromRole || extraSet.has(slug);
+            checkbox.disabled = fromRole;
+            row.classList.toggle('is-granted', fromRole);
+            row.classList.toggle('is-extra', !fromRole && checkbox.checked);
+            source.textContent = fromRole
+                ? 'Role'
+                : (checkbox.checked ? 'Extra' : 'Off');
+        });
+
+        updateEditPermissionSummary();
+    }
 
     editUserModal.addEventListener('show.bs.modal', (event) => {
 
         const button = event.relatedTarget;
 
-        // Get user data from the Edit button
         const userId = button.dataset.userId;
         const name = button.dataset.userName;
         const nic = button.dataset.userNic;
@@ -391,8 +535,8 @@
         const designation = button.dataset.userDesignation;
         const serviceId = button.dataset.userServiceId;
         const roleSlug = button.dataset.userRole;
+        const extras = JSON.parse(button.dataset.userExtras || '[]');
 
-        // Fill the form
         document.getElementById('editName').value = name || '';
         document.getElementById('editNic').value = nic || '';
         document.getElementById('editEmail').value = email || '';
@@ -401,12 +545,35 @@
         document.getElementById('editDesignation').value = designation || '';
         document.getElementById('editServiceId').value = serviceId || '';
 
-        // Select current role
         document.getElementById('editRole').value = roleSlug || '';
+        const roleOption = document.querySelector(`.js-edit-role-option[data-value="${roleSlug}"]`);
+        const roleLabel = document.getElementById('editRoleLabel');
+        roleLabel.textContent = roleOption?.dataset.label || 'Select role';
+        roleLabel.classList.toggle('text-muted', !roleSlug);
+        refreshEditPermissions(roleSlug, extras);
 
-        // Set form action
         editUserForm.action = `/user-management/${userId}`;
 
+    });
+
+    document.getElementById('editRole').addEventListener('change', (event) => {
+        const extras = [...document.querySelectorAll('.js-edit-extra-permission')]
+            .filter((checkbox) => checkbox.checked && !checkbox.disabled)
+            .map((checkbox) => checkbox.value);
+        refreshEditPermissions(event.target.value, extras);
+    });
+
+    document.querySelectorAll('.js-edit-extra-permission').forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+            const extras = [...document.querySelectorAll('.js-edit-extra-permission')]
+                .filter((item) => item.checked && !item.disabled)
+                .map((item) => item.value);
+            refreshEditPermissions(document.getElementById('editRole').value, extras);
+        });
+    });
+
+    editUserForm.addEventListener('submit', () => {
+        document.querySelectorAll('.js-edit-extra-permission').forEach((checkbox) => { checkbox.disabled = false; });
     });
 
 
@@ -430,6 +597,8 @@
         resetPasswordUserName.textContent = button.dataset.userName;
         resetPasswordForm.reset();
     });
+
+    bindSelectDropdowns();
 </script>
 @endpush
 @endsection

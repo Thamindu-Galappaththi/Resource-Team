@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
@@ -75,6 +76,43 @@ class User extends Authenticatable
         return $this->belongsToMany(Role::class);
     }
 
+    public function extraPermissions(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function grantedPermissionSlugs(): array
+    {
+        $all = array_keys(config('rbac.permissions', []));
+        $slugs = collect();
+
+        $this->loadMissing('role', 'roles.permissions');
+
+        foreach ($this->roles->push($this->role)->filter() as $role) {
+            if (in_array($role->slug, ['developer', 'super_admin'], true)) {
+                return $all;
+            }
+
+            $slugs = $slugs->merge($role->permissions->pluck('slug'));
+        }
+
+        if ($this->extraPermissionTableExists()) {
+            $this->loadMissing('extraPermissions');
+            $slugs = $slugs->merge($this->extraPermissions->pluck('slug'));
+        }
+
+        $fromConfig = collect([$this->roleSlug()])
+            ->filter()
+            ->flatMap(fn (string $slug) => in_array($slug, ['developer', 'super_admin'], true)
+                ? $all
+                : config('rbac.role_permissions.'.$slug, []));
+
+        return $slugs->merge($fromConfig)->unique()->values()->all();
+    }
+
     public function roleSlug(): string
     {
         return $this->role?->slug ?? RoleHelper::normalizeRole($this->user_role);
@@ -105,7 +143,9 @@ class User extends Authenticatable
         $this->loadMissing('role.permissions', 'roles.permissions');
 
         if ($this->roles->contains(fn (Role $role) => $role->hasPermission($permission))
-            || $this->role?->hasPermission($permission)) {
+            || $this->role?->hasPermission($permission)
+            || ($this->extraPermissionTableExists()
+                && $this->loadMissing('extraPermissions')->extraPermissions->contains('slug', $permission))) {
             return true;
         }
 
@@ -126,5 +166,12 @@ class User extends Authenticatable
         }
 
         return Storage::disk('public')->url($this->user_profile);
+    }
+
+    private function extraPermissionTableExists(): bool
+    {
+        static $exists;
+
+        return $exists ??= Schema::hasTable('permission_user');
     }
 }

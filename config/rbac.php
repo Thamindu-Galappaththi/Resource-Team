@@ -76,6 +76,78 @@ return [
     ],
 
     /*
+    | Sidebar-aligned permission matrix for Create User. Every permission
+    | above must appear here so role access can be reviewed in one place.
+    */
+    'permission_groups' => [
+        [
+            'section' => 'Home',
+            'actions' => [
+                ['slug' => 'dashboard', 'action' => 'View'],
+            ],
+        ],
+        [
+            'section' => 'User Management',
+            'actions' => [
+                ['slug' => 'user.create', 'action' => 'Create'],
+                ['slug' => 'user.management', 'action' => 'Manage'],
+            ],
+        ],
+        [
+            'section' => 'Reservation Management',
+            'actions' => [
+                ['slug' => 'reservations.index', 'action' => 'View'],
+                ['slug' => 'reservations.create', 'action' => 'Create'],
+                ['slug' => 'reservations.calendar', 'action' => 'Calendar'],
+            ],
+        ],
+        [
+            'section' => 'Resource Management',
+            'actions' => [
+                ['slug' => 'resources.index', 'action' => 'View'],
+                ['slug' => 'resources.create', 'action' => 'Create'],
+                ['slug' => 'resources.calendar', 'action' => 'Calendar'],
+            ],
+        ],
+        [
+            'section' => 'Approvals',
+            'actions' => [
+                ['slug' => 'approvals.index', 'action' => 'Manage'],
+                ['slug' => 'approvals.special', 'action' => 'Special'],
+            ],
+        ],
+        [
+            'section' => 'Hostel',
+            'actions' => [
+                ['slug' => 'hostel.index', 'action' => 'View'],
+                ['slug' => 'hostel.create', 'action' => 'Create'],
+                ['slug' => 'hostel.manage', 'action' => 'Manage'],
+            ],
+        ],
+        [
+            'section' => 'Canteen',
+            'actions' => [
+                ['slug' => 'canteen.view', 'action' => 'View'],
+                ['slug' => 'canteen.index', 'action' => 'List'],
+                ['slug' => 'canteen.create', 'action' => 'Create'],
+                ['slug' => 'canteen.manage', 'action' => 'Manage'],
+            ],
+        ],
+        [
+            'section' => 'Payments',
+            'actions' => [
+                ['slug' => 'payments.view', 'action' => 'View'],
+            ],
+        ],
+        [
+            'section' => 'Reports',
+            'actions' => [
+                ['slug' => 'reports.view', 'action' => 'View'],
+            ],
+        ],
+    ],
+
+    /*
     | Developer and Super Admin receive every permission.
     | Other roles follow BRD actors in sections 5, 7.2, and 8.
     */

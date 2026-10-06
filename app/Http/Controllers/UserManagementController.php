@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\SltEmployeeDirectory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,16 +13,14 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class UserManagementController extends Controller
 {
     public function index(Request $request): View
     {
-        $users = User::query()
-            ->with(['role', 'roles'])
-            ->latest()
-            ->paginate(15);
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'location' => ['nullable', 'string', 'max:100'],
@@ -28,8 +28,13 @@ class UserManagementController extends Controller
             'status' => ['nullable', Rule::in(['active', 'inactive'])],
         ]);
 
+        $with = ['role.permissions', 'roles.permissions'];
+        if (Schema::hasTable('permission_user')) {
+            $with[] = 'extraPermissions';
+        }
+
         $usersQuery = User::withTrashed()
-            ->with('role')
+            ->with($with)
             ->when($filters['search'] ?? null, function ($query, string $search) {
                 $query->where(function ($userQuery) use ($search) {
                     $userQuery->where('name', 'like', "%{$search}%")
@@ -49,26 +54,44 @@ class UserManagementController extends Controller
             'inactive' => User::where('is_active', false)->count(),
         ];
         $locations = User::withTrashed()->whereNotNull('location')->distinct()->orderBy('location')->pluck('location');
-        $roles = Role::query()->where('is_active', true)->orderBy('sort_order')->get();
+        $roles = Role::query()->where('is_active', true)->with('permissions')->orderBy('sort_order')->get();
 
-        return view('user-management.index', compact('users', 'statistics', 'locations', 'roles'));
+        return view('user-management.index', [
+            'users' => $users,
+            'statistics' => $statistics,
+            'locations' => $locations,
+            'roles' => $roles,
+            'permissionGroups' => config('rbac.permission_groups', []),
+            'rolePermissions' => $this->rolePermissionMap($roles),
+        ]);
     }
 
     public function create(): View
     {
         $roles = Role::query()
             ->where('is_active', true)
+            ->with('permissions')
             ->orderBy('sort_order')
             ->get();
 
-        return view('user-management.create-user', compact('roles'));
+        return view('user-management.create-user', [
+            'roles' => $roles,
+            'permissionGroups' => config('rbac.permission_groups', []),
+            'rolePermissions' => $this->rolePermissionMap($roles),
+            'locations' => [
+                'Nebula Institute of Technology - Welisara',
+                'Nebula Institute of Technology - Moratuwa',
+                'Nebula Institute of Technology - Peradeniya',
+            ],
+            'employeeLookupMock' => app(SltEmployeeDirectory::class)->usesMock(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'slt_employee' => ['required', 'in:yes,no'],
-            'name' => ['required', 'string', 'max:50'],
+            'name' => ['required', 'string', 'max:100'],
             'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
             'nic' => ['required', 'string', 'size:12', 'unique:users,nic'],
             'email' => ['required', 'email', 'max:50', 'unique:users,email'],
@@ -77,9 +100,14 @@ class UserManagementController extends Controller
             'designation' => ['nullable', 'string', 'max:100'],
             'user_roles' => ['required', 'array', 'min:1'],
             'user_roles.*' => ['required', 'string', 'distinct', Rule::exists('roles', 'slug')->where('is_active', true)],
+            'extra_permissions' => ['nullable', 'array'],
+            'extra_permissions.*' => ['string', Rule::exists('permissions', 'slug')],
         ]);
 
-        $roles = Role::query()->whereIn('slug', $validated['user_roles'])->get();
+        $roles = Role::query()
+            ->with('permissions')
+            ->whereIn('slug', $validated['user_roles'])
+            ->get();
         $primaryRole = $roles->firstWhere('slug', $validated['user_roles'][0]);
 
         $user = User::create([
@@ -98,6 +126,7 @@ class UserManagementController extends Controller
         ]);
 
         $user->roles()->sync($roles->modelKeys());
+        $this->syncExtraPermissions($user, $roles, $validated['extra_permissions'] ?? []);
 
         $status = Password::sendResetLink([
             'email' => $user->email,
@@ -141,9 +170,12 @@ class UserManagementController extends Controller
                 'string',
                 Rule::exists('roles', 'slug')->where('is_active', true),
             ],
+            'extra_permissions' => ['nullable', 'array'],
+            'extra_permissions.*' => ['string', Rule::exists('permissions', 'slug')],
         ]);
 
         $role = Role::query()
+            ->with('permissions')
             ->where('slug', $validated['user_role'])
             ->where('is_active', true)
             ->firstOrFail();
@@ -159,6 +191,9 @@ class UserManagementController extends Controller
             'role_id' => $role->id,
             'user_role' => $role->slug,
         ]);
+
+        $user->roles()->sync([$role->id]);
+        $this->syncExtraPermissions($user, collect([$role]), $validated['extra_permissions'] ?? []);
 
         return redirect()
             ->route('user.management')
@@ -220,25 +255,63 @@ class UserManagementController extends Controller
         return redirect()->route('user.management')->with('status', 'User account deleted successfully for '.$deletedUserName.'.');
     }
 
-    public function lookupSltEmployee(Request $request): JsonResponse
+    public function lookupSltEmployee(Request $request, SltEmployeeDirectory $directory): JsonResponse
     {
         $validated = $request->validate([
             'employee_id' => ['required', 'string', 'max:20'],
         ]);
 
-        $employee = User::query()
-            ->where('service_id', $validated['employee_id'])
-            ->first();
+        try {
+            return response()->json($directory->lookup($validated['employee_id']));
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 404);
+        }
+    }
 
-        if (! $employee) {
-            return response()->json(['message' => 'No SLT employee was found for that Employee ID.'], 404);
+    /**
+     * @param  \Illuminate\Support\Collection<int, Role>  $roles
+     * @param  array<int, string>  $extraSlugs
+     */
+    private function syncExtraPermissions(User $user, $roles, array $extraSlugs): void
+    {
+        if (! Schema::hasTable('permission_user')) {
+            return;
         }
 
-        return response()->json([
-            'name' => $employee->name,
-            'nic' => $employee->nic,
-            'email' => $employee->email,
-            'phone' => $employee->phone,
-        ]);
+        $grantedByRoles = $roles->flatMap(function (Role $role) {
+            if (in_array($role->slug, ['developer', 'super_admin'], true)) {
+                return array_keys(config('rbac.permissions', []));
+            }
+
+            return $role->permissions->pluck('slug');
+        })->unique()->all();
+
+        $extraIds = Permission::query()
+            ->whereIn('slug', $extraSlugs)
+            ->whereNotIn('slug', $grantedByRoles)
+            ->pluck('id');
+
+        $user->extraPermissions()->sync($extraIds);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Role>  $roles
+     * @return array<string, list<string>>
+     */
+    private function rolePermissionMap($roles): array
+    {
+        $allPermissionSlugs = array_keys(config('rbac.permissions', []));
+
+        return $roles->mapWithKeys(function (Role $role) use ($allPermissionSlugs) {
+            if (in_array($role->slug, ['developer', 'super_admin'], true)) {
+                return [$role->slug => $allPermissionSlugs];
+            }
+
+            $fromRole = $role->permissions->pluck('slug');
+            $fromConfig = collect(config('rbac.role_permissions.'.$role->slug, []))
+                ->reject(fn (string $slug) => $slug === '*');
+
+            return [$role->slug => $fromRole->merge($fromConfig)->unique()->values()->all()];
+        })->all();
     }
 }

@@ -47,26 +47,123 @@ class UserManagementControllerTest extends TestCase
         ]);
     }
 
-    public function test_slt_employee_details_can_be_looked_up_by_employee_id(): void
+    public function test_create_user_page_lists_roles_and_grouped_permissions(): void
     {
         $administrator = User::factory()->role('admin')->create();
-        User::factory()->create([
-            'service_id' => 'SLT-1001',
-            'name' => 'Sam Perera',
-            'nic' => '199012345678',
-            'email' => 'sam.perera@slt.lk',
-            'phone' => '0712345678',
-        ]);
+
+        $html = $this->actingAs($administrator)
+            ->get(route('create.user'))
+            ->assertOk()
+            ->assertSee('SLT employee')
+            ->assertSee('Find employee')
+            ->assertSee('Select roles')
+            ->assertSee('Select extra permissions')
+            ->assertSee('Coordinator')
+            ->assertSee('User Management')
+            ->assertSee('Reservation Management')
+            ->assertSee('Hostel')
+            ->assertSee('Canteen')
+            ->assertSee('Payments')
+            ->assertSee('Reports')
+            ->assertDontSee('Hold Ctrl')
+            ->getContent();
+
+        $this->assertMatchesRegularExpression('/id="service_id"[^>]*\bdisabled\b/', $html);
+    }
+
+    public function test_slt_employee_details_are_mocked_from_erp_sample_in_development(): void
+    {
+        $administrator = User::factory()->role('admin')->create();
 
         $this->actingAs($administrator)
-            ->getJson(route('slt.employee.lookup', ['employee_id' => 'SLT-1001']))
+            ->getJson(route('slt.employee.lookup', ['employee_id' => '010375']))
             ->assertOk()
-            ->assertExactJson([
-                'name' => 'Sam Perera',
-                'nic' => '199012345678',
-                'email' => 'sam.perera@slt.lk',
-                'phone' => '0712345678',
+            ->assertJson([
+                'name' => 'M G D Karunananda',
+                'email' => 'dkaru@slt.com.lk',
+                'phone' => '+94714238497',
+                'designation' => 'Senior Engineer',
+                'service_id' => '010375',
+                'mock' => true,
             ]);
+    }
+
+    public function test_unknown_employee_id_echoes_development_directory_data(): void
+    {
+        $administrator = User::factory()->role('admin')->create();
+
+        $this->actingAs($administrator)
+            ->getJson(route('slt.employee.lookup', ['employee_id' => '123']))
+            ->assertOk()
+            ->assertJson([
+                'service_id' => '000123',
+                'email' => '000123@slt.com.lk',
+                'mock' => true,
+            ]);
+    }
+
+    public function test_live_erp_lookup_uses_the_intranet_api_when_mock_is_disabled(): void
+    {
+        config([
+            'services.slt_erp.mock' => false,
+            'services.slt_erp.url' => 'https://oneidentitytest.slt.com.lk/ERPAPIs/api/ERPData/GetAllEmployeeDetailsForServiceNo',
+            'services.slt_erp.username' => 'dpuser3',
+            'services.slt_erp.password' => 'secret',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'oneidentitytest.slt.com.lk/*' => \Illuminate\Support\Facades\Http::response([
+                'success' => true,
+                'message' => 'Operation completed successfully',
+                'data' => [[
+                    'employeeNumber' => '010375',
+                    'employeeName' => 'M G D Karunananda',
+                    'designation' => 'Senior Engineer',
+                    'email' => 'dkaru@slt.com.lk',
+                    'mobileNo' => '+94714238497',
+                    'orgName' => 'Provincial Network_WPSW',
+                ]],
+            ]),
+        ]);
+
+        $administrator = User::factory()->role('admin')->create();
+
+        $this->actingAs($administrator)
+            ->getJson(route('slt.employee.lookup', ['employee_id' => '010375']))
+            ->assertOk()
+            ->assertJson([
+                'name' => 'M G D Karunananda',
+                'mock' => false,
+            ]);
+
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            return $request->url() === 'https://oneidentitytest.slt.com.lk/ERPAPIs/api/ERPData/GetAllEmployeeDetailsForServiceNo'
+                && $request['employeeNo'] === '010375'
+                && $request->hasHeader('UserName', 'dpuser3');
+        });
+    }
+
+    public function test_extra_permissions_can_be_granted_beyond_the_selected_role(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs(User::factory()->role('admin')->create())
+            ->post(route('create.user.store'), [
+                'slt_employee' => 'no',
+                'name' => 'View Only Plus',
+                'nic' => '199912345678',
+                'email' => 'viewplus@example.com',
+                'phone' => '0770000000',
+                'user_roles' => ['nebula_sms_user'],
+                'extra_permissions' => ['canteen.view'],
+                'location' => 'Nebula Institute of Technology - Welisara',
+            ])
+            ->assertRedirect(route('create.user'));
+
+        $user = User::query()->where('email', 'viewplus@example.com')->firstOrFail();
+        $this->assertTrue($user->hasPermission('reservations.calendar'));
+        $this->assertTrue($user->hasPermission('canteen.view'));
+        $this->assertFalse($user->hasPermission('canteen.create'));
     }
 
     public function test_user_can_be_deleted_after_confirmation_submission(): void
@@ -92,6 +189,19 @@ class UserManagementControllerTest extends TestCase
             ->assertSessionHasErrors('status');
 
         $this->assertDatabaseHas('users', ['id' => $administrator->id]);
+    }
+
+    public function test_user_list_shows_existing_user_permissions(): void
+    {
+        $administrator = User::factory()->role('admin')->create(['name' => 'Access Admin']);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSee('Access Admin')
+            ->assertSee('permissions')
+            ->assertSee('User Management: Create, Manage')
+            ->assertSee('Role access is locked');
     }
 
     public function test_user_management_pagination_uses_bootstrap_links(): void
