@@ -21,7 +21,7 @@
     document.querySelectorAll('.cu-dropdown-menu').forEach(trapMenuScroll);
 
     document.addEventListener('shown.bs.dropdown', (event) => {
-        const menu = event.target.querySelector('.cu-dropdown-menu');
+        const menu = event.target.querySelector('.cu-dropdown-menu, .um-perm-menu');
         if (menu) {
             trapMenuScroll(menu);
         }

@@ -39,7 +39,9 @@
     justify-content: space-between;
     gap: .75rem;
     width: 100%;
+    min-height: 48px;
     padding: .7rem 1rem;
+    overflow: hidden;
     background: #fff;
     border: 1px solid #cbd3da;
     border-radius: .65rem;
@@ -75,7 +77,11 @@
 }
 
 .cu-dropdown-menu {
+    width: 100%;
+    min-width: 100%;
+    max-width: min(100%, calc(100vw - 1.5rem));
     max-height: 16rem;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: .25rem;
@@ -104,7 +110,8 @@
 
 .cu-dropdown-menu .dropdown-item {
     border-radius: .4rem;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
     padding: .4rem .65rem;
     font-size: .9rem;
 }

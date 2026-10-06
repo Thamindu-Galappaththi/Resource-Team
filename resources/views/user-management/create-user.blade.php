@@ -3,7 +3,7 @@
 @section('title', 'Create User')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=7">
+    <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=9">
 @endpush
 
 @section('content')
@@ -43,7 +43,7 @@
                         <button class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="js-select-label {{ old('slt_employee') ? '' : 'text-muted' }}">{{ old('slt_employee') === 'yes' ? 'Yes' : (old('slt_employee') === 'no' ? 'No' : 'Select an option') }}</span>
                         </button>
-                        <ul class="dropdown-menu cu-dropdown-menu w-100">
+                        <ul class="dropdown-menu cu-dropdown-menu">
                             <li><button type="button" class="dropdown-item" data-value="" data-label="Select an option">Select an option</button></li>
                             <li><button type="button" class="dropdown-item" data-value="yes" data-label="Yes">Yes</button></li>
                             <li><button type="button" class="dropdown-item" data-value="no" data-label="No">No</button></li>
@@ -91,10 +91,10 @@
                         <button class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="js-select-label {{ old('location') ? '' : 'text-muted' }}">{{ old('location') ?: 'Select location' }}</span>
                         </button>
-                        <ul class="dropdown-menu cu-dropdown-menu w-100">
+                        <ul class="dropdown-menu cu-dropdown-menu">
                             <li><button type="button" class="dropdown-item" data-value="" data-label="Select location">Select location</button></li>
                             @foreach($locations as $location)
-                                <li><button type="button" class="dropdown-item text-wrap" data-value="{{ $location }}" data-label="{{ $location }}">{{ $location }}</button></li>
+                                <li><button type="button" class="dropdown-item" data-value="{{ $location }}" data-label="{{ $location }}">{{ $location }}</button></li>
                             @endforeach
                         </ul>
                     </div>
@@ -111,7 +111,7 @@
                         <button id="rolesDropdown" class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <span id="rolesSummary" class="{{ old('user_roles') ? '' : 'text-muted' }}">Select roles</span>
                         </button>
-                        <div class="dropdown-menu cu-dropdown-menu w-100">
+                        <div class="dropdown-menu cu-dropdown-menu">
                             @foreach($roles as $role)
                                 <label class="dropdown-item cu-check-item">
                                     <input type="checkbox" name="user_roles[]" value="{{ $role->slug }}" class="form-check-input mt-0 js-user-role" @checked(in_array($role->slug, old('user_roles', []), true))>
@@ -129,7 +129,7 @@
                         <button id="permissionsDropdown" class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <span id="permissionsSummary" class="text-muted">Select extra permissions</span>
                         </button>
-                        <div class="dropdown-menu cu-dropdown-menu w-100">
+                        <div class="dropdown-menu cu-dropdown-menu">
                             @foreach($permissionGroups as $group)
                                 <h6 class="dropdown-header">{{ $group['section'] }}</h6>
                                 @foreach($group['actions'] as $action)
@@ -154,7 +154,7 @@
 </div>
 
 @push('scripts')
-<script src="{{ asset('js/cu-dropdowns.js') }}?v=2"></script>
+<script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
 <script>
     const sltEmployee = document.getElementById('slt_employee');
     const employeeId = document.getElementById('service_id');

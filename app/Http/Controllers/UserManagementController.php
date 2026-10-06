@@ -43,17 +43,29 @@ class UserManagementController extends Controller
                         ->orWhere('email', 'like', "%{$search}%");
                 });
             })
-            ->when($filters['location'] ?? null, fn ($query, string $location) => $query->where('location', $location))
+            ->when($filters['location'] ?? null, function ($query, string $location) {
+                $campus = trim((string) strrchr($location, '-')) ?: $location;
+                $campus = ltrim($campus, '- ');
+                $query->where(function ($locationQuery) use ($location, $campus) {
+                    $locationQuery->where('location', $location)
+                        ->orWhere('location', 'like', '%'.$campus.'%');
+                });
+            })
             ->when($filters['role'] ?? null, fn ($query, int $roleId) => $query->where('role_id', $roleId))
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('is_active', $status === 'active'));
 
-        $users = $usersQuery->latest()->paginate(15)->withQueryString();
-        $statistics = [
-            'total' => User::withTrashed()->count(),
-            'active' => User::where('is_active', true)->count(),
-            'inactive' => User::where('is_active', false)->count(),
-        ];
-        $locations = User::withTrashed()->whereNotNull('location')->distinct()->orderBy('location')->pluck('location');
+        $users = $usersQuery->latest()->paginate(10)->withQueryString();
+        $permissionGroups = config('rbac.permission_groups', []);
+
+        if ($request->ajax()) {
+            return view('user-management._users-table', [
+                'users' => $users,
+                'permissionGroups' => $permissionGroups,
+            ]);
+        }
+
+        $statistics = $this->userStatistics();
+        $locations = $this->campusLocations();
         $roles = Role::query()->where('is_active', true)->with('permissions')->orderBy('sort_order')->get();
 
         return view('user-management.index', [
@@ -61,7 +73,7 @@ class UserManagementController extends Controller
             'statistics' => $statistics,
             'locations' => $locations,
             'roles' => $roles,
-            'permissionGroups' => config('rbac.permission_groups', []),
+            'permissionGroups' => $permissionGroups,
             'rolePermissions' => $this->rolePermissionMap($roles),
         ]);
     }
@@ -78,11 +90,7 @@ class UserManagementController extends Controller
             'roles' => $roles,
             'permissionGroups' => config('rbac.permission_groups', []),
             'rolePermissions' => $this->rolePermissionMap($roles),
-            'locations' => [
-                'Nebula Institute of Technology - Welisara',
-                'Nebula Institute of Technology - Moratuwa',
-                'Nebula Institute of Technology - Peradeniya',
-            ],
+            'locations' => $this->campusLocations(),
             'employeeLookupMock' => app(SltEmployeeDirectory::class)->usesMock(),
         ]);
     }
@@ -148,8 +156,9 @@ class UserManagementController extends Controller
     public function update(Request $request, User $user): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:50'],
-            'service_id' => ['nullable', 'string', 'max:20'],
+            'slt_employee' => ['required', 'in:yes,no'],
+            'name' => ['required', 'string', 'max:100'],
+            'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
             'nic' => [
                 'required',
                 'string',
@@ -165,45 +174,50 @@ class UserManagementController extends Controller
             'phone' => ['required', 'string', 'max:20'],
             'location' => ['required', 'string', 'max:100'],
             'designation' => ['nullable', 'string', 'max:100'],
-            'user_role' => [
-                'required',
-                'string',
-                Rule::exists('roles', 'slug')->where('is_active', true),
-            ],
+            'user_roles' => ['required', 'array', 'min:1'],
+            'user_roles.*' => ['required', 'string', 'distinct', Rule::exists('roles', 'slug')->where('is_active', true)],
             'extra_permissions' => ['nullable', 'array'],
             'extra_permissions.*' => ['string', Rule::exists('permissions', 'slug')],
         ]);
 
-        $role = Role::query()
+        $roles = Role::query()
             ->with('permissions')
-            ->where('slug', $validated['user_role'])
+            ->whereIn('slug', $validated['user_roles'])
             ->where('is_active', true)
-            ->firstOrFail();
+            ->get();
+        $primaryRole = $roles->firstWhere('slug', $validated['user_roles'][0]);
 
         $user->update([
             'name' => $validated['name'],
             'service_id' => $validated['service_id'] ?? null,
+            'slt_employee' => $validated['slt_employee'] === 'yes',
             'nic' => $validated['nic'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'location' => $validated['location'],
             'designation' => $validated['designation'] ?? null,
-            'role_id' => $role->id,
-            'user_role' => $role->slug,
+            'role_id' => $primaryRole->id,
+            'user_role' => $primaryRole->slug,
         ]);
 
-        $user->roles()->sync([$role->id]);
-        $this->syncExtraPermissions($user, collect([$role]), $validated['extra_permissions'] ?? []);
+        $user->roles()->sync($roles->modelKeys());
+        $this->syncExtraPermissions($user, $roles, $validated['extra_permissions'] ?? []);
 
         return redirect()
             ->route('user.management')
             ->with('status', 'User updated successfully!');
     }
 
-    public function toggleActive(User $user): RedirectResponse
+    public function toggleActive(Request $request, User $user): RedirectResponse|JsonResponse
     {
         if ($user->is(auth()->user())) {
-            return back()->withErrors(['status' => 'You cannot change the status of your own account.']);
+            $message = 'You cannot change the status of your own account.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->withErrors(['status' => $message]);
         }
 
         $user->update(['is_active' => ! $user->is_active]);
@@ -211,6 +225,14 @@ class UserManagementController extends Controller
         $message = $user->is_active
             ? 'User account activated successfully!'
             : 'User account deactivated successfully!';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => $message,
+                'is_active' => $user->is_active,
+                'statistics' => $this->userStatistics(),
+            ]);
+        }
 
         return back()->with('status', $message);
     }
@@ -243,16 +265,30 @@ class UserManagementController extends Controller
         return back()->with('status', 'Password reset successfully and the new password was emailed to '.$user->email.'.');
     }
 
-    public function destroy(User $user): RedirectResponse
+    public function destroy(Request $request, User $user): RedirectResponse|JsonResponse
     {
         if ($user->is(auth()->user())) {
-            return redirect()->route('user.management')->withErrors(['status' => 'You cannot delete your own account.']);
+            $message = 'You cannot delete your own account.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return redirect()->route('user.management')->withErrors(['status' => $message]);
         }
 
         $deletedUserName = $user->name;
         $user->delete();
+        $message = 'User account deleted successfully for '.$deletedUserName.'.';
 
-        return redirect()->route('user.management')->with('status', 'User account deleted successfully for '.$deletedUserName.'.');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => $message,
+                'statistics' => $this->userStatistics(),
+            ]);
+        }
+
+        return redirect()->route('user.management')->with('status', $message);
     }
 
     public function lookupSltEmployee(Request $request, SltEmployeeDirectory $directory): JsonResponse
@@ -313,5 +349,29 @@ class UserManagementController extends Controller
 
             return [$role->slug => $fromRole->merge($fromConfig)->unique()->values()->all()];
         })->all();
+    }
+
+    /**
+     * @return array{total: int, active: int, inactive: int}
+     */
+    private function userStatistics(): array
+    {
+        return [
+            'total' => User::withTrashed()->count(),
+            'active' => User::where('is_active', true)->count(),
+            'inactive' => User::where('is_active', false)->count(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function campusLocations(): array
+    {
+        return [
+            'Nebula Institute of Technology - Welisara',
+            'Nebula Institute of Technology - Moratuwa',
+            'Nebula Institute of Technology - Peradeniya',
+        ];
     }
 }
