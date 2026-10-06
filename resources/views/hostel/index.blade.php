@@ -115,8 +115,8 @@
 <div class="hostel-page hostel-reservations py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h1 class="h3 mb-2">Hostel Reservations</h1>
-            <p class="page-subtitle mb-0">Manage student and guest accommodation logistics across the Nebula campus.</p>
+            <h1 class="h3 mb-2 text-white">Hostel Reservations</h1>
+            <p class="page-subtitle mb-0 text-white-50">Manage student and guest accommodation logistics across the Nebula campus.</p>
         </div>
         @can('createHostel', \App\Models\Reservation::class)
         <a href="{{ route('hostel.create') }}" class="btn btn-primary">

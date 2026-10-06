@@ -47,14 +47,14 @@ class CanteenReservationTest extends TestCase
         $user = User::factory()->role('slt_employee')->create();
         $otherUser = User::factory()->role('slt_employee')->create();
 
-        $this->actingAs($user)->post(route('canteen.reservations.store'), [
+        $this->actingAs($user)->post(route('canteen.store'), [
             'reservation_name' => 'Team lunch',
             'requested_by_user_id' => $otherUser->id,
             'meal_type' => 'lunch',
             'reservation_date' => now()->addDay()->toDateString(),
             'reservation_time' => '12:30',
             'number_of_orders' => 12,
-        ])->assertRedirect(route('canteen.reservations.index'));
+        ])->assertRedirect(route('canteen.show', CanteenReservation::query()->first()));
 
         $this->assertDatabaseHas('canteen_reservations', [
             'reservation_name' => 'Team lunch',
@@ -229,17 +229,48 @@ class CanteenReservationTest extends TestCase
         $this->actingAs($user)
             ->get(route('canteen.dashboard'))
             ->assertOk()
-            ->assertSee('Orders expected today')
+            ->assertSee('Expected today')
             ->assertDontSee('Kitchen Readiness');
 
-        $this->get(route('canteen.reservations.index'))
+        $this->get(route('canteen.index'))
             ->assertOk()
             ->assertSee('Reservation register');
 
-        $this->get(route('canteen.maintenance'))
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('canteen.maintenance'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('canteen.reservations.index'));
+    }
+
+    public function test_developer_can_see_other_users_canteen_reservations(): void
+    {
+        $developer = User::factory()->role('developer')->create();
+        $owner = User::factory()->role('slt_employee')->create(['name' => 'Owner Employee']);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $owner->id,
+            'reservation_name' => 'Developer visibility check',
+            'status' => 'confirmed',
+        ]);
+
+        $this->actingAs($developer)
+            ->get(route('canteen.index'))
             ->assertOk()
-            ->assertSee('Maintenance queue')
-            ->assertSee('No resources in maintenance');
+            ->assertSee('Developer visibility check')
+            ->assertSee('Owner Employee');
+    }
+
+    public function test_create_page_lists_locations_in_campus_order(): void
+    {
+        $user = User::factory()->role('slt_employee')->create();
+        \App\Models\Location::factory()->create(['name' => 'Peradeniya']);
+        \App\Models\Location::factory()->create(['name' => 'Welisara']);
+        \App\Models\Location::factory()->create(['name' => 'Moratuwa']);
+
+        $html = $this->actingAs($user)->get(route('canteen.create'))->assertOk()->getContent();
+        $welisara = strpos($html, 'Welisara');
+        $moratuwa = strpos($html, 'Moratuwa');
+        $peradeniya = strpos($html, 'Peradeniya');
+
+        $this->assertNotFalse($welisara);
+        $this->assertTrue($welisara < $moratuwa && $moratuwa < $peradeniya);
     }
 
     public function test_reservation_form_renders_for_requesters(): void
@@ -247,9 +278,9 @@ class CanteenReservationTest extends TestCase
         $user = User::factory()->role('slt_employee')->create();
 
         $this->actingAs($user)
-            ->get(route('canteen.reservations.create'))
+            ->get(route('canteen.create'))
             ->assertOk()
-            ->assertSee('New reservation')
+            ->assertSee('Create Canteen Reservation')
             ->assertSee('Order requirements')
             ->assertSee('location_id');
     }
@@ -270,5 +301,101 @@ class CanteenReservationTest extends TestCase
         $this->actingAs($other)
             ->get(route('canteen.edit', $reservation))
             ->assertForbidden();
+    }
+
+    public function test_canteen_staff_can_approve_pending_reservation_from_the_list(): void
+    {
+        $staff = User::factory()->role('canteen')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $reservation = CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'reservation_name' => 'Exam day lunches',
+            'status' => 'pending',
+            'number_of_orders' => 80,
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('canteen.index'))
+            ->assertOk()
+            ->assertSee('Approve')
+            ->assertSee('Reject');
+
+        $this->actingAs($staff)
+            ->get(route('canteen.show', $reservation))
+            ->assertOk()
+            ->assertSee('Review request')
+            ->assertSee('Approve reservation');
+
+        $this->actingAs($staff)
+            ->patch(route('canteen.status', $reservation), ['status' => 'confirmed'])
+            ->assertRedirect(route('canteen.show', $reservation));
+
+        $this->assertDatabaseHas('canteen_reservations', [
+            'id' => $reservation->id,
+            'status' => 'confirmed',
+            'approved_by_user_id' => $staff->id,
+        ]);
+    }
+
+    public function test_dashboard_counts_only_pending_and_confirmed_orders(): void
+    {
+        $staff = User::factory()->role('canteen')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'reservation_name' => 'Confirmed kitchen lunch',
+            'reservation_date' => now()->toDateString(),
+            'reservation_time' => '12:00:00',
+            'number_of_orders' => 17,
+            'status' => 'confirmed',
+        ]);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'reservation_name' => 'Cancelled banquet',
+            'reservation_date' => now()->toDateString(),
+            'reservation_time' => '13:00:00',
+            'number_of_orders' => 91,
+            'status' => 'cancelled',
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('canteen.dashboard'))
+            ->assertOk()
+            ->assertSee('>17</h3>', false)
+            ->assertDontSee('>108</h3>', false);
+    }
+
+    public function test_store_accepts_browser_time_with_seconds(): void
+    {
+        $user = User::factory()->role('slt_employee')->create();
+
+        $this->actingAs($user)->post(route('canteen.store'), [
+            'reservation_name' => 'Timed lunch',
+            'meal_type' => 'lunch',
+            'reservation_date' => now()->addDay()->toDateString(),
+            'reservation_time' => '12:30:00',
+            'number_of_orders' => 8,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('canteen_reservations', [
+            'reservation_name' => 'Timed lunch',
+            'requested_by_user_id' => $user->id,
+        ]);
+    }
+
+    public function test_edit_form_uses_time_without_seconds(): void
+    {
+        $user = User::factory()->role('slt_employee')->create();
+        $reservation = CanteenReservation::factory()->create([
+            'requested_by_user_id' => $user->id,
+            'status' => 'pending',
+            'reservation_time' => '12:30:00',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('canteen.edit', $reservation))
+            ->assertOk()
+            ->assertSee('value="12:30"', false);
     }
 }

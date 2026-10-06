@@ -9,8 +9,6 @@ use App\Http\Requests\UpdateCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationStatusRequest;
 use App\Models\CanteenReservation;
 use App\Models\Location;
-use App\Models\Role;
-use App\Models\Resource;
 use App\Models\User;
 use App\Notifications\CanteenReservationCreated;
 use App\Notifications\CanteenReservationStatusUpdated;
@@ -27,20 +25,25 @@ class CanteenReservationController extends Controller
         $this->authorize('viewAny', CanteenReservation::class);
 
         $today = now()->toDateString();
-        $reservations = CanteenReservation::query()
-            ->with('requestedBy')
-            ->whereBetween('reservation_date', [now()->startOfDay()->toDateString(), now()->addDays(6)->toDateString()])
+        $query = CanteenReservation::query()->with('requestedBy');
+        $this->restrictToOwnUnlessStaff($query);
+
+        $reservations = $query
+            ->whereBetween('reservation_date', [$today, now()->addDays(6)->toDateString()])
+            ->whereIn('status', CanteenReservationStatus::kitchen())
             ->orderBy('reservation_date')
             ->get();
 
         $forecast = collect();
         for ($i = 0; $i < 7; $i++) {
             $date = now()->addDays($i)->toDateString();
+            $dayReservations = $reservations->filter(
+                fn (CanteenReservation $reservation) => $reservation->reservation_date->toDateString() === $date
+            );
             $forecast->push([
                 'date' => $date,
-                'total' => $reservations
-                    ->filter(fn (CanteenReservation $reservation) => $reservation->reservation_date->toDateString() === $date)
-                    ->sum('number_of_orders'),
+                'total' => $dayReservations->sum('number_of_orders'),
+                'groups' => $dayReservations->count(),
             ]);
         }
 
@@ -48,26 +51,48 @@ class CanteenReservationController extends Controller
             fn (CanteenReservation $reservation) => $reservation->reservation_date->toDateString() === $today
         );
         $peakSlot = $todayReservations
-            ->groupBy('reservation_time')
+            ->groupBy(fn (CanteenReservation $reservation) => $reservation->serviceTimeInput())
             ->sortByDesc(fn ($slot) => $slot->sum('number_of_orders'))
             ->keys()
             ->first();
 
+        $mealBreakdown = $todayReservations
+            ->groupBy('meal_type')
+            ->map(fn ($group, $mealType) => [
+                'meal' => MealType::tryFrom((string) $mealType)?->label() ?? ucfirst(str_replace('_', ' ', (string) $mealType)),
+                'orders' => $group->sum('number_of_orders'),
+                'groups' => $group->count(),
+            ])
+            ->values();
+
         return view('canteen.dashboard', [
             'forecast' => $forecast,
+            'mealBreakdown' => $mealBreakdown,
             'todayTotal' => $todayReservations->sum('number_of_orders'),
+            'todayConfirmed' => $todayReservations
+                ->where('status', CanteenReservationStatus::CONFIRMED->value)
+                ->sum('number_of_orders'),
+            'todayPending' => $todayReservations
+                ->where('status', CanteenReservationStatus::PENDING->value)
+                ->count(),
             'todayBookings' => $todayReservations->count(),
-            'peakSlot' => $peakSlot ? \Illuminate\Support\Facades\Date::parse($peakSlot)->format('h:i A') : null,
+            'peakSlot' => $peakSlot
+                ? (\Illuminate\Support\Facades\Date::createFromFormat('H:i', $peakSlot)?->format('g:i A') ?? $peakSlot)
+                : null,
         ]);
     }
 
     public function forecast(string $date): View
     {
         $this->authorize('viewAny', CanteenReservation::class);
+        abort_unless((bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $date), 404);
 
-        $records = CanteenReservation::query()
-            ->with('requestedBy')
+        $query = CanteenReservation::query()->with(['requestedBy', 'location']);
+        $this->restrictToOwnUnlessStaff($query);
+
+        $records = $query
             ->whereDate('reservation_date', $date)
+            ->whereIn('status', CanteenReservationStatus::kitchen())
             ->orderBy('reservation_time')
             ->get();
 
@@ -81,9 +106,7 @@ class CanteenReservationController extends Controller
         $query = CanteenReservation::query()
             ->with(['requestedBy', 'approvedBy', 'location']);
 
-        if (! auth()->user()?->hasRole('super_admin', 'admin', 'coordinator', 'canteen')) {
-            $query->where('requested_by_user_id', auth()->id());
-        }
+        $this->restrictToOwnUnlessStaff($query);
 
         $query
             ->search($request->input('search'))
@@ -98,9 +121,7 @@ class CanteenReservationController extends Controller
         $reservations = $query->paginate(15)->appends($request->query());
 
         $summaryQuery = CanteenReservation::query();
-        if (! auth()->user()?->hasRole('super_admin', 'admin', 'coordinator', 'canteen')) {
-            $summaryQuery->where('requested_by_user_id', auth()->id());
-        }
+        $this->restrictToOwnUnlessStaff($summaryQuery);
 
         $summary = [
             'total' => (clone $summaryQuery)->count(),
@@ -115,11 +136,7 @@ class CanteenReservationController extends Controller
     {
         $this->authorize('create', CanteenReservation::class);
 
-        return view('canteen.reservations.create', [
-            'mealTypes' => MealType::values(),
-            'locations' => Location::query()->orderBy('name')->get(),
-            'largeGroupThreshold' => config('canteen.large_group_threshold', 50),
-        ]);
+        return view('canteen.reservations.create', $this->formLookups());
     }
 
     public function store(StoreCanteenReservationRequest $request): RedirectResponse
@@ -128,15 +145,7 @@ class CanteenReservationController extends Controller
 
         $data = $request->validated();
         $data['requested_by_user_id'] = auth()->id();
-
-        /**
-         * Default behavior: orders above the configured threshold move to pending review,
-         * otherwise they are confirmed immediately. This was not explicitly specified in the BRD,
-         * so the default is documented here for review during UAT before final approval.
-         */
-        $data['status'] = (int) $data['number_of_orders'] > (int) config('canteen.large_group_threshold', 50)
-            ? CanteenReservationStatus::PENDING->value
-            : CanteenReservationStatus::CONFIRMED->value;
+        $data['status'] = $this->statusForOrderCount((int) $data['number_of_orders']);
 
         $reservation = DB::transaction(function () use ($data) {
             $reservation = CanteenReservation::query()->create($data);
@@ -145,8 +154,8 @@ class CanteenReservationController extends Controller
 
             if ($reservation->status === CanteenReservationStatus::PENDING->value) {
                 $approvers = User::query()->whereHas('role', function ($query) {
-                    $query->whereIn('slug', ['super_admin', 'admin', 'coordinator']);
-                })->get();
+                    $query->whereIn('slug', ['developer', 'super_admin', 'admin', 'coordinator', 'canteen']);
+                })->whereKeyNot(auth()->id())->get();
 
                 foreach ($approvers as $approver) {
                     $approver->notify(new NewCanteenReservationPending($reservation));
@@ -156,12 +165,14 @@ class CanteenReservationController extends Controller
             return $reservation;
         });
 
-        return redirect()->route('canteen.index')->with('success', 'Canteen reservation created successfully.');
+        return redirect()->route('canteen.show', $reservation)->with('success', 'Canteen reservation created successfully.');
     }
 
     public function show(CanteenReservation $reservation): View
     {
         $this->authorize('view', $reservation);
+
+        $reservation->load(['requestedBy', 'location', 'approvedBy']);
 
         return view('canteen.reservations.show', compact('reservation'));
     }
@@ -170,35 +181,36 @@ class CanteenReservationController extends Controller
     {
         $this->authorize('update', $reservation);
 
-        return view('canteen.reservations.edit', [
+        if (! $reservation->canBeEdited() && ! auth()->user()?->hasRole('developer', 'super_admin', 'admin', 'coordinator')) {
+            abort(403, 'This reservation can no longer be edited.');
+        }
+
+        return view('canteen.reservations.edit', array_merge($this->formLookups(), [
             'reservation' => $reservation->load('requestedBy'),
-            'mealTypes' => MealType::values(),
-            'locations' => Location::query()->orderBy('name')->get(),
-        ]);
+        ]));
     }
 
     public function update(UpdateCanteenReservationRequest $request, CanteenReservation $reservation): RedirectResponse
     {
         $this->authorize('update', $reservation);
 
-        $data = $request->validated();
-
-        if (! $reservation->canBeEdited()) {
+        if (! $reservation->canBeEdited() && ! auth()->user()?->hasRole('developer', 'super_admin', 'admin', 'coordinator')) {
             abort(403, 'This reservation can no longer be edited.');
         }
 
-        $data['status'] = ((int) $data['number_of_orders'] > (int) config('canteen.large_group_threshold', 50))
-            ? CanteenReservationStatus::PENDING->value
-            : CanteenReservationStatus::CONFIRMED->value;
+        $data = $request->validated();
+        $data['status'] = $this->statusForOrderCount((int) $data['number_of_orders']);
 
         $reservation->update($data);
 
-        return redirect()->route('canteen.index')->with('success', 'Reservation updated successfully.');
+        return redirect()->route('canteen.show', $reservation)->with('success', 'Reservation updated successfully.');
     }
 
     public function updateStatus(UpdateCanteenReservationStatusRequest $request, CanteenReservation $reservation): RedirectResponse
     {
         $this->authorize('manageStatus', $reservation);
+
+        abort_unless($reservation->status === CanteenReservationStatus::PENDING->value, 403, 'Only pending reservations can be approved or rejected.');
 
         $status = $request->input('status');
 
@@ -212,7 +224,11 @@ class CanteenReservationController extends Controller
             $reservation->requestedBy()->first()?->notify(new CanteenReservationStatusUpdated($reservation, auth()->user()));
         });
 
-        return redirect()->back()->with('success', 'Reservation status updated.');
+        return redirect()
+            ->route('canteen.show', $reservation)
+            ->with('success', $status === CanteenReservationStatus::CONFIRMED->value
+                ? 'Reservation confirmed.'
+                : 'Reservation rejected.');
     }
 
     public function destroy(CanteenReservation $reservation): RedirectResponse
@@ -233,19 +249,33 @@ class CanteenReservationController extends Controller
         return redirect()->route('canteen.index')->with('success', 'Reservation cancelled.');
     }
 
-    public function maintenance(): View
+    private function formLookups(): array
     {
-        $this->authorize('viewAny', CanteenReservation::class);
+        return [
+            'mealTypes' => MealType::cases(),
+            'locations' => Location::query()->ordered()->get(),
+            'largeGroupThreshold' => config('canteen.large_group_threshold', 50),
+        ];
+    }
 
-        $resources = Resource::query()
-            ->with(['type.category', 'location'])
-            ->where('status', 'under_maintenance')
-            ->orderByDesc('updated_at')
-            ->get();
+    private function restrictToOwnUnlessStaff($query): void
+    {
+        if ($this->seesAllCanteenReservations()) {
+            return;
+        }
 
-        return view('canteen.maintenance', [
-            'resources' => $resources,
-            'resourceCount' => Resource::query()->count(),
-        ]);
+        $query->where('requested_by_user_id', auth()->id());
+    }
+
+    private function seesAllCanteenReservations(): bool
+    {
+        return (bool) auth()->user()?->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'canteen');
+    }
+
+    private function statusForOrderCount(int $orders): string
+    {
+        return $orders > (int) config('canteen.large_group_threshold', 50)
+            ? CanteenReservationStatus::PENDING->value
+            : CanteenReservationStatus::CONFIRMED->value;
     }
 }

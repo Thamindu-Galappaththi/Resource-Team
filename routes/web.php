@@ -74,18 +74,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/{reservation}', 'show')->middleware('permission:hostel.index')->name('show');
     });
 
-    // Canteen pages. "canteen.reservations.*" names are resolved to these
-    // names in AppServiceProvider (a route can only have one name).
     Route::prefix('canteen')->name('canteen.')->controller(CanteenReservationController::class)->group(function () {
         Route::get('/', 'dashboard')->middleware('permission:canteen.view')->name('dashboard');
-        Route::get('/maintenance', 'maintenance')->middleware('permission:canteen.manage')->name('maintenance');
         Route::get('/forecast/{date}', 'forecast')->middleware('permission:canteen.view')->name('forecast');
-
         Route::get('/reservations', 'index')->middleware('permission:canteen.index')->name('index');
         Route::get('/reservations/create', 'create')->middleware('permission:canteen.create')->name('create');
         Route::get('/reservations/{reservation}', 'show')->middleware('permission:canteen.index')->name('show');
         Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
-
     });
 
     Route::prefix('payments')->name('payments.')->group(function () {
