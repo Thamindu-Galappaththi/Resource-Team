@@ -240,6 +240,18 @@
     color: #1769c2;
 }
 
+.user-management-page .um-icon-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+    background: #f3f6f9;
+    color: #8a959e;
+}
+
+.user-management-page .um-icon-btn:disabled:hover {
+    background: #f3f6f9;
+    color: #8a959e;
+}
+
 .user-management-page .um-icon-btn.is-danger:hover {
     background: #fdecec;
     color: #c0392b;

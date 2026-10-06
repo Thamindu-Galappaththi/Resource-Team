@@ -24,6 +24,7 @@ class UserFactory extends Factory
             'password' => 'password',
             'user_role' => 'admin',
             'is_active' => true,
+            'password_setup_at' => now(),
         ];
     }
 
@@ -50,6 +51,11 @@ class UserFactory extends Factory
     public function role(string $slug): static
     {
         return $this->state(fn () => ['user_role' => $slug]);
+    }
+
+    public function pendingPasswordSetup(): static
+    {
+        return $this->state(fn () => ['password_setup_at' => null]);
     }
 
     public function inactive(): static

@@ -121,6 +121,7 @@ class UserManagementController extends Controller
             'role_id' => $primaryRole->id,
             'user_role' => $primaryRole->slug,
             'is_active' => true,
+            'password_setup_at' => null,
         ]);
 
         $user->roles()->sync($roles->modelKeys());
@@ -232,7 +233,10 @@ class UserManagementController extends Controller
             'password.min' => 'Use at least 8 characters.',
         ]);
 
-        $user->update(['password' => $validated['password']]);
+        $user->update([
+            'password' => $validated['password'],
+            'password_setup_at' => now(),
+        ]);
 
         try {
             $user->notify(new AdminResetPasswordNotification($validated['password']));
@@ -255,6 +259,35 @@ class UserManagementController extends Controller
         }
 
         return back()->with('status', $message);
+    }
+
+    public function resendPasswordSetup(Request $request, User $user): JsonResponse
+    {
+        if ($user->hasSetPassword()) {
+            return response()->json([
+                'message' => 'This user has already set a password.',
+            ], 422);
+        }
+
+        $status = Password::sendResetLink([
+            'email' => $user->email,
+        ]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'status' => 'A new password setup link was sent to '.$user->email.'.',
+            ]);
+        }
+
+        if ($status === Password::RESET_THROTTLED) {
+            return response()->json([
+                'message' => 'Please wait a minute before sending another setup email.',
+            ], 429);
+        }
+
+        return response()->json([
+            'message' => 'The password setup email could not be sent.',
+        ], 422);
     }
 
     public function destroy(Request $request, User $user): RedirectResponse|JsonResponse

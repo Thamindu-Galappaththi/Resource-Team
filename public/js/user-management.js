@@ -457,6 +457,30 @@ $(function () {
         window.location.reload();
     });
 
+    $(document).on('click', '.js-resend-setup', function () {
+        const $button = $(this);
+        if ($button.prop('disabled')) {
+            return;
+        }
+
+        const user = rowUser(this);
+        $button.prop('disabled', true);
+
+        $.ajax({
+            url: user.resend_setup_url,
+            method: 'POST',
+            headers: csrfHeaders(),
+        }).done(function (response) {
+            showFlash(response.status, 'success');
+        }).fail(function (xhr) {
+            showFlash(xhr.responseJSON?.message || 'The password setup email could not be sent.', 'error');
+        }).always(function () {
+            if (!user.has_set_password) {
+                $button.prop('disabled', false);
+            }
+        });
+    });
+
     $(document).on('click', '.js-toggle-user', function () {
         const user = rowUser(this);
         $.ajax({
@@ -668,6 +692,7 @@ $(function () {
             const modal = bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal'));
             modal?.hide();
             showFlash(response.status, 'success');
+            fetchUsers(window.location.href);
         }).fail(function (xhr) {
             const errors = xhr.responseJSON?.errors;
             if (errors) {

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Notifications\AdminResetPasswordNotification;
+use App\Notifications\SetupPasswordNotification;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -316,6 +317,7 @@ class UserManagementControllerTest extends TestCase
             ->assertSee('Save changes')
             ->assertSee('Save and email password')
             ->assertSee('data-password-toggle="newPassword"', false)
+            ->assertSee('js-resend-setup', false)
             ->assertDontSee('deleteUserModal')
             ->assertDontSee('Confirm user deletion')
             ->assertDontSee('ti-filter');
@@ -492,5 +494,37 @@ class UserManagementControllerTest extends TestCase
             ->assertJsonPath('errors.password.0', 'Enter a new password. It cannot be the same as the current password.');
 
         $this->assertTrue(Hash::check('old-password', $user->fresh()->password));
+    }
+
+    public function test_password_setup_email_can_be_resent_until_the_user_sets_a_password(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+        Notification::fake();
+
+        $administrator = User::factory()->role('admin')->create();
+        $pending = User::factory()->pendingPasswordSetup()->create([
+            'email' => 'pending@nebula.local',
+        ]);
+        $ready = User::factory()->create([
+            'email' => 'ready@nebula.local',
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSee('Send password setup email to '.$pending->name, false)
+            ->assertSee('Password already set for '.$ready->name, false);
+
+        $this->actingAs($administrator)
+            ->postJson(route('users.resend-password-setup', $pending))
+            ->assertOk()
+            ->assertJsonPath('status', 'A new password setup link was sent to pending@nebula.local.');
+
+        Notification::assertSentTo($pending, SetupPasswordNotification::class);
+
+        $this->actingAs($administrator)
+            ->postJson(route('users.resend-password-setup', $ready))
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'This user has already set a password.');
     }
 }

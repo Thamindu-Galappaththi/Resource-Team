@@ -159,6 +159,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/{user}', 'update')->middleware('permission:user.management')->name('users.update');
         Route::post('/{user}/toggle-active', 'toggleActive')->middleware('permission:user.management')->name('users.toggle-active');
         Route::post('/{user}/reset-password', 'resetPassword')->middleware('permission:user.management')->name('users.reset-password');
+        Route::post('/{user}/resend-password-setup', 'resendPasswordSetup')->middleware('permission:user.management')->name('users.resend-password-setup');
     });
 
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {

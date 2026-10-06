@@ -47,6 +47,7 @@ class UserSeeder extends Seeder
                     'user_role' => $role->slug,
                     'is_active' => true,
                     'slt_employee' => $account['slug'] === 'slt_employee',
+                    'password_setup_at' => now(),
                 ]
             );
         }

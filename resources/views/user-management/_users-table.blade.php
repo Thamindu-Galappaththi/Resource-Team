@@ -52,6 +52,8 @@
                         'toggle_url' => route('users.toggle-active', $managedUser),
                         'delete_url' => route('users.destroy', $managedUser),
                         'reset_url' => route('users.reset-password', $managedUser),
+                        'resend_setup_url' => route('users.resend-password-setup', $managedUser),
+                        'has_set_password' => $managedUser->hasSetPassword(),
                     ];
                 @endphp
                 <tr class="um-row" data-user="{{ json_encode($userPayload, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) }}">
@@ -113,6 +115,9 @@
                                 </button>
                                 <button type="button" class="um-icon-btn js-edit-user" title="Edit" aria-label="Edit {{ $managedUser->name }}" data-bs-toggle="modal" data-bs-target="#editUserModal">
                                     <i class="ti ti-pencil"></i>
+                                </button>
+                                <button type="button" class="um-icon-btn js-resend-setup" title="{{ $managedUser->hasSetPassword() ? 'Password already set' : 'Send password setup email' }}" aria-label="{{ $managedUser->hasSetPassword() ? 'Password already set for '.$managedUser->name : 'Send password setup email to '.$managedUser->name }}" @disabled($managedUser->hasSetPassword())>
+                                    <i class="ti ti-mail"></i>
                                 </button>
                                 <button type="button" class="um-icon-btn js-reset-user" title="Reset password" aria-label="Reset password for {{ $managedUser->name }}" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
                                     <i class="ti ti-key"></i>

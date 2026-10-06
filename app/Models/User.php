@@ -33,6 +33,7 @@ class User extends Authenticatable
         'user_type',
         'user_profile',
         'is_active',
+        'password_setup_at',
     ];
 
     protected $hidden = [
@@ -47,6 +48,7 @@ class User extends Authenticatable
             'slt_employee' => 'boolean',
             'is_active' => 'boolean',
             'password' => 'hashed',
+            'password_setup_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
     }
@@ -102,6 +104,16 @@ class User extends Authenticatable
     public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
     {
         $this->notify(new SetupPasswordNotification($token));
+    }
+
+    public function hasSetPassword(): bool
+    {
+        return $this->password_setup_at !== null;
+    }
+
+    public function markPasswordSetupCompleted(): void
+    {
+        $this->forceFill(['password_setup_at' => now()])->save();
     }
 
     /**

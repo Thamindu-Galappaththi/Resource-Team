@@ -90,7 +90,7 @@ class PasswordSetupTest extends TestCase
 
     public function test_setting_a_password_redirects_to_login(): void
     {
-        $user = User::factory()->role('admin')->create([
+        $user = User::factory()->role('admin')->pendingPasswordSetup()->create([
             'email' => 'ready@nebula.local',
             'password' => 'old-password',
         ]);
@@ -108,6 +108,8 @@ class PasswordSetupTest extends TestCase
         $this->post(route('login.attempt'), [
             'username' => $user->email,
             'password' => 'new-password1',
-        ])->assertRedirect(route('dashboard'));
+        ])            ->assertRedirect(route('dashboard'));
+
+        $this->assertNotNull($user->fresh()->password_setup_at);
     }
 }
