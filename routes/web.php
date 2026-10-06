@@ -13,6 +13,7 @@ use App\Http\Controllers\ResourceCategoryController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\LectureFeeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -84,7 +85,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('payments')->name('payments.')->group(function () {
-        Route::get('/lecture-fees', fn () => view('payments.lecture-fees'))->middleware('permission:payments.view')->name('lecture-fees');
+        Route::get('/lecture-fees', [LectureFeeController::class, 'index'])->middleware('permission:payments.view')->name('lecture-fees');
         Route::get('/resources', fn () => view('payments.resources'))->middleware('permission:payments.view')->name('resources');
     });
 
