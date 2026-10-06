@@ -38,6 +38,12 @@ Route::middleware('guest')->get('/forgot-password', function () {
 
 Route::middleware(['auth', 'active'])->group(function () {
 
+    Route::post('/notifications/mark-read', function (\Illuminate\Http\Request $request) {
+        $request->user()->unreadNotifications()->update(['read_at' => now()]);
+
+        return response()->json(['success' => true]);
+    })->name('notifications.mark-read');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('permission:dashboard')->name('dashboard');
 
     Route::prefix('user-management')->controller(UserManagementController::class)->group(function () {

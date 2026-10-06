@@ -12,6 +12,7 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Notifications\NewUserCreated;
 
 class UserManagementController extends Controller
 {
@@ -98,6 +99,13 @@ class UserManagementController extends Controller
         ]);
 
         $user->roles()->sync($roles->modelKeys());
+
+        $creatorName = $request->user()->name;
+        User::query()
+            ->whereHas('roles', fn ($query) => $query->where('slug', 'admin'))
+            ->orWhereHas('role', fn ($query) => $query->where('slug', 'admin'))
+            ->get()
+            ->each(fn (User $admin) => $admin->notify(new NewUserCreated($creatorName)));
 
         $status = Password::sendResetLink([
             'email' => $user->email,

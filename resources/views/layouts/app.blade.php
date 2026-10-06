@@ -53,6 +53,17 @@
         .dropdown-menu.dropdown-menu-end.dropdown-menu-animate-up.bg-light-primary.outline-shadow {
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
         }
+        .notification-toggle { position: relative; }
+        .notification-badge { position: absolute; top: 4px; right: 3px; min-width: 9px; height: 9px; padding: 0 3px; border-radius: 10px; background: #e95778; color: #fff; font-size: 9px; line-height: 9px; }
+        .notification-menu { width: min(420px, calc(100vw - 24px)); padding: 0; overflow: hidden; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+        .notification-heading { padding: 14px 18px; border-bottom: 1px solid #e5e7eb; font-weight: 600; }
+        .notification-list { max-height: 360px; overflow-y: auto; }
+        .notification-item { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid #e5e7eb; background: #f7fafb; }
+        .notification-item.unread { background: #eaf3f6; }
+        .notification-icon { display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center; border-radius: 50%; background: #d4ebf2; color: #1683a3; font-size: 20px; }
+        .notification-copy { min-width: 0; color: #46515b; line-height: 1.35; }
+        .notification-copy small { display: block; margin-top: 6px; color: #9aa6b2; }
+        .notification-empty { padding: 24px 18px; color: #697586; text-align: center; }
     </style>
 
     <script>
@@ -92,6 +103,31 @@
                             <div class="user-name">
                                 <li class="nav-item mr-10" id="greeting"></li>
                             </div>
+                            @if (auth()->user()->hasRole('admin'))
+                                @php
+                                    $headerNotifications = auth()->user()->notifications()->latest()->take(8)->get();
+                                    $unreadNotificationCount = auth()->user()->unreadNotifications()->count();
+                                @endphp
+                                <li class="nav-item dropdown">
+                                <a class="nav-link nav-icon-hover notification-toggle" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
+                                    <i class="ti ti-bell fs-6"></i>
+                                    @if ($unreadNotificationCount > 0)<span class="notification-badge">{{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}</span>@endif
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-end notification-menu" aria-labelledby="notificationsDropdown">
+                                    <div class="notification-heading"><i class="ti ti-bell me-2"></i>Notifications ({{ $unreadNotificationCount }})</div>
+                                    <div class="notification-list">
+                                        @forelse ($headerNotifications as $notification)
+                                            <div class="notification-item {{ $notification->read_at ? '' : 'unread' }}">
+                                                <span class="notification-icon"><i class="ti ti-user-plus"></i></span>
+                                                <div class="notification-copy">{{ $notification->data['message'] ?? 'You have a new notification.' }}<small>{{ $notification->created_at->diffForHumans() }}</small></div>
+                                            </div>
+                                        @empty
+                                            <div class="notification-empty">No notifications yet.</div>
+                                        @endforelse
+                                    </div>
+                                </div>
+                                </li>
+                            @endif
                             <li class="nav-item">
                                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up"
                                     aria-labelledby="drop1">
@@ -145,6 +181,30 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            const notificationDropdown = document.getElementById('notificationsDropdown');
+            if (notificationDropdown) {
+                notificationDropdown.addEventListener('shown.bs.dropdown', function() {
+                    const badge = notificationDropdown.querySelector('.notification-badge');
+                    if (!badge) return;
+
+                    fetch(@json(route('notifications.mark-read')), {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json',
+                        },
+                    }).then(function(response) {
+                        if (!response.ok) return;
+                        badge.remove();
+                        document.querySelectorAll('.notification-item.unread').forEach(function(item) {
+                            item.classList.remove('unread');
+                        });
+                        const heading = document.querySelector('.notification-heading');
+                        if (heading) heading.innerHTML = '<i class="ti ti-bell me-2"></i>Notifications (0)';
+                    });
+                });
+            }
+
             // Get the current time
             var currentTime = new Date();
             var currentHour = currentTime.getHours();
