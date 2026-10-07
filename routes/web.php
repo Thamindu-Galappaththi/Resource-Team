@@ -5,6 +5,7 @@ use App\Http\Controllers\CanteenReservationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HostelReservationController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PasswordSetupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationController;
@@ -172,6 +173,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/', 'store')->middleware('permission:hostel.create')->name('store');
         Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:hostel.index,hostel.create,hostel.manage')->name('cancel');
         Route::post('/{reservation}/approval', 'updateApproval')->middleware('permission:hostel.manage')->name('approval');
+    });
+
+    Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
+        Route::post('/mark-read', 'markAllRead')->name('mark-read');
     });
 
     Route::prefix('logout')->controller(AuthController::class)->group(function () {
