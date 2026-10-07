@@ -60,8 +60,8 @@ class HostelReservationService
                 'attendee_count' => $payload['number_of_guests'],
                 'reservation_date' => $payload['check_in_date'],
                 'end_date' => $payload['check_out_date'],
-                'start_time' => config('hostel.check_in_time', '14:00'),
-                'end_time' => config('hostel.check_out_time', '11:00'),
+                'start_time' => config('hostel.check_in_time', '11:00'),
+                'end_time' => config('hostel.check_out_time', '24:00'),
             ], $actor);
 
             HostelStayDetail::query()->create([
@@ -153,6 +153,75 @@ class HostelReservationService
         });
     }
 
+    public function completePastApprovedReservations(): int
+    {
+        $completedCount = 0;
+
+        Reservation::query()
+            ->where('type', ReservationType::HOSTEL->value)
+            ->where('status', ReservationStatus::APPROVED->value)
+            ->whereHas('hostelStay', fn ($query) => $query->where('check_out_at', '<=', now('UTC')))
+            ->select('id')
+            ->chunkById(100, function ($reservations) use (&$completedCount): void {
+                foreach ($reservations as $reservation) {
+                    if ($this->completeApprovedAtCheckout($reservation->id)) {
+                        $completedCount++;
+                    }
+                }
+            });
+
+        return $completedCount;
+    }
+
+    public function completeApprovedAtCheckout(int $reservationId): bool
+    {
+        return DB::transaction(function () use ($reservationId): bool {
+            $reservation = Reservation::query()
+                ->whereKey($reservationId)
+                ->where('type', ReservationType::HOSTEL->value)
+                ->where('status', ReservationStatus::APPROVED->value)
+                ->lockForUpdate()
+                ->first();
+
+            $checkOutAt = $reservation?->hostelStay()->first()?->check_out_at;
+            if (! $checkOutAt || $checkOutAt->greaterThan(now('UTC'))) {
+                return false;
+            }
+
+            $reservation->update(['status' => ReservationStatus::COMPLETED->value]);
+            ReservationStatusHistory::query()->create([
+                'reservation_id' => $reservation->id,
+                'from_status' => ReservationStatus::APPROVED->value,
+                'to_status' => ReservationStatus::COMPLETED->value,
+                'actor_id' => null,
+                'reason' => 'Automatically completed at the scheduled check-out time.',
+                'created_at' => now(),
+            ]);
+
+            return true;
+        });
+    }
+
+    public function expireOverduePendingReservations(): int
+    {
+        $expiredCount = 0;
+
+        Reservation::query()
+            ->where('type', ReservationType::HOSTEL->value)
+            ->where('status', ReservationStatus::PENDING_APPROVAL->value)
+            ->whereHas('hostelStay', fn ($query) => $query->where('check_in_at', '<=', now('UTC')))
+            ->select('id')
+            ->chunkById(100, function ($reservations) use (&$expiredCount): void {
+                foreach ($reservations as $reservation) {
+                    if ($this->expirePendingAtCheckIn($reservation->id)) {
+                        $expiredCount++;
+                    }
+                }
+            });
+
+        return $expiredCount;
+    }
+
     public function expirePendingAtCheckIn(int $reservationId): bool
     {
         return DB::transaction(function () use ($reservationId): bool {
@@ -202,9 +271,9 @@ class HostelReservationService
         try {
             return $this->bookings->utcDateTimeRange(
                 $checkInDate,
-                config('hostel.check_in_time', '14:00'),
+                config('hostel.check_in_time', '11:00'),
                 $checkOutDate,
-                config('hostel.check_out_time', '11:00'),
+                config('hostel.check_out_time', '24:00'),
             );
         } catch (ValidationException) {
             throw ValidationException::withMessages([

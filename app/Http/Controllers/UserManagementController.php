@@ -6,6 +6,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\AdminResetPasswordNotification;
+use App\Notifications\NewUserCreated;
 use App\Rules\SriLankanNic;
 use App\Services\SltEmployeeDirectory;
 use Illuminate\Http\JsonResponse;
@@ -126,6 +127,8 @@ class UserManagementController extends Controller
 
         $user->roles()->sync($roles->modelKeys());
         $this->syncExtraPermissions($user, $roles, $validated['extra_permissions'] ?? []);
+
+        $this->notifyAdminsOfNewUser($user, $request->user());
 
         $status = Password::sendResetLink([
             'email' => $user->email,
@@ -434,5 +437,20 @@ class UserManagementController extends Controller
             'Nebula Institute of Technology - Moratuwa',
             'Nebula Institute of Technology - Peradeniya',
         ];
+    }
+
+    private function notifyAdminsOfNewUser(User $user, User $creator): void
+    {
+        $adminRoles = ['super_admin', 'admin'];
+
+        User::query()
+            ->where('is_active', true)
+            ->whereKeyNot([$user->id, $creator->id])
+            ->where(function ($query) use ($adminRoles) {
+                $query->whereHas('role', fn ($role) => $role->whereIn('slug', $adminRoles))
+                    ->orWhereHas('roles', fn ($role) => $role->whereIn('slug', $adminRoles));
+            })
+            ->get()
+            ->each(fn (User $admin) => $admin->notify(new NewUserCreated($user, $creator)));
     }
 }
