@@ -36,11 +36,11 @@ enum ReservationStatus: string
             self::PENDING_APPROVAL, self::CHANGES_REQUESTED => 'bg-warning text-dark',
             self::APPROVED => 'bg-success',
             self::CONFIRMED => 'bg-success',
-            self::REJECTED => 'bg-danger',
+            self::REJECTED, self::EXPIRED => 'bg-danger',
             self::IN_PROGRESS => 'bg-info text-dark',
             self::COMPLETED => 'bg-primary',
             self::CANCELLED => 'bg-secondary',
-            self::DRAFT, self::EXPIRED => 'bg-light text-dark border',
+            self::DRAFT => 'bg-light text-dark border',
         };
     }
 
