@@ -4,6 +4,8 @@
 --}}
 @extends('layouts.app')
 
+@section('title', 'Resource Calendar')
+
 @section('content')
 <div class="rc-page">
 
@@ -587,7 +589,7 @@
     background: #fff;
     box-shadow: 0 4px 18px rgba(30, 41, 59, .045);
 }
-.rc-card { padding: 18px; }
+    .rc-card { padding: 18px; }
 .rc-card:nth-child(1) { border-top: 3px solid #bdd9fc; }
 .rc-card:nth-child(2) { border-top: 3px solid #c7eed5; }
 .rc-card:nth-child(3) { border-top: 3px solid #ffe0ae; }
@@ -676,6 +678,36 @@
 .rc-table th { color: #858b97; background: #fafbfc; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
 .rc-table td { color: #4c5563; }
 .rc-modal-box { border: 1px solid #eceef2; border-radius: 16px; }
+/* Match the resource setup and inventory pages with a crisp light surface,
+   deeper text contrast, and restrained blue accents. */
+.rc-page { color:#152238; }
+.rc-title { color:#152238; }
+.rc-subtitle, .rc-scheduler-heading p, .rc-scheduler-note { color:#65738a; }
+.rc-card, .rc-filters, .rc-calendar-card, .rc-table-card { border:1px solid #dfe5ee; border-radius:15px; box-shadow:0 9px 26px rgba(19,35,58,.075); }
+.rc-card:nth-child(n) { background:#fff; border-top:3px solid #dfe5ee; }
+.rc-card:nth-child(2) { border-top-color:#91c6a5; }
+.rc-card:nth-child(3) { border-top-color:#e4bb70; }
+.rc-card:nth-child(4) { border-top-color:#b5a4e8; }
+.rc-card-label { color:#65738a; }
+.rc-card-value { color:#152238; }
+.rc-filters { background:#fff; }
+.rc-filter label { color:#34445b; }
+.rc-filter select, .rc-scheduler-date input { border-color:#cfd8e5; color:#18263a; }
+.rc-filter select:focus, .rc-scheduler-date input:focus { border-color:#5578e8; box-shadow:0 0 0 3px rgba(49,95,232,.15); }
+.rc-filter-apply { background:#315fe8; }
+.rc-filter-apply:hover { background:#244ecb; }
+.rc-filter-clear { border-color:#dfe5ee; color:#40516a; background:#f3f6fa; }
+.rc-filter-clear:hover { background:#e8edf5; }
+.rc-view-switch { border-color:#dfe5ee; background:#edf1f7; }
+.rc-view-switch button { color:#526078; }
+.rc-view-switch button.active { color:#204bc9; background:#fff; box-shadow:0 3px 10px rgba(19,35,58,.1); }
+.fc .fc-toolbar-title, .rc-scheduler-heading h2, .rc-table-title { color:#152238; }
+.fc .fc-button-primary { border-color:#dfe5ee!important; color:#40516a!important; }
+.fc .fc-button-primary:hover, .fc .fc-button-primary:not(:disabled).fc-button-active { border-color:#cbd6e5!important; color:#204bc9!important; background:#edf2ff!important; }
+.fc .fc-col-header-cell-cushion { color:#526078; }
+.fc-theme-standard td, .fc-theme-standard th { border-color:#e5eaf1; }
+.rc-table th { color:#526078; background:#edf1f7; }
+.rc-table td { color:#26364d; }
 @media (prefers-reduced-motion: reduce) {
     .rc-page *, .rc-page *::before, .rc-modal-box, .rc-modal-overlay { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
