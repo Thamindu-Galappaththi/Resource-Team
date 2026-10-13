@@ -183,7 +183,7 @@
     box-shadow: 0 4px 12px rgba(23, 105, 194, .28);
 }
 
-.rc-calendar-card { padding: 16px; margin-bottom: 18px; overflow: hidden; }
+.rc-calendar-card { padding: 16px; margin-bottom: 18px; overflow: visible; }
 .rc-loading, .rc-empty { padding: 24px; text-align: center; color: var(--rc-muted); }
 .rc-empty { border: 1px dashed #cbd5e1; border-radius: 8px; margin-bottom: 12px; }
 
@@ -201,45 +201,155 @@
     background: linear-gradient(180deg, #1e3a8a, #123a7a) !important;
     color: #fff !important;
 }
-.fc .fc-scrollgrid { border-radius: 12px; overflow: hidden; border-color: #c9d6ee !important; }
+.fc .fc-scrollgrid,
+.fc-theme-standard .fc-scrollgrid {
+    border: 0 !important;
+}
+.fc-dayGridMonth-view .fc-scrollgrid,
+.fc-dayGridMonth-view.fc-theme-standard .fc-scrollgrid {
+    overflow: visible !important;
+}
+.fc-dayGridMonth-view .fc-scroller,
+.fc-dayGridMonth-view .fc-scroller-liquid-absolute,
+.fc-dayGridMonth-view .fc-daygrid-body,
+.fc-dayGridMonth-view .fc-scrollgrid-section,
+.fc-dayGridMonth-view .fc-scrollgrid-section-body > td {
+    overflow: visible !important;
+}
+.fc-dayGridMonth-view .fc-scroller { height: auto !important; }
+.fc-dayGridMonth-view .fc-daygrid-body,
+.fc-dayGridMonth-view .fc-daygrid-body table,
+.fc-dayGridMonth-view .fc-scrollgrid-sync-table { width: 100% !important; }
+.fc-theme-standard td, .fc-theme-standard th { border: 0 !important; }
+.fc-timeGridWeek-view .fc-scroller,
+.fc-timeGridDay-view .fc-scroller {
+    overflow: auto !important;
+    height: auto;
+}
 .fc .fc-col-header-cell,
 .fc .fc-col-header-cell.fc-day-today,
 .fc .fc-col-header-cell.fc-day-sat,
 .fc .fc-col-header-cell.fc-day-sun {
-    background: linear-gradient(180deg, #1e4f9c, #1769c2) !important;
+    background: transparent !important;
+    padding: 0 3px 6px;
 }
-.fc .fc-col-header-cell-cushion { padding: 12px 5px; color: #fff !important; font-size: 11px; letter-spacing: .04em; text-decoration: none; }
-.fc-theme-standard td, .fc-theme-standard th { border-color: #d7e1f2; }
-.fc .fc-daygrid-day { background: #fbfdff; }
-.fc .fc-daygrid-day:hover { background: #eef4ff; }
-.fc .fc-daygrid-day.fc-day-sat,
-.fc .fc-daygrid-day.fc-day-sun,
+.fc .fc-col-header-cell-cushion {
+    display: block;
+    padding: 12px 4px;
+    border-radius: 8px;
+    color: #fff !important;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    background: linear-gradient(180deg, #1e4f9c, #1769c2);
+}
+.fc .fc-daygrid-day {
+    background: transparent !important;
+    vertical-align: top;
+    padding: 3px;
+}
+.fc-dayGridMonth-view .fc-daygrid-day-frame {
+    min-height: 112px;
+    height: 112px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    border: 1px solid #d7e1f2;
+    border-radius: 10px;
+    background: #fbfdff;
+    overflow: hidden;
+}
+.fc-dayGridMonth-view .fc-daygrid-day:hover .fc-daygrid-day-frame { background: #eaf1ff; }
+.fc-dayGridMonth-view .fc-daygrid-day-top { flex: 0 0 auto; }
+.fc-dayGridMonth-view .fc-daygrid-day-events {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+}
+.fc-timegrid .fc-daygrid-day-frame {
+    min-height: 0;
+    height: auto;
+    padding: 4px 6px;
+    border: 1px solid #d7e1f2;
+    border-radius: 8px;
+    background: #fbfdff;
+    overflow: hidden;
+}
+.fc .fc-daygrid-event-harness,
+.fc .fc-daygrid-event-harness-abs { max-width: 100%; }
+.fc-dayGridMonth-view .fc-daygrid-day.fc-day-sat .fc-daygrid-day-frame,
+.fc-dayGridMonth-view .fc-daygrid-day.fc-day-sun .fc-daygrid-day-frame {
+    background: #f7f4ff;
+}
 .fc .fc-timegrid-col.fc-day-sat,
 .fc .fc-timegrid-col.fc-day-sun {
     background: #f3f0ff !important;
 }
-.fc .fc-day-other { background: #f4f6fa !important; }
+.fc-dayGridMonth-view .fc-day-other .fc-daygrid-day-frame { background: #f4f6fa; border-color: #e6ebf3; }
 .fc .fc-day-other .fc-daygrid-day-number { color: #9aa6b8; }
-.fc .fc-daygrid-day-number { color: #2c3d5a; font-weight: 650; text-decoration: none; }
-.fc .fc-daygrid-day.fc-day-today {
-    background: linear-gradient(180deg, #dbeafe, #eff6ff) !important;
+.fc .fc-daygrid-day-number {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #2c3d5a;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+.fc-dayGridMonth-view .fc-daygrid-day.fc-day-today .fc-daygrid-day-frame {
+    background: linear-gradient(180deg, #dbeafe, #eff6ff);
+    border-color: #93c5fd;
 }
 .fc .fc-day-today .fc-daygrid-day-number {
-    display: inline-flex; width: 27px; height: 27px; margin: 4px; align-items: center; justify-content: center;
-    border-radius: 50%; color: #fff; background: linear-gradient(180deg, #3b82f6, #1d4ed8); font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, #3b82f6, #1d4ed8);
     box-shadow: 0 4px 10px rgba(29, 78, 216, .35);
 }
 .fc .fc-timegrid-col.fc-day-today { background: rgba(59, 130, 246, .06) !important; }
-.fc .fc-daygrid-more-link { color: #1d4ed8; font-weight: 700; }
+.fc .fc-daygrid-more-link,
+.fc .fc-more-link {
+    display: block;
+    margin: 2px 0 0;
+    padding: 0;
+    color: #1d4ed8 !important;
+    background: transparent;
+    font-weight: 700;
+    font-size: 11px;
+    text-align: left;
+    text-decoration: none;
+}
+.fc .fc-daygrid-more-link:hover,
+.fc .fc-more-link:hover { color: #123a7a !important; }
+.fc .fc-more-popover {
+    border: 1px solid #c9d6ee;
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(18, 58, 122, .18);
+    z-index: 20;
+}
+.fc .fc-more-popover .fc-popover-title {
+    background: linear-gradient(180deg, #1e4f9c, #1769c2);
+    color: #fff;
+    font-weight: 700;
+}
 .fc .fc-event {
     border: 0;
     border-radius: 8px;
-    padding: 4px 6px;
+    padding: 3px 6px;
     cursor: pointer;
     font-size: 11px;
     font-weight: 650;
     overflow: hidden;
     min-width: 0;
+}
+.fc .fc-daygrid-event {
+    padding: 2px 6px;
 }
 .fc .fc-event {
     box-shadow: 0 3px 8px rgba(15, 23, 42, .08);
@@ -278,6 +388,11 @@
     max-width: 100%;
     overflow: hidden;
 }
+.rc-event-inner.is-chip {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+}
 .rc-event-time {
     font-size: 10px;
     font-weight: 700;
@@ -305,8 +420,14 @@
     -webkit-line-clamp: 1;
     white-space: nowrap;
 }
-.fc .fc-daygrid-event {
-    max-width: 100%;
+.fc .fc-daygrid-event,
+.fc .fc-daygrid-block-event,
+.fc .fc-h-event {
+    max-width: 100% !important;
+    width: 100%;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
 }
 .fc .fc-more-link { font-weight: 700; }
 
@@ -332,6 +453,13 @@
 .fc .rc-holiday-bg-poya { background: #f3ecff !important; }
 .fc .rc-holiday-bg-mercantile { background: #e7f7f2 !important; }
 .fc .rc-holiday-bg-public { background: #fdecee !important; }
+.fc-timegrid-body .fc-bg-event.rc-holiday-bg {
+    opacity: 1;
+}
+.fc-timegrid-body .fc-bg-event.rc-holiday-bg .fc-event-title,
+.fc-timegrid-body .fc-bg-event.rc-holiday-bg .rc-holiday-label {
+    display: none !important;
+}
 .fc .rc-holiday-event {
     border: 0 !important;
     font-weight: 700;
@@ -381,6 +509,11 @@
     font-size: .9rem;
     line-height: 1.4;
     overflow-wrap: anywhere;
+}
+.swal2-container.rc-holiday-backdrop {
+    background: rgba(15, 32, 68, .58) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 .rm-swal:has(.rc-holiday-dialog) .swal2-title,
 .rc-holiday-swal .swal2-title {
@@ -632,6 +765,7 @@
         min-height: 0;
     }
     .rc-filter-button { flex: 1; }
+    .fc-dayGridMonth-view .fc-daygrid-day-frame { min-height: 92px; height: 92px; padding: 6px; }
     .rc-scheduler-heading { align-items: stretch; flex-direction: column; }
     .rc-scheduler-track {
         grid-template-columns: 168px repeat(12, 68px);
@@ -644,6 +778,7 @@
     .rc-view-switch button { flex: 1; }
     .fc .fc-toolbar { flex-wrap: wrap; }
     .fc .fc-toolbar-title { font-size: 16px; }
+    .fc-dayGridMonth-view .fc-daygrid-day-frame { min-height: 78px; height: 78px; }
     .rc-detail-row { grid-template-columns: 1fr; gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {

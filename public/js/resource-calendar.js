@@ -15,14 +15,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendar = new FullCalendar.Calendar(calendarElement, {
         initialView: isMobile ? 'listWeek' : 'dayGridMonth',
         height: 'auto',
-        contentHeight: isMobile ? 'auto' : 650,
-        expandRows: !isMobile,
-        firstDay: 1,
+        contentHeight: 'auto',
+        expandRows: false,
+        views: {
+            timeGridWeek: { contentHeight: 640 },
+            timeGridDay: { contentHeight: 640 },
+        },
+        fixedWeekCount: false,
+        firstDay: 0,
         navLinks: true,
         editable: false,
         selectable: false,
         nowIndicator: true,
-        dayMaxEvents: isMobile ? 2 : 4,
+        dayMaxEvents: 2,
+        moreLinkClick: 'popover',
+        moreLinkText: (n) => `+${n} more`,
         headerToolbar: isMobile
             ? { left: 'prev,next', center: 'title', right: 'today' }
             : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
@@ -50,11 +57,12 @@ document.addEventListener('DOMContentLoaded', () => {
         eventContent(info) {
             const details = info.event.extendedProps || {};
             if (details.isHoliday) {
-                if (info.event.display === 'background') return true;
+                if (info.event.display === 'background') return { html: '' };
                 return { html: `<span class="rc-holiday-label">${escapeHtml(info.event.title)}</span>` };
             }
             const time = info.timeText ? `<span class="rc-event-time">${escapeHtml(info.timeText)}</span>` : '';
-            return { html: `<div class="rc-event-inner">${time}<span class="rc-event-title">${escapeHtml(info.event.title)}</span></div>` };
+            const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
+            return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(info.event.title)}</span></div>` };
         },
         events: [...events.map(withEventColors), ...holidays],
         eventClick(info) {
@@ -71,7 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>`,
                     confirmButtonText: 'Close',
-                    customClass: { ...window.RMSwal.base.customClass, popup: 'rm-swal rc-holiday-swal' },
+                    customClass: {
+                        ...window.RMSwal.base.customClass,
+                        popup: 'rm-swal rc-holiday-swal',
+                        container: 'rc-holiday-backdrop',
+                    },
                 });
                 return;
             }
