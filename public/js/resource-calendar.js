@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editable: false,
         selectable: false,
         nowIndicator: true,
-        dayMaxEvents: 2,
+        dayMaxEvents: true,
         moreLinkClick: 'popover',
         moreLinkText: (n) => `+${n} more`,
         headerToolbar: isMobile
@@ -46,19 +46,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const colors = eventColors(details.statusValue);
             info.el.style.backgroundColor = colors.background;
             info.el.style.borderColor = colors.border;
-            info.el.style.borderLeft = `3px solid ${colors.border}`;
             info.el.style.color = colors.text;
+            const inPopover = Boolean(info.el.closest('.fc-more-popover'));
+            if (info.view.type !== 'dayGridMonth' || inPopover) {
+                info.el.style.borderLeft = `3px solid ${colors.border}`;
+            }
             info.el.querySelectorAll('.fc-event-main, .fc-event-main-frame, .fc-event-time, .fc-event-title, .fc-sticky, td').forEach((node) => {
                 node.style.color = colors.text;
                 if (node.tagName === 'TD') node.style.backgroundColor = colors.background;
             });
-            info.el.title = `${info.event.title} · ${details.status || ''}`.trim();
+            if (inPopover) {
+                const label = info.el.querySelector('[data-full-label]');
+                if (label) label.textContent = label.getAttribute('data-full-label') || info.event.title;
+            }
+            info.el.title = `${info.event.title}${details.status ? ` · ${details.status}` : ''}`.trim();
         },
         eventContent(info) {
             const details = info.event.extendedProps || {};
             if (details.isHoliday) {
                 if (info.event.display === 'background') return { html: '' };
-                return { html: `<span class="rc-holiday-label">${escapeHtml(info.event.title)}</span>` };
+                const holidayTitle = info.view.type === 'dayGridMonth' ? limitText(info.event.title, 22) : info.event.title;
+                return { html: `<span class="rc-holiday-label" data-full-label="${escapeHtml(info.event.title)}">${escapeHtml(holidayTitle)}</span>` };
+            }
+            if (info.view.type === 'dayGridMonth') {
+                const fullLabel = `${info.timeText ? `${info.timeText} ` : ''}${info.event.title}`.trim();
+                const label = `${info.timeText ? `${info.timeText} ` : ''}${limitText(info.event.title, 18)}`.trim();
+                return { html: `<span class="rc-event-title" data-full-label="${escapeHtml(fullLabel)}">${escapeHtml(label)}</span>` };
             }
             const time = info.timeText ? `<span class="rc-event-time">${escapeHtml(info.timeText)}</span>` : '';
             const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
@@ -539,6 +552,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return String(value ?? '').replace(/[&<>"']/g, (character) => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
         }[character]));
+    }
+    function limitText(value, max) {
+        const text = String(value ?? '').trim();
+        return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
     }
 
     updateSchedulerSelectionCount();
