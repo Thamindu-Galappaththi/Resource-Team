@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=4">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=12">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=13">
 @endpush
 
 @section('content')
@@ -16,18 +16,22 @@
 
     <div class="rc-cards">
         <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-packages"></i></span>
             <div class="rc-card-label">Active resources</div>
             <div class="rc-card-value">{{ $stats['myResources'] }}</div>
         </div>
         <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-calendar-event"></i></span>
             <div class="rc-card-label">Today's bookings</div>
             <div class="rc-card-value">{{ $stats['todayBookings'] }}</div>
         </div>
         <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-clock-hour-4"></i></span>
             <div class="rc-card-label">Pending approvals</div>
             <div class="rc-card-value">{{ $stats['pendingApprovals'] }}</div>
         </div>
         <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-chart-bar"></i></span>
             <div class="rc-card-label">This month</div>
             <div class="rc-card-value">{{ $stats['thisMonth'] }}</div>
         </div>

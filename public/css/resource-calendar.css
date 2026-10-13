@@ -29,21 +29,52 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
     margin-bottom: 18px;
+    perspective: 900px;
 }
 .rc-card {
-    background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--stat-color) 8%, #fff) 100%);
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--stat-color) 10%, #fff) 100%);
     border: 1px solid color-mix(in srgb, var(--stat-color) 22%, #e8eef6);
     border-top: 4px solid var(--stat-color, #1769c2);
     border-radius: 14px;
     padding: 16px 18px;
     box-shadow: 0 9px 26px rgba(19, 35, 58, .075);
+    transform: translateZ(0);
+    transition: transform .22s ease, box-shadow .22s ease;
+    cursor: default;
+    z-index: 1;
 }
 .rc-card:nth-child(1) { --stat-color: #1769c2; }
 .rc-card:nth-child(2) { --stat-color: #16a77a; }
 .rc-card:nth-child(3) { --stat-color: #d97706; }
 .rc-card:nth-child(4) { --stat-color: #7c5cbf; }
-.rc-card-label { color: var(--rc-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.rc-card-value { margin-top: 8px; color: var(--rc-ink); font-size: 26px; font-weight: 800; }
+.rc-card-icon {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--stat-color) 14%, #fff);
+    color: var(--stat-color);
+    font-size: 1.2rem;
+    transition: transform .22s ease, background .22s ease;
+}
+.rc-card-label { color: var(--rc-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding-right: 48px; }
+.rc-card-value { margin-top: 8px; color: var(--stat-color); font-size: 26px; font-weight: 800; }
+.rc-card:hover {
+    z-index: 2;
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 18px 36px color-mix(in srgb, var(--stat-color) 28%, rgba(19, 35, 58, .12));
+}
+.rc-card:hover .rc-card-icon {
+    transform: scale(1.08);
+    background: color-mix(in srgb, var(--stat-color) 22%, #fff);
+}
 
 .rc-filters, .rc-calendar-card, .rc-table-card {
     background: linear-gradient(180deg, #f5f8ff 0%, #fff 72px);
@@ -431,4 +462,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .rc-page *, .rc-page *::before { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    .rc-card:hover { transform: none; }
 }
