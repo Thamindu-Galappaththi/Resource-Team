@@ -106,6 +106,22 @@ class ReservationManagementTest extends TestCase
             ->assertSessionHasErrors('reservation_date');
     }
 
+    public function test_missing_resource_only_reports_the_resource_field(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+
+        $this->actingAs($user)
+            ->from(route('reservations.create'))
+            ->post(route('reservations.store'), [
+                'reservation_date' => now()->toDateString(),
+                'start_time' => '09:00',
+                'end_time' => '10:00',
+                'purpose' => 'Missing resource',
+            ])
+            ->assertSessionHasErrors('resource_id')
+            ->assertSessionDoesntHaveErrors('resource_ids');
+    }
+
     public function test_inactive_resource_cannot_be_booked(): void
     {
         $user = User::factory()->role('coordinator')->create();

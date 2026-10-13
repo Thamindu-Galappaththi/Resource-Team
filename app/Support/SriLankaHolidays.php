@@ -100,12 +100,21 @@ class SriLankaHolidays
     public static function forMonth(int $year, int $month): array
     {
         $prefix = sprintf('%04d-%02d-', $year, $month);
-        $grouped = [];
 
+        return array_filter(
+            self::indexedByDate(),
+            fn ($_, $date) => str_starts_with((string) $date, $prefix),
+            ARRAY_FILTER_USE_BOTH
+        );
+    }
+
+    /**
+     * @return array<string, array{date: string, title: string, kind: string, types: list<string>, typeLabel: string, image: string, names: list<string>}>
+     */
+    public static function indexedByDate(): array
+    {
+        $grouped = [];
         foreach (self::all() as $holiday) {
-            if (! str_starts_with($holiday['date'], $prefix)) {
-                continue;
-            }
             $grouped[$holiday['date']][] = $holiday;
         }
 

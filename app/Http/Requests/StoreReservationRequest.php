@@ -43,7 +43,7 @@ class StoreReservationRequest extends FormRequest
     {
         return [
             'resource_id' => ['required', 'integer', Rule::exists('resources', 'id')],
-            'resource_ids' => ['required', 'array', 'min:1'],
+            'resource_ids' => ['array'],
             'resource_ids.*' => ['integer', Rule::exists('resources', 'id')],
             'requester_id' => ['required', 'integer', 'exists:users,id'],
             'location_id' => ['nullable', 'integer', 'exists:locations,id'],
@@ -61,10 +61,19 @@ class StoreReservationRequest extends FormRequest
     {
         return [
             'resource_id' => 'resource',
+            'resource_ids' => 'resource',
             'reservation_date' => 'reservation date',
             'start_time' => 'start time',
             'end_time' => 'end time',
             'purpose' => 'purpose of reservation',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'resource_id.required' => 'Select a resource.',
+            'resource_id.exists' => 'The selected resource could not be found.',
         ];
     }
 

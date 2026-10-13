@@ -150,34 +150,7 @@ class ReservationController extends Controller
     {
         $this->authorize('create', Reservation::class);
 
-        $resources = Resource::query()
-            ->with(['type.category', 'location', 'linkedResources'])
-            ->where('status', 'active')
-            ->orderBy('name_model')
-            ->get()
-            ->map(fn (Resource $resource) => [
-                'id' => $resource->id,
-                'name_model' => $resource->name_model,
-                'serial_number' => $resource->serial_number,
-                'location_id' => $resource->location_id,
-                'location_name' => $resource->location?->name,
-                'category_id' => $resource->type?->resource_category_id,
-                'category_name' => $resource->type?->category?->name,
-                'type_id' => $resource->resource_type_id,
-                'type_name' => $resource->type?->name,
-                'linked_resources' => $resource->linkedResources->map(fn (Resource $linked) => [
-                    'id' => $linked->id,
-                    'name_model' => $linked->name_model,
-                    'serial_number' => $linked->serial_number,
-                    'status' => $linked->status,
-                ])->values(),
-            ]);
-
-        return response()->json([
-            'locations' => Location::query()->ordered()->get(['id', 'name']),
-            'categories' => ResourceCategory::query()->orderBy('name')->get(['id', 'name']),
-            'resources' => $resources,
-        ]);
+        return response()->json($this->bookingLookups());
     }
 
     public function availability(Request $request): JsonResponse
@@ -337,16 +310,59 @@ class ReservationController extends Controller
 
     private function formLookups(Request $request): array
     {
+        $today = now($this->bookings->timezone())->toDateString();
+
         return [
-            'prefillDate' => $request->query('date', now($this->bookings->timezone())->toDateString()),
-            'prefillStart' => $request->query('start_time', '09:00'),
-            'prefillEnd' => $request->query('end_time', '10:00'),
-            'prefillResourceId' => $request->query('resource_id'),
-            'prefillResourceIds' => collect($request->query('resource_ids', []))
+            'lookups' => $this->bookingLookups(),
+            'holidays' => SriLankaHolidays::indexedByDate(),
+            'today' => $today,
+            'prefillDate' => old('reservation_date', $request->query('date', $today)),
+            'prefillStart' => old('start_time', $request->query('start_time', '09:00')),
+            'prefillEnd' => old('end_time', $request->query('end_time', '10:00')),
+            'prefillResourceId' => old('resource_id', $request->query('resource_id')),
+            'prefillResourceIds' => collect(old('resource_ids', $request->query('resource_ids', [])))
                 ->filter(fn ($id) => is_scalar($id) && ctype_digit((string) $id))
                 ->map(fn ($id) => (string) $id)
                 ->unique()
                 ->values(),
+            'prefillLocationId' => old('location_id', $request->query('location_id')),
+            'prefillCategoryId' => old('category_id', $request->query('category_id')),
+        ];
+    }
+
+    /**
+     * @return array{locations: \Illuminate\Support\Collection, categories: \Illuminate\Support\Collection, resources: \Illuminate\Support\Collection}
+     */
+    private function bookingLookups(): array
+    {
+        $resources = Resource::query()
+            ->with(['type.category', 'location', 'linkedResources'])
+            ->where('status', 'active')
+            ->orderBy('name_model')
+            ->get()
+            ->map(fn (Resource $resource) => [
+                'id' => $resource->id,
+                'name_model' => $resource->name_model,
+                'serial_number' => $resource->serial_number,
+                'status' => $resource->status,
+                'location_id' => $resource->location_id,
+                'location_name' => $resource->location?->name,
+                'category_id' => $resource->type?->resource_category_id,
+                'category_name' => $resource->type?->category?->name,
+                'type_id' => $resource->resource_type_id,
+                'type_name' => $resource->type?->name,
+                'linked_resources' => $resource->linkedResources->map(fn (Resource $linked) => [
+                    'id' => $linked->id,
+                    'name_model' => $linked->name_model,
+                    'serial_number' => $linked->serial_number,
+                    'status' => $linked->status,
+                ])->values(),
+            ]);
+
+        return [
+            'locations' => Location::query()->ordered()->get(['id', 'name']),
+            'categories' => ResourceCategory::query()->orderBy('name')->get(['id', 'name']),
+            'resources' => $resources,
         ];
     }
 }

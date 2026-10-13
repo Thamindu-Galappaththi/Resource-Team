@@ -2,241 +2,123 @@
 
 @section('title', 'Create Reservation')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
+<link rel="stylesheet" href="{{ asset('css/reservation-create.css') }}?v=6">
+@endpush
+
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container-fluid mt-4 rv-page">
+    <div class="rv-header">
         <div>
-            <h2 class="mb-1">Create Reservations</h2>
-            <p class="text-muted mb-0">Select a resource, date, and time. The system blocks overlapping bookings automatically.</p>
+            <h1 class="rv-title">Create Reservation</h1>
+            <p class="rv-subtitle mb-0">Select a resource, date, and time. Overlapping bookings are blocked automatically.</p>
         </div>
-        <a href="{{ route('reservations.index') }}" class="btn btn-outline-secondary">Existing Reservations</a>
+        <a href="{{ route('reservations.index') }}" class="btn rv-back"><i class="ti ti-arrow-left me-1"></i>Existing Reservations</a>
     </div>
 
     @if($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+        <div class="alert alert-danger rv-auto-alert" role="alert">
+            {{ $errors->first() }}
         </div>
     @endif
+    <div id="rv-flash" class="alert rv-auto-alert d-none" role="status"></div>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body">
-            <form method="POST" action="{{ route('reservations.store') }}" id="reservationForm">
-                @csrf
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label" for="location_id">Location</label>
-                        <select class="form-select" id="location_id" name="location_id">
-                            <option value="">All locations</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="category_id">Resource Category</label>
-                        <select class="form-select" id="category_id">
-                            <option value="">All categories</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="resource_id">Resource <span class="text-danger">*</span></label>
-                        <select class="form-select @error('resource_id') is-invalid @enderror" id="resource_id" name="resource_id" required>
-                            <option value="">Select a resource</option>
-                        </select>
-                        @error('resource_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-12" id="linkedWrap" style="display:none;">
-                        <label class="form-label">Additional resources</label>
-                        <div id="linkedResources" class="border rounded p-3 bg-light"></div>
-                        <small class="text-muted">Selected resources are booked in the same time slot and checked together.</small>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="reservation_date">Reservation Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control @error('reservation_date') is-invalid @enderror" id="reservation_date" name="reservation_date" value="{{ old('reservation_date', $prefillDate) }}" min="{{ now()->toDateString() }}" required>
-                        @error('reservation_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="start_time">Start Time <span class="text-danger">*</span></label>
-                        <input type="time" class="form-control @error('start_time') is-invalid @enderror" id="start_time" name="start_time" value="{{ old('start_time', $prefillStart) }}" required>
-                        @error('start_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="end_time">End Time <span class="text-danger">*</span></label>
-                        <input type="time" class="form-control @error('end_time') is-invalid @enderror" id="end_time" name="end_time" value="{{ old('end_time', $prefillEnd) }}" required>
-                        @error('end_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label" for="purpose">Purpose of Reservation <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('purpose') is-invalid @enderror" id="purpose" name="purpose" value="{{ old('purpose') }}" maxlength="500" placeholder="e.g. CCNA Batch 12 practical lab" required>
-                        @error('purpose')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="attendee_count">Attendee Count</label>
-                        <input type="number" min="1" class="form-control" id="attendee_count" name="attendee_count" value="{{ old('attendee_count') }}">
-                    </div>
-                    <div class="col-12">
-                        <div id="availabilityAlert" class="alert alert-light border mb-0">Select a resource and time slot to check availability.</div>
+    <form method="POST" action="{{ route('reservations.store') }}" id="reservationForm">
+        @csrf
+
+        <section class="rv-card">
+            <h2 class="rv-section-title"><i class="ti ti-packages"></i> Resource</h2>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="location_id">Location</label>
+                    <x-rm-select id="location_id" name="location_id" placeholder="All locations" :value="(string) ($prefillLocationId ?? '')"
+                        :options="collect([['value' => '', 'label' => 'All locations']])->concat($lookups['locations']->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="category_id">Resource category</label>
+                    <x-rm-select id="category_id" name="category_id" placeholder="All categories" :value="(string) ($prefillCategoryId ?? '')"
+                        :options="collect([['value' => '', 'label' => 'All categories']])->concat($lookups['categories']->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="resource_id">Resource <span class="text-danger">*</span></label>
+                    <x-rm-select id="resource_id" name="resource_id" class="{{ $errors->has('resource_id') ? 'is-invalid' : '' }}"
+                        placeholder="Select a resource" :value="(string) ($prefillResourceId ?? '')"
+                        :options="collect([['value' => '', 'label' => 'Select a resource']])->concat($lookups['resources']->map(fn ($resource) => ['value' => (string) $resource['id'], 'label' => $resource['name_model'].($resource['serial_number'] ? ' ('.$resource['serial_number'].')' : '').($resource['location_name'] ? ' — '.$resource['location_name'] : '')]))->all()" />
+                    @error('resource_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-12" id="linkedWrap" hidden>
+                    <label class="form-label">Additional resources</label>
+                    <div id="linkedResources" class="rv-linked"></div>
+                    <p class="rv-hint mb-0 mt-2">Selected extras are booked in the same slot and checked together.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="rv-card">
+            <h2 class="rv-section-title"><i class="ti ti-calendar-event"></i> Schedule</h2>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="reservation_date">Reservation date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control @error('reservation_date') is-invalid @enderror" id="reservation_date" name="reservation_date" value="{{ $prefillDate }}" min="{{ $today }}" required>
+                    @error('reservation_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="start_time">Start time <span class="text-danger">*</span></label>
+                    <input type="time" class="form-control @error('start_time') is-invalid @enderror" id="start_time" name="start_time" value="{{ $prefillStart }}" required>
+                    @error('start_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="end_time">End time <span class="text-danger">*</span></label>
+                    <input type="time" class="form-control @error('end_time') is-invalid @enderror" id="end_time" name="end_time" value="{{ $prefillEnd }}" required>
+                    @error('end_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-12">
+                    <div id="holidayAlert" class="rv-status is-holiday" hidden></div>
+                </div>
+                <div class="col-12">
+                    <div id="availabilityAlert" class="rv-status idle" role="status">
+                        <i class="ti ti-info-circle"></i>
+                        <span>Select a resource and time slot to check availability.</span>
                     </div>
                 </div>
-                <div class="d-flex justify-content-end mt-4">
-                    <button type="submit" class="btn btn-primary" id="submitReservation">Submit for approval</button>
+            </div>
+        </section>
+
+        <section class="rv-card">
+            <h2 class="rv-section-title"><i class="ti ti-notes"></i> Details</h2>
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label" for="purpose">Purpose of Reservation <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control @error('purpose') is-invalid @enderror" id="purpose" name="purpose" value="{{ old('purpose') }}" maxlength="500" placeholder="e.g. CCNA Batch 12 practical lab" required>
+                    @error('purpose')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
-            </form>
-        </div>
-    </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="attendee_count">Attendee count</label>
+                    <input type="number" min="1" class="form-control" id="attendee_count" name="attendee_count" value="{{ old('attendee_count') }}">
+                </div>
+            </div>
+            <div class="rv-actions">
+                <button type="submit" class="rv-submit" id="submitReservation">Submit for approval</button>
+            </div>
+        </section>
+    </form>
 </div>
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const lookupsUrl = @json(route('reservations.lookups'));
-    const availabilityUrl = @json(route('reservations.availability'));
-    const prefillResourceId = @json(old('resource_id', $prefillResourceId));
-    const oldResourceIds = @json(old('resource_ids', $prefillResourceIds));
-
-    const locationSelect = document.getElementById('location_id');
-    const categorySelect = document.getElementById('category_id');
-    const resourceSelect = document.getElementById('resource_id');
-    const linkedWrap = document.getElementById('linkedWrap');
-    const linkedBox = document.getElementById('linkedResources');
-    const availabilityAlert = document.getElementById('availabilityAlert');
-    const submitBtn = document.getElementById('submitReservation');
-
-    let lookups = { locations: [], categories: [], resources: [] };
-
-    function selectedResourceIds() {
-        const ids = [];
-        if (resourceSelect.value) ids.push(resourceSelect.value);
-        linkedBox.querySelectorAll('input[name="resource_ids[]"]:checked').forEach((el) => ids.push(el.value));
-        return ids;
-    }
-
-    function renderOptions(select, rows, labelKey, placeholder) {
-        const current = select.value;
-        select.innerHTML = `<option value="">${placeholder}</option>`;
-        rows.forEach((row) => {
-            const opt = document.createElement('option');
-            opt.value = row.id;
-            opt.textContent = row[labelKey];
-            select.appendChild(opt);
-        });
-        if (current) select.value = current;
-    }
-
-    function filteredResources() {
-        return lookups.resources.filter((resource) => {
-            if (locationSelect.value && String(resource.location_id) !== String(locationSelect.value)) return false;
-            if (categorySelect.value && String(resource.category_id) !== String(categorySelect.value)) return false;
-            return true;
-        });
-    }
-
-    function refreshResources() {
-        const rows = filteredResources();
-        resourceSelect.innerHTML = '<option value="">Select a resource</option>';
-        rows.forEach((resource) => {
-            const opt = document.createElement('option');
-            opt.value = resource.id;
-            opt.textContent = `${resource.name_model} (${resource.serial_number}) — ${resource.location_name ?? 'No location'}`;
-            resourceSelect.appendChild(opt);
-        });
-        if (prefillResourceId) resourceSelect.value = prefillResourceId;
-        renderLinked();
-        checkAvailability();
-    }
-
-    function renderLinked() {
-        const resource = lookups.resources.find((row) => String(row.id) === String(resourceSelect.value));
-        linkedBox.innerHTML = '';
-        if (!resource) {
-            linkedWrap.style.display = 'none';
-            return;
-        }
-        const linkedResources = (resource.linked_resources || []).filter((row) => row.status === 'active');
-        const linkedIds = linkedResources.map((row) => String(row.id));
-        const extraResources = oldResourceIds.map(String)
-            .filter((id) => id !== String(resource.id) && !linkedIds.includes(id))
-            .map((id) => lookups.resources.find((row) => String(row.id) === id && row.status === 'active'))
-            .filter(Boolean);
-        if (!linkedResources.length && !extraResources.length) {
-            linkedWrap.style.display = 'none';
-            return;
-        }
-        linkedWrap.style.display = 'block';
-        [...linkedResources, ...extraResources].forEach((linked) => {
-            const wrap = document.createElement('div');
-            wrap.className = 'form-check';
-            const input = document.createElement('input');
-            input.className = 'form-check-input';
-            input.type = 'checkbox';
-            input.name = 'resource_ids[]';
-            input.value = linked.id;
-            input.id = `linked-${linked.id}`;
-            input.checked = oldResourceIds.map(String).includes(String(linked.id));
-            const label = document.createElement('label');
-            label.className = 'form-check-label';
-            label.htmlFor = input.id;
-            label.textContent = `${linked.name_model} (${linked.serial_number})`;
-            wrap.append(input, label);
-            linkedBox.appendChild(wrap);
-        });
-        linkedBox.querySelectorAll('input').forEach((el) => el.addEventListener('change', checkAvailability));
-    }
-
-    async function checkAvailability() {
-        const ids = selectedResourceIds();
-        const date = document.getElementById('reservation_date').value;
-        const start = document.getElementById('start_time').value;
-        const end = document.getElementById('end_time').value;
-        if (!ids.length || !date || !start || !end || end <= start) {
-            availabilityAlert.className = 'alert alert-light border mb-0';
-            availabilityAlert.textContent = 'Select a resource and time slot to check availability.';
-            submitBtn.disabled = false;
-            return;
-        }
-
-        const params = new URLSearchParams();
-        ids.forEach((id) => params.append('resource_ids[]', id));
-        params.set('reservation_date', date);
-        params.set('start_time', start);
-        params.set('end_time', end);
-
-        try {
-            const response = await fetch(`${availabilityUrl}?${params.toString()}`, { headers: { 'Accept': 'application/json' } });
-            const data = await response.json();
-            if (!data.available) {
-                availabilityAlert.className = 'alert alert-danger mb-0';
-                availabilityAlert.textContent = data.message || 'Selected slot unavailable';
-                submitBtn.disabled = true;
-                return;
-            }
-            availabilityAlert.className = 'alert alert-success mb-0';
-            availabilityAlert.textContent = data.message;
-            submitBtn.disabled = false;
-        } catch (error) {
-            availabilityAlert.className = 'alert alert-warning mb-0';
-            availabilityAlert.textContent = 'Could not check availability right now. You can still submit and the server will re-check.';
-            submitBtn.disabled = false;
-        }
-    }
-
-    fetch(lookupsUrl, { headers: { 'Accept': 'application/json' } })
-        .then((res) => res.json())
-        .then((data) => {
-            lookups = data;
-            renderOptions(locationSelect, data.locations, 'name', 'All locations');
-            renderOptions(categorySelect, data.categories, 'name', 'All categories');
-            refreshResources();
-        });
-
-    ['location_id', 'category_id'].forEach((id) => {
-        document.getElementById(id).addEventListener('change', refreshResources);
-    });
-    resourceSelect.addEventListener('change', function () {
-        renderLinked();
-        checkAvailability();
-    });
-    ['reservation_date', 'start_time', 'end_time'].forEach((id) => {
-        document.getElementById(id).addEventListener('change', checkAvailability);
-    });
-});
+window.RVCreate = {
+    lookups: @json($lookups),
+    holidays: @json($holidays),
+    availabilityUrl: @json(route('reservations.availability')),
+    prefillResourceId: @json($prefillResourceId ? (string) $prefillResourceId : null),
+    prefillResourceIds: @json($prefillResourceIds),
+    prefillLocationId: @json($prefillLocationId ? (string) $prefillLocationId : null),
+    prefillCategoryId: @json($prefillCategoryId ? (string) $prefillCategoryId : null),
+};
 </script>
+<script src="{{ asset('js/reservation-create.js') }}?v=2"></script>
 @endpush
