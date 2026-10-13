@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=4">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=7">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=9">
 @endpush
 
 @section('content')
@@ -73,6 +73,11 @@
     <div class="rc-calendar-card">
         <div id="calendarLoading" class="rc-loading" role="status">Loading reservations…</div>
         <div id="calendarEmpty" class="rc-empty" hidden>No reservations match your filters.</div>
+        <div class="rc-calendar-legend" aria-label="Holiday types">
+            <span><i class="rc-holiday-swatch poya"></i>Poya</span>
+            <span><i class="rc-holiday-swatch mercantile"></i>Mercantile</span>
+            <span><i class="rc-holiday-swatch public"></i>Government / public</span>
+        </div>
         <div id="resourceCalendar"></div>
     </div>
 
@@ -149,11 +154,13 @@
 <script>
     window.RC = {
         events: @json($calendarEvents),
+        holidays: @json($holidayEvents),
+        holidayImageBase: @json(asset('images/holidays')),
         schedulerResources: @json($schedulerResources),
         canReserve: @json($canReserve),
         createReservationUrl: @json(route('reservations.create')),
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=3"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=6"></script>
 @endpush

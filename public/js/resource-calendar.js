@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const config = window.RC || {};
     const events = config.events || [];
+    const holidays = config.holidays || [];
+    const holidayImageBase = (config.holidayImageBase || '/images/holidays').replace(/\/$/, '');
     const schedulerResources = config.schedulerResources || [];
     const canReserve = Boolean(config.canReserve);
     const createReservationUrl = config.createReservationUrl;
@@ -20,13 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
         editable: false,
         selectable: false,
         nowIndicator: true,
-        dayMaxEvents: isMobile ? 2 : 3,
+        dayMaxEvents: isMobile ? 2 : 4,
         headerToolbar: isMobile
             ? { left: 'prev,next', center: 'title', right: 'today' }
             : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
         buttonText: { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'Agenda' },
         eventDidMount(info) {
-            const colors = eventColors(info.event.extendedProps.statusValue);
+            const details = info.event.extendedProps || {};
+            if (details.isHoliday) {
+                info.el.title = `${info.event.title}${details.holidayTypeLabel ? ` · ${details.holidayTypeLabel}` : ''}`;
+                return;
+            }
+            const colors = eventColors(details.statusValue);
             info.el.style.backgroundColor = colors.background;
             info.el.style.borderColor = colors.border;
             info.el.style.borderLeft = `3px solid ${colors.border}`;
@@ -34,10 +41,37 @@ document.addEventListener('DOMContentLoaded', () => {
             info.el.querySelectorAll('.fc-event-main, .fc-event-main-frame, .fc-event-time, .fc-event-title, .fc-sticky').forEach((node) => {
                 node.style.color = colors.text;
             });
-            info.el.title = `${info.event.title} · ${info.event.extendedProps.status}`;
+            info.el.title = `${info.event.title} · ${details.status || ''}`.trim();
         },
-        events: events.map(withEventColors),
-        eventClick(info) { showReservationDetails(info.event); },
+        eventContent(info) {
+            const details = info.event.extendedProps || {};
+            if (details.isHoliday) {
+                if (info.event.display === 'background') return true;
+                return { html: `<span class="rc-holiday-label">${escapeHtml(info.event.title)}</span>` };
+            }
+            const time = info.timeText ? `<span class="rc-event-time">${escapeHtml(info.timeText)}</span>` : '';
+            return { html: `<div class="rc-event-inner">${time}<span class="rc-event-title">${escapeHtml(info.event.title)}</span></div>` };
+        },
+        events: [...events.map(withEventColors), ...holidays],
+        eventClick(info) {
+            if (info.event.extendedProps?.isHoliday) {
+                if (info.event.display === 'background') return;
+                const details = info.event.extendedProps || {};
+                const image = details.holidayImage || 'public.svg';
+                swalFire({
+                    html: `<div class="rc-holiday-dialog">
+                        <img class="rc-holiday-art" src="${holidayImageBase}/${encodeURIComponent(image)}?v=2" alt="">
+                        <div class="rc-holiday-copy">
+                            <strong>${escapeHtml(info.event.title)}</strong>
+                            <p>${escapeHtml(details.holidayTypeLabel || 'Sri Lankan holiday')}</p>
+                        </div>
+                    </div>`,
+                    confirmButtonText: 'Close',
+                });
+                return;
+            }
+            showReservationDetails(info.event);
+        },
     });
 
     calendar.render();
@@ -88,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredEvents = filtered;
         calendar.removeAllEvents();
-        calendar.addEventSource(filtered.map(withEventColors));
+        calendar.addEventSource([...filtered.map(withEventColors), ...holidays]);
         document.getElementById('calendarEmpty').hidden = filtered.length > 0;
         applyFiltersButton.classList.remove('has-pending-filters');
         renderUpcoming(filtered);

@@ -7,6 +7,7 @@ use App\Models\Location;
 use App\Models\ReservationItem;
 use App\Models\Reservation;
 use App\Models\Resource;
+use App\Support\SriLankaHolidays;
 use Illuminate\Http\Request;
 
 class ResourceCalendarController extends Controller
@@ -50,6 +51,7 @@ class ResourceCalendarController extends Controller
 
         return view('resources.calendar', [
             'calendarEvents' => $events,
+            'holidayEvents' => SriLankaHolidays::calendarEvents(),
             'resources' => $resourceRecords,
             'schedulerResources' => $resourceRecords->map(fn (Resource $resource) => [
                 'id' => (string) $resource->id,

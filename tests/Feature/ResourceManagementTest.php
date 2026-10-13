@@ -187,7 +187,16 @@ class ResourceManagementTest extends TestCase
             ->assertSee('Resource calendar')
             ->assertSee('id="resourceCalendar"', false)
             ->assertSee('Active resources')
-            ->assertDontSee('My Resources');
+            ->assertDontSee('My Resources')
+            ->assertSee('Independence Day')
+            ->assertSee('Vap Full Moon Poya Day')
+            ->assertSee('Christmas Day')
+            ->assertSee('Poya')
+            ->assertSee('Mercantile')
+            ->assertSee('2027-02-04')
+            ->assertSee('2028-02-04')
+            ->assertSee('2028-01-12')
+            ->assertSee('poya.svg', false);
     }
 
     public function test_empty_category_features_are_not_stored(): void
