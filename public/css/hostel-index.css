@@ -240,7 +240,6 @@
     align-items: center;
     justify-content: flex-end;
     gap: .25rem;
-    flex-wrap: wrap;
 }
 .hr-icon-btn {
     width: 34px;
@@ -275,9 +274,12 @@
     border-color: #d5def0;
     color: #1769c2;
 }
-.hr-page .pagination .page-item.active .page-link {
+.hr-page .pagination .page-item.active .page-link,
+.hr-page .pagination .page-link.active {
     background: #1769c2;
     border-color: #1769c2;
+    color: #fff;
+    font-weight: 700;
 }
 
 .hr-auto-alert {

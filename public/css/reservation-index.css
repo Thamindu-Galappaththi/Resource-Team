@@ -333,9 +333,12 @@
     border-color: #d5def0;
     color: #1769c2;
 }
-.rsv-page .pagination .page-item.active .page-link {
+.rsv-page .pagination .page-item.active .page-link,
+.rsv-page .pagination .page-link.active {
     background: #1769c2;
     border-color: #1769c2;
+    color: #fff;
+    font-weight: 700;
 }
 
 .rsv-modal .modal-content {

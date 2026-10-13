@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/hostel-index.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/hostel-index.css') }}?v=5">
 @endpush
 
 @section('content')
@@ -153,7 +153,27 @@
                     @if($reservations->hasPages())
                         <div class="hr-pager">
                             <p class="small text-muted mb-0">Showing {{ $reservations->firstItem() }}–{{ $reservations->lastItem() }} of {{ $reservations->total() }}</p>
-                            {{ $reservations->onEachSide(1)->links() }}
+                            <ul class="pagination mb-0">
+                                <li class="page-item {{ $reservations->onFirstPage() ? 'disabled' : '' }}">
+                                    @if($reservations->onFirstPage())
+                                        <span class="page-link">‹</span>
+                                    @else
+                                        <a class="page-link" href="{{ $reservations->previousPageUrl() }}">‹</a>
+                                    @endif
+                                </li>
+                                @for($page = 1; $page <= $reservations->lastPage(); $page++)
+                                    <li class="page-item {{ $page === $reservations->currentPage() ? 'active' : '' }}">
+                                        <a class="page-link" href="{{ $reservations->url($page) }}">{{ $page }}</a>
+                                    </li>
+                                @endfor
+                                <li class="page-item {{ $reservations->hasMorePages() ? '' : 'disabled' }}">
+                                    @if($reservations->hasMorePages())
+                                        <a class="page-link" href="{{ $reservations->nextPageUrl() }}">›</a>
+                                    @else
+                                        <span class="page-link">›</span>
+                                    @endif
+                                </li>
+                            </ul>
                         </div>
                     @endif
                 @endif
