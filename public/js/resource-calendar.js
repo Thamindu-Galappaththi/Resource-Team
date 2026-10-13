@@ -450,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('detailTime').textContent = formatTimeRange(start, end);
         document.getElementById('detailOwner').textContent = details.owner || '—';
         document.getElementById('detailLocation').textContent = details.location || '—';
-        document.getElementById('detailStatus').textContent = details.status || '—';
+        document.getElementById('detailStatus').innerHTML = statusBadge(details.statusValue, details.status);
         modal.classList.add('show');
         modal.setAttribute('aria-hidden', 'false');
     }
