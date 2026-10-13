@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=4">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=13">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=14">
 @endpush
 
 @section('content')
@@ -109,7 +109,7 @@
     </section>
 
     <div class="rc-table-card">
-        <h3 class="rc-table-title">Upcoming reservations</h3>
+        <h3 class="rc-table-title"><i class="ti ti-list-check"></i> Upcoming reservations</h3>
         <div class="rc-table-wrap">
             <table class="rc-table">
                 <thead>
