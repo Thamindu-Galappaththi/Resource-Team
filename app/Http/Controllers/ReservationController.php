@@ -122,79 +122,25 @@ class ReservationController extends Controller
             ->with('success', 'Reservation cancelled successfully.');
     }
 
-    public function calendar(Request $request): View
+    public function calendar(Request $request): View|JsonResponse
     {
         $this->authorize('viewAny', Reservation::class);
 
-        $currentDate = Carbon::now($this->bookings->timezone());
-        if ($request->filled('year') && $request->filled('month')) {
-            $currentDate = Carbon::create(
-                (int) $request->year,
-                (int) $request->month,
-                1,
-                0,
-                0,
-                0,
-                $this->bookings->timezone()
-            );
+        $payload = $this->calendarPayload($request);
+
+        if ($request->wantsJson()) {
+            return response()->json(collect($payload)->except('currentDate')->all());
         }
 
-        $year = $currentDate->year;
-        $month = $currentDate->month;
-        $daysInMonth = $currentDate->daysInMonth;
-        $firstDayOfMonth = $currentDate->copy()->startOfMonth();
-        $startingDayOfWeek = $firstDayOfMonth->dayOfWeek;
-
-        $query = Reservation::query()
-            ->with(['requester', 'location', 'items'])
-            ->whereYear('reservation_date', $year)
-            ->whereMonth('reservation_date', $month)
-            ->whereNotIn('status', [
-                ReservationStatus::CANCELLED->value,
-                ReservationStatus::REJECTED->value,
-                ReservationStatus::DRAFT->value,
-            ]);
-
-        $this->restrictToOwnUnlessStaff($query);
-        $query->filter([
-            'status' => $request->input('status'),
-            'location_id' => $request->input('location_id'),
-            'resource_id' => $request->input('resource_id'),
-            'resource_category_id' => $request->input('resource_category_id'),
-        ]);
-
-        $reservations = $query->orderBy('start_time')->get();
-
-        $calendarReservations = $reservations->map(function (Reservation $reservation) {
-            return [
-                'id' => $reservation->id,
-                'reference' => $reservation->reference,
-                'title' => $reservation->title,
-                'purpose' => $reservation->purpose,
-                'status' => $reservation->status,
-                'status_label' => $reservation->statusEnum()->label(),
-                'reservation_date' => $reservation->reservation_date?->toDateString(),
-                'start_time' => substr((string) $reservation->start_time, 0, 5),
-                'end_time' => substr((string) $reservation->end_time, 0, 5),
-                'requester' => $reservation->requester?->name,
-                'location' => $reservation->location?->name,
-                'resources' => $reservation->resourceNames(),
-                'url' => route('reservations.show', $reservation),
-            ];
-        });
-
-        return view('reservations.calendar', [
-            'currentDate' => $currentDate,
-            'year' => $year,
-            'month' => $month,
-            'daysInMonth' => $daysInMonth,
-            'startingDayOfWeek' => $startingDayOfWeek,
-            'reservations' => $reservations,
-            'calendarReservations' => $calendarReservations,
+        return view('reservations.calendar', $payload + [
             'locations' => Location::query()->ordered()->get(),
             'categories' => ResourceCategory::query()->orderBy('name')->get(),
             'resources' => Resource::query()->orderBy('name_model')->get(['id', 'name_model']),
-            'statuses' => ReservationStatus::cases(),
+            'statuses' => collect(ReservationStatus::cases())->reject(fn (ReservationStatus $status) => in_array($status, [
+                ReservationStatus::DRAFT,
+                ReservationStatus::CANCELLED,
+                ReservationStatus::REJECTED,
+            ], true))->values(),
             'canCreate' => $request->user()?->can('create', Reservation::class),
         ]);
     }
@@ -264,6 +210,109 @@ class ReservationController extends Controller
             'available' => ! $conflict,
             'message' => $conflict ? 'Selected slot unavailable' : 'This slot is available.',
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function calendarPayload(Request $request): array
+    {
+        $timezone = $this->bookings->timezone();
+        $now = Carbon::now($timezone);
+        $year = $request->filled('year') ? max(2000, min(2100, (int) $request->year)) : $now->year;
+        $month = $request->filled('month') ? max(1, min(12, (int) $request->month)) : $now->month;
+        $currentDate = Carbon::create($year, $month, 1, 0, 0, 0, $timezone)->startOfMonth();
+        $prev = $currentDate->copy()->subMonth();
+        $next = $currentDate->copy()->addMonth();
+
+        $filters = array_filter([
+            'status' => $request->input('status'),
+            'location_id' => $request->input('location_id'),
+            'resource_id' => $request->input('resource_id'),
+            'resource_category_id' => $request->input('resource_category_id'),
+        ], fn ($value) => $value !== null && $value !== '');
+
+        $query = Reservation::query()
+            ->with(['requester', 'location', 'items'])
+            ->whereYear('reservation_date', $year)
+            ->whereMonth('reservation_date', $month)
+            ->whereNotIn('status', [
+                ReservationStatus::CANCELLED->value,
+                ReservationStatus::REJECTED->value,
+                ReservationStatus::DRAFT->value,
+            ]);
+
+        $this->restrictToOwnUnlessStaff($query);
+        $query->filter($filters);
+
+        $calendarReservations = $query->orderBy('start_time')->get()->map(function (Reservation $reservation) {
+            return [
+                'id' => $reservation->id,
+                'reference' => $reservation->reference,
+                'title' => $reservation->title,
+                'purpose' => $reservation->purpose,
+                'status' => $reservation->status,
+                'status_label' => $reservation->statusEnum()->label(),
+                'reservation_date' => $reservation->reservation_date?->toDateString(),
+                'start_time' => substr((string) $reservation->start_time, 0, 5),
+                'end_time' => substr((string) $reservation->end_time, 0, 5),
+                'requester' => $reservation->requester?->name,
+                'location' => $reservation->location?->name,
+                'resources' => $reservation->resourceNames(),
+                'url' => route('reservations.show', $reservation),
+            ];
+        });
+
+        $byDate = $calendarReservations->groupBy('reservation_date');
+        $cells = [];
+
+        for ($i = 0; $i < $currentDate->dayOfWeek; $i++) {
+            $cells[] = ['empty' => true];
+        }
+
+        for ($day = 1; $day <= $currentDate->daysInMonth; $day++) {
+            $date = $currentDate->copy()->day($day);
+            $iso = $date->toDateString();
+            $dayItems = $byDate->get($iso, collect());
+
+            $cells[] = [
+                'empty' => false,
+                'day' => $day,
+                'iso' => $iso,
+                'display' => $date->format('l, F j, Y'),
+                'isToday' => $date->isToday(),
+                'isWeekend' => in_array($date->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY], true),
+                'count' => $dayItems->count(),
+                'preview' => $dayItems->take(2)->values()->all(),
+            ];
+        }
+
+        while (count($cells) % 7 !== 0) {
+            $cells[] = ['empty' => true];
+        }
+
+        $todayKey = $now->toDateString();
+
+        return [
+            'currentDate' => $currentDate,
+            'year' => $year,
+            'month' => $month,
+            'label' => $currentDate->format('F Y'),
+            'prev' => ['year' => $prev->year, 'month' => $prev->month],
+            'next' => ['year' => $next->year, 'month' => $next->month],
+            'cells' => $cells,
+            'calendarQuery' => $filters,
+            'reservationsByDate' => $byDate->map(fn ($items) => $items->values())->all(),
+            'stats' => [
+                'month' => $calendarReservations->count(),
+                'today' => $calendarReservations->where('reservation_date', $todayKey)->count(),
+                'pending' => $calendarReservations->where('status', ReservationStatus::PENDING_APPROVAL->value)->count(),
+                'approved' => $calendarReservations->whereIn('status', [
+                    ReservationStatus::APPROVED->value,
+                    ReservationStatus::CONFIRMED->value,
+                ])->count(),
+            ],
+        ];
     }
 
     private function restrictToOwnUnlessStaff($query): void

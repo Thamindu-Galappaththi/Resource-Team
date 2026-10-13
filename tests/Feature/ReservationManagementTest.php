@@ -178,6 +178,18 @@ class ReservationManagementTest extends TestCase
         $this->actingAs($user)->get(route('reservations.index'))->assertOk()->assertSee('Existing Reservations');
     }
 
+    public function test_calendar_json_returns_month_payload(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+
+        $this->actingAs($user)
+            ->getJson(route('reservations.calendar', ['year' => 2026, 'month' => 10]))
+            ->assertOk()
+            ->assertJsonPath('year', 2026)
+            ->assertJsonPath('month', 10)
+            ->assertJsonStructure(['label', 'cells', 'stats', 'reservationsByDate', 'prev', 'next']);
+    }
+
     public function test_nebula_sms_user_cannot_create_but_can_view_list(): void
     {
         $user = User::factory()->role('nebula_sms_user')->create();
