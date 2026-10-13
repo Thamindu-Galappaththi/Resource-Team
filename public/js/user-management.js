@@ -12,6 +12,25 @@ $(function () {
         };
     }
 
+    const umSwalClass = {
+        popup: 'um-swal',
+        title: 'um-swal-title',
+        htmlContainer: 'um-swal-text',
+        confirmButton: 'btn btn-primary um-swal-btn',
+        cancelButton: 'btn btn-outline-secondary um-swal-btn',
+        actions: 'um-swal-actions',
+        icon: 'um-swal-icon',
+    };
+
+    function umSwal(options) {
+        return Swal.fire({
+            buttonsStyling: false,
+            reverseButtons: true,
+            customClass: umSwalClass,
+            ...options,
+        });
+    }
+
     let activeUser = {};
 
     function rowUser(element) {
@@ -506,16 +525,14 @@ $(function () {
 
         const confirmDelete = typeof Swal === 'undefined'
             ? Promise.resolve({ isConfirmed: window.confirm('Delete ' + name + '? This cannot be undone.') })
-            : Swal.fire({
+            : umSwal({
                 icon: 'warning',
                 title: 'Delete this user?',
                 text: name + ' will be permanently deleted. This cannot be undone.',
                 showCancelButton: true,
-                confirmButtonText: 'Yes, delete',
+                confirmButtonText: 'Delete',
                 cancelButtonText: 'Cancel',
-                confirmButtonColor: '#dc3545',
-                reverseButtons: true,
-                customClass: { popup: 'um-swal' },
+                customClass: { ...umSwalClass, confirmButton: 'btn btn-danger um-swal-btn' },
             });
 
         Promise.resolve(confirmDelete).then(function (result) {
@@ -523,7 +540,7 @@ $(function () {
                 return;
             }
             if (typeof Swal !== 'undefined') {
-                Swal.fire({
+                umSwal({
                     title: 'Deleting...',
                     allowOutsideClick: false,
                     allowEscapeKey: false,
@@ -545,7 +562,7 @@ $(function () {
                 fetchUsers(window.location.href);
             }).fail(function (xhr) {
                 if (typeof Swal !== 'undefined') {
-                    Swal.fire({
+                    umSwal({
                         icon: 'error',
                         title: 'Delete failed',
                         text: xhr.responseJSON?.message || 'Could not delete this user.',
