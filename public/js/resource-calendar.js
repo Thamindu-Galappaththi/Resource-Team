@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
             ? { left: 'prev,next', center: 'title', right: 'today' }
             : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
         buttonText: { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'Agenda' },
+        eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
+        slotLabelFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
+        displayEventTime: true,
         eventDidMount(info) {
             const details = info.event.extendedProps || {};
             if (details.isHoliday) {
