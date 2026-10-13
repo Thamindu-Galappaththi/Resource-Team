@@ -204,9 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!rows.length) return;
 
         const header = document.createElement('div');
-        header.className = 'rc-scheduler-track';
+        header.className = 'rc-scheduler-track rc-scheduler-header';
         const resourceHeading = document.createElement('div');
-        resourceHeading.className = 'rc-scheduler-times';
+        resourceHeading.className = 'rc-scheduler-times rc-scheduler-corner';
         resourceHeading.textContent = 'Resource / Load';
         header.appendChild(resourceHeading);
         schedulerHours.forEach((hour) => {
@@ -222,19 +222,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return groups;
         }, {});
         Object.entries(grouped).forEach(([category, categoryRows]) => {
+            const categoryTrack = document.createElement('div');
+            categoryTrack.className = 'rc-scheduler-track';
             const categoryHeading = document.createElement('div');
             categoryHeading.className = 'rc-scheduler-category';
             categoryHeading.textContent = category;
-            schedulerGrid.appendChild(categoryHeading);
+            categoryTrack.appendChild(categoryHeading);
+            schedulerGrid.appendChild(categoryTrack);
             const groupedTypes = categoryRows.reduce((types, resource) => {
                 (types[resource.type || 'Other'] ||= []).push(resource);
                 return types;
             }, {});
             Object.entries(groupedTypes).forEach(([type, typeRows]) => {
+                const typeTrack = document.createElement('div');
+                typeTrack.className = 'rc-scheduler-track';
                 const typeHeading = document.createElement('div');
                 typeHeading.className = 'rc-scheduler-type';
                 typeHeading.textContent = type;
-                schedulerGrid.appendChild(typeHeading);
+                typeTrack.appendChild(typeHeading);
+                schedulerGrid.appendChild(typeTrack);
                 typeRows.forEach((resource) => renderResourceRow(resource, date));
             });
         });
