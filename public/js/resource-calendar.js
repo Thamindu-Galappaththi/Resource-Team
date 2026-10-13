@@ -487,10 +487,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'confirmed';
     }
     function eventColors(status) {
-        if (['approved', 'confirmed', 'in_progress', 'completed'].includes(status)) return { background: '#e2f5e8', border: '#55b978', text: '#1f5130' };
-        if (['pending_approval', 'changes_requested', 'draft'].includes(status)) return { background: '#fff0d4', border: '#e6b34f', text: '#5c4310' };
-        if (['rejected', 'cancelled', 'expired'].includes(status)) return { background: '#ffe5e2', border: '#e77770', text: '#7a2b27' };
-        return { background: '#e8f1ff', border: '#8bb8f0', text: '#1f3f66' };
+        if (['approved', 'confirmed', 'in_progress', 'completed'].includes(status)) return { background: '#bbf7d0', border: '#059669', text: '#14532d' };
+        if (['pending_approval', 'changes_requested', 'draft'].includes(status)) return { background: '#fde68a', border: '#d97706', text: '#78350f' };
+        if (['rejected', 'cancelled', 'expired'].includes(status)) return { background: '#fecaca', border: '#dc2626', text: '#7f1d1d' };
+        return { background: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' };
     }
     function withEventColors(event) {
         const colors = eventColors(event.extendedProps?.statusValue);

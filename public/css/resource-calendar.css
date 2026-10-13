@@ -9,20 +9,20 @@
 
 .rc-header {
     margin-bottom: 1.25rem;
-    padding: 1.25rem 1.4rem;
-    border: 1px solid var(--rc-line);
-    border-radius: .9rem;
-    background: #fff;
-    box-shadow: 0 .3rem 1rem rgba(24, 39, 75, .09);
+    padding: 1.35rem 1.5rem;
+    border: 0;
+    border-radius: 1rem;
+    background: linear-gradient(120deg, #123a7a 0%, #1769c2 52%, #5b4fc9 100%);
+    box-shadow: 0 .6rem 1.6rem rgba(23, 58, 130, .28);
 }
 .rc-title {
     margin: 0;
-    color: var(--rc-blue);
+    color: #fff;
     font-size: clamp(1.45rem, 2.4vw, 2rem);
     font-weight: 700;
     letter-spacing: -.04em;
 }
-.rc-subtitle { margin: .35rem 0 0; color: var(--rc-muted); }
+.rc-subtitle { margin: .35rem 0 0; color: rgba(255, 255, 255, .82); }
 
 .rc-cards {
     display: grid;
@@ -31,8 +31,8 @@
     margin-bottom: 18px;
 }
 .rc-card {
-    background: #fff;
-    border: 1px solid var(--rc-line);
+    background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--stat-color) 8%, #fff) 100%);
+    border: 1px solid color-mix(in srgb, var(--stat-color) 22%, #e8eef6);
     border-top: 4px solid var(--stat-color, #1769c2);
     border-radius: 14px;
     padding: 16px 18px;
@@ -46,10 +46,10 @@
 .rc-card-value { margin-top: 8px; color: var(--rc-ink); font-size: 26px; font-weight: 800; }
 
 .rc-filters, .rc-calendar-card, .rc-table-card {
-    background: #fff;
-    border: 1px solid var(--rc-line);
+    background: linear-gradient(180deg, #f5f8ff 0%, #fff 72px);
+    border: 1px solid #d5def0;
     border-radius: 14px;
-    box-shadow: 0 9px 26px rgba(19, 35, 58, .075);
+    box-shadow: 0 12px 32px rgba(28, 55, 110, .1);
 }
 
 .rc-filters {
@@ -133,39 +133,73 @@
     gap: 4px;
     margin: 0 0 12px;
     padding: 4px;
-    border: 1px solid var(--rc-line);
+    border: 1px solid #c9d6ee;
     border-radius: 11px;
-    background: #edf1f7;
+    background: linear-gradient(180deg, #e8eeff, #dfe7fb);
 }
 .rc-view-switch button {
     min-width: 88px;
     border: 0;
     border-radius: 8px;
     padding: 8px 14px;
-    color: #526078;
+    color: #3d4d6b;
     background: transparent;
     font-weight: 600;
 }
-.rc-view-switch button.active { color: var(--rc-blue); background: #fff; box-shadow: 0 3px 10px rgba(19, 35, 58, .1); }
+.rc-view-switch button.active {
+    color: #fff;
+    background: linear-gradient(180deg, #2a74d4, #1769c2);
+    box-shadow: 0 4px 12px rgba(23, 105, 194, .28);
+}
 
 .rc-calendar-card { padding: 16px; margin-bottom: 18px; overflow: hidden; }
 .rc-loading, .rc-empty { padding: 24px; text-align: center; color: var(--rc-muted); }
 .rc-empty { border: 1px dashed #cbd5e1; border-radius: 8px; margin-bottom: 12px; }
 
 .fc .fc-toolbar { padding: 2px 2px 16px; gap: 8px; }
-.fc .fc-toolbar-title { color: var(--rc-ink); font-size: 20px; font-weight: 650; }
+.fc .fc-toolbar-title { color: #14315e; font-size: 20px; font-weight: 750; }
 .fc .fc-button { min-height: 34px; border-radius: 8px !important; font-size: 12px !important; }
-.fc .fc-button-primary { border-color: var(--rc-line) !important; color: #40516a !important; background: #fff !important; }
-.fc .fc-button-primary:hover,
-.fc .fc-button-primary:not(:disabled).fc-button-active { border-color: #cbd6e5 !important; color: var(--rc-blue) !important; background: #edf2ff !important; }
-.fc .fc-col-header-cell-cushion { padding: 11px 5px; color: #526078; font-size: 11px; text-decoration: none; }
-.fc-theme-standard td, .fc-theme-standard th { border-color: #e5eaf1; }
-.fc .fc-daygrid-day-number { color: #555d69; text-decoration: none; }
-.fc .fc-day-today { background: #eef5ff !important; }
+.fc .fc-button-primary {
+    border: 0 !important;
+    color: #fff !important;
+    background: linear-gradient(180deg, #3b82f6, #1769c2) !important;
+    box-shadow: 0 4px 10px rgba(23, 105, 194, .22) !important;
+}
+.fc .fc-button-primary:hover { filter: brightness(1.05); }
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+    background: linear-gradient(180deg, #1e3a8a, #123a7a) !important;
+    color: #fff !important;
+}
+.fc .fc-scrollgrid { border-radius: 12px; overflow: hidden; border-color: #c9d6ee !important; }
+.fc .fc-col-header-cell,
+.fc .fc-col-header-cell.fc-day-today,
+.fc .fc-col-header-cell.fc-day-sat,
+.fc .fc-col-header-cell.fc-day-sun {
+    background: linear-gradient(180deg, #1e4f9c, #1769c2) !important;
+}
+.fc .fc-col-header-cell-cushion { padding: 12px 5px; color: #fff !important; font-size: 11px; letter-spacing: .04em; text-decoration: none; }
+.fc-theme-standard td, .fc-theme-standard th { border-color: #d7e1f2; }
+.fc .fc-daygrid-day { background: #fbfdff; }
+.fc .fc-daygrid-day:hover { background: #eef4ff; }
+.fc .fc-daygrid-day.fc-day-sat,
+.fc .fc-daygrid-day.fc-day-sun,
+.fc .fc-timegrid-col.fc-day-sat,
+.fc .fc-timegrid-col.fc-day-sun {
+    background: #f3f0ff !important;
+}
+.fc .fc-day-other { background: #f4f6fa !important; }
+.fc .fc-day-other .fc-daygrid-day-number { color: #9aa6b8; }
+.fc .fc-daygrid-day-number { color: #2c3d5a; font-weight: 650; text-decoration: none; }
+.fc .fc-daygrid-day.fc-day-today {
+    background: linear-gradient(180deg, #dbeafe, #eff6ff) !important;
+}
 .fc .fc-day-today .fc-daygrid-day-number {
     display: inline-flex; width: 27px; height: 27px; margin: 4px; align-items: center; justify-content: center;
-    border-radius: 50%; color: #fff; background: var(--rc-blue); font-weight: 700;
+    border-radius: 50%; color: #fff; background: linear-gradient(180deg, #3b82f6, #1d4ed8); font-weight: 700;
+    box-shadow: 0 4px 10px rgba(29, 78, 216, .35);
 }
+.fc .fc-timegrid-col.fc-day-today { background: rgba(59, 130, 246, .06) !important; }
+.fc .fc-daygrid-more-link { color: #1d4ed8; font-weight: 700; }
 .fc .fc-event {
     border: 0;
     border-radius: 8px;
@@ -176,7 +210,10 @@
     overflow: hidden;
     min-width: 0;
 }
-.fc .fc-event:hover { filter: brightness(.97); }
+.fc .fc-event {
+    box-shadow: 0 3px 8px rgba(15, 23, 42, .08);
+}
+.fc .fc-event:hover { filter: brightness(.97); transform: translateY(-1px); }
 .fc .fc-event .fc-event-main,
 .fc .fc-event .fc-event-main-frame,
 .fc .fc-event .fc-event-time,
