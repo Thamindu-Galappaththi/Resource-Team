@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=4">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=16">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=17">
 @endpush
 
 @section('content')
@@ -132,7 +132,7 @@
 <div id="reservationModal" class="rc-modal" role="dialog" aria-modal="true" aria-labelledby="reservationModalTitle" aria-hidden="true">
     <div class="rc-modal-overlay"></div>
     <div class="rc-modal-box">
-        <button type="button" id="closeReservationModal" class="rc-modal-close" aria-label="Close">&times;</button>
+        <button type="button" id="closeReservationModal" class="rc-modal-close" aria-label="Close"><i class="ti ti-x"></i></button>
         <div class="rc-modal-header">
             <div class="rc-modal-icon"><i class="ti ti-calendar-event"></i></div>
             <div>

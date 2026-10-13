@@ -486,7 +486,7 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 20px 22px;
+    padding: 20px 56px 20px 22px;
     background: linear-gradient(120deg, #123a7a 0%, #1769c2 55%, #5b4fc9 100%);
     border-bottom: 0;
 }
@@ -506,9 +506,10 @@
 .rc-modal-close {
     position: absolute;
     right: 14px;
-    top: 16px;
+    top: 20px;
     width: 36px;
     height: 36px;
+    padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -516,9 +517,13 @@
     border-radius: 50%;
     background: rgba(255, 255, 255, .16);
     color: #fff;
-    font-size: 22px;
-    line-height: 1;
+    line-height: 0;
     cursor: pointer;
+}
+.rc-modal-close .ti {
+    display: block;
+    font-size: 18px;
+    line-height: 1;
 }
 .rc-modal-close:hover { background: rgba(255, 255, 255, .28); }
 .rc-modal-body { padding: 16px 22px 22px; display: grid; gap: 8px; }
