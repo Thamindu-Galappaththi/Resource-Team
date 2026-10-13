@@ -238,10 +238,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 ['Status', statusLabel(resource.status)],
                 ['Linked Resources', linked],
             ];
-            const html = `<dl class="row text-start mb-0">${details.map(([label, value]) =>
-                `<dt class="col-sm-4">${escapeHtml(label)}</dt><dd class="col-sm-8">${escapeHtml(value || '—')}</dd>`
-            ).join('')}</dl>`;
-            await swalFire({ title: 'Resource details', html, width: 680, confirmButtonText: 'Close' });
+            const html = `<div class="rm-details">${details.map(([label, value]) =>
+                `<div class="rm-detail-row"><span class="rm-detail-label">${escapeHtml(label)}</span><span class="rm-detail-value">${escapeHtml(value || '—')}</span></div>`
+            ).join('')}</div>`;
+            await swalFire({ title: 'Resource details', html, confirmButtonText: 'Close' });
         } catch (error) {
             await swalFire({ icon: 'error', title: 'View failed', text: error.message });
         }

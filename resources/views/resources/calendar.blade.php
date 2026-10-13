@@ -3,7 +3,7 @@
 @section('title', 'Resource Calendar')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=7">
 <link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=18">
 @endpush
 

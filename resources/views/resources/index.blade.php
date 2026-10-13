@@ -3,7 +3,7 @@
 @section('title', 'Existing Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=10">
 @endpush
 
 @section('content')
@@ -120,19 +120,23 @@
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="editResourceModalLabel">Edit Resource</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <span class="rm-modal-icon" aria-hidden="true"><i class="ti ti-pencil"></i></span>
+                        <div>
+                            <h5 class="modal-title" id="editResourceModalLabel">Edit Resource</h5>
+                            <p class="rm-modal-sub mb-0">Update inventory details and save.</p>
+                        </div>
+                        <button type="button" class="rm-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
                     </div>
                     <div class="modal-body">
                         <div id="editResourceLoading" class="text-center text-muted py-4" role="status" hidden>Loading resource details…</div>
                         <form id="editResourceForm">
                             @csrf
                             @include('resources.partials.resource-fields')
-                            <div class="d-flex justify-content-end gap-2">
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary" id="editResourceSaveButton">Save changes</button>
-                            </div>
                         </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" form="editResourceForm" id="editResourceSaveButton">Save changes</button>
                     </div>
                 </div>
             </div>
@@ -159,5 +163,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-index.js') }}?v=3"></script>
+<script src="{{ asset('js/resource-index.js') }}?v=5"></script>
 @endpush
