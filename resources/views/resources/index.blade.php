@@ -4,60 +4,106 @@
 
 @section('content')
 @php($canManageResources = auth()->user()?->hasPermission('resources.create') ?? false)
-<div class="container-fluid mt-4">
+<div class="container-fluid mt-4 resource-index-page">
     <style>
+        .resource-index-page { --ri-ink:#152238; --ri-muted:#65738a; --ri-line:#dfe5ee; color:var(--ri-ink); }
+        .resource-index-page .page-intro { margin-bottom:1.5rem; }
+        .resource-index-page .page-heading { color:#fff!important; font-size:1.85rem; font-weight:600; letter-spacing:-.035em; text-shadow:0 2px 8px rgba(15,23,42,.36); }
+        .resource-index-page .page-intro .text-muted { color:rgba(255,255,255,.78)!important; font-size:1rem; text-shadow:0 1px 5px rgba(15,23,42,.32); }
+        .resource-index-page .card { border:1px solid var(--ri-line)!important; border-radius:15px; background:#fff; box-shadow:0 9px 26px rgba(19,35,58,.075)!important; }
+        .resource-index-page .summary-card { position:relative; isolation:isolate; overflow:hidden; border-top:4px solid var(--stat-accent)!important; animation:ri-stat-in .58s cubic-bezier(.2,.75,.25,1) both; animation-delay:var(--stat-delay,0s); transition:transform .24s ease,box-shadow .24s ease; }
+        .resource-index-page .summary-card::after { position:absolute; z-index:-1; right:-30px; bottom:-54px; width:150px; height:150px; border-radius:50%; background:var(--stat-tint); content:""; transition:transform .32s ease,opacity .32s ease; }
+        .resource-index-page .summary-card:hover { transform:translateY(-5px); box-shadow:0 16px 32px rgba(19,35,58,.15)!important; }
+        .resource-index-page .summary-card:hover::after { transform:scale(1.2); opacity:.9; }
+        .resource-index-page .row > div:nth-child(1) .summary-card { --stat-accent:#5c6ff2; --stat-tint:rgba(92,111,242,.11); --stat-delay:0s; }
+        .resource-index-page .row > div:nth-child(2) .summary-card { --stat-accent:#16a77a; --stat-tint:rgba(22,167,122,.11); --stat-delay:.08s; }
+        .resource-index-page .row > div:nth-child(3) .summary-card { --stat-accent:#e49a20; --stat-tint:rgba(228,154,32,.13); --stat-delay:.16s; }
+        .resource-index-page .row > div:nth-child(4) .summary-card { --stat-accent:#ed6c62; --stat-tint:rgba(237,108,98,.12); --stat-delay:.24s; }
+        .resource-index-page .summary-card .stat-label { color:#61718a; font-weight:500; }
+        .resource-index-page .summary-card .stat-value { color:var(--stat-accent); font-variant-numeric:tabular-nums; }
+        .resource-index-page .filter-card, .resource-index-page .table-card { animation:ri-rise .55s .12s both; }
+        .resource-index-page .card-body { padding:1.25rem; }
+        .resource-index-page .text-muted { color:var(--ri-muted)!important; }
+        .resource-index-page .form-control, .resource-index-page .form-select { min-height:44px; color:#18263a; border-color:#cfd8e5; border-radius:9px; box-shadow:none; }
+        .resource-index-page .form-control:focus, .resource-index-page .form-select:focus { border-color:#5578e8; box-shadow:0 0 0 .2rem rgba(49,95,232,.15); }
+        .resource-index-page .btn-primary { --bs-btn-bg:#315fe8; --bs-btn-border-color:#315fe8; --bs-btn-hover-bg:#244ecb; --bs-btn-hover-border-color:#244ecb; border-radius:9px; font-weight:600; }
+        .resource-index-page #resourceTable thead th { color:#526078; background:#edf1f7; border-bottom-color:#dfe5ee; font-size:.72rem; letter-spacing:.045em; }
+        .resource-index-page #resourceTable tbody td { color:#26364d; border-color:#edf0f5; }
+        .resource-index-page #resourceTable tbody tr { transition:background-color .18s ease,transform .18s ease; }
+        .resource-index-page #resourceTable tbody tr:hover { background:#f2f6fc; }
+        .resource-index-page #resourceTable tbody tr.resource-row-enter { animation:ri-row-in .3s both; }
+        .resource-index-page .btn { transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease; }
+        .resource-index-page .btn:hover { transform:translateY(-1px); }
+        .resource-index-page .btn:focus-visible { outline:3px solid rgba(49,95,232,.3); outline-offset:2px; }
+        .resource-index-page .search-wrap { position:relative; }
+        .resource-index-page .search-wrap .form-control { padding-left:2.6rem; }
+        .resource-index-page .search-icon { position:absolute; z-index:2; top:50%; left:.9rem; color:#8290a4; transform:translateY(-50%); pointer-events:none; }
+        .resource-index-page .results-summary { color:#65738a; }
+        @keyframes ri-rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes ri-row-in { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes ri-stat-in { from { opacity:0; transform:translateY(14px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
         #editResourceModal .modal-dialog { transform: scale(.96); transition: transform 250ms ease, opacity 250ms ease; }
         #editResourceModal.show .modal-dialog { transform: scale(1); }
         #resourceTable .btn { transition: transform 200ms ease, box-shadow 200ms ease; }
         #resourceTable .btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(42, 53, 71, .16); }
         #resourceTable .resource-row-removing { opacity: 0; transform: translateX(16px); transition: opacity 250ms ease, transform 250ms ease; }
+        @media (prefers-reduced-motion: reduce) {
+            .resource-index-page *, .resource-index-page *::before, .resource-index-page *::after { animation-duration:.01ms!important; animation-iteration-count:1!important; scroll-behavior:auto!important; transition-duration:.01ms!important; }
+        }
+        @media (max-width:767.98px) {
+            .resource-index-page .card-body { padding:1rem; }
+            .resource-index-page .page-heading { font-size:1.6rem; }
+            .resource-index-page #resourceTable { min-width:760px; }
+        }
     </style>
 
-    <h4 class="mb-3">Existing Resources</h4>
+    <div class="page-intro"><h1 class="h3 page-heading mb-1">Existing resources</h1><p class="text-muted mb-0">Search, filter, and manage your resource inventory.</p></div>
 
     {{-- ===================== SUMMARY STAT CARDS ===================== --}}
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card summary-card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">Total Resources</div>
-                    <div class="fs-3 fw-bold" id="statTotal">0</div>
+                    <div class="stat-label small">Total Resources</div>
+                    <div class="stat-value fs-3 fw-bold" id="statTotal">0</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-success border-4">
+            <div class="card summary-card border-0 shadow-sm h-100 border-start border-success border-4">
                 <div class="card-body">
-                    <div class="text-muted small">Active</div>
-                    <div class="fs-3 fw-bold text-success" id="statActive">0</div>
+                    <div class="stat-label small">Active</div>
+                    <div class="stat-value fs-3 fw-bold" id="statActive">0</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-warning border-4">
+            <div class="card summary-card border-0 shadow-sm h-100 border-start border-warning border-4">
                 <div class="card-body">
-                    <div class="text-muted small">Under Maintenance</div>
-                    <div class="fs-3 fw-bold text-warning" id="statMaintenance">0</div>
+                    <div class="stat-label small">Under Maintenance</div>
+                    <div class="stat-value fs-3 fw-bold" id="statMaintenance">0</div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-danger border-4">
+            <div class="card summary-card border-0 shadow-sm h-100 border-start border-danger border-4">
                 <div class="card-body">
-                    <div class="text-muted small">Pending Deletion</div>
-                    <div class="fs-3 fw-bold text-danger" id="statPending">0</div>
+                    <div class="stat-label small">Pending Deletion</div>
+                    <div class="stat-value fs-3 fw-bold" id="statPending">0</div>
                 </div>
             </div>
         </div>
     </div>
 
     {{-- ===================== SEARCH + FILTERS ===================== --}}
-    <div class="card border-0 shadow-sm mb-3">
+    <div class="card filter-card border-0 shadow-sm mb-3">
         <div class="card-body">
             <div class="row g-2 align-items-center">
-                <div class="col-md-4">
+                <div class="col-md-4 search-wrap">
+                    <label for="searchInput" class="visually-hidden">Search resources by name or ID</label>
+                    <i class="ti ti-search search-icon" aria-hidden="true"></i>
                     <input type="text" class="form-control" id="searchInput"
-                        placeholder="Search resource name or ID...">
+                        placeholder="Search by name or ID..." autocomplete="off">
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" id="categoryFilter">
@@ -77,8 +123,8 @@
                 </div>
                 <div class="col-md-2">
                     <div class="d-grid gap-2">
-                        <button class="btn btn-primary w-100" id="applyFiltersBtn">Apply Filters</button>
-                        <button class="btn btn-outline-secondary w-100" id="clearFiltersBtn" type="button">Clear Filters</button>
+                        <button class="btn btn-primary w-100" id="applyFiltersBtn"><i class="ti ti-adjustments-horizontal me-1" aria-hidden="true"></i>Apply filters</button>
+                        <button class="btn btn-outline-secondary w-100" id="clearFiltersBtn" type="button">Clear filters</button>
                     </div>
                 </div>
             </div>
@@ -86,7 +132,7 @@
     </div>
 
     {{-- ===================== RESOURCE TABLE ===================== --}}
-    <div class="card border-0 shadow-sm">
+    <div class="card table-card border-0 shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="resourceTable">
@@ -106,7 +152,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="text-muted small mt-2 mb-0" id="resultCount"></p>
+            <p class="results-summary small mt-3 mb-0" id="resultCount" aria-live="polite"></p>
         </div>
     </div>
 
@@ -149,6 +195,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
     document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
     document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('searchInput').addEventListener('keydown', event => {
+        if (event.key === 'Enter') applyFilters();
+    });
 });
 
 async function loadResources() {
@@ -239,7 +288,7 @@ function renderTable(resources) {
     tbody.innerHTML = '';
 
     if (resources.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No resources found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5"><div class="fw-semibold text-dark mb-1">No resources found</div><div class="text-muted small">Try another search or clear the filters to see all resources.</div></td></tr>`;
     }
 
     resources.forEach(resource => {
@@ -249,6 +298,7 @@ function renderTable(resources) {
         const serial = resource.serial_number || '—';
 
         const row = document.createElement('tr');
+        row.classList.add('resource-row-enter');
         row.dataset.resourceId = resource.id;
         row.innerHTML = `
             <td>

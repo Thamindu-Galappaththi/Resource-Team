@@ -3,59 +3,88 @@
 @section('title', 'Create Resources')
 
 @section('content')
-<div class="container-fluid mt-4">
+@push('styles')
+<style>
+    .resource-create-page { --rc-ink:#152238; --rc-muted:#65738a; --rc-line:#dfe5ee; --rc-blue:#315fe8; color:var(--rc-ink); }
+    .resource-create-page .page-heading { font-weight:700; letter-spacing:-.035em; color:var(--rc-ink); }
+    .resource-create-page .page-subtitle, .resource-create-page .step-hint { color:var(--rc-muted); }
+    .resource-create-page .workflow-card { border:1px solid #dce3ed; border-radius:18px; background:#fff; box-shadow:0 16px 42px rgba(19,35,58,.12); overflow:hidden; }
+    .resource-create-page .workflow-card > .card-body { background:linear-gradient(180deg,#fff 0%,#fbfcfe 100%); }
+    .resource-create-page .workflow-tabs { display:flex; flex-wrap:nowrap; gap:.45rem; padding:.6rem 1rem; border:1px solid #d8e0eb; border-radius:17px; background:#edf1f7; overflow-x:auto; }
+    .resource-create-page .workflow-tabs .nav-link { display:flex; align-items:center; gap:.65rem; border:1px solid transparent; border-radius:13px; padding:1rem 1.15rem; color:#4e5c71; white-space:nowrap; transition:background .18s ease,color .18s ease,box-shadow .18s ease; }
+    .resource-create-page .workflow-tabs .nav-link:hover { background:#fff; color:var(--rc-ink); }
+    .resource-create-page .workflow-tabs .nav-link.active { background:#fff; border-color:#e4e9f1; color:#204bc9; box-shadow:0 4px 12px rgba(19,35,58,.1); font-weight:650; }
+    .resource-create-page .workflow-content { padding:clamp(1rem,3vw,2rem); }
+    .resource-create-page .step-panel { max-width:1000px; margin:0 auto; padding:clamp(1.25rem,3vw,2.25rem); background:#fff; border:1px solid #dfe5ee; border-radius:16px; box-shadow:0 9px 26px rgba(19,35,58,.075); }
+    .resource-create-page .step-title { font-size:1.45rem; font-weight:650; letter-spacing:-.025em; }
+    .resource-create-page .form-label { color:#202e43; font-weight:600; margin-bottom:.5rem; }
+    .resource-create-page .form-control, .resource-create-page .form-select { min-height:46px; border-color:#cfd8e5; border-radius:9px; background-color:#fff; color:#18263a; box-shadow:0 1px 2px rgba(19,35,58,.035); }
+    .resource-create-page .form-control::placeholder { color:#8591a3; }
+    .resource-create-page .form-control:focus, .resource-create-page .form-select:focus { border-color:#5578e8; box-shadow:0 0 0 .2rem rgba(49,95,232,.15); }
+    .resource-create-page .btn-primary { --bs-btn-bg:#315fe8; --bs-btn-border-color:#315fe8; --bs-btn-hover-bg:#244ecb; --bs-btn-hover-border-color:#244ecb; --bs-btn-active-bg:#1e43b1; --bs-btn-active-border-color:#1e43b1; border-radius:9px; padding:.65rem 1.15rem; font-weight:600; box-shadow:0 4px 10px rgba(49,95,232,.2); }
+    .resource-create-page .feature-heading { border-top:1px solid var(--rc-line); padding-top:1.25rem; }
+    .resource-create-page #featuresContainer .row { align-items:center; row-gap:.75rem; margin:0 0 .75rem; padding:1rem; border:1px solid #e0e6ef; border-radius:12px; background:#f7f9fc; }
+    .resource-create-page .existing-card { border:1px solid #dce3ed; border-radius:16px; background:#fff; box-shadow:0 9px 26px rgba(19,35,58,.08); overflow:hidden; }
+    .resource-create-page .existing-card .card-header { background:#edf1f7; color:var(--rc-ink); }
+    @media (max-width:575.98px) { .resource-create-page .workflow-tabs { margin:0 -1rem; border-radius:0; } .resource-create-page .workflow-content { padding:1rem 0 0; } .resource-create-page .step-panel { padding:1.15rem; border-radius:12px; } }
+</style>
+@endpush
+
+<div class="container-fluid mt-4 resource-create-page">
     <div class="row">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
+            <div class="card workflow-card">
                 <div class="card-body">
-                    <h4 class="mb-4">Create Resources</h4>
+                    <div class="mb-4">
+                        <h1 class="h3 page-heading mb-1">Create resources</h1>
+                        <p class="page-subtitle mb-0">Set up a category, define its types, then add and link your resources.</p>
+                    </div>
 
                     {{-- ===================== NAV TABS ===================== --}}
-                    <ul class="nav nav-tabs" id="resourceTabs" role="tablist">
+                    <ul class="nav nav-tabs workflow-tabs" id="resourceTabs" role="tablist" aria-label="Resource creation steps">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="category-tab" data-bs-toggle="tab"
                                 data-bs-target="#category-pane" type="button" role="tab">
-                                Resource Category
+                                <span>Category</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="type-tab" data-bs-toggle="tab"
                                 data-bs-target="#type-pane" type="button" role="tab">
-                                Resource Type
+                                <span>Resource type</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="resource-tab" data-bs-toggle="tab"
                                 data-bs-target="#resource-pane" type="button" role="tab">
-                                Resource
+                                <span>Resource</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="linked-tab" data-bs-toggle="tab"
                                 data-bs-target="#linked-pane" type="button" role="tab">
-                                Linked Resource
+                                <span>Link resources</span>
                             </button>
                         </li>
                     </ul>
 
-                    <div class="tab-content border border-top-0 p-4 rounded-bottom" id="resourceTabsContent">
+                    <div class="tab-content workflow-content" id="resourceTabsContent">
 
                         {{-- ===================== TAB 1: RESOURCE CATEGORY ===================== --}}
                         <div class="tab-pane fade show active" id="category-pane" role="tabpanel">
-                            <div class="card category-section-card mb-4" style="background:#fff; border:1px solid #d9e2ef; border-radius:12px; box-shadow:0 4px 16px rgba(42,53,71,.12); overflow:hidden;">
-                                <div class="card-header bg-white border-bottom-0 px-4 pt-4"><h4 class="mb-0">Create Resource Category</h4></div>
-                                <div class="card-body px-4 pb-4">
-                            <form id="categoryForm">
+                            <section class="step-panel">
+                                <div class="mb-4"><h2 class="step-title mb-1">Create a resource category</h2><p class="step-hint mb-0">Group similar items together and add any details you want to track.</p></div>
+                                <form id="categoryForm">
                                 @csrf
                                 <div class="mb-3">
-                                    <label for="categoryName" class="form-label">Category Name</label>
+                                    <label for="categoryName" class="form-label">Category name</label>
                                     <input type="text" class="form-control" id="categoryName" name="category_name" required>
                                 </div>
 
                                 <hr>
 
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="mb-0">Additional Features</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-3 feature-heading">
+                                    <div><h3 class="h6 fw-semibold mb-1">Additional features <span class="text-muted fw-normal">(optional)</span></h3><p class="step-hint small mb-0">Add fields such as brand, capacity, or purchase date.</p></div>
                                     <button type="button" class="btn btn-sm btn-outline-primary" id="addFeatureBtn">
                                         <i class="bi bi-plus-lg"></i> Add Feature
                                     </button>
@@ -65,76 +94,75 @@
                                     {{-- feature rows injected here by JS --}}
                                 </div>
 
-                                <button type="submit" class="btn btn-primary mt-3">Create Category</button>
-                            </form>
-                                </div>
-                            </div>
+                                <div class="mt-4"><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Create category</button></div>
+                                </form>
+                            </section>
                         </div>
 
                         {{-- ===================== TAB 2: RESOURCE TYPE ===================== --}}
                         <div class="tab-pane fade" id="type-pane" role="tabpanel">
-                            <form id="typeForm">
+                            <section class="step-panel"><div class="mb-4"><h2 class="step-title mb-1">Add a resource type</h2><p class="step-hint mb-0">Choose a category and give this type a clear name.</p></div><form id="typeForm">
                                 @csrf
                                 <div class="mb-3">
-                                    <label for="typeCategorySelect" class="form-label">Select Category</label>
+                                    <label for="typeCategorySelect" class="form-label">Category</label>
                                     <select class="form-select category-select" id="typeCategorySelect" name="category_id" required>
                                         <option value="" selected disabled>-- Select Category --</option>
                                     </select>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="resourceTypeName" class="form-label">Resource Type</label>
+                                    <label for="resourceTypeName" class="form-label">Type name</label>
                                     <input type="text" class="form-control" id="resourceTypeName" name="resource_type" required>
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="form-label">Additional Features</label>
-                                    <div id="typeAdditionalFeatures" class="border rounded p-3 bg-light text-muted small">
+                                    <div id="typeAdditionalFeatures" class="border rounded p-3 bg-light text-muted small" aria-live="polite">
                                         Select a category above to view its additional features.
                                     </div>
                                 </div>
 
                                 <button type="submit" class="btn btn-primary">Create Resource Type</button>
-                            </form>
+                            </form></section>
                         </div>
 
                         {{-- ===================== TAB 3: RESOURCE ===================== --}}
                         <div class="tab-pane fade" id="resource-pane" role="tabpanel">
-                            <form id="resourceForm">
+                            <section class="step-panel"><div class="mb-4"><h2 class="step-title mb-1">Add a resource</h2><p class="step-hint mb-0">Enter the key details so it can be found and managed later.</p></div><form id="resourceForm">
                                 @csrf
                                 @include('resources.partials.resource-fields')
 
                                 <button type="submit" class="btn btn-primary" id="saveResourceButton">Create Resource</button>
-                            </form>
+                            </form></section>
                         </div>
 
                         {{-- ===================== TAB 4: LINKED RESOURCE ===================== --}}
                         <div class="tab-pane fade" id="linked-pane" role="tabpanel">
-                            <form id="linkedForm">
+                            <section class="step-panel"><div class="mb-4"><h2 class="step-title mb-1">Link resources</h2><p class="step-hint mb-0">Connect related items to make their relationship easy to find.</p></div><form id="linkedForm">
                                 @csrf
                                 <div class="mb-3">
-                                    <label for="primaryResourceSelect" class="form-label">Resource</label>
+                                    <label for="primaryResourceSelect" class="form-label">Main resource</label>
                                     <select class="form-select resource-select" id="primaryResourceSelect" name="resource_id" required>
                                         <option value="" selected disabled>-- Select Resource --</option>
                                     </select>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="linkedResourceSelect" class="form-label">Link To Resource</label>
+                                    <label for="linkedResourceSelect" class="form-label">Related resource</label>
                                     <select class="form-select resource-select" id="linkedResourceSelect" name="linked_resource_id" required>
                                         <option value="" selected disabled>-- Select Resource To Link --</option>
                                     </select>
                                 </div>
 
                                 <button type="submit" class="btn btn-primary">Create Linked Resource</button>
-                            </form>
+                            </form></section>
                         </div>
 
                     </div>
                 </div>
             </div>
-            <div class="card border-0 shadow-sm overflow-hidden mt-4" id="existingCategoriesCard">
-                <div class="card-header border-0 px-4 py-3" style="background:#d4e2ff; color:#164f73;"><h4 class="h6 mb-0"><i class="ti ti-info-circle me-2" aria-hidden="true"></i>Existing Categories</h4></div>
+            <div class="card existing-card mt-4" id="existingCategoriesCard">
+                <div class="card-header border-0 px-4 py-3"><h2 class="h6 mb-0"><i class="ti ti-list me-2" aria-hidden="true"></i>Existing categories</h2></div>
                 <div class="card-body p-4">
                     <div class="table-responsive">
                         <table class="table table-striped align-middle mb-0">
@@ -362,25 +390,27 @@ document.addEventListener('DOMContentLoaded', function () {
     function addFeatureRow() {
         const idx = featureIndex++;
         const row = document.createElement('div');
-        row.className = 'row align-items-center mb-2 feature-row';
+        row.className = 'row feature-row';
         row.innerHTML = `
-            <div class="col-md-5">
-                <input type="text" class="form-control" placeholder="Feature Name"
+            <div class="col-lg-5 col-md-6">
+                <label class="form-label" for="featureName${idx}">Feature name</label>
+                <input type="text" class="form-control" id="featureName${idx}" placeholder="e.g., Brand"
                     name="features[${idx}][name]">
             </div>
-            <div class="col-md-3">
-                <div class="form-check form-switch">
+            <div class="col-lg-3 col-md-6">
+                <div class="form-check form-switch mt-4">
                     <input class="form-check-input feature-toggle" type="checkbox"
                         name="features[${idx}][enabled]" id="featureToggle${idx}">
                     <label class="form-check-label" for="featureToggle${idx}">Enabled</label>
                 </div>
             </div>
-            <div class="col-md-3">
-                <input type="text" class="form-control feature-options" placeholder="Options"
+            <div class="col-lg-3 col-md-10 col-9">
+                <label class="form-label" for="featureOptions${idx}">Options</label>
+                <input type="text" class="form-control feature-options" id="featureOptions${idx}" placeholder="e.g., Dell, Lenovo"
                     name="features[${idx}][options]" disabled>
             </div>
-            <div class="col-md-1">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-feature-btn">&times;</button>
+            <div class="col-lg-1 col-md-2 col-3 text-end">
+                <button type="button" class="btn btn-outline-danger remove-feature-btn mt-4" aria-label="Remove feature">&times;</button>
             </div>
         `;
         featuresContainer.appendChild(row);
