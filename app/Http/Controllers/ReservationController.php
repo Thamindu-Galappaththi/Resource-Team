@@ -10,6 +10,8 @@ use App\Models\Location;
 use App\Models\Reservation;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
+use App\Models\ResourceType;
+use App\Models\User;
 use App\Services\ReservationBookingService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -125,78 +127,134 @@ class ReservationController extends Controller
     public function calendar(Request $request): View
     {
         $this->authorize('viewAny', Reservation::class);
-
-        $currentDate = Carbon::now($this->bookings->timezone());
-        if ($request->filled('year') && $request->filled('month')) {
-            $currentDate = Carbon::create(
-                (int) $request->year,
-                (int) $request->month,
-                1,
-                0,
-                0,
-                0,
-                $this->bookings->timezone()
-            );
+        $user = $request->user();
+        $ownersQuery = User::query()
+            ->whereIn('id', Reservation::query()->select('requester_id')->whereNotNull('requester_id')->distinct())
+            ->orderBy('name');
+        if (! $user?->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'resource_owner')) {
+            $ownersQuery->whereKey($user?->id);
         }
+        return view('reservations.calendar', [
+            'locations' => Location::query()->ordered()->get(),
+            'categories' => ResourceCategory::query()->orderBy('name')->get(),
+            'resourceTypes' => ResourceType::query()->with('category')->orderBy('name')->get(),
+            'resources' => Resource::query()->where('status', 'active')->orderBy('name_model')->get(['id', 'name_model']),
+            'owners' => $ownersQuery->get(['id', 'name']),
+            'statuses' => ReservationStatus::cases(),
+            'canCreate' => $request->user()?->can('create', Reservation::class),
+            'eventsUrl' => route('reservations.calendar.events'),
+            'availabilityUrl' => route('reservations.availability'),
+            'createUrl' => route('reservations.create'),
+        ]);
+    }
 
-        $year = $currentDate->year;
-        $month = $currentDate->month;
-        $daysInMonth = $currentDate->daysInMonth;
-        $firstDayOfMonth = $currentDate->copy()->startOfMonth();
-        $startingDayOfWeek = $firstDayOfMonth->dayOfWeek;
-
-        $query = Reservation::query()
-            ->with(['requester', 'location', 'items'])
-            ->whereYear('reservation_date', $year)
-            ->whereMonth('reservation_date', $month)
-            ->whereNotIn('status', [
-                ReservationStatus::CANCELLED->value,
-                ReservationStatus::REJECTED->value,
-                ReservationStatus::DRAFT->value,
-            ]);
-
-        $this->restrictToOwnUnlessStaff($query);
-        $query->filter([
-            'status' => $request->input('status'),
-            'location_id' => $request->input('location_id'),
-            'resource_id' => $request->input('resource_id'),
-            'resource_category_id' => $request->input('resource_category_id'),
+    public function calendarEvents(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Reservation::class);
+        $filters = $request->validate([
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:start'],
+            'location_id' => ['nullable', 'integer', 'exists:locations,id'],
+            'resource_category_id' => ['nullable', 'integer', 'exists:resource_categories,id'],
+            'resource_type_id' => ['nullable', 'integer', 'exists:resource_types,id'],
+            'resource_id' => ['nullable', 'integer', 'exists:resources,id'],
+            'requester_id' => ['nullable', 'integer', 'exists:users,id'],
+            'status' => ['nullable', 'in:'.implode(',', ReservationStatus::values())],
         ]);
 
-        $reservations = $query->orderBy('start_time')->get();
+        $rangeStart = Carbon::parse($filters['start'])->utc();
+        $rangeEnd = Carbon::parse($filters['end'])->utc();
+        $baseQuery = Reservation::query()
+            ->with(['requester', 'location', 'items.resource.type.category'])
+            ->where('status', '!=', ReservationStatus::DRAFT->value)
+            ->whereHas('items', fn ($items) => $items->where('starts_at', '<', $rangeEnd)->where('ends_at', '>', $rangeStart));
+        $this->restrictToOwnUnlessStaff($baseQuery);
 
-        $calendarReservations = $reservations->map(function (Reservation $reservation) {
+        $visibleReservations = (clone $baseQuery)->get();
+        $blockingStatuses = ReservationStatus::blockingItemStatuses();
+        $bookedItems = $visibleReservations->flatMap(fn (Reservation $reservation) =>
+            $reservation->items
+                ->filter(fn ($item) => in_array($item->status, $blockingStatuses, true) && $item->starts_at && $item->ends_at)
+                ->map(fn ($item) => [
+                    'reservation_id' => $reservation->id,
+                    'resource_id' => $item->resource_id,
+                    'starts_at' => $item->starts_at,
+                    'ends_at' => $item->ends_at,
+                ])
+        );
+        $conflicts = [];
+        foreach ($bookedItems->groupBy('resource_id') as $items) {
+            $items = $items->sortBy(fn ($item) => $item['starts_at']->getTimestamp())->values();
+            for ($i = 0; $i < $items->count(); $i++) {
+                for ($j = $i + 1; $j < $items->count(); $j++) {
+                    if (! $items[$i]['starts_at']->lt($items[$j]['ends_at'])) break;
+                    if ($items[$i]['reservation_id'] !== $items[$j]['reservation_id']
+                        && $items[$i]['ends_at']->gt($items[$j]['starts_at'])) {
+                        $conflicts[$items[$i]['reservation_id']] = true;
+                        $conflicts[$items[$j]['reservation_id']] = true;
+                    }
+                }
+            }
+        }
+
+        $query = (clone $baseQuery)
+            ->when($filters['location_id'] ?? null, fn ($q, $value) => $q->where('location_id', $value))
+            ->when($filters['requester_id'] ?? null, fn ($q, $value) => $q->where('requester_id', $value))
+            ->when($filters['status'] ?? null, fn ($q, $value) => $q->where('status', $value))
+            ->when(($filters['resource_id'] ?? null) || ($filters['resource_type_id'] ?? null) || ($filters['resource_category_id'] ?? null), function ($q) use ($filters) {
+                $q->whereHas('items.resource', function ($resources) use ($filters) {
+                    if ($filters['resource_id'] ?? null) $resources->whereKey($filters['resource_id']);
+                    if ($filters['resource_type_id'] ?? null) $resources->where('resource_type_id', $filters['resource_type_id']);
+                    if ($filters['resource_category_id'] ?? null) {
+                        $resources->whereHas('type', fn ($types) => $types->where('resource_category_id', $filters['resource_category_id']));
+                    }
+                });
+            });
+
+        $events = $query->orderBy('reservation_date')->orderBy('start_time')->get()->map(function (Reservation $reservation) use ($conflicts) {
+            $item = $reservation->items->first();
+            $start = $item?->starts_at?->timezone($this->bookings->timezone())
+                ?? Carbon::parse($reservation->reservation_date->toDateString().' '.$reservation->start_time, $this->bookings->timezone());
+            $end = $item?->ends_at?->timezone($this->bookings->timezone())
+                ?? Carbon::parse($reservation->reservation_date->toDateString().' '.$reservation->end_time, $this->bookings->timezone());
+            $minutes = max(0, (int) $start->diffInMinutes($end));
+            $duration = trim(implode(' ', array_filter([
+                intdiv($minutes, 60) ? intdiv($minutes, 60).' hr' : null,
+                $minutes % 60 ? ($minutes % 60).' min' : null,
+            ]))) ?: 'Less than a minute';
+            $conflict = isset($conflicts[$reservation->id]);
+            [$color, $textColor] = match ($reservation->status) {
+                ReservationStatus::APPROVED->value, ReservationStatus::CONFIRMED->value, ReservationStatus::IN_PROGRESS->value => ['#16845b', '#fff'],
+                ReservationStatus::CANCELLED->value, ReservationStatus::REJECTED->value, ReservationStatus::EXPIRED->value => ['#7b8493', '#fff'],
+                ReservationStatus::COMPLETED->value => ['#4778d0', '#fff'],
+                default => ['#d18b00', '#fff'],
+            };
+
             return [
-                'id' => $reservation->id,
-                'reference' => $reservation->reference,
-                'title' => $reservation->title,
-                'purpose' => $reservation->purpose,
-                'status' => $reservation->status,
-                'status_label' => $reservation->statusEnum()->label(),
-                'reservation_date' => $reservation->reservation_date?->toDateString(),
-                'start_time' => substr((string) $reservation->start_time, 0, 5),
-                'end_time' => substr((string) $reservation->end_time, 0, 5),
-                'requester' => $reservation->requester?->name,
-                'location' => $reservation->location?->name,
-                'resources' => $reservation->resourceNames(),
-                'url' => route('reservations.show', $reservation),
+                'id' => (string) $reservation->id,
+                'title' => $reservation->reference.' · '.($reservation->title ?: $reservation->purpose),
+                'start' => $start->toIso8601String(),
+                'end' => $end->toIso8601String(),
+                'backgroundColor' => $conflict ? '#c0392b' : $color,
+                'borderColor' => $conflict ? '#a93226' : $color,
+                'textColor' => $textColor,
+                'classNames' => $conflict ? ['reservation-conflict'] : [],
+                'extendedProps' => [
+                    'reference' => $reservation->reference,
+                    'purpose' => $reservation->purpose,
+                    'resource' => $reservation->resourceNames() ?: '—',
+                    'owner' => $reservation->requester?->name ?? 'Unknown',
+                    'location' => $reservation->location?->name ?? '—',
+                    'duration' => $duration,
+                    'status' => $reservation->statusEnum()->label(),
+                    'statusKey' => $reservation->status,
+                    'conflict' => $conflict,
+                    'url' => request()->user()?->can('view', $reservation) ? route('reservations.show', $reservation) : null,
+                ],
             ];
         });
 
-        return view('reservations.calendar', [
-            'currentDate' => $currentDate,
-            'year' => $year,
-            'month' => $month,
-            'daysInMonth' => $daysInMonth,
-            'startingDayOfWeek' => $startingDayOfWeek,
-            'reservations' => $reservations,
-            'calendarReservations' => $calendarReservations,
-            'locations' => Location::query()->ordered()->get(),
-            'categories' => ResourceCategory::query()->orderBy('name')->get(),
-            'resources' => Resource::query()->orderBy('name_model')->get(['id', 'name_model']),
-            'statuses' => ReservationStatus::cases(),
-            'canCreate' => $request->user()?->can('create', Reservation::class),
-        ]);
+        return response()->json($events->values());
     }
 
     public function lookups(): JsonResponse

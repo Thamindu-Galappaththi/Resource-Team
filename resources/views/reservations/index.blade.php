@@ -3,8 +3,9 @@
 @section('title', 'Existing Reservations')
 
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+@include('reservations.partials.management-styles')
+<div class="reservation-page reservation-index-page">
+    <div class="reservation-page-header d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">Existing Reservations</h2>
             <p class="text-muted mb-0">Search, filter, and review reservation history.</p>

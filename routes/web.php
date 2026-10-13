@@ -51,6 +51,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', 'index')->middleware('permission:reservations.index')->name('index');
         Route::get('/create', 'create')->middleware('permission:reservations.create')->name('create');
         Route::get('/calendar', 'calendar')->middleware('permission:reservations.calendar')->name('calendar');
+        Route::get('/calendar/events', 'calendarEvents')->middleware('permission:reservations.calendar')->name('calendar.events');
         Route::get('/lookups', 'lookups')->middleware('permission:reservations.create')->name('lookups');
         Route::get('/availability', 'availability')->middleware('permission:reservations.create')->name('availability');
         Route::get('/{reservation}', 'show')->middleware('permission:reservations.index')->name('show');

@@ -3,8 +3,9 @@
 @section('title', 'Create Reservation')
 
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+@include('reservations.partials.management-styles')
+<div class="reservation-page reservation-create-page">
+    <div class="reservation-page-header d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="mb-1">Create Reservations</h2>
             <p class="text-muted mb-0">Select a resource, date, and time. The system blocks overlapping bookings automatically.</p>
