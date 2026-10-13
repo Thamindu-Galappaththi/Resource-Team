@@ -71,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>`,
                     confirmButtonText: 'Close',
+                    customClass: { ...window.RMSwal.base.customClass, popup: 'rm-swal rc-holiday-swal' },
                 });
                 return;
             }

@@ -3,7 +3,7 @@
 @section('title', 'Existing Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=10">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
 @endpush
 
 @section('content')
@@ -56,7 +56,7 @@
                 <div class="col-12 col-lg-4">
                     <label for="searchInput" class="form-label">Search</label>
                     <div class="input-group rm-search-group">
-                        <span class="input-group-text border-end-0"><i class="ti ti-search"></i></span>
+                        <span class="input-group-text"><i class="ti ti-search"></i></span>
                         <input type="text" class="form-control" id="searchInput"
                             placeholder="Search by name, ID, serial, type..." autocomplete="off">
                     </div>
