@@ -2,263 +2,174 @@
 
 @section('title', 'Existing Reservations')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
+<link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=16">
+@endpush
+
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+@php
+    $selectedLocation = $locations->firstWhere('id', (int) request('location_id'));
+    $selectedCategory = $categories->firstWhere('id', (int) request('resource_category_id'));
+    $selectedResource = $resources->firstWhere('id', (int) request('resource_id'));
+    $selectedStatus = collect($statuses)->first(fn ($status) => $status->value === request('status'));
+@endphp
+<div class="container-fluid mt-4 rsv-page">
+    <div class="rsv-header">
         <div>
-            <h2 class="mb-1">Existing Reservations</h2>
-            <p class="text-muted mb-0">Search, filter, and review reservation history.</p>
+            <h1 class="rsv-title">Existing Reservations</h1>
+            <p class="rsv-subtitle mb-0">Search, filter, and review reservation history.</p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{{ route('reservations.calendar') }}" class="btn btn-outline-secondary">Calendar</a>
+        <div class="rsv-header-actions">
+            <a href="{{ route('reservations.calendar') }}" class="btn rsv-header-btn rsv-calendar-btn"><i class="ti ti-calendar-month me-1"></i>Calendar</a>
             @can('create', \App\Models\Reservation::class)
-                <a href="{{ route('reservations.create') }}" class="btn btn-primary">Create Reservation</a>
+                <a href="{{ route('reservations.create') }}" class="btn rsv-header-btn rsv-create-btn"><i class="ti ti-plus me-1"></i>Create Reservation</a>
             @endcan
         </div>
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <div class="alert alert-success rsv-auto-alert" role="status">{{ session('success') }}</div>
     @endif
+    @if($errors->any())
+        <div class="alert alert-danger rsv-auto-alert" role="alert">{{ $errors->first() }}</div>
+    @endif
+    <div id="rsv-flash" class="alert rsv-auto-alert d-none" role="status"></div>
 
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100"><div class="card-body"><div class="text-muted small">Total</div><h3>{{ $summary['total'] }}</h3></div></div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100"><div class="card-body"><div class="text-muted small">Pending approval</div><h3>{{ $summary['pending'] }}</h3></div></div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100"><div class="card-body"><div class="text-muted small">Approved / confirmed</div><h3>{{ $summary['approved'] }}</h3></div></div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100"><div class="card-body"><div class="text-muted small">Rejected / cancelled</div><h3>{{ $summary['cancelled'] }}</h3></div></div>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0 mb-4">
-                <div class="card-body">
-            <form method="GET" action="{{ route('reservations.index') }}" class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label">Search</label>
-                    <input type="text" name="search" class="form-control" value="{{ request('search') }}" placeholder="ID, purpose, requester, resource">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">From</label>
-                    <input type="date" name="from_date" class="form-control" value="{{ request('from_date') }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">To</label>
-                    <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Location</label>
-                    <select name="location_id" class="form-select">
-                        <option value="">All</option>
-                        @foreach($locations as $location)
-                            <option value="{{ $location->id }}" @selected(request('location_id') == $location->id)>{{ $location->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Category</label>
-                    <select name="resource_category_id" class="form-select">
-                        <option value="">All</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}" @selected(request('resource_category_id') == $category->id)>{{ $category->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Resource</label>
-                    <select name="resource_id" class="form-select">
-                        <option value="">All</option>
-                        @foreach($resources as $resource)
-                            <option value="{{ $resource->id }}" @selected(request('resource_id') == $resource->id)>{{ $resource->name_model }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
-                        <option value="">All</option>
-                        @foreach($statuses as $status)
-                            <option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2 d-grid">
-                    <button class="btn btn-primary">Filter</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-            @if($reservations->isEmpty())
-                <div class="p-4">
-                    <div class="alert alert-info mb-0">No reservations found.</div>
-                </div>
-            @else
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Reservation ID</th>
-                                <th>Purpose</th>
-                                <th>Resource</th>
-                                <th>Requester</th>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Location</th>
-                                <th>Status</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($reservations as $reservation)
-                                <tr>
-                                    <td>{{ $reservation->reference }}</td>
-                                    <td>{{ $reservation->purpose }}</td>
-                                    <td>{{ $reservation->resourceNames() ?: '—' }}</td>
-                                    <td>{{ $reservation->requester?->name ?? 'Unknown' }}</td>
-                                    <td>{{ $reservation->reservation_date?->format('d M Y') }}</td>
-                                    <td>{{ substr((string) $reservation->start_time, 0, 5) }}–{{ substr((string) $reservation->end_time, 0, 5) }}</td>
-                                    <td>{{ $reservation->location?->name ?? '—' }}</td>
-                                    <td><span class="badge rounded-pill px-3 {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span></td>
-                                    <td class="text-nowrap">
-                                        @can('view', $reservation)
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#viewModal-{{ $reservation->id }}" aria-label="View reservation {{ $reservation->reference }}">View</button>
-                                        @endcan
-                                        @can('cancel', $reservation)
-                                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal-{{ $reservation->id }}">Cancel</button>
-                                        @endcan
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </div>
-    </div>
-
-    <div class="mt-3">{{ $reservations->links() }}</div>
-</div>
-
-@foreach($reservations as $reservation)
-    @can('view', $reservation)
-        <div class="modal fade" id="viewModal-{{ $reservation->id }}" tabindex="-1" aria-labelledby="viewModalTitle-{{ $reservation->id }}" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header bg-light">
-                        <div>
-                            <h2 class="modal-title fs-5 mb-1" id="viewModalTitle-{{ $reservation->id }}">{{ $reservation->reference }}</h2>
-                            <div class="small text-muted">{{ $reservation->title }}</div>
-                        </div>
-                        <div class="d-flex align-items-center gap-3">
-                            <span class="badge rounded-pill px-3 {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                    </div>
-                    <div class="modal-body p-4">
-                        <div class="row g-4">
-                            <div class="col-lg-7">
-                                <section aria-labelledby="reservationDetails-{{ $reservation->id }}">
-                                    <h3 class="fs-6 mb-3" id="reservationDetails-{{ $reservation->id }}">Reservation details</h3>
-                                    <div class="row g-3">
-                                        <div class="col-sm-6"><div class="small text-muted">Purpose</div><div class="fw-medium">{{ $reservation->purpose ?: '—' }}</div></div>
-                                        <div class="col-sm-6"><div class="small text-muted">Requester</div><div class="fw-medium">{{ $reservation->requester?->name ?? 'Unknown' }}</div></div>
-                                        <div class="col-sm-6"><div class="small text-muted">Created by</div><div class="fw-medium">{{ $reservation->createdBy?->name ?? 'Unknown' }}</div></div>
-                                        <div class="col-sm-6"><div class="small text-muted">Location</div><div class="fw-medium">{{ $reservation->location?->name ?? '—' }}</div></div>
-                                        <div class="col-sm-6"><div class="small text-muted">Date</div><div class="fw-medium">{{ $reservation->reservation_date?->format('d M Y') ?? '—' }}</div></div>
-                                        <div class="col-sm-6"><div class="small text-muted">Time</div><div class="fw-medium">{{ substr((string) $reservation->start_time, 0, 5) }}–{{ substr((string) $reservation->end_time, 0, 5) }} (Asia/Colombo)</div></div>
-                                        <div class="col-sm-6"><div class="small text-muted">Attendees</div><div class="fw-medium">{{ $reservation->attendee_count ?? '—' }}</div></div>
-                                        @if($reservation->cancellation_reason)
-                                            <div class="col-12"><div class="small text-muted">Cancellation reason</div><div class="fw-medium">{{ $reservation->cancellation_reason }}</div></div>
-                                        @endif
-                                    </div>
-                                </section>
-
-                                <section class="mt-4" aria-labelledby="bookedResources-{{ $reservation->id }}">
-                                    <h3 class="fs-6 mb-3" id="bookedResources-{{ $reservation->id }}">Booked resources</h3>
-                                    <div class="table-responsive border rounded">
-                                        <table class="table table-sm align-middle mb-0">
-                                            <thead class="table-light">
-                                                <tr><th scope="col">Resource</th><th scope="col">Category</th><th scope="col">Item status</th></tr>
-                                            </thead>
-                                            <tbody>
-                                                @forelse($reservation->items as $item)
-                                                    <tr>
-                                                        <td>{{ $item->resource_name_snapshot }}</td>
-                                                        <td>{{ $item->resource?->type?->category?->name ?? '—' }}</td>
-                                                        <td>{{ ucfirst($item->status) }}</td>
-                                                    </tr>
-                                                @empty
-                                                    <tr><td colspan="3" class="text-muted">No resources recorded.</td></tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </section>
-                            </div>
-
-                            <aside class="col-lg-5">
-                                <section aria-labelledby="reservationHistory-{{ $reservation->id }}">
-                                    <h3 class="fs-6 mb-3" id="reservationHistory-{{ $reservation->id }}">Status history</h3>
-                                    @forelse($reservation->statusHistory as $history)
-                                        <div class="border-start border-2 ps-3 pb-3 mb-3">
-                                            <div class="fw-medium">{{ $history->from_status ? $history->from_status.' → ' : '' }}{{ $history->to_status }}</div>
-                                            <div class="small text-muted">{{ $history->actor?->name ?? 'System' }} · {{ $history->created_at?->timezone(config('reservations.display_timezone'))->format('d M Y H:i') }}</div>
-                                            @if($history->reason)<div class="small mt-1">{{ $history->reason }}</div>@endif
-                                        </div>
-                                    @empty
-                                        <p class="small text-muted mb-0">No history recorded.</p>
-                                    @endforelse
-                                </section>
-
-                                @can('cancel', $reservation)
-                                    <section class="border-top mt-4 pt-4" aria-labelledby="cancelReservation-{{ $reservation->id }}">
-                                        <h3 class="fs-6 mb-3" id="cancelReservation-{{ $reservation->id }}">Cancel reservation</h3>
-                                        <form method="POST" action="{{ route('reservations.cancel', $reservation) }}">
-                                            @csrf
-                                            <label for="cancellationReason-{{ $reservation->id }}" class="visually-hidden">Cancellation reason</label>
-                                            <textarea id="cancellationReason-{{ $reservation->id }}" name="cancellation_reason" class="form-control mb-2" rows="3" required placeholder="Reason is required"></textarea>
-                                            <button type="submit" class="btn btn-danger w-100">Cancel reservation</button>
-                                        </form>
-                                    </section>
-                                @endcan
-                            </aside>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </div>
+        <div class="col-6 col-lg-3">
+            <div class="rsv-stat p-3 p-md-4" style="--stat-color:#1769c2;--stat-icon-bg:#e8f0fa">
+                <span class="rsv-stat-icon"><i class="ti ti-calendar-event"></i></span>
+                <div class="rsv-stat-label mt-3">Total</div>
+                <div class="rsv-stat-number" id="rsv-stat-total">{{ number_format($payload['summary']['total']) }}</div>
             </div>
         </div>
-    @endcan
-    @can('cancel', $reservation)
-        <div class="modal fade" id="cancelModal-{{ $reservation->id }}" tabindex="-1">
-            <div class="modal-dialog">
-                <form method="POST" action="{{ route('reservations.cancel', $reservation) }}" class="modal-content">
-                    @csrf
-                    <div class="modal-header">
-                        <h5 class="modal-title">Cancel {{ $reservation->reference }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <label class="form-label">Cancellation reason</label>
-                        <textarea name="cancellation_reason" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                        <button class="btn btn-danger">Cancel reservation</button>
-                    </div>
-                </form>
+        <div class="col-6 col-lg-3">
+            <div class="rsv-stat p-3 p-md-4" style="--stat-color:#d97706;--stat-icon-bg:#fff4e5">
+                <span class="rsv-stat-icon"><i class="ti ti-clock-hour-4"></i></span>
+                <div class="rsv-stat-label mt-3">Pending approval</div>
+                <div class="rsv-stat-number" id="rsv-stat-pending">{{ number_format($payload['summary']['pending']) }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="rsv-stat p-3 p-md-4" style="--stat-color:#16a77a;--stat-icon-bg:#e7f6f0">
+                <span class="rsv-stat-icon"><i class="ti ti-circle-check"></i></span>
+                <div class="rsv-stat-label mt-3">Approved / confirmed</div>
+                <div class="rsv-stat-number" id="rsv-stat-approved">{{ number_format($payload['summary']['approved']) }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="rsv-stat p-3 p-md-4" style="--stat-color:#dc3545;--stat-icon-bg:#fdecee">
+                <span class="rsv-stat-icon"><i class="ti ti-ban"></i></span>
+                <div class="rsv-stat-label mt-3">Rejected / cancelled</div>
+                <div class="rsv-stat-number" id="rsv-stat-cancelled">{{ number_format($payload['summary']['cancelled']) }}</div>
+            </div>
+        </div>
+    </div>
+
+    <form id="rsv-filters" class="rsv-filters">
+        <div class="rsv-filter rsv-f-search">
+            <label for="search">Search</label>
+            <div class="input-group rsv-search-group">
+                <span class="input-group-text"><i class="ti ti-search"></i></span>
+                <input type="text" name="search" id="search" class="form-control" value="{{ request('search') }}" placeholder="ID, purpose, requester, resource" autocomplete="off">
+            </div>
+        </div>
+        <div class="rsv-filter">
+            <label for="from_date">From</label>
+            <input type="date" name="from_date" id="from_date" class="form-control" value="{{ request('from_date') }}">
+        </div>
+        <div class="rsv-filter">
+            <label for="to_date">To</label>
+            <input type="date" name="to_date" id="to_date" class="form-control" value="{{ request('to_date') }}">
+        </div>
+        <div class="rsv-filter">
+            <label for="location_id">Location</label>
+            <x-rm-select id="location_id" name="location_id" placeholder="All locations" :value="(string) request('location_id', '')" :selected-label="$selectedLocation->name ?? 'All locations'"
+                :options="collect([['value' => '', 'label' => 'All locations']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
+        </div>
+        <div class="rsv-filter">
+            <label for="resource_category_id">Category</label>
+            <x-rm-select id="resource_category_id" name="resource_category_id" placeholder="All categories" :value="(string) request('resource_category_id', '')" :selected-label="$selectedCategory->name ?? 'All categories'"
+                :options="collect([['value' => '', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
+        </div>
+        <div class="rsv-filter">
+            <label for="resource_id">Resource</label>
+            <x-rm-select id="resource_id" name="resource_id" placeholder="All resources" :value="(string) request('resource_id', '')" :selected-label="$selectedResource->name_model ?? 'All resources'"
+                :options="collect([['value' => '', 'label' => 'All resources']])->concat($resources->map(fn ($resource) => ['value' => (string) $resource->id, 'label' => $resource->name_model.($resource->serial_number ? ' ('.$resource->serial_number.')' : '')]))->all()" />
+        </div>
+        <div class="rsv-filter">
+            <label for="status">Status</label>
+            <x-rm-select id="status" name="status" placeholder="All statuses" :value="(string) request('status', '')" :selected-label="$selectedStatus?->label() ?? 'All statuses'"
+                :options="collect([['value' => '', 'label' => 'All statuses']])->concat(collect($statuses)->map(fn ($status) => ['value' => $status->value, 'label' => $status->label()]))->all()" />
+        </div>
+        <div class="rsv-filter-actions">
+            <button class="rsv-filter-btn rsv-filter-clear" type="button" id="rsv-clear" @disabled(! $payload['meta']['has_filters'])>Clear</button>
+        </div>
+    </form>
+
+    <div class="card border-0 rsv-panel">
+        <div class="card-body position-relative">
+            <div id="rsv-loading" class="rsv-loading" hidden>Updating…</div>
+            <div id="rsv-results"></div>
+        </div>
     </div>
 </div>
-    @endcan
-@endforeach
+
+<div class="modal fade rsv-modal" id="rsv-view-modal" tabindex="-1" aria-labelledby="rsv-view-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="rsv-modal-icon" aria-hidden="true"><i class="ti ti-calendar-event"></i></span>
+                <div>
+                    <h2 class="modal-title fs-5" id="rsv-view-title"></h2>
+                    <p class="rsv-modal-sub mb-0" id="rsv-view-sub"></p>
+                </div>
+                <span class="badge" id="rsv-view-badge"></span>
+                <button type="button" class="rsv-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="modal-body" id="rsv-view-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" id="rsv-view-cancel" hidden>Cancel reservation</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade rsv-modal" id="rsv-cancel-modal" tabindex="-1" aria-labelledby="rsv-cancel-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="rsv-cancel-form" class="modal-content">
+            <div class="modal-header">
+                <span class="rsv-modal-icon" aria-hidden="true"><i class="ti ti-ban"></i></span>
+                <div>
+                    <h2 class="modal-title fs-5" id="rsv-cancel-title">Cancel reservation</h2>
+                    <p class="rsv-modal-sub mb-0">This will release the booked slot.</p>
+                </div>
+                <button type="button" class="rsv-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" for="rsv-cancel-reason">Cancellation reason</label>
+                <textarea id="rsv-cancel-reason" name="cancellation_reason" class="form-control" rows="3" required placeholder="Reason is required"></textarea>
+                <div class="invalid-feedback d-none" id="rsv-cancel-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep reservation</button>
+                <button type="submit" class="btn btn-danger" id="rsv-cancel-submit">Cancel reservation</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
+<script>
+window.RSVIndex = {
+    url: @json(route('reservations.index')),
+    payload: @json($payload),
+};
+</script>
+<script src="{{ asset('js/reservation-index.js') }}?v=5"></script>
+@endpush

@@ -183,6 +183,12 @@ class ReservationManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Pending hall booking')
             ->assertDontSee('Cancelled hall booking');
+
+        $this->actingAs($admin)
+            ->getJson(route('reservations.index', ['status' => ReservationStatus::PENDING_APPROVAL->value]))
+            ->assertOk()
+            ->assertJsonFragment(['purpose' => 'Pending hall booking'])
+            ->assertJsonMissing(['purpose' => 'Cancelled hall booking']);
     }
 
     public function test_calendar_and_create_pages_render(): void

@@ -23,49 +23,18 @@ class ReservationController extends Controller
 {
     public function __construct(private readonly ReservationBookingService $bookings) {}
 
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $this->authorize('viewAny', Reservation::class);
 
-        $query = Reservation::query()
-            ->with(['requester', 'createdBy', 'location', 'items.resource.type.category', 'statusHistory.actor'])
-            ->latest('reservation_date')
-            ->latest('start_time');
+        $payload = $this->indexPayload($request);
 
-        $this->restrictToOwnUnlessStaff($query);
-
-        $query
-            ->search($request->input('search'))
-            ->filter([
-                'status' => $request->input('status'),
-                'location_id' => $request->input('location_id'),
-                'from_date' => $request->input('from_date'),
-                'to_date' => $request->input('to_date'),
-                'resource_id' => $request->input('resource_id'),
-                'resource_category_id' => $request->input('resource_category_id'),
-            ]);
-
-        $reservations = $query->paginate(15)->appends($request->query());
-
-        $base = Reservation::query();
-        $this->restrictToOwnUnlessStaff($base);
-
-        $summary = [
-            'total' => (clone $base)->count(),
-            'pending' => (clone $base)->where('status', ReservationStatus::PENDING_APPROVAL->value)->count(),
-            'approved' => (clone $base)->whereIn('status', [
-                ReservationStatus::APPROVED->value,
-                ReservationStatus::CONFIRMED->value,
-            ])->count(),
-            'cancelled' => (clone $base)->whereIn('status', [
-                ReservationStatus::CANCELLED->value,
-                ReservationStatus::REJECTED->value,
-            ])->count(),
-        ];
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($payload);
+        }
 
         return view('reservations.index', [
-            'reservations' => $reservations,
-            'summary' => $summary,
+            'payload' => $payload,
             'locations' => Location::query()->ordered()->get(),
             'categories' => ResourceCategory::query()->orderBy('name')->get(),
             'resources' => Resource::query()->orderBy('name_model')->get(['id', 'name_model', 'serial_number']),
@@ -116,6 +85,10 @@ class ReservationController extends Controller
             $this->bookings->cancel($reservation, $request->user(), $request->validated('cancellation_reason'));
         } catch (ValidationException $exception) {
             return back()->withErrors($exception->errors());
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['message' => 'Reservation cancelled successfully.']);
         }
 
         return redirect()
@@ -293,6 +266,132 @@ class ReservationController extends Controller
                 ])->count(),
             ],
         ];
+    }
+
+    private function indexPayload(Request $request): array
+    {
+        $query = Reservation::query()
+            ->with(['requester', 'createdBy', 'location', 'items.resource.type.category', 'statusHistory.actor'])
+            ->latest('reservation_date')
+            ->latest('start_time');
+
+        $this->restrictToOwnUnlessStaff($query);
+
+        $query
+            ->search($request->input('search'))
+            ->filter([
+                'status' => $request->input('status'),
+                'location_id' => $request->input('location_id'),
+                'from_date' => $request->input('from_date'),
+                'to_date' => $request->input('to_date'),
+                'resource_id' => $request->input('resource_id'),
+                'resource_category_id' => $request->input('resource_category_id'),
+            ]);
+
+        $reservations = $query->paginate(10)->appends($request->query());
+        $user = $request->user();
+
+        $base = Reservation::query();
+        $this->restrictToOwnUnlessStaff($base);
+
+        $current = $reservations->currentPage();
+        $last = max(1, $reservations->lastPage());
+        $start = max(1, $current - 2);
+        $end = min($last, $start + 4);
+        $start = max(1, $end - 4);
+
+        $pages = [];
+        for ($page = $start; $page <= $end; $page++) {
+            $pages[] = [
+                'page' => $page,
+                'url' => $reservations->url($page),
+                'active' => $page === $current,
+            ];
+        }
+
+        return [
+            'summary' => [
+                'total' => (clone $base)->count(),
+                'pending' => (clone $base)->where('status', ReservationStatus::PENDING_APPROVAL->value)->count(),
+                'approved' => (clone $base)->whereIn('status', [
+                    ReservationStatus::APPROVED->value,
+                    ReservationStatus::CONFIRMED->value,
+                ])->count(),
+                'cancelled' => (clone $base)->whereIn('status', [
+                    ReservationStatus::CANCELLED->value,
+                    ReservationStatus::REJECTED->value,
+                ])->count(),
+            ],
+            'reservations' => $reservations->getCollection()
+                ->map(fn (Reservation $reservation) => $this->reservationListItem($reservation, $user))
+                ->values(),
+            'meta' => [
+                'from' => $reservations->firstItem(),
+                'to' => $reservations->lastItem(),
+                'total' => $reservations->total(),
+                'current_page' => $current,
+                'last_page' => $last,
+                'has_filters' => $this->indexHasFilters($request),
+            ],
+            'links' => [
+                'prev' => $reservations->previousPageUrl(),
+                'next' => $reservations->nextPageUrl(),
+                'pages' => $pages,
+            ],
+        ];
+    }
+
+    private function indexHasFilters(Request $request): bool
+    {
+        return collect(['search', 'from_date', 'to_date', 'location_id', 'resource_category_id', 'resource_id', 'status'])
+            ->contains(fn (string $key) => filled($request->input($key)));
+    }
+
+    private function reservationListItem(Reservation $reservation, $user): array
+    {
+        $timezone = config('reservations.display_timezone', 'Asia/Colombo');
+
+        return [
+            'id' => $reservation->id,
+            'reference' => $reservation->reference,
+            'purpose' => $reservation->purpose,
+            'title' => $reservation->title,
+            'resource_names' => $reservation->resourceNames() ?: '—',
+            'requester' => $reservation->requester?->name ?? 'Unknown',
+            'created_by' => $reservation->createdBy?->name ?? 'Unknown',
+            'location' => $reservation->location?->name ?? '—',
+            'date' => $reservation->reservation_date?->format('d M Y') ?? '—',
+            'time' => substr((string) $reservation->start_time, 0, 5).'–'.substr((string) $reservation->end_time, 0, 5),
+            'attendee_count' => $reservation->attendee_count,
+            'status' => $reservation->status,
+            'status_label' => $reservation->statusEnum()->label(),
+            'status_badge' => $reservation->statusEnum()->badgeClass(),
+            'cancellation_reason' => $reservation->cancellation_reason,
+            'can_view' => $user?->can('view', $reservation) ?? false,
+            'can_cancel' => $user?->can('cancel', $reservation) ?? false,
+            'cancel_url' => route('reservations.cancel', $reservation),
+            'items' => $reservation->items->map(fn ($item) => [
+                'name' => $item->resource_name_snapshot,
+                'category' => $item->resource?->type?->category?->name ?? '—',
+                'status' => ucfirst((string) $item->status),
+            ])->values(),
+            'history' => $reservation->statusHistory->map(fn ($history) => [
+                'from' => $this->statusLabel($history->from_status),
+                'to' => $this->statusLabel($history->to_status),
+                'actor' => $history->actor?->name ?? 'System',
+                'at' => $history->created_at?->timezone($timezone)->format('d M Y H:i'),
+                'reason' => $history->reason,
+            ])->values(),
+        ];
+    }
+
+    private function statusLabel(?string $value): string
+    {
+        if (! filled($value)) {
+            return '';
+        }
+
+        return ReservationStatus::tryFrom($value)?->label() ?? $value;
     }
 
     private function restrictToOwnUnlessStaff($query): void
