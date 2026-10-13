@@ -9,7 +9,7 @@ class ReservationPolicy
 {
     public function before(User $user, string $ability): bool|null
     {
-        if (in_array($ability, ['manageHostel', 'cancelHostel'], true)) {
+        if (in_array($ability, ['manageHostel', 'cancelHostel', 'cancel'], true)) {
             return null;
         }
 
@@ -94,7 +94,7 @@ class ReservationPolicy
             return false;
         }
 
-        if ($user->hasRole('developer', 'coordinator', 'resource_owner')) {
+        if ($user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'resource_owner')) {
             return true;
         }
 

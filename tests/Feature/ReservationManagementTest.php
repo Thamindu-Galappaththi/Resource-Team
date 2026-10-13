@@ -160,6 +160,55 @@ class ReservationManagementTest extends TestCase
         ]);
     }
 
+    public function test_cancelled_and_rejected_reservations_hide_cancel_for_admin(): void
+    {
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+
+        $cancelled = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::CANCELLED->value,
+            'purpose' => 'Cancelled hall booking',
+        ]);
+        $rejected = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::REJECTED->value,
+            'purpose' => 'Rejected hall booking',
+        ]);
+        $pending = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'purpose' => 'Pending hall booking',
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson(route('reservations.index'))
+            ->assertOk()
+            ->assertJsonFragment(['id' => $cancelled->id, 'can_cancel' => false])
+            ->assertJsonFragment(['id' => $rejected->id, 'can_cancel' => false])
+            ->assertJsonFragment(['id' => $pending->id, 'can_cancel' => true]);
+
+        $this->get(route('reservations.show', $cancelled))
+            ->assertOk()
+            ->assertDontSee('Cancel reservation', false);
+        $this->get(route('reservations.show', $rejected))
+            ->assertOk()
+            ->assertDontSee('Cancel reservation', false);
+        $this->get(route('reservations.show', $pending))
+            ->assertOk()
+            ->assertSee('Cancel reservation', false);
+
+        $this->post(route('reservations.cancel', $cancelled), [
+            'cancellation_reason' => 'again',
+        ])->assertForbidden();
+        $this->post(route('reservations.cancel', $rejected), [
+            'cancellation_reason' => 'again',
+        ])->assertForbidden();
+    }
+
     public function test_existing_reservations_filter_by_status(): void
     {
         $admin = User::factory()->role('admin')->create();
