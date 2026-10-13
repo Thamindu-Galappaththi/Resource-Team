@@ -3,7 +3,7 @@
 @section('title', 'Create Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=6">
 @endpush
 
 @section('content')
@@ -127,13 +127,13 @@
                             @csrf
                             <div class="mb-3">
                                 <label class="form-label">Main resource</label>
-                                <x-rm-select id="primaryResourceSelect" name="resource_id" class="resource-select" required
+                                <x-rm-select id="primaryResourceSelect" name="resource_id" class="resource-select dropup" required
                                     placeholder="Select a resource"
                                     :options="[['value' => '', 'label' => 'Select a resource']]" />
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Related resource</label>
-                                <x-rm-select id="linkedResourceSelect" name="linked_resource_id" class="resource-select" required
+                                <x-rm-select id="linkedResourceSelect" name="linked_resource_id" class="resource-select dropup" required
                                     placeholder="Select a resource to link"
                                     :options="[['value' => '', 'label' => 'Select a resource to link']]" />
                             </div>
