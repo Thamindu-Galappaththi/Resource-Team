@@ -8,7 +8,7 @@
     .resource-create-page { --rc-ink:#152238; --rc-muted:#65738a; --rc-line:#dfe5ee; --rc-blue:#315fe8; color:var(--rc-ink); }
     .resource-create-page .page-heading { font-weight:700; letter-spacing:-.035em; color:var(--rc-ink); }
     .resource-create-page .page-subtitle, .resource-create-page .step-hint { color:var(--rc-muted); }
-    .resource-create-page .workflow-card { border:1px solid #dce3ed; border-radius:18px; background:#fff; box-shadow:0 16px 42px rgba(19,35,58,.12); overflow:hidden; }
+    .resource-create-page .workflow-card { border:1px solid #dce3ed; border-radius:16px; background:#fff; box-shadow:0 10px 30px rgba(19,35,58,.09); overflow:hidden; }
     .resource-create-page .workflow-card > .card-body { background:linear-gradient(180deg,#fff 0%,#fbfcfe 100%); }
     .resource-create-page .workflow-tabs { display:flex; flex-wrap:nowrap; gap:.45rem; padding:.6rem 1rem; border:1px solid #d8e0eb; border-radius:17px; background:#edf1f7; overflow-x:auto; }
     .resource-create-page .workflow-tabs .nav-link { display:flex; align-items:center; gap:.65rem; border:1px solid transparent; border-radius:13px; padding:1rem 1.15rem; color:#4e5c71; white-space:nowrap; transition:background .18s ease,color .18s ease,box-shadow .18s ease; }
@@ -33,13 +33,12 @@
 <div class="container-fluid mt-4 resource-create-page">
     <div class="row">
         <div class="col-12">
+            <div class="resource-page-banner">
+                <h1 class="page-heading">Create resources</h1>
+                <p class="page-subtitle">Set up a category, define its types, then add and link your resources.</p>
+            </div>
             <div class="card workflow-card">
                 <div class="card-body">
-                    <div class="mb-4">
-                        <h1 class="h3 page-heading mb-1">Create resources</h1>
-                        <p class="page-subtitle mb-0">Set up a category, define its types, then add and link your resources.</p>
-                    </div>
-
                     {{-- ===================== NAV TABS ===================== --}}
                     <ul class="nav nav-tabs workflow-tabs" id="resourceTabs" role="tablist" aria-label="Resource creation steps">
                         <li class="nav-item" role="presentation">

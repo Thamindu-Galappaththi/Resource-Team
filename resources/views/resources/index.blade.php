@@ -7,20 +7,9 @@
 <div class="container-fluid mt-4 resource-index-page">
     <style>
         .resource-index-page { --ri-ink:#152238; --ri-muted:#65738a; --ri-line:#dfe5ee; color:var(--ri-ink); }
-        .resource-index-page .page-intro { margin-bottom:1.5rem; }
-        .resource-index-page .page-heading { color:#fff!important; font-size:1.85rem; font-weight:600; letter-spacing:-.035em; text-shadow:0 2px 8px rgba(15,23,42,.36); }
-        .resource-index-page .page-intro .text-muted { color:rgba(255,255,255,.78)!important; font-size:1rem; text-shadow:0 1px 5px rgba(15,23,42,.32); }
-        .resource-index-page .card { border:1px solid var(--ri-line)!important; border-radius:15px; background:#fff; box-shadow:0 9px 26px rgba(19,35,58,.075)!important; }
-        .resource-index-page .summary-card { position:relative; isolation:isolate; overflow:hidden; border-top:4px solid var(--stat-accent)!important; animation:ri-stat-in .58s cubic-bezier(.2,.75,.25,1) both; animation-delay:var(--stat-delay,0s); transition:transform .24s ease,box-shadow .24s ease; }
-        .resource-index-page .summary-card::after { position:absolute; z-index:-1; right:-30px; bottom:-54px; width:150px; height:150px; border-radius:50%; background:var(--stat-tint); content:""; transition:transform .32s ease,opacity .32s ease; }
-        .resource-index-page .summary-card:hover { transform:translateY(-5px); box-shadow:0 16px 32px rgba(19,35,58,.15)!important; }
-        .resource-index-page .summary-card:hover::after { transform:scale(1.2); opacity:.9; }
-        .resource-index-page .row > div:nth-child(1) .summary-card { --stat-accent:#5c6ff2; --stat-tint:rgba(92,111,242,.11); --stat-delay:0s; }
-        .resource-index-page .row > div:nth-child(2) .summary-card { --stat-accent:#16a77a; --stat-tint:rgba(22,167,122,.11); --stat-delay:.08s; }
-        .resource-index-page .row > div:nth-child(3) .summary-card { --stat-accent:#e49a20; --stat-tint:rgba(228,154,32,.13); --stat-delay:.16s; }
-        .resource-index-page .row > div:nth-child(4) .summary-card { --stat-accent:#ed6c62; --stat-tint:rgba(237,108,98,.12); --stat-delay:.24s; }
-        .resource-index-page .summary-card .stat-label { color:#61718a; font-weight:500; }
-        .resource-index-page .summary-card .stat-value { color:var(--stat-accent); font-variant-numeric:tabular-nums; }
+        .resource-index-page .page-intro { margin-bottom:1.25rem; }
+        .resource-index-page .card { border:1px solid var(--ri-line)!important; border-radius:16px; background:#fff; box-shadow:0 10px 30px rgba(19,35,58,.09)!important; }
+        .resource-index-page .card.resource-stat-card { border:1px solid #e5ebf3!important; background:#fff!important; box-shadow:0 10px 24px rgba(9,30,66,.1)!important; }
         .resource-index-page .filter-card, .resource-index-page .table-card { animation:ri-rise .55s .12s both; }
         .resource-index-page .card-body { padding:1.25rem; }
         .resource-index-page .text-muted { color:var(--ri-muted)!important; }
@@ -39,6 +28,8 @@
         .resource-index-page .search-wrap .form-control { padding-left:2.6rem; }
         .resource-index-page .search-icon { position:absolute; z-index:2; top:50%; left:.9rem; color:#8290a4; transform:translateY(-50%); pointer-events:none; }
         .resource-index-page .results-summary { color:#65738a; }
+        .resource-index-page .status-badge { display:inline-flex; align-items:center; justify-content:center; min-width:104px; min-height:38px; padding:.5rem 1rem!important; font-size:.92rem; font-weight:600; letter-spacing:.01em; }
+        .resource-index-page .status-badge.status-inactive { color:#2165b0!important; background:#e4f1ff!important; border:1px solid #cfe4fb; }
         @keyframes ri-rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         @keyframes ri-row-in { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
         @keyframes ri-stat-in { from { opacity:0; transform:translateY(14px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -57,40 +48,36 @@
         }
     </style>
 
-    <div class="page-intro"><h1 class="h3 page-heading mb-1">Existing resources</h1><p class="text-muted mb-0">Search, filter, and manage your resource inventory.</p></div>
+    <div class="resource-page-banner page-intro"><h1 class="page-heading">Existing resources</h1><p>Search, filter, and manage your resource inventory.</p></div>
 
     {{-- ===================== SUMMARY STAT CARDS ===================== --}}
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 resource-stat-grid">
         <div class="col-md-3">
-            <div class="card summary-card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="stat-label small">Total Resources</div>
-                    <div class="stat-value fs-3 fw-bold" id="statTotal">0</div>
-                </div>
+            <div class="card summary-card resource-stat-card stat-total h-100">
+                <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-box" aria-hidden="true"></i></span><div class="resource-stat-label">Total Resources</div></div>
+                <div class="resource-stat-value" id="statTotal">0</div>
+                <p class="resource-stat-description">Items in your inventory</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card summary-card border-0 shadow-sm h-100 border-start border-success border-4">
-                <div class="card-body">
-                    <div class="stat-label small">Active</div>
-                    <div class="stat-value fs-3 fw-bold" id="statActive">0</div>
-                </div>
+            <div class="card summary-card resource-stat-card stat-active h-100">
+                <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-circle-check" aria-hidden="true"></i></span><div class="resource-stat-label">Active</div></div>
+                <div class="resource-stat-value" id="statActive">0</div>
+                <p class="resource-stat-description">Ready to use</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card summary-card border-0 shadow-sm h-100 border-start border-warning border-4">
-                <div class="card-body">
-                    <div class="stat-label small">Under Maintenance</div>
-                    <div class="stat-value fs-3 fw-bold" id="statMaintenance">0</div>
-                </div>
+            <div class="card summary-card resource-stat-card stat-maintenance h-100">
+                <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-tool" aria-hidden="true"></i></span><div class="resource-stat-label">Under Maintenance</div></div>
+                <div class="resource-stat-value" id="statMaintenance">0</div>
+                <p class="resource-stat-description">Currently being serviced</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card summary-card border-0 shadow-sm h-100 border-start border-danger border-4">
-                <div class="card-body">
-                    <div class="stat-label small">Pending Deletion</div>
-                    <div class="stat-value fs-3 fw-bold" id="statPending">0</div>
-                </div>
+            <div class="card summary-card resource-stat-card stat-pending h-100">
+                <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-trash" aria-hidden="true"></i></span><div class="resource-stat-label">Pending Deletion</div></div>
+                <div class="resource-stat-value" id="statPending">0</div>
+                <p class="resource-stat-description">Awaiting review</p>
             </div>
         </div>
     </div>
@@ -280,7 +267,8 @@ function statusBadge(status) {
     };
     const cls = map[status] || 'bg-light text-dark';
     const label = labels[status] || status;
-    return `<span class="badge rounded-pill ${cls} px-3 py-2">${label}</span>`;
+    const inactiveStyle = status === 'inactive' ? 'status-inactive' : '';
+    return `<span class="badge rounded-pill status-badge ${inactiveStyle} ${cls} px-3 py-2">${label}</span>`;
 }
 
 function renderTable(resources) {

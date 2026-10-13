@@ -10,7 +10,7 @@
 <div class="rc-page">
 
     {{-- Header --}}
-    <div class="rc-header">
+    <div class="rc-header resource-page-banner">
         <div class="rc-header-left">
             <h1 class="rc-title">Resource Calendar</h1>
             <p class="rc-subtitle">
@@ -20,22 +20,26 @@
     </div>
 
     {{-- Summary Cards --}}
-    <div class="rc-cards">
-        <div class="rc-card">
-            <div class="rc-card-label">My Resources</div>
-            <div class="rc-card-value">{{ $stats['myResources'] }}</div>
+    <div class="rc-cards resource-stat-grid">
+        <div class="rc-card resource-stat-card stat-total">
+            <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-box" aria-hidden="true"></i></span><div class="resource-stat-label">My Resources</div></div>
+            <div class="resource-stat-value">{{ $stats['myResources'] }}</div>
+            <p class="resource-stat-description">Resources available to you</p>
         </div>
-        <div class="rc-card">
-            <div class="rc-card-label">Today's Bookings</div>
-            <div class="rc-card-value">{{ $stats['todayBookings'] }}</div>
+        <div class="rc-card resource-stat-card stat-active">
+            <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-calendar-event" aria-hidden="true"></i></span><div class="resource-stat-label">Today's Bookings</div></div>
+            <div class="resource-stat-value">{{ $stats['todayBookings'] }}</div>
+            <p class="resource-stat-description">Scheduled for today</p>
         </div>
-        <div class="rc-card">
-            <div class="rc-card-label">Pending Approvals</div>
-            <div class="rc-card-value">{{ $stats['pendingApprovals'] }}</div>
+        <div class="rc-card resource-stat-card stat-maintenance">
+            <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-clock" aria-hidden="true"></i></span><div class="resource-stat-label">Pending Approvals</div></div>
+            <div class="resource-stat-value">{{ $stats['pendingApprovals'] }}</div>
+            <p class="resource-stat-description">Waiting for a decision</p>
         </div>
-        <div class="rc-card">
-            <div class="rc-card-label">This Month</div>
-            <div class="rc-card-value">{{ $stats['thisMonth'] }}</div>
+        <div class="rc-card resource-stat-card stat-pending">
+            <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-calendar-stats" aria-hidden="true"></i></span><div class="resource-stat-label">This Month</div></div>
+            <div class="resource-stat-value">{{ $stats['thisMonth'] }}</div>
+            <p class="resource-stat-description">Bookings this month</p>
         </div>
     </div>
 
@@ -683,13 +687,25 @@
 .rc-page { color:#152238; }
 .rc-title { color:#152238; }
 .rc-subtitle, .rc-scheduler-heading p, .rc-scheduler-note { color:#65738a; }
-.rc-card, .rc-filters, .rc-calendar-card, .rc-table-card { border:1px solid #dfe5ee; border-radius:15px; box-shadow:0 9px 26px rgba(19,35,58,.075); }
+.rc-card, .rc-filters, .rc-calendar-card, .rc-table-card { border:1px solid #dfe5ee; border-radius:16px; box-shadow:0 10px 30px rgba(19,35,58,.09); }
 .rc-card:nth-child(n) { background:#fff; border-top:3px solid #dfe5ee; }
 .rc-card:nth-child(2) { border-top-color:#91c6a5; }
 .rc-card:nth-child(3) { border-top-color:#e4bb70; }
 .rc-card:nth-child(4) { border-top-color:#b5a4e8; }
-.rc-card-label { color:#65738a; }
-.rc-card-value { color:#152238; }
+.rc-card { position:relative; isolation:isolate; display:flex; flex-direction:column; justify-content:space-between; align-items:stretch; min-height:146px; overflow:hidden; padding:1.25rem 1.5rem; border-top:5px solid var(--calendar-accent); background:#fff; }
+.rc-card::after { position:absolute; z-index:0; right:-10px; bottom:-100px; width:200px; height:200px; border-radius:50%; background:var(--calendar-tint); content:""; pointer-events:none; transition:transform .32s ease,opacity .32s ease; }
+.rc-card:nth-child(1) { --calendar-accent:#5c6ff2; --calendar-tint:rgba(92,111,242,.11); }
+.rc-card:nth-child(2) { --calendar-accent:#16a77a; --calendar-tint:rgba(22,167,122,.11); }
+.rc-card:nth-child(3) { --calendar-accent:#e49a20; --calendar-tint:rgba(228,154,32,.14); }
+.rc-card:nth-child(4) { --calendar-accent:#ed6c62; --calendar-tint:rgba(237,108,98,.12); }
+.rc-card:nth-child(n) { border-top:5px solid var(--calendar-accent); }
+.rc-card-label { position:relative; z-index:1; color:#61718a; font-size:1.05rem; font-weight:500; letter-spacing:0; text-transform:none; }
+.rc-card-value { position:relative; z-index:1; align-self:center; margin:auto 0; color:var(--calendar-accent); font-size:2.5rem; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
+.rc-card:hover { transform:translateY(-5px); box-shadow:0 16px 34px rgba(19,35,58,.15); }
+.rc-card:hover::after { transform:scale(1.08); opacity:.9; }
+.rc-card.resource-stat-card { min-height:176px; padding:1.25rem 1.4rem; border:1px solid #e5ebf3; background:#fff!important; box-shadow:0 10px 24px rgba(9,30,66,.1); }
+.rc-card.resource-stat-card:nth-child(n) { border:1px solid #e5ebf3; }
+.rc-card.resource-stat-card::after { display:none; }
 .rc-filters { background:#fff; }
 .rc-filter label { color:#34445b; }
 .rc-filter select, .rc-scheduler-date input { border-color:#cfd8e5; color:#18263a; }
