@@ -7,7 +7,13 @@ use App\Models\Resource;
 use App\Models\ResourceCategory;
 use App\Models\ResourceType;
 use App\Models\User;
+use App\Models\Reservation;
+use Database\Seeders\HostelRoomSeeder;
+use Database\Seeders\LocationSeeder;
+use Database\Seeders\ReservationSeeder;
+use Database\Seeders\ResourceSeeder;
 use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -35,9 +41,13 @@ class ResourceManagementTest extends TestCase
         $this->actingAs($user)->get('/resources')
             ->assertOk()
             ->assertSee('editResourceModal')
+            ->assertSee('data-cu-select', false)
+            ->assertSee('rm-search-group', false)
+            ->assertSee('id="rmPagination"', false)
             ->assertSee('editResourceForm')
             ->assertSee('data-bs-dismiss="modal"', false)
-            ->assertSee('Edit Resource');
+            ->assertSee('Edit Resource')
+            ->assertSee('lookups', false);
     }
 
     public function test_resource_serial_number_is_optional_trimmed_and_shown_in_details(): void
@@ -125,6 +135,78 @@ class ResourceManagementTest extends TestCase
         $this->assertDatabaseHas('resources', ['id' => $resource->id, 'name_model' => 'Projector 02', 'serial_number' => null]);
     }
 
+    public function test_view_only_users_see_the_inventory_without_edit_controls(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('management')->create();
+
+        $this->actingAs($user)->get('/resources')
+            ->assertOk()
+            ->assertSee('Existing resources')
+            ->assertDontSee('editResourceModal')
+            ->assertDontSee('Create resource');
+    }
+
+    public function test_view_only_users_cannot_delete_a_resource(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('management')->create();
+        [, $type, $location] = $this->resourceLookups();
+        $resource = Resource::query()->create([
+            'resource_type_id' => $type->id,
+            'location_id' => $location->id,
+            'name_model' => 'Protected Projector',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)->deleteJson("/resources/{$resource->id}")->assertForbidden();
+        $this->assertDatabaseHas('resources', ['id' => $resource->id, 'is_deleted' => false]);
+    }
+
+    public function test_create_resource_page_uses_stepped_workflow_without_unsaved_owner_field(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+
+        $this->actingAs($user)->get('/resources/create')
+            ->assertOk()
+            ->assertSee('Create a resource category')
+            ->assertSee('Link resources')
+            ->assertSee('data-cu-select', false)
+            ->assertDontSee('Resource Owner')
+            ->assertDontSee('e.g., Nadun');
+    }
+
+    public function test_resource_calendar_page_renders_filters_and_calendar_root(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+
+        $this->actingAs($user)->get(route('resources.calendar'))
+            ->assertOk()
+            ->assertSee('Resource calendar')
+            ->assertSee('id="resourceCalendar"', false)
+            ->assertSee('Active resources')
+            ->assertDontSee('My Resources');
+    }
+
+    public function test_empty_category_features_are_not_stored(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+
+        $this->actingAs($user)->postJson('/resource-categories', [
+            'category_name' => 'IT Equipment',
+            'features' => [
+                ['name' => '  ', 'enabled' => true, 'options' => 'Dell'],
+                ['name' => 'Brand', 'enabled' => true, 'options' => 'Dell, Lenovo'],
+            ],
+        ])->assertCreated();
+
+        $category = ResourceCategory::query()->where('name', 'IT Equipment')->firstOrFail();
+        $this->assertSame(['Brand'], $category->features()->pluck('name')->all());
+    }
+
     public function test_resource_delete_sets_soft_delete_fields_and_hides_it_from_list_and_details(): void
     {
         $this->seed(RolePermissionSeeder::class);
@@ -148,6 +230,27 @@ class ResourceManagementTest extends TestCase
         $this->assertNotNull(Resource::withoutGlobalScope('not_deleted')->findOrFail($resource->id)->deleted_at);
         $this->actingAs($user)->getJson('/resource-list')->assertOk()->assertJsonMissing(['id' => $resource->id]);
         $this->actingAs($user)->getJson("/resources/{$resource->id}")->assertNotFound();
+    }
+
+    public function test_resource_seeder_creates_enough_rows_for_pagination(): void
+    {
+        $this->seed([LocationSeeder::class, HostelRoomSeeder::class, ResourceSeeder::class]);
+
+        $this->assertGreaterThanOrEqual(11, Resource::query()->count());
+    }
+
+    public function test_reservation_seeder_creates_calendar_bookings(): void
+    {
+        $this->seed([
+            LocationSeeder::class,
+            RolePermissionSeeder::class,
+            UserSeeder::class,
+            HostelRoomSeeder::class,
+            ResourceSeeder::class,
+            ReservationSeeder::class,
+        ]);
+
+        $this->assertGreaterThan(0, Reservation::query()->count());
     }
 
     private function resourceLookups(): array

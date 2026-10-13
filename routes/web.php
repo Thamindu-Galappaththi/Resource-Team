@@ -57,7 +57,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('resources')->name('resources.')->group(function () {
-        Route::get('/', fn () => view('resources.index'))->middleware('permission:resources.index')->name('index');
+        Route::get('/', [ResourceController::class, 'inventoryPage'])->middleware('permission:resources.index')->name('index');
         Route::get('/create', fn () => view('resources.create'))->middleware('permission:resources.create')->name('create');
     });
 
@@ -135,11 +135,11 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('resources')->name('resources.')->controller(ResourceController::class)->group(function () {
         Route::get('/{resource}', 'show')->middleware('permission:resources.index,resources.create')->name('show');
         Route::put('/{resource}', 'update')->middleware('permission:resources.create')->name('update');
-        Route::delete('/{resource}', 'destroy')->middleware('permission:resources.index')->name('destroy');
+        Route::delete('/{resource}', 'destroy')->middleware('permission:resources.create')->name('destroy');
         Route::post('/', 'store')->middleware('permission:resources.create')->name('store');
-        Route::post('/{resource}/request-delete', 'requestDelete')->middleware('permission:resources.index')->name('request-delete');
-        Route::post('/{resource}/approve-delete', 'approveDelete')->middleware('permission:resources.index')->name('approve-delete');
-        Route::post('/{resource}/reject-delete', 'rejectDelete')->middleware('permission:resources.index')->name('reject-delete');
+        Route::post('/{resource}/request-delete', 'requestDelete')->middleware('permission:resources.create')->name('request-delete');
+        Route::post('/{resource}/approve-delete', 'approveDelete')->middleware('permission:resources.create')->name('approve-delete');
+        Route::post('/{resource}/reject-delete', 'rejectDelete')->middleware('permission:resources.create')->name('reject-delete');
     });
 
     Route::prefix('locations')->name('locations.')->middleware('permission:resources.create')->controller(LocationController::class)->group(function () {

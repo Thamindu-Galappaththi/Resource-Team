@@ -66,7 +66,7 @@ class ResourceCalendarController extends Controller
                 ->filter()->unique('id')->sortBy('name')->values(),
             'locations' => Location::query()->ordered()->get(['id', 'name']),
             'stats' => [
-                'myResources' => Resource::query()->where('status', 'active')->count(),
+                'myResources' => $resourceRecords->where('status', 'active')->count(),
                 'todayBookings' => $reservations->filter(fn ($reservation) => $reservation->reservation_date?->toDateString() === $today)->count(),
                 'pendingApprovals' => $reservations->where('status', ReservationStatus::PENDING_APPROVAL->value)->count(),
                 'thisMonth' => $reservations->filter(fn ($reservation) => $reservation->reservation_date?->isSameMonth(now(config('reservations.display_timezone', 'Asia/Colombo'))))->count(),

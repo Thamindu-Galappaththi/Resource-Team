@@ -54,11 +54,13 @@ class ResourceCategoryController extends Controller
             // "features" is optional, so default to an empty array if
             // the user didn't add any rows before submitting.
             foreach ($validated['features'] ?? [] as $feature) {
+                $name = trim((string) ($feature['name'] ?? ''));
+                if ($name === '') {
+                    continue;
+                }
+
                 $category->features()->create([
-                    'name' => $feature['name'],
-                    // Cast explicitly to bool: an unchecked checkbox
-                    // means this key may be completely absent from the
-                    // payload, so default it to false rather than null.
+                    'name' => $name,
                     'enabled' => (bool) ($feature['enabled'] ?? false),
                     'options' => $feature['options'] ?? null,
                 ]);

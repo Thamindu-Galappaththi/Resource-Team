@@ -3,12 +3,34 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreResourceRequest;
+use App\Models\Location;
 use App\Models\Resource;
+use App\Models\ResourceCategory;
+use App\Models\ResourceType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class ResourceController extends Controller
 {
+    /** GET /resources: inventory page with dropdown lookups for the edit modal. */
+    public function inventoryPage(): View
+    {
+        $canManage = auth()->user()?->hasPermission('resources.create') ?? false;
+
+        return view('resources.index', [
+            'lookups' => $canManage ? [
+                'categories' => ResourceCategory::query()->orderBy('name')->get(['id', 'name']),
+                'types' => ResourceType::query()->orderBy('name')->get(['id', 'name', 'resource_category_id']),
+                'locations' => Location::query()->ordered()->get(['id', 'name']),
+            ] : [
+                'categories' => [],
+                'types' => [],
+                'locations' => [],
+            ],
+        ]);
+    }
+
     /**
      * GET /resource-list
      *

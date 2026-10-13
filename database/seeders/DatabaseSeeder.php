@@ -13,6 +13,8 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             UserSeeder::class,
             HostelRoomSeeder::class,
+            ResourceSeeder::class,
+            ReservationSeeder::class,
             LectureFeeSeeder::class,
         ]);
     }
