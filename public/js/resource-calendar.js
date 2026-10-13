@@ -41,8 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
             info.el.style.borderColor = colors.border;
             info.el.style.borderLeft = `3px solid ${colors.border}`;
             info.el.style.color = colors.text;
-            info.el.querySelectorAll('.fc-event-main, .fc-event-main-frame, .fc-event-time, .fc-event-title, .fc-sticky').forEach((node) => {
+            info.el.querySelectorAll('.fc-event-main, .fc-event-main-frame, .fc-event-time, .fc-event-title, .fc-sticky, td').forEach((node) => {
                 node.style.color = colors.text;
+                if (node.tagName === 'TD') node.style.backgroundColor = colors.background;
             });
             info.el.title = `${info.event.title} · ${details.status || ''}`.trim();
         },

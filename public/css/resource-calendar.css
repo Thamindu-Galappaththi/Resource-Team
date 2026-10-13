@@ -244,7 +244,23 @@
 .fc .fc-event {
     box-shadow: 0 3px 8px rgba(15, 23, 42, .08);
 }
-.fc .fc-event:hover { filter: brightness(.97); transform: translateY(-1px); }
+.fc .fc-daygrid-event:hover,
+.fc .fc-timegrid-event:hover {
+    filter: brightness(.97);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, .12);
+}
+.fc .fc-list-event,
+.fc .fc-list-event td {
+    background-color: inherit;
+}
+.fc-theme-standard .fc-list-event:hover td {
+    background-color: inherit !important;
+}
+.fc .fc-list-event:hover {
+    filter: brightness(.96);
+    box-shadow: none;
+    transform: none;
+}
 .fc .fc-event .fc-event-main,
 .fc .fc-event .fc-event-main-frame,
 .fc .fc-event .fc-event-time,
