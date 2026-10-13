@@ -3,21 +3,21 @@
 @section('title', 'Create User')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=13">
+<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=14">
 @endpush
 
 @section('content')
 <div class="container-fluid py-4 cu-page">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
-        <div>
-            <h1 class="cu-title text-white mb-2">Create User</h1>
-            <p class="text-white-50 mb-0">Provision an account, assign roles, and review the access that comes with
-                them.</p>
+    <header class="cu-hero">
+        <div class="cu-hero-copy">
+            <p class="cu-kicker"><i class="bi bi-people me-1" aria-hidden="true"></i> User management</p>
+            <h1 class="cu-title">Create User</h1>
+            <p class="cu-lead">Provision an account, assign roles, and review the access that comes with them.</p>
         </div>
         @if(auth()->user()->hasPermission('user.management'))
-        <a href="{{ route('user.management') }}" class="btn btn-outline-light">Back to user list</a>
+        <a href="{{ route('user.management') }}" class="rs-dash-action"><i class="bi bi-arrow-left" aria-hidden="true"></i><span>Back to user list</span></a>
         @endif
-    </div>
+    </header>
 
     @if(session('status'))
     <div class="alert alert-success cu-auto-alert">{{ session('status') }}</div>
@@ -32,7 +32,10 @@
     <form method="POST" action="{{ route('create.user.store') }}" id="create-user-form" class="cu-card p-3 p-md-4">
         @csrf
         <section class="mb-4">
-            <h2 class="h5 mb-3">Employee details</h2>
+            <div class="cu-section-heading">
+                <span class="cu-section-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+                <div><h2>Employee details</h2><p>Enter the employee record and contact information.</p></div>
+            </div>
             <div class="row g-3">
                 <div class="col-12 col-md-6">
                     <label class="form-label">SLT employee <span class="text-danger">*</span></label>
@@ -146,6 +149,10 @@
         </section>
 
         <section class="mb-4">
+            <div class="cu-section-heading">
+                <span class="cu-section-icon cu-section-icon--access"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+                <div><h2>Roles &amp; access</h2><p>Choose role-based access and add any individual permissions.</p></div>
+            </div>
             <div class="row g-3 cu-align-fields">
                 <div class="col-12 col-lg-6">
                     <label class="form-label" for="rolesDropdown">Roles <span class="text-danger">*</span></label>
@@ -204,7 +211,7 @@
         <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 cu-actions">
             <a href="{{ auth()->user()->hasPermission('user.management') ? route('user.management') : route('dashboard') }}"
                 class="btn btn-outline-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary">Create user</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-person-plus me-1" aria-hidden="true"></i> Create user</button>
         </div>
     </form>
 </div>

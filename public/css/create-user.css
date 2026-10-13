@@ -1,18 +1,111 @@
 .cu-page {
-    --cu-blue: #1769c2;
+    --cu-blue: #0b3d91;
     --cu-border: #dfe5ea;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-top: 1.25rem;
+    color: #132033;
+}
+
+.cu-page .cu-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    margin-bottom: 1rem;
+    padding: 1.35rem 1.4rem 1.3rem;
+    border-top: 4px solid #00aeef;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 16px 40px rgba(8, 16, 40, .12);
+}
+
+.cu-page .cu-kicker {
+    margin: 0 0 .35rem;
+    color: #5b6b82;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
 }
 
 .cu-page .cu-title {
-    font-size: clamp(1.5rem, 2.4vw, 2rem);
-    font-weight: 700;
+    margin: 0;
+    color: #0b3d91;
+    font-size: clamp(1.5rem, 2.4vw, 1.85rem);
+    font-weight: 800;
+    letter-spacing: -.03em;
 }
+
+.cu-page .cu-lead {
+    max-width: 46rem;
+    margin: .4rem 0 0;
+    color: #5b6b82;
+    font-size: .95rem;
+}
+
+.cu-page .cu-hero .rs-dash-action {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    min-height: 40px;
+    padding: .4rem .9rem;
+    border: 1px solid #d7deea;
+    border-radius: 999px;
+    background: #fff;
+    color: #0b3d91;
+    font-size: .86rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.cu-page .cu-hero .rs-dash-action:hover { background: #f3f7ff; }
 
 .cu-page .cu-card {
     background: rgba(255, 255, 255, .98);
     border: 1px solid var(--cu-border);
-    border-radius: 1rem;
-    box-shadow: 0 .3rem 1rem rgba(24, 39, 75, .09);
+    border-radius: 16px;
+    box-shadow: 0 12px 28px rgba(8, 16, 40, .1);
+}
+
+.cu-page .cu-section-heading {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    margin-bottom: 1rem;
+    padding-bottom: .85rem;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.cu-page .cu-section-heading h2 {
+    margin: 0;
+    color: #132033;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.cu-page .cu-section-heading p {
+    margin: .2rem 0 0;
+    color: #7b889c;
+    font-size: .82rem;
+}
+
+.cu-page .cu-section-icon {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    place-items: center;
+    border-radius: 12px;
+    background: #e7f7fd;
+    color: #0284c7;
+    font-size: 1.15rem;
+}
+
+.cu-page .cu-section-icon--access {
+    background: #eef4ff;
+    color: #0b3d91;
 }
 
 .cu-page .form-label {
@@ -207,7 +300,14 @@
         width: 100%;
     }
 
-    .cu-page .cu-actions .btn {
+.cu-page .cu-actions .btn {
         width: 100%;
+    }
+
+    .cu-page { padding-top: .75rem; }
+
+    .cu-page .cu-hero {
+        padding: 1.05rem 1rem 1rem;
+        border-radius: 16px;
     }
 }

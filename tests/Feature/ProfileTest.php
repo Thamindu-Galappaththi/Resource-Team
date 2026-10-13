@@ -134,7 +134,7 @@ class ProfileTest extends TestCase
                 'email' => $user->email,
                 'phone' => $user->phone ?? '0771234567',
                 'location' => 'Nebula Institute of Technology - Welisara',
-                'avatar' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
+                'avatar' => UploadedFile::fake()->create('avatar.jpg', 1, 'image/jpeg'),
             ])
             ->assertRedirect(route('user.profile'));
 
