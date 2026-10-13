@@ -53,7 +53,7 @@ class SriLankaHolidays
         foreach ($grouped as $date => $holidays) {
             $names = array_values(array_unique(array_column($holidays, 'name')));
             $types = array_values(array_unique(array_merge(...array_column($holidays, 'types'))));
-            $kind = in_array('poya', $types, true) ? 'poya' : (in_array('mercantile', $types, true) ? 'mercantile' : 'public');
+            $kind = self::kind($types);
             $title = implode(' / ', $names);
             $typeLabel = self::typeLabel($types);
 
@@ -90,6 +90,55 @@ class SriLankaHolidays
         }
 
         return $events;
+    }
+
+    /**
+     * Holidays keyed by Y-m-d for a given month.
+     *
+     * @return array<string, array{date: string, title: string, kind: string, types: list<string>, typeLabel: string, image: string, names: list<string>}>
+     */
+    public static function forMonth(int $year, int $month): array
+    {
+        $prefix = sprintf('%04d-%02d-', $year, $month);
+        $grouped = [];
+
+        foreach (self::all() as $holiday) {
+            if (! str_starts_with($holiday['date'], $prefix)) {
+                continue;
+            }
+            $grouped[$holiday['date']][] = $holiday;
+        }
+
+        $days = [];
+        foreach ($grouped as $date => $holidays) {
+            $names = array_values(array_unique(array_column($holidays, 'name')));
+            $types = array_values(array_unique(array_merge(...array_column($holidays, 'types'))));
+            $title = implode(' / ', $names);
+            $days[$date] = [
+                'date' => $date,
+                'title' => $title,
+                'kind' => self::kind($types),
+                'types' => $types,
+                'typeLabel' => self::typeLabel($types),
+                'image' => self::imageFor($title),
+                'names' => $names,
+            ];
+        }
+
+        return $days;
+    }
+
+    /**
+     * @param  list<string>  $types
+     */
+    public static function kind(array $types): string
+    {
+        return match (true) {
+            in_array('poya', $types, true) => 'poya',
+            in_array('mercantile', $types, true) => 'mercantile',
+            in_array('bank', $types, true) && ! in_array('public', $types, true) => 'bank',
+            default => 'public',
+        };
     }
 
     /**

@@ -30,6 +30,23 @@
         return config.reservationsByDate?.[iso] || [];
     }
 
+    function holidayFor(iso) {
+        return config.holidaysByDate?.[iso] || null;
+    }
+
+    function holidayMarkup(holiday) {
+        if (!holiday) return '';
+        const image = holiday.image || 'public.svg';
+        const src = `${(config.holidayImageBase || '/images/holidays').replace(/\/$/, '')}/${encodeURIComponent(image)}?v=2`;
+        return `<div class="rsv-holiday-card is-${escapeHtml(holiday.kind || 'public')}">
+            <img src="${src}" alt="">
+            <div>
+                <strong>${escapeHtml(holiday.title)}</strong>
+                <p>${escapeHtml(holiday.typeLabel || 'Sri Lankan holiday')}</p>
+            </div>
+        </div>`;
+    }
+
     function chipClass(status) {
         if (status === 'pending_approval' || status === 'changes_requested') return 'is-pending';
         if (status === 'approved' || status === 'confirmed') return 'is-approved';
@@ -71,12 +88,15 @@
         }
         if (!list) return;
 
+        const holiday = holidayFor(iso);
+        const holidayHtml = holidayMarkup(holiday);
+
         if (!bookings.length) {
-            list.innerHTML = '<p class="rsv-empty-day">No bookings for this day.</p>';
+            list.innerHTML = `${holidayHtml}<p class="rsv-empty-day">${holiday ? 'No bookings on this holiday.' : 'No bookings for this day.'}</p>`;
             return;
         }
 
-        list.innerHTML = bookings.map((reservation) => {
+        list.innerHTML = holidayHtml + bookings.map((reservation) => {
             const title = escapeHtml(reservation.reference || reservation.title || 'Reservation');
             const purpose = escapeHtml(reservation.title || reservation.purpose || '');
             const status = escapeHtml(reservation.status_label || '');
@@ -122,19 +142,25 @@
             const classes = ['rsv-cell', 'is-day'];
             if (cell.isToday) classes.push('is-today');
             if (cell.isWeekend) classes.push('is-weekend');
+            if (cell.holiday) classes.push('is-holiday', `is-holiday-${cell.holiday.kind || 'public'}`);
+            const holidayLabel = cell.holiday ? `, ${cell.holiday.title}` : '';
             const countLabel = cell.count
                 ? `, ${cell.count} booking${cell.count === 1 ? '' : 's'}`
+                : '';
+            const holidayChip = cell.holiday
+                ? `<span class="rsv-holiday-chip is-${escapeHtml(cell.holiday.kind || 'public')}">${escapeHtml(limit(cell.holiday.title, 22))}</span>`
                 : '';
             const chips = (cell.preview || []).map((booking) => {
                 const statusClass = `is-${String(booking.status || '').replaceAll('_', '-')}`;
                 const label = `${booking.start_time || ''} ${limit(booking.title || booking.reference, 18)}`.trim();
                 return `<span class="rsv-chip ${statusClass}">${escapeHtml(label)}</span>`;
             }).join('');
-            const more = cell.count > 2 ? `<span class="rsv-more">+${cell.count - 2} more</span>` : '';
+            const moreLimit = cell.holiday ? 1 : 2;
+            const more = cell.count > moreLimit ? `<span class="rsv-more">+${cell.count - moreLimit} more</span>` : '';
 
-            return `<button type="button" class="${classes.join(' ')}" data-bs-toggle="modal" data-bs-target="#eventModal" data-date="${escapeHtml(cell.iso)}" data-display-date="${escapeHtml(cell.display)}" aria-label="${escapeHtml(cell.display)}${escapeHtml(countLabel)}">
+            return `<button type="button" class="${classes.join(' ')}" data-bs-toggle="modal" data-bs-target="#eventModal" data-date="${escapeHtml(cell.iso)}" data-display-date="${escapeHtml(cell.display)}" aria-label="${escapeHtml(cell.display)}${escapeHtml(holidayLabel)}${escapeHtml(countLabel)}">
                 <span class="rsv-daynum">${cell.day}</span>
-                <span class="rsv-events">${chips}${more}</span>
+                <span class="rsv-events">${holidayChip}${chips}${more}</span>
             </button>`;
         }).join('');
 
@@ -148,6 +174,7 @@
         config.next = payload.next;
         config.query = payload.calendarQuery || {};
         config.reservationsByDate = payload.reservationsByDate || {};
+        config.holidaysByDate = payload.holidaysByDate || {};
         selectedYear = Number(payload.year);
 
         document.getElementById('rsv-year').value = payload.year;

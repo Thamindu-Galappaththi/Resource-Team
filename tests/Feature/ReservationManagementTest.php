@@ -187,7 +187,8 @@ class ReservationManagementTest extends TestCase
             ->assertOk()
             ->assertJsonPath('year', 2026)
             ->assertJsonPath('month', 10)
-            ->assertJsonStructure(['label', 'cells', 'stats', 'reservationsByDate', 'prev', 'next']);
+            ->assertJsonStructure(['label', 'cells', 'stats', 'reservationsByDate', 'holidaysByDate', 'prev', 'next'])
+            ->assertJsonPath('holidaysByDate.2026-10-25.kind', 'poya');
     }
 
     public function test_nebula_sms_user_cannot_create_but_can_view_list(): void

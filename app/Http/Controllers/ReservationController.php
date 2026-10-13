@@ -11,6 +11,7 @@ use App\Models\Reservation;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
 use App\Services\ReservationBookingService;
+use App\Support\SriLankaHolidays;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -264,6 +265,7 @@ class ReservationController extends Controller
         });
 
         $byDate = $calendarReservations->groupBy('reservation_date');
+        $holidaysByDate = SriLankaHolidays::forMonth($year, $month);
         $cells = [];
 
         for ($i = 0; $i < $currentDate->dayOfWeek; $i++) {
@@ -275,6 +277,9 @@ class ReservationController extends Controller
             $iso = $date->toDateString();
             $dayItems = $byDate->get($iso, collect());
 
+            $holiday = $holidaysByDate[$iso] ?? null;
+            $previewLimit = $holiday ? 1 : 2;
+
             $cells[] = [
                 'empty' => false,
                 'day' => $day,
@@ -283,7 +288,8 @@ class ReservationController extends Controller
                 'isToday' => $date->isToday(),
                 'isWeekend' => in_array($date->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY], true),
                 'count' => $dayItems->count(),
-                'preview' => $dayItems->take(2)->values()->all(),
+                'preview' => $dayItems->take($previewLimit)->values()->all(),
+                'holiday' => $holiday,
             ];
         }
 
@@ -303,6 +309,7 @@ class ReservationController extends Controller
             'cells' => $cells,
             'calendarQuery' => $filters,
             'reservationsByDate' => $byDate->map(fn ($items) => $items->values())->all(),
+            'holidaysByDate' => $holidaysByDate,
             'stats' => [
                 'month' => $calendarReservations->count(),
                 'today' => $calendarReservations->where('reservation_date', $todayKey)->count(),

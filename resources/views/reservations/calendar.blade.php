@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=4">
 @endpush
 
 @section('content')
@@ -92,6 +92,12 @@
             <button type="button" class="rsv-month-btn" id="rsv-month-label" data-bs-toggle="modal" data-bs-target="#monthModal">{{ $currentDate->format('F Y') }}</button>
             <a class="rsv-nav-btn" id="rsv-next" href="{{ route('reservations.calendar', $navQuery($next['year'], $next['month'])) }}">Next <i class="ti ti-chevron-right"></i></a>
         </div>
+        <div class="rsv-legend" aria-label="Holiday types">
+            <span><i class="rsv-holiday-swatch poya"></i>Poya</span>
+            <span><i class="rsv-holiday-swatch mercantile"></i>Mercantile</span>
+            <span><i class="rsv-holiday-swatch bank"></i>Bank</span>
+            <span><i class="rsv-holiday-swatch public"></i>Government / public</span>
+        </div>
         <div class="rsv-weekdays">
             @foreach ($weekdays as $weekday)
                 <div class="rsv-weekday">
@@ -106,14 +112,17 @@
                     <div class="rsv-cell is-empty" aria-hidden="true"></div>
                 @else
                     <button type="button"
-                        class="rsv-cell is-day{{ $cell['isToday'] ? ' is-today' : '' }}{{ $cell['isWeekend'] ? ' is-weekend' : '' }}"
+                        class="rsv-cell is-day{{ $cell['isToday'] ? ' is-today' : '' }}{{ $cell['isWeekend'] ? ' is-weekend' : '' }}{{ ! empty($cell['holiday']) ? ' is-holiday is-holiday-'.$cell['holiday']['kind'] : '' }}"
                         data-bs-toggle="modal"
                         data-bs-target="#eventModal"
                         data-date="{{ $cell['iso'] }}"
                         data-display-date="{{ $cell['display'] }}"
-                        aria-label="{{ $cell['display'] }}{{ $cell['count'] ? ', '.$cell['count'].' '.\Illuminate\Support\Str::plural('booking', $cell['count']) : '' }}">
+                        aria-label="{{ $cell['display'] }}{{ ! empty($cell['holiday']) ? ', '.$cell['holiday']['title'] : '' }}{{ $cell['count'] ? ', '.$cell['count'].' '.\Illuminate\Support\Str::plural('booking', $cell['count']) : '' }}">
                         <span class="rsv-daynum">{{ $cell['day'] }}</span>
                         <span class="rsv-events">
+                            @if (! empty($cell['holiday']))
+                                <span class="rsv-holiday-chip is-{{ $cell['holiday']['kind'] }}">{{ \Illuminate\Support\Str::limit($cell['holiday']['title'], 22) }}</span>
+                            @endif
                             @foreach ($cell['preview'] as $booking)
                                 <span class="rsv-chip is-{{ str_replace('_', '-', $booking['status']) }}">
                                     {{ $booking['start_time'] }} {{ \Illuminate\Support\Str::limit($booking['title'] ?: $booking['reference'], 18) }}
@@ -187,7 +196,9 @@ window.RSVCal = {
     canCreate: @json((bool) $canCreate),
     query: @json($calendarQuery),
     reservationsByDate: @json($reservationsByDate),
+    holidaysByDate: @json($holidaysByDate),
+    holidayImageBase: @json(asset('images/holidays')),
 };
 </script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=3"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=4"></script>
 @endpush
