@@ -37,7 +37,7 @@
     </div>
 
     <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
+                <div class="card-body">
             <form method="GET" action="{{ route('reservations.index') }}" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label">Search</label>
@@ -257,8 +257,8 @@
                         <button class="btn btn-danger">Cancel reservation</button>
                     </div>
                 </form>
-            </div>
-        </div>
+    </div>
+</div>
     @endcan
 @endforeach
 @endsection

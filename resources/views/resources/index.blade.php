@@ -3,7 +3,7 @@
 @section('title', 'Existing Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=12">
 @endpush
 
 @section('content')

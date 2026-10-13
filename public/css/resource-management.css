@@ -370,9 +370,9 @@
     align-items: end;
     margin: 0 0 .75rem;
     padding: 1rem;
-    border: 1px solid #e0e6ef;
+    border: 1px solid #d5def0;
     border-radius: 12px;
-    background: #f7f9fc;
+    background: linear-gradient(180deg, #fff 0%, #eef3ff 100%);
 }
 
 .rm-feature-enabled {
@@ -488,6 +488,14 @@
     border-radius: 8px;
 }
 
+.rm-page .rm-cat-action {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
 .rm-page .rm-badge {
     font-weight: 600;
     letter-spacing: .01em;
@@ -522,14 +530,17 @@
 }
 
 .rm-page .workflow-card { overflow: visible; }
+.rm-page .workflow-card .card-body {
+    padding-bottom: 2.5rem !important;
+}
 .rm-page .workflow-tabs {
     display: flex;
     flex-wrap: nowrap;
     gap: .45rem;
     padding: .55rem;
-    border: 1px solid #d8e0eb;
+    border: 0;
     border-radius: 14px;
-    background: #edf1f7;
+    background: linear-gradient(120deg, #123a7a 0%, #1769c2 55%, #5b4fc9 100%);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
@@ -541,15 +552,19 @@
     border: 1px solid transparent;
     border-radius: 11px;
     padding: .8rem 1rem;
-    color: #4e5c71;
+    color: rgba(255, 255, 255, .88);
     white-space: nowrap;
+}
+.rm-page .workflow-tabs .nav-link:hover {
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
 }
 
 .rm-page .workflow-tabs .nav-link.active {
     background: #fff;
-    border-color: #e4e9f1;
-    color: var(--rm-blue);
-    box-shadow: 0 4px 12px rgba(19, 35, 58, .1);
+    border-color: #fff;
+    color: #1769c2;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .16);
     font-weight: 650;
 }
 
@@ -560,8 +575,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #d9e6f5;
-    color: var(--rm-blue);
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
     font-size: .78rem;
     font-weight: 700;
 }
@@ -575,14 +590,49 @@
     max-width: 920px;
     margin: 0 auto;
     padding: clamp(1.15rem, 3vw, 2rem);
-    border: 1px solid var(--rm-line);
+    padding-bottom: 2.5rem;
+    border: 1px solid #d5def0;
     border-radius: 16px;
-    background: #fff;
+    background: linear-gradient(180deg, #f5f8ff 0%, #fff 90px);
+    box-shadow: 0 12px 32px rgba(28, 55, 110, .08);
 }
 
-.rm-page .step-title { font-size: 1.35rem; font-weight: 650; letter-spacing: -.02em; }
+.rm-page .step-title { font-size: 1.35rem; font-weight: 700; letter-spacing: -.02em; color: #123a7a; }
 .rm-page .step-hint { color: var(--rm-muted); }
-.rm-page .form-label { font-weight: 600; }
+.rm-page .form-label { font-weight: 600; color: #24324a; }
+
+.rm-page #typeAdditionalFeatures {
+    background: #eef3ff !important;
+    border: 1px solid #d5def0 !important;
+    color: #5b6b86 !important;
+    border-radius: 12px;
+}
+
+.rm-page #existingCategoriesCard .card-header {
+    background: linear-gradient(120deg, #123a7a 0%, #1769c2 100%) !important;
+    border-radius: .9rem .9rem 0 0;
+    padding: 1rem 1.35rem !important;
+}
+.rm-page #existingCategoriesCard .card-header h2 {
+    color: #fff;
+    font-weight: 700;
+}
+.rm-page #existingCategoriesCard table thead th {
+    color: #fff;
+    background: linear-gradient(180deg, #1e4f9c, #1769c2);
+    border-bottom: 0;
+    font-size: .72rem;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.rm-page #existingCategoriesCard table tbody td {
+    color: #26364d;
+    border-color: #e4ecf8;
+    background: #fff;
+}
+.rm-page #existingCategoriesCard table tbody tr:nth-child(even) td { background: #f5f8ff; }
+.rm-page #existingCategoriesCard table tbody tr:hover td { background: #eaf1ff; }
 
 .rm-page #featuresContainer .feature-row { margin: 0; padding: 0; border: 0; background: transparent; }
 

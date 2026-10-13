@@ -260,7 +260,10 @@ document.addEventListener('DOMContentLoaded', () => {
             features.textContent = (category.features || []).map((feature) => feature.name).filter(Boolean).join(', ') || '—';
             const actions = document.createElement('td');
             actions.className = 'text-end';
-            actions.innerHTML = `<button type="button" class="btn btn-sm btn-outline-primary me-2" data-edit-id="${category.id}">Edit</button><button type="button" class="btn btn-sm btn-outline-danger" data-delete-id="${category.id}">Delete</button>`;
+            actions.innerHTML = `<div class="d-inline-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary rm-icon-btn" data-edit-id="${category.id}" aria-label="Edit" title="Edit"><i class="ti ti-pencil"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger rm-icon-btn" data-delete-id="${category.id}" aria-label="Delete" title="Delete"><i class="ti ti-trash"></i></button>
+            </div>`;
             row.append(name, features, actions);
             body.appendChild(row);
         });
