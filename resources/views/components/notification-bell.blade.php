@@ -2,10 +2,12 @@
     <a class="nav-link nav-icon-hover nb-toggle" href="javascript:void(0)" id="notificationsDropdown" role="button"
         data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
         aria-label="Notifications{{ $unreadNotificationCount > 0 ? ' ('.$unreadNotificationCount.' unread)' : '' }}">
-        <i class="ti ti-bell"></i>
-        @if ($unreadNotificationCount > 0)
-            <span class="nb-badge">{{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}</span>
-        @endif
+        <span class="nb-icon-wrap">
+            <i class="ti ti-bell"></i>
+            @if ($unreadNotificationCount > 0)
+                <span class="nb-badge">{{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}</span>
+            @endif
+        </span>
     </a>
     <div class="dropdown-menu dropdown-menu-end nb-menu" aria-labelledby="notificationsDropdown">
         <div class="nb-heading">

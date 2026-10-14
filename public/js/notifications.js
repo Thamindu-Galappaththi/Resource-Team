@@ -45,12 +45,13 @@ document.addEventListener('DOMContentLoaded', function () {
         var badge = bell.querySelector('.nb-badge');
         var headingCount = bell.querySelector('.nb-count');
         var toggle = bell.querySelector('.nb-toggle');
+        var iconWrap = bell.querySelector('.nb-icon-wrap') || toggle;
 
         if (count > 0) {
             if (!badge) {
                 badge = document.createElement('span');
                 badge.className = 'nb-badge';
-                toggle.appendChild(badge);
+                iconWrap.appendChild(badge);
             }
             badge.textContent = count > 9 ? '9+' : count;
             if (!headingCount) {
