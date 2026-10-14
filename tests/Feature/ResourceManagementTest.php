@@ -8,6 +8,7 @@ use App\Models\ResourceCategory;
 use App\Models\ResourceType;
 use App\Models\User;
 use App\Models\Reservation;
+use App\Models\ReservationItem;
 use Database\Seeders\HostelRoomSeeder;
 use Database\Seeders\LocationSeeder;
 use Database\Seeders\ReservationSeeder;
@@ -214,6 +215,54 @@ class ResourceManagementTest extends TestCase
             ->assertSee('2028-02-04')
             ->assertSee('2028-01-12')
             ->assertSee('poya.svg', false);
+    }
+
+    public function test_resource_calendar_embeds_iso8601_times_from_reservation_items(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Hall A', 'status' => 'active']);
+        $reservation = Reservation::factory()->create([
+            'requester_id' => $user->id,
+            'created_by_user_id' => $user->id,
+            'title' => 'Lab session',
+        ]);
+        $start = now('UTC')->addDay()->setTime(3, 30, 0);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'resource_id' => $resource->id,
+            'starts_at' => $start,
+            'ends_at' => $start->copy()->addHours(3),
+            'resource_name_snapshot' => 'Hall A',
+        ]);
+
+        $this->actingAs($user)->get(route('resources.calendar'))
+            ->assertOk()
+            ->assertSee('Hall A', false)
+            ->assertSee($start->copy()->timezone('Asia/Colombo')->format('Y-m-d\TH:i:s'), false)
+            ->assertDontSee('"start":"T', false);
+    }
+
+    public function test_resource_calendar_shows_other_users_bookings_to_developer(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $developer = User::factory()->role('developer')->create();
+        $owner = User::factory()->role('admin')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Hall A', 'status' => 'active']);
+        $reservation = Reservation::factory()->create([
+            'requester_id' => $owner->id,
+            'created_by_user_id' => $owner->id,
+            'title' => 'Shared lab booking',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'resource_id' => $resource->id,
+            'resource_name_snapshot' => 'Hall A',
+        ]);
+
+        $this->actingAs($developer)->get(route('resources.calendar'))
+            ->assertOk()
+            ->assertSee('Hall A', false);
     }
 
     public function test_empty_category_features_are_not_stored(): void

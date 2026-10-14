@@ -1,9 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const calendarElement = document.getElementById('resourceCalendar');
-    if (!calendarElement || typeof FullCalendar === 'undefined') return;
+    const loading = document.getElementById('calendarLoading');
+    const hideLoading = () => { if (loading) loading.hidden = true; };
 
     const config = window.RC || {};
-    const events = config.events || [];
+    const events = (config.events || []).filter((event) => /^\d{4}-\d{2}-\d{2}/.test(String(event?.start || '')));
     let filteredEvents = events;
     const holidays = config.holidays || [];
     const holidayImageBase = (config.holidayImageBase || '/images/holidays').replace(/\/$/, '');
@@ -11,8 +12,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const canReserve = Boolean(config.canReserve);
     const createReservationUrl = config.createReservationUrl;
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
-    const swalFire = (options) => window.RMSwal.fire(options);
+    const swalFire = (options) => window.RMSwal?.fire ? window.RMSwal.fire(options) : window.Swal?.fire(options);
     let lastCalendarView = null;
+    let calendarReady = false;
+
+    try {
+        renderUpcoming(events);
+        const empty = document.getElementById('calendarEmpty');
+        if (empty) empty.hidden = events.length > 0;
+    } catch (error) {
+        console.error('Resource calendar upcoming list failed', error);
+    }
+
+    if (!calendarElement || typeof FullCalendar === 'undefined') {
+        hideLoading();
+        return;
+    }
 
     const calendar = new FullCalendar.Calendar(calendarElement, {
         initialView: isMobile ? 'listWeek' : 'dayGridMonth',
@@ -46,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showDayEventList(info.date, holiday ? [holiday, ...items] : items);
         },
         datesSet() {
-            syncTimeGridEvents();
+            if (calendarReady) syncTimeGridEvents();
             queueMicrotask(paintMonthCells);
         },
         headerToolbar: isMobile
@@ -112,9 +127,15 @@ document.addEventListener('DOMContentLoaded', () => {
         },
     });
 
-    calendar.render();
-    document.getElementById('calendarLoading').hidden = true;
-    paintMonthCells();
+    try {
+        calendar.render();
+        calendarReady = true;
+        paintMonthCells();
+    } catch (error) {
+        console.error('Resource calendar failed to render', error);
+    } finally {
+        hideLoading();
+    }
 
     const resourceFilter = document.getElementById('resourceFilter');
     const locationFilter = document.getElementById('locationFilter');
@@ -135,8 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeDrag = null;
     let suppressSlotClick = false;
 
-    document.getElementById('calendarEmpty').hidden = events.length > 0;
-    renderUpcoming(events);
+    const calendarEmpty = document.getElementById('calendarEmpty');
+    if (calendarEmpty) calendarEmpty.hidden = events.length > 0;
 
     function isTimeGrid() {
         return ['timeGridWeek', 'timeGridDay'].includes(calendar.view.type);
@@ -215,13 +236,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     [resourceFilter, locationFilter, statusFilter, categoryFilter].forEach((el) => {
-        el.addEventListener('change', () => {
+        el?.addEventListener('change', () => {
             selectedSchedulerResources.clear();
             updateSchedulerSelectionCount();
             applyFilters();
         });
     });
-    clearFiltersButton.addEventListener('click', () => {
+    clearFiltersButton?.addEventListener('click', () => {
         if (clearFiltersButton.disabled) return;
         window.RMSelect.setValue('resourceFilter', 'all', 'All resources');
         window.RMSelect.setValue('locationFilter', 'all', 'All locations');
@@ -531,12 +552,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeReservationModal(); });
 
     function dateKey(value) {
+        const match = String(value ?? '').match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
         if (value instanceof Date && !Number.isNaN(value.getTime())) {
             const month = String(value.getMonth() + 1).padStart(2, '0');
             const day = String(value.getDate()).padStart(2, '0');
             return `${value.getFullYear()}-${month}-${day}`;
         }
-        return String(value || '').slice(0, 10);
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) {
+            const month = String(parsed.getMonth() + 1).padStart(2, '0');
+            const day = String(parsed.getDate()).padStart(2, '0');
+            return `${parsed.getFullYear()}-${month}-${day}`;
+        }
+        return '';
     }
 
     function bookingsOn(date) {

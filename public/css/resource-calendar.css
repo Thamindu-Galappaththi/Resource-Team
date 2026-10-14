@@ -199,6 +199,8 @@
 
 .rc-calendar-card { padding: 16px; margin-bottom: 18px; overflow: visible; }
 .rc-loading, .rc-empty { padding: 24px; text-align: center; color: var(--rc-muted); }
+#calendarLoading[hidden],
+.rc-loading[hidden] { display: none !important; }
 .rc-empty { border: 1px dashed #cbd5e1; border-radius: 8px; margin-bottom: 12px; }
 
 .fc .fc-toolbar { padding: 2px 2px 16px; gap: 8px; }
