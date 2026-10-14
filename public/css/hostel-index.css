@@ -256,6 +256,32 @@
 .hr-icon-btn.btn-outline-success:hover { color: #fff; background: #16a77a; border-color: #16a77a; }
 .hr-icon-btn.btn-outline-danger { color: #c24141; border-color: #f0b4b4; }
 .hr-icon-btn.btn-outline-danger:hover { color: #fff; background: #c24141; border-color: #c24141; }
+.hr-icon-btn:disabled,
+.hr-icon-btn[aria-disabled="true"] {
+    opacity: .42;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: #f8fafc;
+    box-shadow: none;
+}
+.hr-icon-btn.btn-outline-secondary:disabled,
+.hr-icon-btn.btn-outline-secondary:disabled:hover {
+    color: #8aa0c0;
+    background: #f8fafc;
+    border-color: #d5def0;
+}
+.hr-icon-btn.btn-outline-success:disabled,
+.hr-icon-btn.btn-outline-success:disabled:hover {
+    color: #8fbfae;
+    background: #f8fafc;
+    border-color: #d5e8e0;
+}
+.hr-icon-btn.btn-outline-danger:disabled,
+.hr-icon-btn.btn-outline-danger:disabled:hover {
+    color: #d4a3a3;
+    background: #f8fafc;
+    border-color: #edd6d6;
+}
 
 .hr-empty { text-align: center; padding: 2.4rem 1rem; color: var(--hr-muted); }
 .hr-empty i { font-size: 2.2rem; color: #1769c2; }

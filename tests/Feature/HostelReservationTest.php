@@ -246,6 +246,9 @@ class HostelReservationTest extends TestCase
         $reservation->update(['status' => ReservationStatus::CANCELLED->value]);
         $this->get(route('hostel.index'))
             ->assertOk()
+            ->assertSee('Approve unavailable', false)
+            ->assertSee('Reject unavailable', false)
+            ->assertSee('Cancel unavailable', false)
             ->assertDontSee('Approve reservation '.$reservation->reference, false)
             ->assertDontSee('Reject reservation '.$reservation->reference, false)
             ->assertDontSee('Cancel reservation '.$reservation->reference, false);
@@ -257,6 +260,9 @@ class HostelReservationTest extends TestCase
         $reservation->update(['status' => ReservationStatus::REJECTED->value]);
         $this->get(route('hostel.index'))
             ->assertOk()
+            ->assertSee('Approve unavailable', false)
+            ->assertSee('Reject unavailable', false)
+            ->assertSee('Cancel unavailable', false)
             ->assertDontSee('Approve reservation '.$reservation->reference, false)
             ->assertDontSee('Reject reservation '.$reservation->reference, false)
             ->assertDontSee('Cancel reservation '.$reservation->reference, false);
@@ -268,6 +274,8 @@ class HostelReservationTest extends TestCase
         $reservation->update(['status' => ReservationStatus::APPROVED->value]);
         $this->get(route('hostel.index'))
             ->assertOk()
+            ->assertSee('Approve unavailable', false)
+            ->assertSee('Reject unavailable', false)
             ->assertDontSee('Approve reservation '.$reservation->reference, false)
             ->assertDontSee('Reject reservation '.$reservation->reference, false)
             ->assertSee('Cancel reservation '.$reservation->reference, false);

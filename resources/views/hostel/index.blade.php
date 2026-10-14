@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/hostel-index.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('css/hostel-index.css') }}?v=6">
 @endpush
 
 @section('content')
@@ -132,17 +132,16 @@
                                         <td data-label="Check-out">{{ $reservation->hostelStay?->check_out_at?->timezone($tz)->format('d M Y') ?: '—' }}</td>
                                         <td data-label="Status"><span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span></td>
                                         <td class="text-end hr-actions" data-label="Actions">
+                                            @php
+                                                $canView = auth()->user()?->can('viewHostel', $reservation) ?? false;
+                                                $canManage = auth()->user()?->can('manageHostel', $reservation) ?? false;
+                                                $canCancel = auth()->user()?->can('cancelHostel', $reservation) ?? false;
+                                            @endphp
                                             <span class="hr-action-group">
-                                                @can('viewHostel', $reservation)
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary hr-icon-btn" data-bs-toggle="modal" data-bs-target="#viewModal-{{ $reservation->id }}" title="View" aria-label="View reservation {{ $reservation->reference }}"><i class="ti ti-eye"></i></button>
-                                                @endcan
-                                                @can('manageHostel', $reservation)
-                                                    <button type="button" class="btn btn-sm btn-outline-success hr-icon-btn" data-bs-toggle="modal" data-bs-target="#approveModal-{{ $reservation->id }}" title="Approve" aria-label="Approve reservation {{ $reservation->reference }}"><i class="ti ti-check"></i></button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger hr-icon-btn" data-bs-toggle="modal" data-bs-target="#rejectModal-{{ $reservation->id }}" title="Reject" aria-label="Reject reservation {{ $reservation->reference }}"><i class="ti ti-x"></i></button>
-                                                @endcan
-                                                @can('cancelHostel', $reservation)
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary hr-icon-btn" data-bs-toggle="modal" data-bs-target="#cancelModal-{{ $reservation->id }}" title="Cancel" aria-label="Cancel reservation {{ $reservation->reference }}"><i class="ti ti-ban"></i></button>
-                                                @endcan
+                                                <button type="button" class="btn btn-sm btn-outline-secondary hr-icon-btn" @if($canView) data-bs-toggle="modal" data-bs-target="#viewModal-{{ $reservation->id }}" title="View" aria-label="View reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="View unavailable" @endif><i class="ti ti-eye"></i></button>
+                                                <button type="button" class="btn btn-sm btn-outline-success hr-icon-btn" @if($canManage) data-bs-toggle="modal" data-bs-target="#approveModal-{{ $reservation->id }}" title="Approve" aria-label="Approve reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="Approve unavailable" @endif><i class="ti ti-check"></i></button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger hr-icon-btn" @if($canManage) data-bs-toggle="modal" data-bs-target="#rejectModal-{{ $reservation->id }}" title="Reject" aria-label="Reject reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="Reject unavailable" @endif><i class="ti ti-x"></i></button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary hr-icon-btn" @if($canCancel) data-bs-toggle="modal" data-bs-target="#cancelModal-{{ $reservation->id }}" title="Cancel" aria-label="Cancel reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="Cancel unavailable" @endif><i class="ti ti-ban"></i></button>
                                             </span>
                                         </td>
                                     </tr>
