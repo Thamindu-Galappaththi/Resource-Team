@@ -162,6 +162,10 @@
                     </tbody>
                         </table>
                     </div>
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
+                        <p class="small text-muted mb-0" id="existingCategoriesCount" aria-live="polite"></p>
+                        <ul class="pagination rm-pagination mb-0" id="existingCategoriesPagination"></ul>
+                    </div>
         </div>
     </div>
 
@@ -220,5 +224,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-create.js') }}?v=10"></script>
+<script src="{{ asset('js/resource-create.js') }}?v=11"></script>
 @endpush

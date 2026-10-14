@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editResourceId = new URLSearchParams(window.location.search).get('edit');
     const swalFire = (options) => window.RMSwal.fire(options);
     let editingCategoryId = null;
+    const categoryPageSize = 10;
+    let categoryPage = 1;
 
     const state = { categories: [], types: [], resources: [], locations: [] };
     const nextTab = { categoryForm: 'type-tab', typeForm: 'resource-tab', resourceForm: 'linked-tab' };
@@ -37,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById(id)?.addEventListener('change', () => clearFieldError(id));
     });
     document.getElementById('existingCategoriesBody')?.addEventListener('click', onCategoryTableClick);
+    document.getElementById('existingCategoriesPagination')?.addEventListener('click', onCategoryPaginationClick);
 
     ['categoryName', 'resourceTypeName', 'resourceNameModel', 'serialNumber'].forEach((id) => {
         document.getElementById(id)?.addEventListener('input', () => clearFieldError(id));
@@ -109,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const result = await postJSON(config.categoriesUrl, { category_name: categoryName, features });
             state.categories.push({ id: result.id, name: result.name || categoryName, features: result.features || [] });
+            categoryPage = Math.max(1, Math.ceil(state.categories.length / categoryPageSize));
             refreshCategorySelects();
             event.target.reset();
             featuresContainer.replaceChildren();
@@ -305,13 +309,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderExistingCategories() {
         const body = document.getElementById('existingCategoriesBody');
+        const count = document.getElementById('existingCategoriesCount');
         if (!body) return;
         body.replaceChildren();
         if (!state.categories.length) {
             body.innerHTML = '<tr><td colspan="3" class="text-muted">No active categories found.</td></tr>';
+            if (count) count.textContent = '';
+            renderCategoryPagination(0);
             return;
         }
-        state.categories.forEach((category) => {
+
+        const totalPages = Math.max(1, Math.ceil(state.categories.length / categoryPageSize));
+        if (categoryPage > totalPages) categoryPage = totalPages;
+        const start = (categoryPage - 1) * categoryPageSize;
+        const pageRows = state.categories.slice(start, start + categoryPageSize);
+        pageRows.forEach((category) => {
             const row = document.createElement('tr');
             const name = document.createElement('td');
             name.textContent = category.name;
@@ -326,6 +338,53 @@ document.addEventListener('DOMContentLoaded', () => {
             row.append(name, features, actions);
             body.appendChild(row);
         });
+        if (count) count.textContent = `Showing ${start + 1}–${start + pageRows.length} of ${state.categories.length}`;
+        renderCategoryPagination(totalPages);
+    }
+
+    function categoryVisiblePages(total, current) {
+        if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+        const pages = new Set([1, total, current, current - 1, current + 1]);
+        const ordered = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
+        return ordered.reduce((list, page, index) => {
+            if (index && page - ordered[index - 1] > 1) list.push('…');
+            list.push(page);
+            return list;
+        }, []);
+    }
+
+    function renderCategoryPagination(totalPages) {
+        const nav = document.getElementById('existingCategoriesPagination');
+        if (!nav) return;
+        nav.replaceChildren();
+        if (totalPages <= 1) return;
+
+        const addItem = (label, page, disabled, active) => {
+            const li = document.createElement('li');
+            li.className = `page-item${disabled ? ' disabled' : ''}${active ? ' active' : ''}`;
+            li.innerHTML = `<button type="button" class="page-link" data-page="${page}">${label}</button>`;
+            nav.appendChild(li);
+        };
+
+        addItem('Prev', categoryPage - 1, categoryPage === 1, false);
+        categoryVisiblePages(totalPages, categoryPage).forEach((page) => {
+            if (page === '…') {
+                const li = document.createElement('li');
+                li.className = 'page-item disabled';
+                li.innerHTML = '<span class="page-link">…</span>';
+                nav.appendChild(li);
+                return;
+            }
+            addItem(String(page), page, false, page === categoryPage);
+        });
+        addItem('Next', categoryPage + 1, categoryPage === totalPages, false);
+    }
+
+    function onCategoryPaginationClick(event) {
+        const button = event.target.closest('[data-page]');
+        if (!button || button.parentElement.classList.contains('disabled')) return;
+        categoryPage = Number(button.dataset.page);
+        renderExistingCategories();
     }
 
     function refreshResourceSelects() {

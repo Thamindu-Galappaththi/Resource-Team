@@ -192,7 +192,9 @@ class ResourceManagementTest extends TestCase
             ->assertSee('Resource Owner')
             ->assertSee('e.g., Nadun')
             ->assertSee('Update the category name and features.')
-            ->assertSee('editAddFeatureBtn', false);
+            ->assertSee('editAddFeatureBtn', false)
+            ->assertSee('id="existingCategoriesPagination"', false)
+            ->assertSee('id="existingCategoriesCount"', false);
     }
 
     public function test_resource_calendar_page_renders_filters_and_calendar_root(): void
