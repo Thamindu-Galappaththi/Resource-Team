@@ -243,24 +243,69 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<span class="badge rounded-pill rm-badge ${cls} px-3 py-2">${escapeHtml(label)}</span>`;
     }
 
+    async function loadResource(id) {
+        return fetchJSON(config.showUrl.replace('__ID__', id));
+    }
+
+    function linkedResources(resource) {
+        const rows = [...(resource.linked_resources || []), ...(resource.linked_from || [])];
+        const seen = new Set();
+        return rows.filter((row) => {
+            const key = String(row.id);
+            if (seen.has(key) || key === String(resource.id)) return false;
+            seen.add(key);
+            return true;
+        });
+    }
+
+    function linkedLabel(item) {
+        const serial = item.serial_number ? ` (${item.serial_number})` : '';
+        const location = item.location?.name ? ` — ${item.location.name}` : '';
+        return `${item.name_model || 'Resource'}${serial}${location}`;
+    }
+
+    function featureLines(resource) {
+        const categoryFeatures = (resource.type?.category?.features || [])
+            .map((feature) => feature.name)
+            .filter(Boolean);
+        const typeValues = (resource.type?.feature_values || [])
+            .map((row) => {
+                const name = row.feature?.name || 'Feature';
+                return row.value ? `${name}: ${row.value}` : name;
+            })
+            .filter(Boolean);
+        return [...new Set([...categoryFeatures, ...typeValues])];
+    }
+
     async function viewResource(id) {
         try {
-            const cached = allResources.find((item) => String(item.id) === String(id));
-            const resource = cached || await fetchJSON(config.showUrl.replace('__ID__', id));
-            const linked = (resource.linked_resources || []).map((item) => `${item.name_model} (#${item.id})`).join(', ') || '—';
+            const resource = await loadResource(id);
+            const linked = linkedResources(resource).map((item) => linkedLabel(item)).join('\n') || '—';
+            const features = featureLines(resource).join('\n') || '—';
             const details = [
+                ['Resource ID', resource.id],
                 ['Name / Model', resource.name_model],
+                ['Serial number', resource.serial_number],
                 ['Category', resource.type?.category?.name],
                 ['Type', resource.type?.name],
                 ['Location', resource.location?.name],
-                ['Serial Number', resource.serial_number],
                 ['Status', statusLabel(resource.status)],
-                ['Linked Resources', linked],
+                ['Features', features],
+                ['Linked resources', linked],
             ];
             const html = `<div class="rm-details">${details.map(([label, value]) =>
-                `<div class="rm-detail-row"><span class="rm-detail-label">${escapeHtml(label)}</span><span class="rm-detail-value">${escapeHtml(value || '—')}</span></div>`
+                `<div class="rm-detail-row"><span class="rm-detail-label">${escapeHtml(label)}</span><span class="rm-detail-value">${escapeHtml(value || '—').replaceAll('\n', '<br>')}</span></div>`
             ).join('')}</div>`;
-            await swalFire({ title: 'Resource details', html, confirmButtonText: 'Close' });
+            await swalFire({
+                title: 'Resource details',
+                html,
+                confirmButtonText: 'Close',
+                width: 640,
+                customClass: {
+                    ...window.RMSwal.base.customClass,
+                    container: 'rm-swal-backdrop',
+                },
+            });
         } catch (error) {
             await swalFire({ icon: 'error', title: 'View failed', text: error.message });
         }
@@ -295,6 +340,28 @@ document.addEventListener('DOMContentLoaded', () => {
         window.RMSelect.setValue('resourceStatusSelect', resource.status || '', statusLabel(resource.status));
         document.getElementById('resourceNameModel').value = resource.name_model || '';
         document.getElementById('serialNumber').value = resource.serial_number || '';
+        const idField = document.getElementById('editResourceId');
+        if (idField) idField.value = resource.id || '';
+        fillReadonlyList('editFeaturesWrap', 'editFeaturesList', featureLines(resource));
+        fillReadonlyList('editLinkedWrap', 'editLinkedList', linkedResources(resource).map((item) => linkedLabel(item)));
+    }
+
+    function fillReadonlyList(wrapId, listId, items) {
+        const wrap = document.getElementById(wrapId);
+        const list = document.getElementById(listId);
+        if (!wrap || !list) return;
+        list.replaceChildren();
+        if (!items.length) {
+            wrap.hidden = true;
+            return;
+        }
+        wrap.hidden = false;
+        items.forEach((item) => {
+            const row = document.createElement('div');
+            row.className = 'rm-linked-item';
+            row.textContent = item;
+            list.appendChild(row);
+        });
     }
 
     async function editResource(id) {
@@ -303,27 +370,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const loading = document.getElementById('editResourceLoading');
         if (!modalElement || !form) return;
 
-        const resource = allResources.find((item) => String(item.id) === String(id));
-        if (!resource) {
-            await swalFire({ icon: 'error', title: 'Could not load resource', text: 'That resource is no longer in the list.' });
-            return;
-        }
-
-        const ready = lookupCache.categories.length && lookupCache.types.length && lookupCache.locations.length;
-        if (ready) {
-            fillEditForm(resource, lookupCache);
-            form.dataset.resourceId = id;
-            if (loading) loading.hidden = true;
-            form.hidden = false;
-            bootstrap.Modal.getOrCreateInstance(modalElement).show();
-            return;
-        }
-
         form.hidden = true;
         if (loading) loading.hidden = false;
         bootstrap.Modal.getOrCreateInstance(modalElement).show();
         try {
-            fillEditForm(resource, await ensureLookups());
+            const [resource, lookups] = await Promise.all([loadResource(id), ensureLookups()]);
+            fillEditForm(resource, lookups);
             form.dataset.resourceId = id;
             if (loading) loading.hidden = true;
             form.hidden = false;

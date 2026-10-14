@@ -116,12 +116,21 @@ class ResourceManagementTest extends TestCase
             'status' => 'active',
         ]);
 
+        $linked = Resource::query()->create([
+            'resource_type_id' => $type->id,
+            'location_id' => $location->id,
+            'name_model' => 'HDMI Cable 01',
+            'status' => 'active',
+        ]);
+        $resource->linkedResources()->syncWithoutDetaching([$linked->id]);
+
         $this->actingAs($user)->getJson("/resources/{$resource->id}")
             ->assertOk()
             ->assertJsonPath('name_model', 'Projector 01')
             ->assertJsonPath('serial_number', 'PR-001')
             ->assertJsonPath('location.name', $location->name)
-            ->assertJsonPath('type.category.name', $category->name);
+            ->assertJsonPath('type.category.name', $category->name)
+            ->assertJsonPath('linked_resources.0.name_model', 'HDMI Cable 01');
 
         $this->actingAs($user)->putJson("/resources/{$resource->id}", [
             'category_id' => $category->id,

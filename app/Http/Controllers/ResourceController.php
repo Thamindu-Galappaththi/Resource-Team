@@ -57,7 +57,34 @@ class ResourceController extends Controller
     /** GET /resources/{resource}: details for the read-only view. */
     public function show(Resource $resource): JsonResponse
     {
-        return response()->json($resource->load(['type.category', 'location', 'linkedResources.type.category', 'linkedResources.location']));
+        $resource->load([
+            'type.category.features',
+            'type.featureValues.feature',
+            'location',
+            'linkedResources.type.category',
+            'linkedResources.location',
+            'linkedFrom.type.category',
+            'linkedFrom.location',
+        ]);
+
+        $payload = $resource->toArray();
+        $payload['linked_resources'] = $resource->linkedResources
+            ->concat($resource->linkedFrom)
+            ->unique('id')
+            ->values()
+            ->map(fn (Resource $item) => [
+                'id' => $item->id,
+                'name_model' => $item->name_model,
+                'serial_number' => $item->serial_number,
+                'status' => $item->status,
+                'location' => $item->location ? [
+                    'id' => $item->location->id,
+                    'name' => $item->location->name,
+                ] : null,
+            ])
+            ->all();
+
+        return response()->json($payload);
     }
 
     /**

@@ -349,6 +349,11 @@
     font-weight: 600 !important;
 }
 
+.swal2-container.rm-swal-backdrop {
+    background: rgba(15, 32, 68, .58) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
 .rm-details { display: grid; gap: 8px; text-align: left; min-width: 0; }
 .rm-detail-row {
     display: grid;
@@ -362,7 +367,20 @@
 }
 .rm-detail-row:nth-child(odd) { background: #eef3ff; }
 .rm-detail-label { color: #5b6b86; font-size: 13px; font-weight: 700; }
-.rm-detail-value { color: #14315e; font-size: 14px; font-weight: 700; word-break: break-word; }
+.rm-detail-value { color: #14315e; font-size: 14px; font-weight: 700; word-break: break-word; white-space: normal; }
+.rm-linked-list {
+    display: grid;
+    gap: 8px;
+}
+.rm-linked-item {
+    padding: 10px 12px;
+    border: 1px solid #d5def0;
+    border-radius: 10px;
+    background: #f7faff;
+    color: #14315e;
+    font-size: 13px;
+    font-weight: 650;
+}
 
 .rm-feature {
     display: grid;

@@ -86,6 +86,12 @@ class Resource extends Model
             ->withTimestamps();
     }
 
+    public function linkedFrom(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'resource_links', 'linked_resource_id', 'resource_id')
+            ->withTimestamps();
+    }
+
     /**
      * Lets you call $resource->category to get the parent category
      * WITHOUT storing a redundant category_id column, and without an

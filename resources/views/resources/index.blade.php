@@ -3,7 +3,7 @@
 @section('title', 'Existing Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=16">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=18">
 @endpush
 
 @section('content')
@@ -130,7 +130,19 @@
                         <div id="editResourceLoading" class="text-center text-muted py-4" role="status" hidden>Loading resource details…</div>
                         <form id="editResourceForm">
                             @csrf
+                            <div class="mb-3">
+                                <label class="form-label" for="editResourceId">Resource ID</label>
+                                <input type="text" class="form-control" id="editResourceId" readonly>
+                            </div>
                             @include('resources.partials.resource-fields')
+                            <div class="mb-3" id="editFeaturesWrap" hidden>
+                                <label class="form-label">Category / type features</label>
+                                <div id="editFeaturesList" class="rm-linked-list"></div>
+                            </div>
+                            <div class="mb-0" id="editLinkedWrap" hidden>
+                                <label class="form-label">Linked resources</label>
+                                <div id="editLinkedList" class="rm-linked-list"></div>
+                            </div>
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -162,5 +174,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-index.js') }}?v=6"></script>
+<script src="{{ asset('js/resource-index.js') }}?v=9"></script>
 @endpush
