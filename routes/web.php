@@ -87,7 +87,8 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/lecture-fees', [LectureFeeController::class, 'index'])->middleware('permission:payments.view')->name('lecture-fees');
-        Route::get('/resources', fn () => view('payments.resources'))->middleware('permission:payments.view')->name('resources');
+        Route::get('/resources', [\App\Http\Controllers\ResourcePaymentController::class, 'index'])->middleware('permission:payments.view')->name('resources');
+        Route::get('/resources/lookup', [\App\Http\Controllers\ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
     });
 
     Route::get('/reports', fn () => view('reports.index'))->middleware('permission:reports.view')->name('reports.index');
