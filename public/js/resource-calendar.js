@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const createReservationUrl = config.createReservationUrl;
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
     const swalFire = (options) => window.RMSwal.fire(options);
+    let lastCalendarView = null;
 
     const calendar = new FullCalendar.Calendar(calendarElement, {
         initialView: isMobile ? 'listWeek' : 'dayGridMonth',
@@ -133,7 +134,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedSchedulerResources = new Set();
     let activeDrag = null;
     let suppressSlotClick = false;
-    let lastCalendarView = null;
 
     document.getElementById('calendarEmpty').hidden = events.length > 0;
     renderUpcoming(events);

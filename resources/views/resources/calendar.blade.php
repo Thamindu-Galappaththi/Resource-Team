@@ -165,5 +165,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=26"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=27"></script>
 @endpush
