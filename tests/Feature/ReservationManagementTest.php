@@ -247,7 +247,12 @@ class ReservationManagementTest extends TestCase
     {
         $user = User::factory()->role('coordinator')->create();
 
-        $this->actingAs($user)->get(route('reservations.calendar'))->assertOk()->assertSee('Reservation Calendar');
+        $this->actingAs($user)->get(route('reservations.calendar'))
+            ->assertOk()
+            ->assertSee('Reservation Calendar')
+            ->assertSee('reservationCalendar')
+            ->assertSee('fullcalendar@6.1.19', false)
+            ->assertSee('js/reservation-calendar.js', false);
         $this->actingAs($user)->get(route('reservations.create'))->assertOk()->assertSee('Purpose of Reservation');
         $this->actingAs($user)->get(route('reservations.index'))->assertOk()->assertSee('Existing Reservations');
     }
@@ -263,6 +268,35 @@ class ReservationManagementTest extends TestCase
             ->assertJsonPath('month', 10)
             ->assertJsonStructure(['label', 'cells', 'stats', 'reservationsByDate', 'holidaysByDate', 'prev', 'next'])
             ->assertJsonPath('holidaysByDate.2026-10-25.kind', 'poya');
+    }
+
+    public function test_calendar_events_include_each_resource_item(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $hallA = Resource::factory()->create(['name_model' => 'Hall A']);
+        $hallB = Resource::factory()->create([
+            'name_model' => 'Hall B',
+            'location_id' => $hallA->location_id,
+            'resource_type_id' => $hallA->resource_type_id,
+        ]);
+
+        $this->actingAs($user)->post(route('reservations.store'), $this->payload($hallA, $user, [
+            'resource_id' => $hallA->id,
+            'resource_ids' => [$hallA->id, $hallB->id],
+            'purpose' => 'Dual hall booking',
+        ]))->assertRedirect();
+
+        $events = $this->actingAs($user)
+            ->getJson(route('reservations.calendar.events', [
+                'start' => now()->startOfMonth()->toIso8601String(),
+                'end' => now()->endOfMonth()->addDay()->toIso8601String(),
+            ]))
+            ->assertOk()
+            ->json();
+
+        $resources = collect($events)->pluck('extendedProps.resource')->filter();
+        $this->assertTrue($resources->contains(fn ($name) => str_contains((string) $name, 'Hall A')));
+        $this->assertTrue($resources->contains(fn ($name) => str_contains((string) $name, 'Hall B')));
     }
 
     public function test_nebula_sms_user_cannot_create_but_can_view_list(): void

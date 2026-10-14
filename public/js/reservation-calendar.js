@@ -1,292 +1,520 @@
-(function () {
-    const config = window.RSVCal || {};
-    const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+document.addEventListener('DOMContentLoaded', () => {
+    const calendarElement = document.getElementById('reservationCalendar');
+    if (!calendarElement || typeof FullCalendar === 'undefined') return;
+
+    const filters = document.getElementById('reservation-calendar-filters');
+    const feedback = document.getElementById('calendar-slot-feedback');
+    const loading = document.getElementById('calendarLoading');
+    const empty = document.getElementById('calendarEmpty');
+    const clearFiltersButton = document.getElementById('clearFiltersButton');
+    const modal = document.getElementById('reservationModal');
+    const canCreate = calendarElement.dataset.canCreate === '1';
+    const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
+    const swalFire = (options) => window.RMSwal.fire(options);
+    const holidayImageBase = (window.RSVCal?.holidayImageBase || '/images/holidays').replace(/\/$/, '');
+    const filterIds = ['calendar-location', 'calendar-category', 'calendar-resource', 'calendar-status'];
     const filterLabels = {
-        locationFilter: 'All locations',
-        categoryFilter: 'All categories',
-        resourceFilter: 'All resources',
-        statusFilter: 'All statuses',
+        'calendar-location': 'All locations',
+        'calendar-category': 'All categories',
+        'calendar-resource': 'All resources',
+        'calendar-status': 'All statuses',
     };
 
-    let selectedYear = Number(config.year);
-    let request = null;
+    let bookings = [];
+    let holidays = [];
 
-    function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-        }[char]));
+    const inputTimeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const partsFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+    function localDateKey(date) {
+        const parts = Object.fromEntries(partsFormat.formatToParts(date).map(({ type, value }) => [type, value]));
+        return `${parts.year}-${parts.month}-${parts.day}`;
     }
 
-    function limit(value, max) {
-        const text = String(value || '');
-        return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+    function localTimeKey(date) {
+        const parts = Object.fromEntries(inputTimeFormat.formatToParts(date).map(({ type, value }) => [type, value]));
+        return `${parts.hour}:${parts.minute}`;
     }
 
-    function bookingsFor(iso) {
-        return config.reservationsByDate?.[iso] || [];
-    }
-
-    function holidayFor(iso) {
-        return config.holidaysByDate?.[iso] || null;
-    }
-
-    function holidayMarkup(holiday) {
-        if (!holiday) return '';
-        const image = holiday.image || 'public.svg';
-        const src = `${(config.holidayImageBase || '/images/holidays').replace(/\/$/, '')}/${encodeURIComponent(image)}?v=2`;
-        return `<div class="rsv-holiday-card is-${escapeHtml(holiday.kind || 'public')}">
-            <img src="${src}" alt="">
-            <div>
-                <strong>${escapeHtml(holiday.title)}</strong>
-                <p>${escapeHtml(holiday.typeLabel || 'Sri Lankan holiday')}</p>
-            </div>
-        </div>`;
-    }
-
-    function chipClass(status) {
-        if (status === 'pending_approval' || status === 'changes_requested') return 'is-pending';
-        if (status === 'approved' || status === 'confirmed') return 'is-approved';
-        return '';
-    }
-
-    function currentFilters() {
-        return {
-            location_id: document.getElementById('locationFilter')?.value || '',
-            resource_category_id: document.getElementById('categoryFilter')?.value || '',
-            resource_id: document.getElementById('resourceFilter')?.value || '',
-            status: document.getElementById('statusFilter')?.value || '',
-        };
-    }
-
-    function queryFrom(year, month, extra = {}) {
-        const params = new URLSearchParams();
-        params.set('year', String(year));
-        params.set('month', String(month));
-        Object.entries({ ...currentFilters(), ...extra }).forEach(([key, value]) => {
-            if (value) params.set(key, String(value));
-        });
-        return params;
-    }
-
-    function setLoading(isLoading) {
-        const board = document.getElementById('rsv-board');
-        const overlay = document.getElementById('rsv-loading');
-        board?.classList.toggle('is-loading', isLoading);
-        if (overlay) overlay.hidden = !isLoading;
-    }
-
-    function renderList(iso) {
-        const list = document.getElementById('reservationList');
-        const bookings = bookingsFor(iso);
-        const createLink = document.getElementById('createForDate');
-        if (createLink) {
-            createLink.href = `${config.createUrl}?date=${encodeURIComponent(iso)}`;
+    function showFeedback(message, type = 'info', href = null) {
+        if (!feedback) return;
+        feedback.replaceChildren();
+        feedback.hidden = false;
+        feedback.className = `calendar-slot-feedback alert alert-${type} mt-3 mb-0`;
+        const text = document.createElement('span');
+        text.textContent = message;
+        feedback.appendChild(text);
+        if (href) {
+            const link = document.createElement('a');
+            link.href = href;
+            link.className = 'btn btn-sm btn-primary ms-3';
+            link.textContent = 'Continue to reservation';
+            feedback.appendChild(link);
         }
-        if (!list) return;
+    }
 
-        const holiday = holidayFor(iso);
-        const holidayHtml = holidayMarkup(holiday);
-
-        if (!bookings.length) {
-            list.innerHTML = `${holidayHtml}<p class="rsv-empty-day">${holiday ? 'No bookings on this holiday.' : 'No bookings for this day.'}</p>`;
+    async function checkAvailability(selection) {
+        if (!canCreate || !filters) return;
+        const resourceId = filters.elements.resource_id?.value;
+        if (!resourceId) {
+            showFeedback('Choose a resource filter before selecting a time slot.', 'warning');
             return;
         }
-
-        list.innerHTML = holidayHtml + bookings.map((reservation) => {
-            const title = escapeHtml(reservation.reference || reservation.title || 'Reservation');
-            const purpose = escapeHtml(reservation.title || reservation.purpose || '');
-            const status = escapeHtml(reservation.status_label || '');
-            const resources = escapeHtml(reservation.resources || '');
-            const meta = [reservation.requester, reservation.location].filter(Boolean).map(escapeHtml).join(' · ');
-            const time = `${escapeHtml(reservation.start_time)} – ${escapeHtml(reservation.end_time)}`;
-            const url = reservation.url ? `<a class="btn btn-sm btn-outline-primary mt-2" href="${escapeHtml(reservation.url)}">View details</a>` : '';
-
-            return `<article class="rsv-item">
-                <div class="d-flex justify-content-between gap-2">
-                    <h6>${title}</h6>
-                    <span class="badge ${chipClass(reservation.status) === 'is-pending' ? 'text-bg-warning' : 'text-bg-primary'}">${status}</span>
-                </div>
-                ${purpose ? `<p>${purpose}</p>` : ''}
-                ${resources ? `<small class="text-muted d-block">${resources}</small>` : ''}
-                ${meta ? `<small class="text-muted d-block">${meta}</small>` : ''}
-                <small class="text-muted d-block">${time}</small>
-                ${url}
-            </article>`;
-        }).join('');
+        const date = localDateKey(selection.start);
+        const endMinute = new Date(selection.end.getTime() - 60_000);
+        if (localDateKey(endMinute) !== date) {
+            showFeedback('Choose a slot within one day. Use the reservation form for overnight bookings.', 'warning');
+            return;
+        }
+        const startTime = localTimeKey(selection.start);
+        const endTime = localTimeKey(selection.end);
+        if (endTime <= startTime) {
+            showFeedback('Choose a valid start and end time.', 'warning');
+            return;
+        }
+        const params = new URLSearchParams();
+        params.append('resource_ids[]', resourceId);
+        params.set('reservation_date', date);
+        params.set('start_time', startTime);
+        params.set('end_time', endTime);
+        showFeedback('Checking availability…', 'info');
+        try {
+            const response = await fetch(`${calendarElement.dataset.availabilityUrl}?${params}`, {
+                headers: { Accept: 'application/json' },
+            });
+            const result = await response.json();
+            if (!response.ok || !result.available) {
+                showFeedback(result.message || 'That time is unavailable. Select another slot.', 'danger');
+                return;
+            }
+            const createUrl = new URL(calendarElement.dataset.createUrl, window.location.origin);
+            createUrl.searchParams.set('date', date);
+            createUrl.searchParams.set('start_time', startTime);
+            createUrl.searchParams.set('end_time', endTime);
+            createUrl.searchParams.set('resource_id', resourceId);
+            showFeedback('This resource is available for the selected time.', 'success', createUrl.toString());
+        } catch {
+            showFeedback('Availability could not be checked. Please try again.', 'warning');
+        }
     }
 
-    function bindDayCells() {
-        document.querySelectorAll('.rsv-cell.is-day').forEach((cell) => {
-            cell.addEventListener('click', () => {
-                const iso = cell.dataset.date;
-                const selectedDate = document.getElementById('selectedDate');
-                if (selectedDate) selectedDate.textContent = cell.dataset.displayDate || iso;
-                renderList(iso);
+    const calendar = new FullCalendar.Calendar(calendarElement, {
+        initialView: isMobile ? 'listWeek' : 'dayGridMonth',
+        height: 'auto',
+        contentHeight: 'auto',
+        expandRows: false,
+        views: {
+            timeGridWeek: { contentHeight: 640, dayMaxEvents: 2, eventMaxStack: 3 },
+            timeGridDay: { contentHeight: 640, dayMaxEvents: 2, eventMaxStack: 3 },
+        },
+        fixedWeekCount: false,
+        firstDay: 0,
+        navLinks: true,
+        editable: false,
+        selectable: canCreate,
+        selectMirror: true,
+        selectAllow: (info) => info.view.type !== 'dayGridMonth',
+        nowIndicator: true,
+        dayMaxEvents: 2,
+        headerToolbar: isMobile
+            ? { left: 'prev,next', center: 'title', right: 'today' }
+            : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+        buttonText: { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'Agenda' },
+        eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
+        slotLabelFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
+        displayEventTime: true,
+        events: async (fetchInfo, success, failure) => {
+            if (!filters) {
+                failure(new Error('Calendar filters are missing.'));
+                return;
+            }
+            const params = new URLSearchParams({ start: fetchInfo.startStr, end: fetchInfo.endStr });
+            new FormData(filters).forEach((value, key) => {
+                if (value && key !== 'year' && key !== 'month') params.set(key, value);
             });
+            try {
+                const response = await fetch(`${calendarElement.dataset.eventsUrl}?${params}`, {
+                    headers: { Accept: 'application/json' },
+                });
+                if (!response.ok) throw new Error('Reservations could not be loaded.');
+                const events = await response.json();
+                bookings = events.filter((event) => !event.extendedProps?.isHoliday);
+                holidays = events.filter((event) => event.extendedProps?.isHoliday);
+                if (empty) empty.hidden = bookings.length > 0;
+                if (loading) loading.hidden = true;
+                success(forCalendarView(bookings, holidays));
+                queueMicrotask(paintMonthCells);
+            } catch (error) {
+                if (loading) loading.hidden = true;
+                failure(error);
+            }
+        },
+        eventDidMount(info) {
+            const details = info.event.extendedProps || {};
+            if (details.isHoliday) {
+                info.el.title = `${info.event.title}${details.holidayTypeLabel ? ` · ${details.holidayTypeLabel}` : ''}`;
+                return;
+            }
+            const colors = eventColors(details.statusValue || details.statusKey);
+            info.el.style.backgroundColor = colors.background;
+            info.el.style.borderColor = colors.border;
+            info.el.style.color = colors.text;
+            const inPopover = Boolean(info.el.closest('.fc-more-popover'));
+            if (info.view.type !== 'dayGridMonth' || inPopover) {
+                info.el.style.borderLeft = `3px solid ${colors.border}`;
+            }
+            info.el.querySelectorAll('.fc-event-main, .fc-event-main-frame, .fc-event-time, .fc-event-title, .fc-sticky, td').forEach((node) => {
+                node.style.color = colors.text;
+                if (node.tagName === 'TD') node.style.backgroundColor = colors.background;
+            });
+            info.el.title = `${details.resource || info.event.title}${details.status ? ` · ${details.status}` : ''}`.trim();
+        },
+        eventContent(info) {
+            const details = info.event.extendedProps || {};
+            if (details.isHoliday) {
+                if (info.event.display === 'background') return { html: '' };
+                const holidayTitle = info.view.type === 'dayGridMonth' ? limitText(info.event.title, 22) : info.event.title;
+                return { html: `<span class="rc-holiday-label" data-full-label="${escapeHtml(info.event.title)}">${escapeHtml(holidayTitle)}</span>` };
+            }
+            if (info.view.type === 'dayGridMonth') {
+                const fullLabel = `${info.timeText ? `${info.timeText} ` : ''}${details.resource || info.event.title}`.trim();
+                return { html: `<span class="rc-event-title" data-full-label="${escapeHtml(fullLabel)}">${escapeHtml(fullLabel)}</span>` };
+            }
+            const start = details.reservationStart || details.actualStart || info.event.start;
+            const end = details.reservationEnd || details.actualEnd || info.event.end;
+            const timeLabel = formatTimeRange(
+                start instanceof Date ? start : new Date(start),
+                end instanceof Date ? end : new Date(end),
+            );
+            const time = timeLabel && timeLabel !== '—' ? `<span class="rc-event-time">${escapeHtml(timeLabel)}</span>` : '';
+            const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
+            return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(details.resource || info.event.title)}</span></div>` };
+        },
+        dateClick(info) {
+            if (info.view.type !== 'dayGridMonth') return;
+            const holiday = holidayOn(info.date);
+            if (info.jsEvent?.target?.closest('[data-holiday]')) {
+                if (holiday) showHolidayDialog(holiday);
+                return;
+            }
+            const items = bookingsOn(info.date);
+            if (!items.length && holiday) {
+                showHolidayDialog(holiday);
+                return;
+            }
+            if (!items.length) return;
+            showDayEventList(info.date, holiday ? [holiday, ...items] : items);
+        },
+        eventClick(info) {
+            if (info.event.extendedProps?.isHoliday) {
+                if (info.event.display === 'background') return;
+                showHolidayDialog(info.event);
+                return;
+            }
+            showReservationDetails(info.event);
+        },
+        select(selection) {
+            checkAvailability(selection);
+            calendar.unselect();
+        },
+        datesSet(info) {
+            const date = info.view.currentStart;
+            const year = String(date.getFullYear());
+            const month = String(date.getMonth() + 1);
+            const yearInput = document.getElementById('rsv-year');
+            const monthInput = document.getElementById('rsv-month');
+            if (yearInput) yearInput.value = year;
+            if (monthInput) monthInput.value = month;
+            const params = new URLSearchParams({ year, month });
+            if (filters) {
+                new FormData(filters).forEach((value, key) => {
+                    if (value && key !== 'year' && key !== 'month') params.set(key, value);
+                });
+            }
+            fetch(`${window.RSVCal?.calendarUrl || '/reservations/calendar'}?${params}`, {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            }).then((response) => (response.ok ? response.json() : null)).then((payload) => {
+                if (!payload?.stats) return;
+                const monthStat = document.getElementById('rsv-stat-month');
+                const todayStat = document.getElementById('rsv-stat-today');
+                const pendingStat = document.getElementById('rsv-stat-pending');
+                const approvedStat = document.getElementById('rsv-stat-approved');
+                if (monthStat) monthStat.textContent = payload.stats.month;
+                if (todayStat) todayStat.textContent = payload.stats.today;
+                if (pendingStat) pendingStat.textContent = payload.stats.pending;
+                if (approvedStat) approvedStat.textContent = payload.stats.approved;
+            }).catch(() => {});
+            queueMicrotask(paintMonthCells);
+        },
+        eventsSet() {
+            queueMicrotask(paintMonthCells);
+        },
+    });
+
+    calendar.render();
+
+    function hasFilters() {
+        return filterIds.some((id) => Boolean(document.getElementById(id)?.value));
+    }
+
+    function toggleClear() {
+        if (clearFiltersButton) clearFiltersButton.disabled = !hasFilters();
+    }
+
+    filters?.addEventListener('change', () => {
+        toggleClear();
+        calendar.refetchEvents();
+    });
+    filters?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        calendar.refetchEvents();
+    });
+    clearFiltersButton?.addEventListener('click', () => {
+        if (clearFiltersButton.disabled) return;
+        filterIds.forEach((id) => {
+            if (!document.getElementById(id)) return;
+            window.RMSelect.setValue(id, '', filterLabels[id]);
+        });
+        toggleClear();
+        calendar.refetchEvents();
+    });
+    toggleClear();
+
+    document.getElementById('closeReservationModal')?.addEventListener('click', closeReservationModal);
+    document.querySelector('.rc-modal-overlay')?.addEventListener('click', closeReservationModal);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeReservationModal();
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) calendar.refetchEvents();
+    });
+
+    function dateKey(value) {
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+            return localDateKey(value);
+        }
+        return String(value || '').slice(0, 10);
+    }
+
+    function bookingsOn(date) {
+        const key = dateKey(date);
+        return bookings.filter((event) => dateKey(event.start) === key);
+    }
+
+    function holidayOn(date) {
+        const key = dateKey(date);
+        return holidays.find((event) => event.extendedProps?.isHoliday && event.display !== 'background' && dateKey(event.start) === key)
+            || holidays.find((event) => event.extendedProps?.isHoliday && dateKey(event.start) === key)
+            || null;
+    }
+
+    function showHolidayDialog(holiday) {
+        if (!holiday) return;
+        const details = holiday.extendedProps || {};
+        const image = details.holidayImage || 'public.svg';
+        swalFire({
+            html: `<div class="rc-holiday-dialog">
+                <img class="rc-holiday-art" src="${holidayImageBase}/${encodeURIComponent(image)}?v=2" alt="">
+                <div class="rc-holiday-copy">
+                    <strong>${escapeHtml(holiday.title)}</strong>
+                    <p>${escapeHtml(details.holidayTypeLabel || 'Sri Lankan holiday')}</p>
+                </div>
+            </div>`,
+            confirmButtonText: 'Close',
+            customClass: {
+                ...window.RMSwal.base.customClass,
+                popup: 'rm-swal rc-holiday-swal',
+                container: 'rc-holiday-backdrop',
+            },
         });
     }
 
-    function renderGrid(cells) {
-        const grid = document.getElementById('rsv-grid');
-        if (!grid) return;
+    function formatChipTime(value) {
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '').toLowerCase();
+    }
 
-        grid.innerHTML = cells.map((cell) => {
-            if (cell.empty) {
-                return '<div class="rsv-cell is-empty" aria-hidden="true"></div>';
+    function paintMonthCells() {
+        if (calendar.view.type !== 'dayGridMonth') return;
+        calendarElement.querySelectorAll('.fc-daygrid-day').forEach((cell) => {
+            const frame = cell.querySelector('.fc-daygrid-day-frame');
+            if (!frame) return;
+            const date = cell.getAttribute('data-date');
+            const items = bookingsOn(date);
+            const holiday = holidayOn(date);
+            const kind = holiday?.extendedProps?.holidayKind || 'public';
+            frame.classList.remove('is-holiday', 'is-holiday-poya', 'is-holiday-mercantile', 'is-holiday-bank', 'is-holiday-public');
+            if (holiday) frame.classList.add('is-holiday', `is-holiday-${kind}`);
+            let summary = frame.querySelector('.rc-month-summary');
+            if (!summary) {
+                summary = document.createElement('div');
+                summary.className = 'rc-month-summary';
+                frame.appendChild(summary);
             }
-
-            const classes = ['rsv-cell', 'is-day'];
-            if (cell.isToday) classes.push('is-today');
-            if (cell.isWeekend) classes.push('is-weekend');
-            if (cell.holiday) classes.push('is-holiday', `is-holiday-${cell.holiday.kind || 'public'}`);
-            const holidayLabel = cell.holiday ? `, ${cell.holiday.title}` : '';
-            const countLabel = cell.count
-                ? `, ${cell.count} booking${cell.count === 1 ? '' : 's'}`
+            if (!items.length && !holiday) {
+                summary.replaceChildren();
+                summary.hidden = true;
+                return;
+            }
+            const previewLimit = holiday ? 1 : 2;
+            const preview = items.slice(0, previewLimit);
+            const extra = items.length - preview.length;
+            const holidayChip = holiday
+                ? `<span class="rc-month-holiday rc-holiday-${escapeHtml(kind)}" data-holiday="1" title="${escapeHtml(holiday.title)}">${escapeHtml(limitText(holiday.title, 22))}</span>`
                 : '';
-            const holidayChip = cell.holiday
-                ? `<span class="rsv-holiday-chip is-${escapeHtml(cell.holiday.kind || 'public')}">${escapeHtml(limit(cell.holiday.title, 22))}</span>`
-                : '';
-            const chips = (cell.preview || []).map((booking) => {
-                const statusClass = `is-${String(booking.status || '').replaceAll('_', '-')}`;
-                const label = `${booking.start_time || ''} ${limit(booking.title || booking.reference, 18)}`.trim();
-                return `<span class="rsv-chip ${statusClass}">${escapeHtml(label)}</span>`;
+            const chips = preview.map((event) => {
+                const colors = eventColors(event.extendedProps?.statusValue || event.extendedProps?.statusKey);
+                const label = `${formatChipTime(event.start)} ${event.extendedProps?.resource || event.title}`.trim();
+                return `<span class="rc-month-chip" style="background:${colors.background};color:${colors.text}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
             }).join('');
-            const moreLimit = cell.holiday ? 1 : 2;
-            const more = cell.count > moreLimit ? `<span class="rsv-more">+${cell.count - moreLimit} more</span>` : '';
+            summary.hidden = false;
+            summary.innerHTML = `${holidayChip}<div class="rc-month-chips">${chips}</div>${extra > 0 ? `<span class="rc-month-more">+${extra} more</span>` : ''}`;
+        });
+    }
 
-            return `<button type="button" class="${classes.join(' ')}" data-bs-toggle="modal" data-bs-target="#eventModal" data-date="${escapeHtml(cell.iso)}" data-display-date="${escapeHtml(cell.display)}" aria-label="${escapeHtml(cell.display)}${escapeHtml(holidayLabel)}${escapeHtml(countLabel)}">
-                <span class="rsv-daynum">${cell.day}</span>
-                <span class="rsv-events">${holidayChip}${chips}${more}</span>
+    async function showDayEventList(date, eventList) {
+        const dayBookings = eventList
+            .filter((event) => !event.extendedProps?.isHoliday)
+            .sort((left, right) => new Date(left.start) - new Date(right.start));
+        const holiday = eventList.find((event) => event.extendedProps?.isHoliday);
+        const rows = dayBookings.map((event, index) => {
+            const details = event.extendedProps || {};
+            const colors = eventColors(details.statusValue || details.statusKey);
+            const start = event.start instanceof Date ? event.start : new Date(event.start);
+            const end = details.reservationEnd ? new Date(details.reservationEnd) : (event.end instanceof Date ? event.end : new Date(event.end));
+            const meta = [details.location, details.status].filter(Boolean).join(' · ');
+            return `<button type="button" class="rc-day-item" data-index="${index}" style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
+                <span class="rc-day-item-time">${escapeHtml(formatTimeRange(start, end))}</span>
+                <span class="rc-day-item-title">${escapeHtml(details.resource || event.title)}</span>
+                ${meta ? `<span class="rc-day-item-meta">${escapeHtml(meta)}</span>` : ''}
             </button>`;
         }).join('');
-
-        bindDayCells();
-    }
-
-    function applyPayload(payload, { push = true } = {}) {
-        config.year = payload.year;
-        config.month = payload.month;
-        config.prev = payload.prev;
-        config.next = payload.next;
-        config.query = payload.calendarQuery || {};
-        config.reservationsByDate = payload.reservationsByDate || {};
-        config.holidaysByDate = payload.holidaysByDate || {};
-        selectedYear = Number(payload.year);
-
-        document.getElementById('rsv-year').value = payload.year;
-        document.getElementById('rsv-month').value = payload.month;
-        const monthLabel = document.getElementById('rsv-month-label');
-        if (monthLabel) monthLabel.textContent = payload.label;
-        const yearTitle = document.getElementById('yearTitle');
-        if (yearTitle) yearTitle.textContent = payload.year;
-
-        document.getElementById('rsv-stat-month').textContent = payload.stats.month;
-        document.getElementById('rsv-stat-today').textContent = payload.stats.today;
-        document.getElementById('rsv-stat-pending').textContent = payload.stats.pending;
-        document.getElementById('rsv-stat-approved').textContent = payload.stats.approved;
-
-        document.querySelectorAll('.rsv-month-pick').forEach((button) => {
-            button.classList.toggle('is-current', Number(button.dataset.month) === Number(payload.month));
+        const holidayRow = holiday
+            ? `<div class="rc-day-holiday">${escapeHtml(holiday.title)}${holiday.extendedProps?.holidayTypeLabel ? ` · ${escapeHtml(holiday.extendedProps.holidayTypeLabel)}` : ''}</div>`
+            : '';
+        await swalFire({
+            title: formatDate(date instanceof Date ? date : new Date(date)),
+            html: `<div class="rc-day-list">${holidayRow}${rows || '<p class="rc-day-empty">No reservations on this day.</p>'}</div>`,
+            confirmButtonText: 'Close',
+            width: 560,
+            customClass: {
+                ...window.RMSwal.base.customClass,
+                container: 'rm-swal-backdrop',
+                htmlContainer: 'rc-day-list-wrap',
+            },
+            didOpen(popup) {
+                popup.querySelectorAll('.rc-day-item').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        const event = dayBookings[Number(button.dataset.index)];
+                        if (window.Swal) window.Swal.close();
+                        if (event) showReservationDetails(event);
+                    });
+                });
+            },
         });
-
-        const params = queryFrom(payload.year, payload.month);
-        document.getElementById('rsv-prev')?.setAttribute('href', `${config.calendarUrl}?${queryFrom(payload.prev.year, payload.prev.month)}`);
-        document.getElementById('rsv-next')?.setAttribute('href', `${config.calendarUrl}?${queryFrom(payload.next.year, payload.next.month)}`);
-        document.getElementById('rsv-clear')?.setAttribute('href', `${config.calendarUrl}?year=${payload.year}&month=${payload.month}`);
-
-        renderGrid(payload.cells || []);
-        const url = `${config.calendarUrl}?${params.toString()}`;
-        if (push) history.pushState({ rsv: true }, '', url);
-        else history.replaceState({ rsv: true }, '', url);
     }
 
-    async function load(params, { push = true } = {}) {
-        if (request) request.abort();
-        request = new AbortController();
-        setLoading(true);
-
-        try {
-            const response = await fetch(`${config.calendarUrl}?${params.toString()}`, {
-                headers: {
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
-                },
-                signal: request.signal,
-            });
-            if (!response.ok) throw new Error('Could not update the calendar.');
-            const payload = await response.json();
-            applyPayload(payload, { push });
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                window.location.href = `${config.calendarUrl}?${params.toString()}`;
-            }
-        } finally {
-            setLoading(false);
+    function showReservationDetails(event) {
+        const details = event.extendedProps || {};
+        const start = details.reservationStart ? new Date(details.reservationStart) : (event.start instanceof Date ? event.start : new Date(event.start));
+        const end = details.reservationEnd ? new Date(details.reservationEnd) : (event.end instanceof Date ? event.end : new Date(event.end));
+        document.getElementById('reservationModalTitle').textContent = details.reference || 'Reservation details';
+        document.getElementById('detailResource').textContent = details.resource || event.title || '—';
+        document.getElementById('detailDate').textContent = formatDate(start);
+        document.getElementById('detailTime').textContent = details.duration
+            ? `${formatTimeRange(start, end)} · ${details.duration}`
+            : formatTimeRange(start, end);
+        document.getElementById('detailOwner').textContent = details.owner || '—';
+        document.getElementById('detailLocation').textContent = details.location || '—';
+        document.getElementById('detailPurpose').textContent = details.purpose || '—';
+        document.getElementById('detailStatus').innerHTML = statusBadge(details.statusValue || details.statusKey, details.status);
+        const conflict = document.getElementById('detailConflict');
+        const link = document.getElementById('detailLink');
+        if (conflict) conflict.hidden = !details.conflict;
+        if (link) {
+            link.hidden = !details.url;
+            if (details.url) link.href = details.url;
         }
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
     }
 
-    function navigateTo(year, month, extra) {
-        load(queryFrom(year, month, extra));
+    function closeReservationModal() {
+        modal?.classList.remove('show');
+        modal?.setAttribute('aria-hidden', 'true');
     }
 
-    function interceptNav(event, year, month) {
-        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-            return;
+    function isTimeGrid() {
+        return ['timeGridWeek', 'timeGridDay'].includes(calendar.view.type);
+    }
+
+    function forCalendarView(eventList, holidayList) {
+        if (!isTimeGrid()) {
+            return [...eventList.map(withEventColors), ...holidayList];
         }
-        event.preventDefault();
-        navigateTo(year, month);
+
+        return [
+            ...eventList.map((event) => {
+                const start = new Date(event.start);
+                return withEventColors({
+                    ...event,
+                    end: Number.isNaN(start.getTime())
+                        ? event.end
+                        : new Date(start.getTime() + 45 * 60 * 1000).toISOString(),
+                    extendedProps: {
+                        ...event.extendedProps,
+                        actualStart: event.start,
+                        actualEnd: event.end,
+                    },
+                });
+            }),
+            ...holidayList.filter((event) => event.display !== 'background'),
+        ];
     }
 
-    document.getElementById('rsv-prev')?.addEventListener('click', (event) => {
-        interceptNav(event, config.prev.year, config.prev.month);
-    });
+    function eventColors(status) {
+        if (['approved', 'confirmed', 'in_progress', 'completed'].includes(status)) return { background: '#bbf7d0', border: '#059669', text: '#14532d' };
+        if (['pending_approval', 'changes_requested', 'draft'].includes(status)) return { background: '#fde68a', border: '#d97706', text: '#78350f' };
+        if (['rejected', 'cancelled', 'expired'].includes(status)) return { background: '#fecaca', border: '#dc2626', text: '#7f1d1d' };
+        return { background: '#bfdbfe', border: '#2563eb', text: '#1e3a8a' };
+    }
 
-    document.getElementById('rsv-next')?.addEventListener('click', (event) => {
-        interceptNav(event, config.next.year, config.next.month);
-    });
+    function withEventColors(event) {
+        const colors = eventColors(event.extendedProps?.statusValue || event.extendedProps?.statusKey);
+        return { ...event, backgroundColor: colors.background, borderColor: colors.border, textColor: colors.text };
+    }
 
-    document.getElementById('rsv-filters')?.addEventListener('submit', (event) => {
-        event.preventDefault();
-        navigateTo(config.year, config.month);
-    });
+    function statusBadge(statusValue, label) {
+        const cls = ['approved', 'confirmed', 'in_progress', 'completed'].includes(statusValue)
+            ? 'rc-badge-approved'
+            : ['pending_approval', 'changes_requested', 'draft'].includes(statusValue)
+                ? 'rc-badge-pending'
+                : 'rc-badge-cancelled';
+        return `<span class="rc-badge ${cls}">${escapeHtml(label || statusValue || '—')}</span>`;
+    }
 
-    document.getElementById('rsv-clear')?.addEventListener('click', (event) => {
-        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-            return;
-        }
-        event.preventDefault();
-        Object.keys(filterLabels).forEach((id) => {
-            window.RMSelect?.setValue(id, '', filterLabels[id]);
-        });
-        load(queryFrom(config.year, config.month));
-    });
+    function formatDate(date) {
+        if (!date || Number.isNaN(date.getTime())) return '—';
+        return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
 
-    const yearTitle = document.getElementById('yearTitle');
-    document.getElementById('previousYear')?.addEventListener('click', () => {
-        selectedYear -= 1;
-        if (yearTitle) yearTitle.textContent = selectedYear;
-    });
-    document.getElementById('nextYear')?.addEventListener('click', () => {
-        selectedYear += 1;
-        if (yearTitle) yearTitle.textContent = selectedYear;
-    });
+    function formatTimeRange(start, end) {
+        if (!start || Number.isNaN(start.getTime())) return '—';
+        const options = { hour: 'numeric', minute: '2-digit' };
+        const startText = start.toLocaleTimeString('en-GB', options);
+        if (!end || Number.isNaN(end.getTime())) return startText;
+        return `${startText} – ${end.toLocaleTimeString('en-GB', options)}`;
+    }
 
-    document.querySelectorAll('.rsv-month-pick').forEach((button) => {
-        button.addEventListener('click', () => {
-            bootstrap.Modal.getInstance(document.getElementById('monthModal'))?.hide();
-            navigateTo(selectedYear, Number(button.dataset.month));
-        });
-    });
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+        }[character]));
+    }
 
-    window.addEventListener('popstate', () => {
-        const params = new URLSearchParams(window.location.search);
-        load(params, { push: false });
-    });
-
-    bindDayCells();
-})();
+    function limitText(value, max) {
+        const text = String(value ?? '').trim();
+        return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+    }
+});
