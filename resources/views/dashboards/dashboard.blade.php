@@ -85,61 +85,83 @@
         margin: 1rem auto;
     }
 
-    .nebula-header-card,
-    .nebula-workspace-card {
+    .nebula-header-card {
         border: none;
-        border-radius: 14px;
-        background: #ffffff;
-        box-shadow: 0 14px 30px rgba(9, 30, 66, 0.12);
+        border-radius: 1rem;
+        padding: 1.35rem 1.5rem;
+        background: linear-gradient(120deg, #123a7a 0%, #1769c2 52%, #5b4fc9 100%);
+        box-shadow: 0 .6rem 1.6rem rgba(23, 58, 130, .28);
     }
 
-    .nebula-header-card {
-        padding: 1.5rem 1.6rem;
+    .nebula-workspace-card {
+        border: 1px solid #d5def0;
+        border-radius: 1rem;
+        background: linear-gradient(180deg, #f5f8ff 0%, #fff 88px);
+        box-shadow: 0 12px 32px rgba(28, 55, 110, .1);
     }
 
     .nebula-title {
         font-size: 2rem;
         line-height: 1.1;
         margin: 0;
-        color: #10335d;
+        color: #fff;
         font-weight: 700;
+        letter-spacing: -.04em;
     }
 
     .nebula-subtitle {
         margin-top: 0.45rem;
         margin-bottom: 0;
-        color: #526281;
+        color: rgba(255, 255, 255, .82);
     }
 
     .nebula-role-tabs {
         border-bottom: none;
         gap: 0.5rem;
-        margin-top: 1rem;
+        margin-top: 0;
         flex-wrap: wrap;
+        padding: .55rem;
+        border-radius: 14px;
+        background: linear-gradient(120deg, #123a7a 0%, #1769c2 55%, #5b4fc9 100%);
     }
 
     .nebula-role-tabs .nav-link {
-        border: 1px solid #dbe3f0;
-        background: #ffffff;
-        color: #102e55;
+        border: 1px solid transparent;
+        background: transparent;
+        color: rgba(255, 255, 255, .88);
         border-radius: 12px;
         font-weight: 600;
         padding: 0.62rem 0.9rem;
         line-height: 1;
     }
 
+    .nebula-role-tabs .nav-link:hover {
+        background: rgba(255, 255, 255, .12);
+        color: #fff;
+    }
+
     .nebula-role-tabs .nav-link.active {
-        color: #ffffff;
-        border-color: transparent;
-        box-shadow: 0 10px 20px rgba(30, 75, 149, 0.24);
+        color: #1769c2;
+        background: #fff !important;
+        border-color: #fff;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, .16);
+    }
+
+    .nebula-role-tabs .nav-link:disabled {
+        opacity: .55;
+        color: rgba(255, 255, 255, .7);
     }
 
     .nebula-topbar {
         border-radius: 12px;
-        background: #f7f9fc;
+        background: linear-gradient(120deg, #123a7a, #1769c2);
+        color: #fff;
         padding: 0.8rem 1rem;
         margin-bottom: 0.9rem;
     }
+
+    .nebula-topbar .text-secondary,
+    .nebula-topbar .fw-semibold { color: #fff !important; }
 
     .nebula-mini-tabs {
         display: flex;
@@ -150,24 +172,30 @@
 
     .nebula-mini-tabs .btn {
         border-radius: 10px;
-        border: none;
+        border: 1px solid #d5def0;
         font-weight: 600;
         padding: 0.42rem 0.9rem;
-        color: #fff;
-        background: #4f8cff;
+        color: #1769c2;
+        background: #fff;
     }
 
     .nebula-mini-tabs .btn:first-child {
-        background: #213a6b;
+        background: #1769c2;
+        border-color: #1769c2;
+        color: #fff;
     }
 
     .nebula-metrics .metric-card {
-        border: 1px solid #e7edf5;
+        border: 1px solid #d5def0;
+        border-top: 4px solid #1769c2;
         border-radius: 12px;
         padding: 0.9rem;
-        background: #ffffff;
+        background: linear-gradient(180deg, #fff 0%, #eef4ff 100%);
         height: 100%;
     }
+
+    .nebula-metrics .col-md-4:nth-child(2) .metric-card { border-top-color: #16a77a; background: linear-gradient(180deg, #fff 0%, #e7f6f0 100%); }
+    .nebula-metrics .col-md-4:nth-child(3) .metric-card { border-top-color: #d97706; background: linear-gradient(180deg, #fff 0%, #fff4e5 100%); }
 
     .nebula-metrics .metric-label {
         color: #63758f;
@@ -175,10 +203,13 @@
     }
 
     .nebula-metrics .metric-value {
-        color: #0e284a;
+        color: #123a7a;
         font-size: 1.4rem;
         font-weight: 700;
     }
+
+    .nebula-metrics .col-md-4:nth-child(2) .metric-value { color: #16a77a; }
+    .nebula-metrics .col-md-4:nth-child(3) .metric-value { color: #d97706; }
 
     .nebula-section-tabs {
         display: flex;
@@ -190,16 +221,40 @@
     .nebula-section-tab {
         border-radius: 10px;
         padding: 0.5rem 0.95rem;
-        background: #e9edf3;
+        background: #eef3ff;
         color: #233b63;
         font-weight: 600;
         font-size: 0.92rem;
+        border: 1px solid #d5def0;
     }
 
     .nebula-section-tab.active {
-        background: #2563eb;
+        background: #1769c2;
+        border-color: #1769c2;
         color: #fff;
     }
+
+    .nebula-workspace-card .table-responsive {
+        border: 1px solid #c9d6ee;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .nebula-workspace-card table thead th {
+        color: #fff;
+        background: linear-gradient(180deg, #1e4f9c, #1769c2);
+        border-bottom: 0;
+        font-size: .72rem;
+        letter-spacing: .045em;
+        text-transform: uppercase;
+    }
+
+    .nebula-workspace-card table tbody td {
+        border-color: #e4ecf8;
+        background: #fff;
+    }
+
+    .nebula-workspace-card table tbody tr:nth-child(even) td { background: #f5f8ff; }
 
     @media (max-width: 768px) {
         .nebula-title {
@@ -315,7 +370,7 @@
 
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
+                                <thead>
                                     <tr>
                                         <th>Focus Area</th>
                                         <th>Status</th>

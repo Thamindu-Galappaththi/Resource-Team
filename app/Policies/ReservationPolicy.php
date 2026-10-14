@@ -9,7 +9,11 @@ class ReservationPolicy
 {
     public function before(User $user, string $ability): bool|null
     {
-        if ($ability !== 'manageHostel' && $user->hasRole('developer', 'super_admin', 'admin')) {
+        if (in_array($ability, ['manageHostel', 'cancelHostel', 'cancel'], true)) {
+            return null;
+        }
+
+        if ($user->hasRole('developer', 'super_admin', 'admin')) {
             return true;
         }
 
@@ -52,7 +56,8 @@ class ReservationPolicy
             return false;
         }
 
-        if ($user->hasRole('coordinator', 'hostel_manager') || $user->hasPermission('hostel.manage')) {
+        if ($user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'hostel_manager')
+            || $user->hasPermission('hostel.manage')) {
             return true;
         }
 
@@ -64,7 +69,8 @@ class ReservationPolicy
     {
         return $reservation->type === \App\Enums\ReservationType::HOSTEL->value
             && $reservation->status === \App\Enums\ReservationStatus::PENDING_APPROVAL->value
-            && ($user->hasRole('hostel_manager') || $user->hasPermission('hostel.manage'));
+            && ($user->hasRole('developer', 'super_admin', 'admin', 'hostel_manager')
+                || $user->hasPermission('hostel.manage'));
     }
 
     public function view(User $user, Reservation $reservation): bool
@@ -88,7 +94,7 @@ class ReservationPolicy
             return false;
         }
 
-        if ($user->hasRole('developer', 'coordinator', 'resource_owner')) {
+        if ($user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'resource_owner')) {
             return true;
         }
 
