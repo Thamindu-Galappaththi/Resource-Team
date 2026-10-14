@@ -173,6 +173,20 @@ class ReservationBookingService
         });
     }
 
+    public function confirm(Reservation $reservation): void
+    {
+        $reservation->items()
+            ->whereIn('status', [ReservationItemStatus::HELD->value, ReservationItemStatus::REQUESTED->value])
+            ->update(['status' => ReservationItemStatus::CONFIRMED->value]);
+    }
+
+    public function release(Reservation $reservation): void
+    {
+        $reservation->items()
+            ->whereIn('status', [ReservationItemStatus::HELD->value, ReservationItemStatus::REQUESTED->value])
+            ->update(['status' => ReservationItemStatus::CANCELLED->value]);
+    }
+
     public function hasConflict(Collection|array $resourceIds, CarbonInterface $startsAt, CarbonInterface $endsAt, ?int $ignoreReservationId = null): bool
     {
         return $this->conflictingItems($resourceIds, $startsAt, $endsAt, $ignoreReservationId)->isNotEmpty();
