@@ -30,6 +30,8 @@ return new class extends Migration
 
             $table->foreignId('location_id')->index();
 
+            $table->string('resource_owner')->nullable();
+
             // "Resource Name / Model" field.
             $table->string('name_model');
 

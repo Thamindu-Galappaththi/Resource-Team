@@ -106,6 +106,25 @@ class ReservationManagementTest extends TestCase
             ->assertSessionHasErrors('reservation_date');
     }
 
+    public function test_missing_resource_only_reports_the_resource_field(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $resource = Resource::factory()->create();
+
+        $this->actingAs($user)
+            ->from(route('reservations.create'))
+            ->post(route('reservations.store'), [
+                'location_id' => $resource->location_id,
+                'category_id' => $resource->type->resource_category_id,
+                'reservation_date' => now()->toDateString(),
+                'start_time' => '09:00',
+                'end_time' => '10:00',
+                'purpose' => 'Missing resource',
+            ])
+            ->assertSessionHasErrors('resource_id')
+            ->assertSessionDoesntHaveErrors('resource_ids');
+    }
+
     public function test_inactive_resource_cannot_be_booked(): void
     {
         $user = User::factory()->role('coordinator')->create();
@@ -144,6 +163,55 @@ class ReservationManagementTest extends TestCase
         ]);
     }
 
+    public function test_cancelled_and_rejected_reservations_hide_cancel_for_admin(): void
+    {
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+
+        $cancelled = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::CANCELLED->value,
+            'purpose' => 'Cancelled hall booking',
+        ]);
+        $rejected = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::REJECTED->value,
+            'purpose' => 'Rejected hall booking',
+        ]);
+        $pending = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'purpose' => 'Pending hall booking',
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson(route('reservations.index'))
+            ->assertOk()
+            ->assertJsonFragment(['id' => $cancelled->id, 'can_cancel' => false])
+            ->assertJsonFragment(['id' => $rejected->id, 'can_cancel' => false])
+            ->assertJsonFragment(['id' => $pending->id, 'can_cancel' => true]);
+
+        $this->get(route('reservations.show', $cancelled))
+            ->assertOk()
+            ->assertDontSee('Cancel reservation', false);
+        $this->get(route('reservations.show', $rejected))
+            ->assertOk()
+            ->assertDontSee('Cancel reservation', false);
+        $this->get(route('reservations.show', $pending))
+            ->assertOk()
+            ->assertSee('Cancel reservation', false);
+
+        $this->post(route('reservations.cancel', $cancelled), [
+            'cancellation_reason' => 'again',
+        ])->assertForbidden();
+        $this->post(route('reservations.cancel', $rejected), [
+            'cancellation_reason' => 'again',
+        ])->assertForbidden();
+    }
+
     public function test_existing_reservations_filter_by_status(): void
     {
         $admin = User::factory()->role('admin')->create();
@@ -167,6 +235,12 @@ class ReservationManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Pending hall booking')
             ->assertDontSee('Cancelled hall booking');
+
+        $this->actingAs($admin)
+            ->getJson(route('reservations.index', ['status' => ReservationStatus::PENDING_APPROVAL->value]))
+            ->assertOk()
+            ->assertJsonFragment(['purpose' => 'Pending hall booking'])
+            ->assertJsonMissing(['purpose' => 'Cancelled hall booking']);
     }
 
     public function test_calendar_and_create_pages_render(): void
@@ -176,6 +250,19 @@ class ReservationManagementTest extends TestCase
         $this->actingAs($user)->get(route('reservations.calendar'))->assertOk()->assertSee('Reservation Calendar');
         $this->actingAs($user)->get(route('reservations.create'))->assertOk()->assertSee('Purpose of Reservation');
         $this->actingAs($user)->get(route('reservations.index'))->assertOk()->assertSee('Existing Reservations');
+    }
+
+    public function test_calendar_json_returns_month_payload(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+
+        $this->actingAs($user)
+            ->getJson(route('reservations.calendar', ['year' => 2026, 'month' => 10]))
+            ->assertOk()
+            ->assertJsonPath('year', 2026)
+            ->assertJsonPath('month', 10)
+            ->assertJsonStructure(['label', 'cells', 'stats', 'reservationsByDate', 'holidaysByDate', 'prev', 'next'])
+            ->assertJsonPath('holidaysByDate.2026-10-25.kind', 'poya');
     }
 
     public function test_nebula_sms_user_cannot_create_but_can_view_list(): void
@@ -214,6 +301,7 @@ class ReservationManagementTest extends TestCase
             'resource_ids' => [$resource->id],
             'requester_id' => $user->id,
             'location_id' => $resource->location_id,
+            'category_id' => $resource->type->resource_category_id,
             'reservation_date' => now()->addDay()->toDateString(),
             'start_time' => '09:00',
             'end_time' => '12:00',

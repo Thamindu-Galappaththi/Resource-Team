@@ -54,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
 
             $notifications = $user
                 ? $user->notifications()->latest()->take(8)->get()->map(fn (DatabaseNotification $notification) => [
+                    'id' => $notification->id,
                     'message' => $notification->data['message'] ?? 'You have a new notification.',
                     'icon' => $notification->data['icon'] ?? self::NOTIFICATION_ICONS[class_basename($notification->type)] ?? 'ti-bell',
                     'url' => $notification->data['url'] ?? null,

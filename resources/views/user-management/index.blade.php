@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=13">
-<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=12">
+<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=17">
 @endpush
 
 @section('content')
@@ -48,7 +48,7 @@
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-4">
-            <div class="um-stat p-4" style="--stat-color:#737b80;--stat-icon-bg:#f0f1f2">
+            <div class="um-stat p-4" style="--stat-color:#64748b;--stat-icon-bg:#eef2f6">
                 <div class="d-flex justify-content-between"><span class="um-stat-icon"><i
                             class="ti ti-user-off"></i></span><small class="text-muted">Access disabled</small></div>
                 <div class="um-stat-label mt-3">Inactive Users</div>
@@ -115,8 +115,7 @@
                     </ul>
                 </div>
                 <div class="um-toolbar-btns">
-                    <button class="btn btn-outline-secondary px-3" type="button" id="um-clear" @disabled(!
-                        request()->hasAny(['search', 'location', 'role', 'status']))>Clear</button>
+                    <button class="um-filter-clear" type="button" id="um-clear" @disabled(! request()->hasAny(['search', 'location', 'role', 'status']))>Clear</button>
                 </div>
             </div>
         </form>
@@ -439,6 +438,6 @@ window.UM = {
     errors: @json(session('edit_user_id') ? $errors->toArray() : []),
 };
 </script>
-<script src="{{ asset('js/user-management.js') }}?v=13"></script>
+<script src="{{ asset('js/user-management.js') }}?v=14"></script>
 @endpush
 @endsection

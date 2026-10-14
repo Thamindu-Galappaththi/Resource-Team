@@ -44,23 +44,25 @@
         </section>
     @endif
 
-    <div class="rs-dash-grid">
-        <section class="rs-dash-panel">
+    <div class="rs-dash-grid rs-dash-grid--metrics">
+        <section class="rs-dash-panel rs-dash-panel--chart">
             <div class="rs-dash-panel__head">
                 <h2>{{ $chart['title'] ?? 'This week' }}</h2>
             </div>
-            <div class="rs-chart" role="img" aria-label="{{ $chart['title'] ?? 'Weekly volume' }}">
-                @forelse($chart['points'] ?? [] as $point)
-                    <div class="rs-chart__col">
-                        <span class="rs-chart__n">{{ $point['value'] }}</span>
-                        <div class="rs-chart__track">
-                            <div class="rs-chart__bar" style="height: {{ $point['pct'] }}%"></div>
+            <div class="rs-dash-panel__body">
+                <div class="rs-chart" role="img" aria-label="{{ $chart['title'] ?? 'Weekly volume' }}">
+                    @forelse($chart['points'] ?? [] as $point)
+                        <div class="rs-chart__col">
+                            <span class="rs-chart__n">{{ $point['value'] }}</span>
+                            <div class="rs-chart__track">
+                                <div class="rs-chart__bar" style="height: {{ max((int) $point['pct'], $point['value'] > 0 ? 8 : 0) }}%"></div>
+                            </div>
+                            <span class="rs-chart__d">{{ $point['label'] }}</span>
                         </div>
-                        <span class="rs-chart__d">{{ $point['label'] }}</span>
-                    </div>
-                @empty
-                    <p class="rs-dash-empty mb-0">No volume to chart yet.</p>
-                @endforelse
+                    @empty
+                        <p class="rs-dash-empty mb-0">No volume to chart yet.</p>
+                    @endforelse
+                </div>
             </div>
         </section>
 
@@ -68,19 +70,21 @@
             <div class="rs-dash-panel__head">
                 <h2>{{ $breakdown['title'] ?? 'Breakdown' }}</h2>
             </div>
-            @forelse($breakdown['items'] ?? [] as $item)
-                <div class="rs-mix">
-                    <div class="rs-mix__row">
-                        <span>{{ $item['label'] }}</span>
-                        <strong>{{ $item['value'] }}</strong>
+            <div class="rs-dash-panel__body">
+                @forelse($breakdown['items'] ?? [] as $item)
+                    <div class="rs-mix">
+                        <div class="rs-mix__row">
+                            <span>{{ $item['label'] }}</span>
+                            <strong>{{ $item['value'] }}</strong>
+                        </div>
+                        <div class="rs-mix__track">
+                            <div class="rs-mix__fill tone-{{ $item['tone'] }}" style="width: {{ $item['pct'] }}%"></div>
+                        </div>
                     </div>
-                    <div class="rs-mix__track">
-                        <div class="rs-mix__fill tone-{{ $item['tone'] }}" style="width: {{ $item['pct'] }}%"></div>
-                    </div>
-                </div>
-            @empty
-                <p class="rs-dash-empty mb-0">No status data yet.</p>
-            @endforelse
+                @empty
+                    <p class="rs-dash-empty mb-0">No status data yet.</p>
+                @endforelse
+            </div>
         </section>
     </div>
 
@@ -94,14 +98,16 @@
             <div class="rs-dash-panel__head">
                 <h2>{{ $spotlight['title'] }}</h2>
             </div>
-            <ul class="rs-spot">
-                @foreach($spotlight['items'] as $item)
-                    <li>
-                        <span>{{ $item['label'] }}</span>
-                        <strong>{{ $item['value'] }}</strong>
-                    </li>
-                @endforeach
-            </ul>
+            <div class="rs-dash-panel__body">
+                <ul class="rs-spot">
+                    @foreach($spotlight['items'] as $item)
+                        <li>
+                            <span>{{ $item['label'] }}</span>
+                            <strong>{{ $item['value'] }}</strong>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
         </section>
     @endif
 </div>
