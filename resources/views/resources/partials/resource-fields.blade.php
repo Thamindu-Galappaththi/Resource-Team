@@ -49,3 +49,9 @@
     <input type="text" class="form-control" id="serialNumber" name="serial_number" maxlength="50" placeholder="e.g., SN-2024-00123">
     <div class="invalid-feedback" id="serialNumberError"></div>
 </div>
+
+<div class="mb-3">
+    <label for="resourceOwner" class="form-label">Resource Owner <span class="text-muted">(Optional)</span></label>
+    <input type="text" class="form-control" id="resourceOwner" name="resource_owner" maxlength="255" placeholder="e.g., Nadun">
+    <div class="invalid-feedback" id="resourceOwnerError"></div>
+</div>

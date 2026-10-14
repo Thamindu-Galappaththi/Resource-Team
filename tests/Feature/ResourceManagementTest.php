@@ -136,10 +136,16 @@ class ResourceManagementTest extends TestCase
             'category_id' => $category->id,
             'resource_type_id' => $type->id,
             'location_id' => $location->id,
+            'resource_owner' => 'Nadun',
             'name_model' => 'Projector 02',
             'serial_number' => '',
             'status' => 'under_maintenance',
-        ])->assertOk()->assertJsonPath('name_model', 'Projector 02')->assertJsonPath('serial_number', null);
+            'linked_resource_ids' => [$linked->id],
+        ])->assertOk()
+            ->assertJsonPath('name_model', 'Projector 02')
+            ->assertJsonPath('serial_number', null)
+            ->assertJsonPath('resource_owner', 'Nadun')
+            ->assertJsonPath('linked_resources.0.id', $linked->id);
 
         $this->assertDatabaseHas('resources', ['id' => $resource->id, 'name_model' => 'Projector 02', 'serial_number' => null]);
     }
@@ -172,7 +178,7 @@ class ResourceManagementTest extends TestCase
         $this->assertDatabaseHas('resources', ['id' => $resource->id, 'is_deleted' => false]);
     }
 
-    public function test_create_resource_page_uses_stepped_workflow_without_unsaved_owner_field(): void
+    public function test_create_resource_page_uses_stepped_workflow_with_owner_input(): void
     {
         $this->seed(RolePermissionSeeder::class);
         $user = User::factory()->role('admin')->create();
@@ -182,8 +188,8 @@ class ResourceManagementTest extends TestCase
             ->assertSee('Create a resource category')
             ->assertSee('Link resources')
             ->assertSee('data-cu-select', false)
-            ->assertDontSee('Resource Owner')
-            ->assertDontSee('e.g., Nadun');
+            ->assertSee('Resource Owner')
+            ->assertSee('e.g., Nadun');
     }
 
     public function test_resource_calendar_page_renders_filters_and_calendar_root(): void

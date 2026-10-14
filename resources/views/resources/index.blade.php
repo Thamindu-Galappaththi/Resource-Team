@@ -3,7 +3,7 @@
 @section('title', 'Existing Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=18">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=19">
 @endpush
 
 @section('content')
@@ -119,8 +119,7 @@
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <span class="rm-modal-icon" aria-hidden="true"><i class="ti ti-pencil"></i></span>
-                        <div>
+                        <div class="rm-modal-heading">
                             <h5 class="modal-title" id="editResourceModalLabel">Edit Resource</h5>
                             <p class="rm-modal-sub mb-0">Update inventory details and save.</p>
                         </div>
@@ -130,18 +129,15 @@
                         <div id="editResourceLoading" class="text-center text-muted py-4" role="status" hidden>Loading resource details…</div>
                         <form id="editResourceForm">
                             @csrf
-                            <div class="mb-3">
-                                <label class="form-label" for="editResourceId">Resource ID</label>
-                                <input type="text" class="form-control" id="editResourceId" readonly>
-                            </div>
                             @include('resources.partials.resource-fields')
                             <div class="mb-3" id="editFeaturesWrap" hidden>
                                 <label class="form-label">Category / type features</label>
                                 <div id="editFeaturesList" class="rm-linked-list"></div>
                             </div>
-                            <div class="mb-0" id="editLinkedWrap" hidden>
-                                <label class="form-label">Linked resources</label>
+                            <div class="mb-0" id="editLinkedWrap">
+                                <label class="form-label">Link resources</label>
                                 <div id="editLinkedList" class="rm-linked-list"></div>
+                                <p class="text-muted small mb-0 mt-2">Select related inventory items to keep with this resource.</p>
                             </div>
                         </form>
                     </div>
@@ -174,5 +170,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-index.js') }}?v=9"></script>
+<script src="{{ asset('js/resource-index.js') }}?v=12"></script>
 @endpush

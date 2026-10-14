@@ -208,14 +208,21 @@
 .rm-page .modal-header {
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: flex-start;
     gap: 14px;
     padding: 1.1rem 3.5rem 1.1rem 1.35rem;
     background: linear-gradient(120deg, #123a7a 0%, #1769c2 55%, #5b4fc9 100%);
     border-bottom: 0;
+    text-align: left;
 }
 
-.rm-page .modal-title { font-weight: 700; color: #fff; margin: 0; }
+.rm-page .rm-modal-heading {
+    margin-right: auto;
+    min-width: 0;
+    text-align: left;
+}
+.rm-page .modal-title { font-weight: 700; color: #fff; margin: 0; text-align: left; }
 .rm-page .modal-header .rm-modal-sub { margin: .15rem 0 0; color: rgba(255, 255, 255, .8); font-size: .82rem; }
 .rm-modal-icon {
     width: 44px;
@@ -373,6 +380,10 @@
     gap: 8px;
 }
 .rm-linked-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
     padding: 10px 12px;
     border: 1px solid #d5def0;
     border-radius: 10px;
@@ -380,6 +391,12 @@
     color: #14315e;
     font-size: 13px;
     font-weight: 650;
+    cursor: pointer;
+}
+.rm-linked-item input { margin: 0; flex-shrink: 0; accent-color: #1769c2; }
+.rm-linked-item:has(input:checked) {
+    border-color: #93c5fd;
+    background: #eef5ff;
 }
 
 .rm-feature {

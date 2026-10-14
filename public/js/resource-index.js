@@ -283,12 +283,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const linked = linkedResources(resource).map((item) => linkedLabel(item)).join('\n') || '—';
             const features = featureLines(resource).join('\n') || '—';
             const details = [
-                ['Resource ID', resource.id],
                 ['Name / Model', resource.name_model],
                 ['Serial number', resource.serial_number],
                 ['Category', resource.type?.category?.name],
                 ['Type', resource.type?.name],
                 ['Location', resource.location?.name],
+                ['Resource Owner', resource.resource_owner],
                 ['Status', statusLabel(resource.status)],
                 ['Features', features],
                 ['Linked resources', linked],
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchJSON(config.typesUrl),
             fetchJSON(config.locationsUrl),
         ]);
-        lookupCache = { categories, types, locations };
+        lookupCache = { ...lookupCache, categories, types, locations };
         return lookupCache;
     }
 
@@ -337,13 +337,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type) window.RMSelect.setValue('resourceTypeSelect', type.id, type.name);
         const location = lookups.locations.find((item) => String(item.id) === String(resource.location_id));
         if (location) window.RMSelect.setValue('resourceLocationSelect', location.id, location.name);
+        window.RMSelect.setOptions('resourceStatusSelect', [
+            { value: 'active', label: 'Active' },
+            { value: 'inactive', label: 'Inactive' },
+            { value: 'under_maintenance', label: 'Under Maintenance' },
+            { value: 'decommissioned', label: 'Decommissioned' },
+        ], 'Select status (e.g., Available, Under Maintenance)');
         window.RMSelect.setValue('resourceStatusSelect', resource.status || '', statusLabel(resource.status));
         document.getElementById('resourceNameModel').value = resource.name_model || '';
         document.getElementById('serialNumber').value = resource.serial_number || '';
-        const idField = document.getElementById('editResourceId');
-        if (idField) idField.value = resource.id || '';
+        const ownerField = document.getElementById('resourceOwner');
+        if (ownerField) ownerField.value = resource.resource_owner || '';
         fillReadonlyList('editFeaturesWrap', 'editFeaturesList', featureLines(resource));
-        fillReadonlyList('editLinkedWrap', 'editLinkedList', linkedResources(resource).map((item) => linkedLabel(item)));
+        fillLinkedChoices(resource);
     }
 
     function fillReadonlyList(wrapId, listId, items) {
@@ -364,11 +370,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function fillLinkedChoices(resource) {
+        const list = document.getElementById('editLinkedList');
+        if (!list) return;
+        const selected = new Set(linkedResources(resource).map((item) => String(item.id)));
+        const others = allResources.filter((item) => String(item.id) !== String(resource.id) && item.status !== 'deleted');
+        list.replaceChildren();
+        if (!others.length) {
+            list.innerHTML = '<p class="text-muted small mb-0">No other resources are available to link.</p>';
+            return;
+        }
+        others.forEach((item) => {
+            const id = `edit-linked-${item.id}`;
+            const label = document.createElement('label');
+            label.className = 'rm-linked-item';
+            label.setAttribute('for', id);
+            label.innerHTML = `<input type="checkbox" id="${id}" name="linked_resource_ids[]" value="${item.id}" ${selected.has(String(item.id)) ? 'checked' : ''}><span>${escapeHtml(linkedLabel(item))}</span>`;
+            list.appendChild(label);
+        });
+    }
+
     async function editResource(id) {
         const modalElement = document.getElementById('editResourceModal');
         const form = document.getElementById('editResourceForm');
         const loading = document.getElementById('editResourceLoading');
         if (!modalElement || !form) return;
+
+        form.dataset.resourceId = id;
+        const cached = allResources.find((item) => String(item.id) === String(id));
+        if (cached && lookupCache.categories.length) {
+            fillEditForm(cached, lookupCache);
+            form.hidden = false;
+            if (loading) loading.hidden = true;
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            loadResource(id).then((resource) => fillEditForm(resource, lookupCache)).catch(() => {});
+            return;
+        }
 
         form.hidden = true;
         if (loading) loading.hidden = false;
@@ -376,7 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const [resource, lookups] = await Promise.all([loadResource(id), ensureLookups()]);
             fillEditForm(resource, lookups);
-            form.dataset.resourceId = id;
             if (loading) loading.hidden = true;
             form.hidden = false;
         } catch (error) {
@@ -395,9 +431,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 category_id: document.getElementById('resourceCategorySelect').value,
                 resource_type_id: document.getElementById('resourceTypeSelect').value,
                 location_id: document.getElementById('resourceLocationSelect').value,
+                resource_owner: document.getElementById('resourceOwner')?.value.trim() || null,
                 name_model: document.getElementById('resourceNameModel').value.trim(),
                 serial_number: document.getElementById('serialNumber').value.trim() || null,
                 status: document.getElementById('resourceStatusSelect').value,
+                linked_resource_ids: [...form.querySelectorAll('input[name="linked_resource_ids[]"]:checked')].map((input) => input.value),
             });
             bootstrap.Modal.getInstance(document.getElementById('editResourceModal'))?.hide();
             await loadResources();

@@ -34,12 +34,11 @@ class Resource extends Model
      * resource_type_id, location_id, name_model, serial_number, status.
      * Note: category_id is intentionally NOT here — see the migration
      * comment for why (it's derived through resource_type, not stored).
-     * Note: no resource_owner_id — that's just a hardcoded name in the
-     * Tab 3 dropdown right now, there's no table/column for it yet.
      */
     protected $fillable = [
         'resource_type_id',
         'location_id',
+        'resource_owner',
         'name_model',
         'serial_number',
         'status',

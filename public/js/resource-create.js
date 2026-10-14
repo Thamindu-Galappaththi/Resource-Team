@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             location_id: document.getElementById('resourceLocationSelect').value,
             name_model: document.getElementById('resourceNameModel').value.trim(),
             serial_number: document.getElementById('serialNumber').value.trim() || null,
+            resource_owner: document.getElementById('resourceOwner')?.value.trim() || null,
             status: document.getElementById('resourceStatusSelect').value,
         };
 
@@ -137,6 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
             window.RMSelect.setValue('resourceStatusSelect', '', 'Select status (e.g., Available, Under Maintenance)');
             document.getElementById('resourceNameModel').value = '';
             document.getElementById('serialNumber').value = '';
+            const ownerField = document.getElementById('resourceOwner');
+            if (ownerField) ownerField.value = '';
             await success('Resource created successfully.', 'resourceForm');
         } catch (error) {
             showRequestErrors(error, {
@@ -145,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 location_id: 'resourceLocationSelect',
                 name_model: 'resourceNameModel',
                 serial_number: 'serialNumber',
+                resource_owner: 'resourceOwner',
                 status: 'resourceStatusSelect',
             });
             await swalFire({ icon: 'error', title: 'Could not save resource', text: error.message });
@@ -380,6 +384,8 @@ document.addEventListener('DOMContentLoaded', () => {
             })[resource.status] || resource.status);
             document.getElementById('resourceNameModel').value = resource.name_model || '';
             document.getElementById('serialNumber').value = resource.serial_number || '';
+            const ownerField = document.getElementById('resourceOwner');
+            if (ownerField) ownerField.value = resource.resource_owner || '';
             document.getElementById('saveResourceButton').textContent = 'Save changes';
             bootstrap.Tab.getOrCreateInstance(document.getElementById('resource-tab')).show();
         } catch (error) {
