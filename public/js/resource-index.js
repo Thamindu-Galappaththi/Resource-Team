@@ -16,14 +16,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const swalFire = (options) => window.RMSwal.fire(options);
 
     loadResources();
-    document.getElementById('applyFiltersBtn')?.addEventListener('click', () => { currentPage = 1; applyFilters(); });
-    document.getElementById('clearFiltersBtn')?.addEventListener('click', clearFilters);
+    document.getElementById('clearFiltersBtn')?.addEventListener('click', () => {
+        if (document.getElementById('clearFiltersBtn')?.disabled) return;
+        clearFilters();
+    });
     document.getElementById('searchInput')?.addEventListener('input', () => {
+        toggleClear();
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => { currentPage = 1; applyFilters(); }, 180);
     });
     document.getElementById('searchInput')?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') { event.preventDefault(); currentPage = 1; applyFilters(); }
+    });
+    ['categoryFilter', 'statusFilter'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', () => { currentPage = 1; applyFilters(); });
     });
     document.getElementById('resourceTableBody')?.addEventListener('click', onTableClick);
     document.getElementById('rmPagination')?.addEventListener('click', onPaginationClick);
@@ -116,6 +122,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const start = filteredResources.length ? (currentPage - 1) * pageSize + 1 : 0;
         const end = Math.min(currentPage * pageSize, filteredResources.length);
         setText('resultCount', `Showing ${start}–${end} of ${filteredResources.length} resources`);
+        toggleClear();
+    }
+
+    function hasFilters() {
+        const search = (document.getElementById('searchInput')?.value || '').trim();
+        const category = document.getElementById('categoryFilter')?.value || '';
+        const status = document.getElementById('statusFilter')?.value || '';
+        return Boolean(search || category || status);
+    }
+
+    function toggleClear() {
+        const button = document.getElementById('clearFiltersBtn');
+        if (button) button.disabled = !hasFilters();
     }
 
     function buildRow(resource) {

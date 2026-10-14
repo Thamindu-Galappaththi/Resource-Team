@@ -429,21 +429,21 @@
     gap: .5rem;
 }
 
-.rm-page .rm-filter-actions .btn {
+.rm-page .rm-clear-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
     min-height: 48px;
-    padding: 0 1rem;
-    line-height: 1;
-    border-radius: .65rem;
-}
-
-.rm-page .rm-clear-btn {
-    color: var(--rm-blue);
-    background: #fff;
+    padding: 0 16px;
     border: 1.5px solid var(--rm-blue);
-    font-weight: 600;
+    border-radius: .65rem;
+    background: #fff;
+    color: var(--rm-blue);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .rm-page .rm-clear-btn:hover,
@@ -451,6 +451,24 @@
     color: #fff;
     background: var(--rm-blue);
     border-color: var(--rm-blue);
+}
+
+.rm-page .rm-clear-btn:disabled {
+    color: var(--rm-blue);
+    background: #fff;
+    border-color: var(--rm-blue);
+    opacity: .55;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.rm-page .rm-clear-btn:disabled:hover,
+.rm-page .rm-clear-btn:disabled:focus {
+    color: #fff;
+    background: var(--rm-blue);
+    border-color: var(--rm-blue);
+    opacity: .55;
+    cursor: not-allowed;
 }
 
 .rm-page .rm-search-group .input-group-text {

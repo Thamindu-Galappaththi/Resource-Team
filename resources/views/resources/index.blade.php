@@ -3,7 +3,7 @@
 @section('title', 'Existing Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=15">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=16">
 @endpush
 
 @section('content')
@@ -80,8 +80,7 @@
                 <div class="col-12 col-lg-2">
                     <label class="form-label d-none d-lg-block">&nbsp;</label>
                     <div class="d-flex gap-2 rm-filter-actions">
-                        <button class="btn btn-primary flex-fill" id="applyFiltersBtn" type="button">Apply</button>
-                        <button class="btn rm-clear-btn flex-fill" id="clearFiltersBtn" type="button">Clear</button>
+                        <button class="rm-clear-btn" id="clearFiltersBtn" type="button" disabled>Clear</button>
                     </div>
                 </div>
             </div>
@@ -163,5 +162,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-index.js') }}?v=5"></script>
+<script src="{{ asset('js/resource-index.js') }}?v=6"></script>
 @endpush
