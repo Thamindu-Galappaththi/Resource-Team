@@ -16,14 +16,8 @@
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
-<<<<<<< HEAD
-    <link href="{{ asset('css/sidebar-responsive.css') }}?v=9" rel="stylesheet">
-    <link href="{{ asset('css/notifications.css') }}?v=1" rel="stylesheet">
-    <link href="{{ asset('css/resource-pages.css') }}?v=3" rel="stylesheet">
-=======
     <link href="{{ asset('css/sidebar-responsive.css') }}?v=10" rel="stylesheet">
     <link href="{{ asset('css/notifications.css') }}?v=3" rel="stylesheet">
->>>>>>> 83fa4dc2490e6d9583ee5be9e7771a3b3088792c
     @stack('styles')
 
     <!-- JS -->
@@ -72,7 +66,7 @@
 </head>
 
 <body class="d-flex flex-column">
-    
+
 
     <!--  Body Wrapper -->
     <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"

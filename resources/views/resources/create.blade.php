@@ -3,44 +3,6 @@
 @section('title', 'Create Resources')
 
 @push('styles')
-<<<<<<< HEAD
-<style>
-    .resource-create-page { --rc-ink:#152238; --rc-muted:#65738a; --rc-line:#dfe5ee; --rc-blue:#315fe8; color:var(--rc-ink); }
-    .resource-create-page .page-heading { font-weight:700; letter-spacing:-.035em; color:var(--rc-ink); }
-    .resource-create-page .page-subtitle, .resource-create-page .step-hint { color:var(--rc-muted); }
-    .resource-create-page .workflow-card { border:1px solid #dce3ed; border-radius:16px; background:#fff; box-shadow:0 10px 30px rgba(19,35,58,.09); overflow:hidden; }
-    .resource-create-page .workflow-card > .card-body { background:linear-gradient(180deg,#fff 0%,#fbfcfe 100%); }
-    .resource-create-page .workflow-tabs { display:flex; flex-wrap:nowrap; gap:.45rem; padding:.6rem 1rem; border:1px solid #d8e0eb; border-radius:17px; background:#edf1f7; overflow-x:auto; }
-    .resource-create-page .workflow-tabs .nav-link { display:flex; align-items:center; gap:.65rem; border:1px solid transparent; border-radius:13px; padding:1rem 1.15rem; color:#4e5c71; white-space:nowrap; transition:background .18s ease,color .18s ease,box-shadow .18s ease; }
-    .resource-create-page .workflow-tabs .nav-link:hover { background:#fff; color:var(--rc-ink); }
-    .resource-create-page .workflow-tabs .nav-link.active { background:#fff; border-color:#e4e9f1; color:#204bc9; box-shadow:0 4px 12px rgba(19,35,58,.1); font-weight:650; }
-    .resource-create-page .workflow-content { padding:clamp(1rem,3vw,2rem); }
-    .resource-create-page .step-panel { max-width:1000px; margin:0 auto; padding:clamp(1.25rem,3vw,2.25rem); background:#fff; border:1px solid #dfe5ee; border-radius:16px; box-shadow:0 9px 26px rgba(19,35,58,.075); }
-    .resource-create-page .step-title { font-size:1.45rem; font-weight:650; letter-spacing:-.025em; }
-    .resource-create-page .form-label { color:#202e43; font-weight:600; margin-bottom:.5rem; }
-    .resource-create-page .form-control, .resource-create-page .form-select { min-height:46px; border-color:#cfd8e5; border-radius:9px; background-color:#fff; color:#18263a; box-shadow:0 1px 2px rgba(19,35,58,.035); }
-    .resource-create-page .form-control::placeholder { color:#8591a3; }
-    .resource-create-page .form-control:focus, .resource-create-page .form-select:focus { border-color:#5578e8; box-shadow:0 0 0 .2rem rgba(49,95,232,.15); }
-    .resource-create-page .btn-primary { --bs-btn-bg:#315fe8; --bs-btn-border-color:#315fe8; --bs-btn-hover-bg:#244ecb; --bs-btn-hover-border-color:#244ecb; --bs-btn-active-bg:#1e43b1; --bs-btn-active-border-color:#1e43b1; border-radius:9px; padding:.65rem 1.15rem; font-weight:600; box-shadow:0 4px 10px rgba(49,95,232,.2); }
-    .resource-create-page .feature-heading { border-top:1px solid var(--rc-line); padding-top:1.25rem; }
-    .resource-create-page #featuresContainer .row { align-items:center; row-gap:.75rem; margin:0 0 .75rem; padding:1rem; border:1px solid #e0e6ef; border-radius:12px; background:#f7f9fc; }
-    .resource-create-page .existing-card { border:1px solid #dce3ed; border-radius:16px; background:#fff; box-shadow:0 9px 26px rgba(19,35,58,.08); overflow:hidden; }
-    .resource-create-page .existing-card .card-header { background:#edf1f7; color:var(--rc-ink); }
-    @media (max-width:575.98px) { .resource-create-page .workflow-tabs { margin:0 -1rem; border-radius:0; } .resource-create-page .workflow-content { padding:1rem 0 0; } .resource-create-page .step-panel { padding:1.15rem; border-radius:12px; } }
-</style>
-@endpush
-
-<div class="container-fluid mt-4 resource-create-page">
-    <div class="row">
-        <div class="col-12">
-            <div class="resource-page-banner">
-                <h1 class="page-heading">Create resources</h1>
-                <p class="page-subtitle">Set up a category, define its types, then add and link your resources.</p>
-            </div>
-            <div class="card workflow-card">
-                <div class="card-body">
-                    {{-- ===================== NAV TABS ===================== --}}
-=======
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=21">
 @endpush
 
@@ -56,7 +18,6 @@
 
     <div class="card border-0 rm-panel workflow-card">
         <div class="card-body p-3 p-md-4">
->>>>>>> 83fa4dc2490e6d9583ee5be9e7771a3b3088792c
                     <ul class="nav nav-tabs workflow-tabs" id="resourceTabs" role="tablist" aria-label="Resource creation steps">
                         <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-pane" type="button" role="tab">
