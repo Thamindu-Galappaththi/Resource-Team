@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=17">
+<link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
 @endpush
 
 @section('content')
@@ -171,5 +171,5 @@ window.RSVIndex = {
     payload: @json($payload),
 };
 </script>
-<script src="{{ asset('js/reservation-index.js') }}?v=5"></script>
+<script src="{{ asset('js/reservation-index.js') }}?v=6"></script>
 @endpush

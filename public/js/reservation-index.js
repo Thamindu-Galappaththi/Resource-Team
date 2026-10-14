@@ -90,14 +90,13 @@
     }
 
     function actionButtons(row) {
-        let html = '';
-        if (row.can_view) {
-            html += `<button type="button" class="btn btn-sm btn-outline-secondary rsv-icon-btn" data-rsv-view="${row.id}" title="View" aria-label="View reservation ${escapeHtml(row.reference)}"><i class="ti ti-eye"></i></button>`;
-        }
-        if (row.can_cancel) {
-            html += `<button type="button" class="btn btn-sm btn-outline-danger rsv-icon-btn" data-rsv-cancel="${row.id}" title="Cancel" aria-label="Cancel reservation ${escapeHtml(row.reference)}"><i class="ti ti-x"></i></button>`;
-        }
-        return html ? `<span class="rsv-action-group">${html}</span>` : '—';
+        const view = row.can_view !== false
+            ? `<button type="button" class="btn btn-sm btn-outline-secondary rsv-icon-btn" data-rsv-view="${row.id}" title="View" aria-label="View reservation ${escapeHtml(row.reference)}"><i class="ti ti-eye"></i></button>`
+            : `<button type="button" class="btn btn-sm btn-outline-secondary rsv-icon-btn" disabled aria-disabled="true" title="View unavailable"><i class="ti ti-eye"></i></button>`;
+        const cancel = row.can_cancel
+            ? `<button type="button" class="btn btn-sm btn-outline-danger rsv-icon-btn" data-rsv-cancel="${row.id}" title="Cancel" aria-label="Cancel reservation ${escapeHtml(row.reference)}"><i class="ti ti-x"></i></button>`
+            : `<button type="button" class="btn btn-sm btn-outline-danger rsv-icon-btn" disabled aria-disabled="true" title="Cancel unavailable"><i class="ti ti-x"></i></button>`;
+        return `<span class="rsv-action-group">${view}${cancel}</span>`;
     }
 
     function renderPagination(payload) {
@@ -306,6 +305,7 @@
         const cancel = event.target.closest('[data-rsv-cancel]');
         if (cancel) {
             event.preventDefault();
+            if (cancel.disabled) return;
             openCancel(cancel.dataset.rsvCancel);
             return;
         }

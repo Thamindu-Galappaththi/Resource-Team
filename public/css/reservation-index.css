@@ -313,6 +313,26 @@
 .rsv-icon-btn.btn-outline-secondary:hover { color: #fff; background: #1769c2; border-color: #1769c2; }
 .rsv-icon-btn.btn-outline-danger { color: #c24141; border-color: #f0b4b4; }
 .rsv-icon-btn.btn-outline-danger:hover { color: #fff; background: #c24141; border-color: #c24141; }
+.rsv-icon-btn:disabled,
+.rsv-icon-btn[aria-disabled="true"] {
+    opacity: .42;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: #f8fafc;
+    box-shadow: none;
+}
+.rsv-icon-btn.btn-outline-secondary:disabled,
+.rsv-icon-btn.btn-outline-secondary:disabled:hover {
+    color: #8aa0c0;
+    background: #f8fafc;
+    border-color: #d5def0;
+}
+.rsv-icon-btn.btn-outline-danger:disabled,
+.rsv-icon-btn.btn-outline-danger:disabled:hover {
+    color: #d4a3a3;
+    background: #f8fafc;
+    border-color: #edd6d6;
+}
 
 .rsv-empty {
     text-align: center;
