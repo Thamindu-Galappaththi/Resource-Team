@@ -691,7 +691,9 @@
 .rm-page #existingCategoriesCard table tbody tr:nth-child(even) td { background: #f5f8ff; }
 .rm-page #existingCategoriesCard table tbody tr:hover td { background: #eaf1ff; }
 
-.rm-page #featuresContainer .feature-row { margin: 0; padding: 0; border: 0; background: transparent; }
+.rm-page #featuresContainer .feature-row,
+.rm-page #editFeaturesContainer .feature-row { margin: 0; padding: 0; border: 0; background: transparent; }
+.rm-page #editFeaturesContainer { display: flex; flex-direction: column; gap: .75rem; }
 
 .rm-page .invalid-feedback.d-block { display: block; }
 

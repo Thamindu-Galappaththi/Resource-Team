@@ -9,13 +9,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextTab = { categoryForm: 'type-tab', typeForm: 'resource-tab', resourceForm: 'linked-tab' };
     const existingCategoriesCard = document.getElementById('existingCategoriesCard');
     const featuresContainer = document.getElementById('featuresContainer');
+    const editFeaturesContainer = document.getElementById('editFeaturesContainer');
     let featureIndex = 0;
 
     document.getElementById('resourceTabs')?.addEventListener('shown.bs.tab', (event) => {
         if (existingCategoriesCard) existingCategoriesCard.hidden = event.target.id !== 'category-tab';
     });
 
-    document.getElementById('addFeatureBtn')?.addEventListener('click', addFeatureRow);
+    document.getElementById('addFeatureBtn')?.addEventListener('click', () => addFeatureRow(featuresContainer));
+    document.getElementById('editAddFeatureBtn')?.addEventListener('click', () => {
+        addFeatureRow(editFeaturesContainer);
+        toggleEditFeaturesEmpty();
+    });
     document.getElementById('categoryForm')?.addEventListener('submit', submitCategory);
     document.getElementById('typeForm')?.addEventListener('submit', submitType);
     document.getElementById('resourceForm')?.addEventListener('submit', submitResource);
@@ -30,38 +35,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadInitialData();
 
-    function addFeatureRow() {
+    function addFeatureRow(container = featuresContainer, feature = {}) {
+        if (!container) return;
         const idx = featureIndex += 1;
         const row = document.createElement('div');
         row.className = 'rm-feature feature-row';
+        if (feature.id) row.dataset.featureId = feature.id;
+        const enabled = Boolean(feature.enabled);
         row.innerHTML = `
             <div>
                 <label class="form-label" for="featureName${idx}">Feature name</label>
-                <input type="text" class="form-control" id="featureName${idx}" placeholder="e.g., Brand">
+                <input type="text" class="form-control" id="featureName${idx}" placeholder="e.g., Brand" value="${escapeHtml(feature.name || '')}">
             </div>
             <div class="rm-feature-enabled">
                 <span class="form-label">Enabled</span>
                 <div class="form-check form-switch">
-                    <input class="form-check-input feature-toggle" type="checkbox" id="featureToggle${idx}" role="switch" aria-label="Enable feature">
+                    <input class="form-check-input feature-toggle" type="checkbox" id="featureToggle${idx}" role="switch" aria-label="Enable feature"${enabled ? ' checked' : ''}>
                 </div>
             </div>
             <div>
                 <label class="form-label" for="featureOptions${idx}">Options</label>
-                <input type="text" class="form-control feature-options" id="featureOptions${idx}" placeholder="e.g., Dell, Lenovo" disabled>
+                <input type="text" class="form-control feature-options" id="featureOptions${idx}" placeholder="e.g., Dell, Lenovo" value="${escapeHtml(feature.options || '')}" ${enabled ? '' : 'disabled'}>
             </div>
             <div class="rm-feature-remove">
                 <span class="form-label d-none d-lg-block">&nbsp;</span>
                 <button type="button" class="btn btn-outline-danger rm-remove-btn remove-feature-btn" aria-label="Remove feature"><i class="ti ti-x"></i></button>
             </div>
         `;
-        featuresContainer.appendChild(row);
+        container.appendChild(row);
         const toggle = row.querySelector('.feature-toggle');
         const optionsInput = row.querySelector('.feature-options');
         toggle.addEventListener('change', () => {
             optionsInput.disabled = !toggle.checked;
             if (!toggle.checked) optionsInput.value = '';
         });
-        row.querySelector('.remove-feature-btn').addEventListener('click', () => row.remove());
+        row.querySelector('.remove-feature-btn').addEventListener('click', () => {
+            row.remove();
+            toggleEditFeaturesEmpty();
+        });
+    }
+
+    function collectFeatures(container) {
+        if (!container) return [];
+        return Array.from(container.querySelectorAll('.feature-row')).map((row) => ({
+            id: row.dataset.featureId ? Number(row.dataset.featureId) : null,
+            name: row.querySelector('input[id^="featureName"]').value.trim(),
+            enabled: row.querySelector('.feature-toggle').checked,
+            options: row.querySelector('.feature-options').value.trim() || null,
+        })).filter((feature) => feature.name);
+    }
+
+    function toggleEditFeaturesEmpty() {
+        const empty = document.getElementById('editFeaturesEmpty');
+        if (empty) empty.hidden = Boolean(editFeaturesContainer?.querySelector('.feature-row'));
     }
 
     async function submitCategory(event) {
@@ -69,11 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const categoryName = document.getElementById('categoryName').value.trim();
         if (!categoryName) return showFieldError('categoryName', 'Enter a category name.');
 
-        const features = Array.from(document.querySelectorAll('.feature-row')).map((row) => ({
-            name: row.querySelector('input[id^="featureName"]').value.trim(),
-            enabled: row.querySelector('.feature-toggle').checked,
-            options: row.querySelector('.feature-options').value.trim() || null,
-        })).filter((feature) => feature.name);
+        const features = collectFeatures(featuresContainer);
 
         try {
             const result = await postJSON(config.categoriesUrl, { category_name: categoryName, features });
@@ -190,6 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const nameInput = document.getElementById('editCategoryName');
             nameInput.value = category.name;
             nameInput.classList.remove('is-invalid');
+            editFeaturesContainer?.replaceChildren();
+            (category.features || []).forEach((feature) => addFeatureRow(editFeaturesContainer, feature));
+            toggleEditFeaturesEmpty();
             bootstrap.Modal.getOrCreateInstance(document.getElementById('editCategoryModal')).show();
             return;
         }
@@ -226,11 +251,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const category = state.categories.find((item) => String(item.id) === String(editingCategoryId));
         if (!category) return;
         try {
-            const updated = await requestJSON(`${config.categoriesUrl}/${editingCategoryId}`, 'PUT', { category_name: name });
+            const updated = await requestJSON(`${config.categoriesUrl}/${editingCategoryId}`, 'PUT', {
+                category_name: name,
+                features: collectFeatures(editFeaturesContainer),
+            });
             category.name = updated.name;
+            category.features = updated.features || [];
             refreshCategorySelects();
+            const selectedTypeCategory = document.getElementById('typeCategorySelect')?.value;
+            if (String(selectedTypeCategory) === String(category.id)) renderCategoryFeatures(category.id);
             bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
-            await swalFire({ icon: 'success', title: 'Updated', text: 'Category name saved.', timer: 2000, showConfirmButton: false });
+            await swalFire({ icon: 'success', title: 'Updated', text: 'Category details saved.', timer: 2000, showConfirmButton: false });
         } catch (error) {
             await swalFire({ icon: 'error', title: 'Update failed', text: error.message });
         }
@@ -448,5 +479,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function clearResourceErrors() {
         ['resourceCategorySelect', 'resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'resourceNameModel', 'serialNumber']
             .forEach(clearFieldError);
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+        }[character]));
     }
 });

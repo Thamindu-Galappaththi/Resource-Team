@@ -189,7 +189,9 @@ class ResourceManagementTest extends TestCase
             ->assertSee('Link resources')
             ->assertSee('data-cu-select', false)
             ->assertSee('Resource Owner')
-            ->assertSee('e.g., Nadun');
+            ->assertSee('e.g., Nadun')
+            ->assertSee('Update the category name and features.')
+            ->assertSee('editAddFeatureBtn', false);
     }
 
     public function test_resource_calendar_page_renders_filters_and_calendar_root(): void
@@ -229,6 +231,34 @@ class ResourceManagementTest extends TestCase
 
         $category = ResourceCategory::query()->where('name', 'IT Equipment')->firstOrFail();
         $this->assertSame(['Brand'], $category->features()->pluck('name')->all());
+    }
+
+    public function test_category_update_can_add_and_edit_features(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        $category = ResourceCategory::query()->create(['name' => 'Meeting Rooms']);
+
+        $this->actingAs($user)->putJson("/resource-categories/{$category->id}", [
+            'category_name' => 'Meeting Rooms',
+            'features' => [
+                ['name' => 'Capacity', 'enabled' => true, 'options' => '8, 12, 20'],
+            ],
+        ])->assertOk()->assertJsonPath('features.0.name', 'Capacity');
+
+        $this->assertSame(['Capacity'], $category->features()->pluck('name')->all());
+
+        $featureId = $category->features()->value('id');
+        $this->actingAs($user)->putJson("/resource-categories/{$category->id}", [
+            'category_name' => 'Conference Rooms',
+            'features' => [
+                ['id' => $featureId, 'name' => 'Seating', 'enabled' => true, 'options' => '8, 12'],
+                ['name' => 'Projector', 'enabled' => false, 'options' => null],
+            ],
+        ])->assertOk();
+
+        $this->assertSame(['Seating', 'Projector'], $category->fresh()->features()->pluck('name')->all());
+        $this->assertDatabaseHas('resource_categories', ['id' => $category->id, 'name' => 'Conference Rooms']);
     }
 
     public function test_resource_delete_sets_soft_delete_fields_and_hides_it_from_list_and_details(): void

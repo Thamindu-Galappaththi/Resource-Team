@@ -3,7 +3,7 @@
 @section('title', 'Create Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=14">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=21">
 @endpush
 
 @section('content')
@@ -164,21 +164,34 @@
     </div>
 
     <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                 <div class="modal-header">
                     <span class="rm-modal-icon" aria-hidden="true"><i class="ti ti-pencil"></i></span>
                     <div>
                         <h5 class="modal-title" id="editCategoryModalLabel">Edit category</h5>
-                        <p class="rm-modal-sub mb-0">Update the category name and save.</p>
+                        <p class="rm-modal-sub mb-0">Update the category name and features.</p>
                     </div>
                     <button type="button" class="rm-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
                 </div>
                 <form id="editCategoryForm">
                     <div class="modal-body">
-                        <label for="editCategoryName" class="form-label">Category name</label>
-                        <input type="text" class="form-control" id="editCategoryName" required>
-                        <div class="invalid-feedback">Enter a category name.</div>
+                        <div class="mb-3">
+                            <label for="editCategoryName" class="form-label">Category name</label>
+                            <input type="text" class="form-control" id="editCategoryName" required>
+                            <div class="invalid-feedback">Enter a category name.</div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3 feature-heading flex-wrap gap-2">
+                            <div>
+                                <h3 class="h6 fw-semibold mb-1">Additional features <span class="text-muted fw-normal">(optional)</span></h3>
+                                <p class="step-hint small mb-0">Edit existing fields or add new ones such as brand or capacity.</p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="editAddFeatureBtn">
+                                <i class="ti ti-plus me-1"></i> Add feature
+                            </button>
+                        </div>
+                        <p class="text-muted small mb-2" id="editFeaturesEmpty">No features yet. Add a feature to track extra details.</p>
+                        <div id="editFeaturesContainer"></div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -205,5 +218,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-create.js') }}?v=6"></script>
+<script src="{{ asset('js/resource-create.js') }}?v=7"></script>
 @endpush

@@ -83,8 +83,43 @@ class ResourceCategoryController extends Controller
     {
         $validated = $request->validate([
             'category_name' => ['required', 'string', 'max:255', Rule::unique('resource_categories', 'name')->ignore($category->id)],
+            'features' => ['nullable', 'array'],
+            'features.*.id' => ['nullable', 'integer', Rule::exists('category_features', 'id')->where('resource_category_id', $category->id)],
+            'features.*.name' => ['nullable', 'string', 'max:255'],
+            'features.*.enabled' => ['nullable', 'boolean'],
+            'features.*.options' => ['nullable', 'string', 'max:255'],
         ]);
-        $category->update(['name' => $validated['category_name']]);
+
+        DB::transaction(function () use ($validated, $category) {
+            $category->update(['name' => $validated['category_name']]);
+
+            $keepIds = [];
+            foreach ($validated['features'] ?? [] as $feature) {
+                $name = trim((string) ($feature['name'] ?? ''));
+                if ($name === '') {
+                    continue;
+                }
+
+                $payload = [
+                    'name' => $name,
+                    'enabled' => (bool) ($feature['enabled'] ?? false),
+                    'options' => $feature['options'] ?? null,
+                ];
+
+                if (! empty($feature['id'])) {
+                    $existing = $category->features()->whereKey($feature['id'])->first();
+                    if ($existing) {
+                        $existing->update($payload);
+                        $keepIds[] = $existing->id;
+                        continue;
+                    }
+                }
+
+                $keepIds[] = $category->features()->create($payload)->id;
+            }
+
+            $category->features()->whereNotIn('id', $keepIds)->delete();
+        });
 
         return response()->json($category->fresh()->load('features'));
     }
