@@ -16,7 +16,7 @@
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/sidebar-responsive.css') }}?v=10" rel="stylesheet">
+    <link href="{{ asset('css/sidebar-responsive.css') }}?v=11" rel="stylesheet">
     <link href="{{ asset('css/notifications.css') }}?v=3" rel="stylesheet">
     @stack('styles')
 

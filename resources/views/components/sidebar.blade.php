@@ -248,11 +248,11 @@
             @endif
 
         </ul>
-        <div class="sidebar-footer">
-            <div class="bg-light rounded p-3 d-flex flex-column gap-2 align-items-center">
-                <a href="{{ route('user.profile') }}" class="btn w-100" style="background-color: #6c8cff; color: #fff; font-weight: 500;">My Profile</a>
-                <a href="{{ route('logout') }}" class="btn w-100" style="background-color: #ff8c7a; color: #fff; font-weight: 500;">Logout</a>
-            </div>
-        </div>
     </nav>
+    <div class="sidebar-footer">
+        <div class="bg-light rounded p-3 d-flex flex-column gap-2 align-items-center">
+            <a href="{{ route('user.profile') }}" class="btn w-100" style="background-color: #6c8cff; color: #fff; font-weight: 500;">My Profile</a>
+            <a href="{{ route('logout') }}" class="btn w-100" style="background-color: #ff8c7a; color: #fff; font-weight: 500;">Logout</a>
+        </div>
+    </div>
 </div>
