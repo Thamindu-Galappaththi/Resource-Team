@@ -126,7 +126,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
 <script>
 window.RVCreate = {

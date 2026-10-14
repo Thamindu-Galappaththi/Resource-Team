@@ -25,8 +25,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('typeForm')?.addEventListener('submit', submitType);
     document.getElementById('resourceForm')?.addEventListener('submit', submitResource);
     document.getElementById('linkedForm')?.addEventListener('submit', submitLink);
-    document.getElementById('typeCategorySelect')?.addEventListener('change', (event) => renderCategoryFeatures(event.target.value));
-    document.getElementById('resourceCategorySelect')?.addEventListener('change', (event) => refreshTypeSelectForCategory(event.target.value));
+    document.getElementById('typeCategorySelect')?.addEventListener('change', (event) => {
+        clearFieldError('typeCategorySelect');
+        renderCategoryFeatures(event.target.value);
+    });
+    document.getElementById('resourceCategorySelect')?.addEventListener('change', (event) => {
+        clearFieldError('resourceCategorySelect');
+        refreshTypeSelectForCategory(event.target.value);
+    });
+    ['resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'primaryResourceSelect', 'linkedResourceSelect'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', () => clearFieldError(id));
+    });
     document.getElementById('existingCategoriesBody')?.addEventListener('click', onCategoryTableClick);
 
     ['categoryName', 'resourceTypeName', 'resourceNameModel', 'serialNumber'].forEach((id) => {
@@ -112,7 +121,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function submitType(event) {
         event.preventDefault();
-        const categoryId = document.getElementById('typeCategorySelect').value;
+        clearFieldError('typeCategorySelect');
+        clearFieldError('resourceTypeName');
+        const categoryId = window.RMSelect.getValue('typeCategorySelect');
         const typeName = document.getElementById('resourceTypeName').value.trim();
         if (!categoryId) return showFieldError('typeCategorySelect', 'Select a category.');
         if (!typeName) return showFieldError('resourceTypeName', 'Enter a type name.');
@@ -120,8 +131,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const result = await postJSON(config.typesUrl, { category_id: categoryId, resource_type: typeName });
             state.types.push({ id: result.id, category_id: categoryId, name: typeName });
-            event.target.reset();
-            renderCategoryFeatures('');
+            document.getElementById('resourceTypeName').value = '';
+            const category = state.categories.find((item) => String(item.id) === String(categoryId));
+            window.RMSelect.setValue('typeCategorySelect', categoryId, category?.name || 'Select a category');
+            renderCategoryFeatures(categoryId);
             await success('Resource type created successfully.', 'typeForm');
         } catch (error) {
             await swalFire({ icon: 'error', title: 'Could not create type', text: error.message });
@@ -132,14 +145,19 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         clearResourceErrors();
         const payload = {
-            category_id: document.getElementById('resourceCategorySelect').value,
-            resource_type_id: document.getElementById('resourceTypeSelect').value,
-            location_id: document.getElementById('resourceLocationSelect').value,
+            category_id: window.RMSelect.getValue('resourceCategorySelect'),
+            resource_type_id: window.RMSelect.getValue('resourceTypeSelect'),
+            location_id: window.RMSelect.getValue('resourceLocationSelect'),
             name_model: document.getElementById('resourceNameModel').value.trim(),
             serial_number: document.getElementById('serialNumber').value.trim() || null,
             resource_owner: document.getElementById('resourceOwner')?.value.trim() || null,
-            status: document.getElementById('resourceStatusSelect').value,
+            status: window.RMSelect.getValue('resourceStatusSelect'),
         };
+        if (!payload.category_id) return showFieldError('resourceCategorySelect', 'Select a category.');
+        if (!payload.resource_type_id) return showFieldError('resourceTypeSelect', 'Select a type.');
+        if (!payload.location_id) return showFieldError('resourceLocationSelect', 'Select a location.');
+        if (!payload.status) return showFieldError('resourceStatusSelect', 'Select a status.');
+        if (!payload.name_model) return showFieldError('resourceNameModel', 'Enter a resource name/model.');
 
         try {
             const result = editResourceId
@@ -179,22 +197,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function submitLink(event) {
         event.preventDefault();
-        const resourceId = document.getElementById('primaryResourceSelect').value;
-        const linkedResourceId = document.getElementById('linkedResourceSelect').value;
-        if (!resourceId || !linkedResourceId) {
-            await swalFire({ icon: 'warning', title: 'Select both resources', text: 'Choose a main resource and a related resource.' });
-            return;
-        }
+        clearFieldError('primaryResourceSelect');
+        clearFieldError('linkedResourceSelect');
+        const resourceId = window.RMSelect.getValue('primaryResourceSelect');
+        const linkedResourceId = window.RMSelect.getValue('linkedResourceSelect');
+        if (!resourceId) showFieldError('primaryResourceSelect', 'Select a main resource.');
+        if (!linkedResourceId) showFieldError('linkedResourceSelect', 'Select a related resource.');
+        if (!resourceId || !linkedResourceId) return;
         if (resourceId === linkedResourceId) {
-            await swalFire({ icon: 'warning', title: 'Invalid link', text: 'A resource cannot be linked to itself.' });
+            showFieldError('linkedResourceSelect', 'A resource cannot be linked to itself.');
             return;
         }
 
         try {
             await postJSON(config.linksUrl, { resource_id: resourceId, linked_resource_id: linkedResourceId });
-            event.target.reset();
+            window.RMSelect.setValue('primaryResourceSelect', '', 'Select a resource');
+            window.RMSelect.setValue('linkedResourceSelect', '', 'Select a resource to link');
             await swalFire({ icon: 'success', title: 'Resources linked', text: 'The relationship was saved.' });
         } catch (error) {
+            showRequestErrors(error, {
+                resource_id: 'primaryResourceSelect',
+                linked_resource_id: 'linkedResourceSelect',
+            });
             await swalFire({ icon: 'error', title: 'Could not link resources', text: error.message });
         }
     }
@@ -389,6 +413,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const types = await fetchJSON(config.typesUrl);
             state.types = types.map((type) => ({ id: type.id, category_id: type.resource_category_id, name: type.name }));
+            const selectedCategory = window.RMSelect.getValue('resourceCategorySelect');
+            if (selectedCategory) refreshTypeSelectForCategory(selectedCategory);
         } catch (error) { console.error(error); }
 
         try {

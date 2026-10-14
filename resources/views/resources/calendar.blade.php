@@ -164,6 +164,6 @@
         createReservationUrl: @json(route('reservations.create')),
     };
 </script>
-<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/resource-calendar.js') }}?v=26"></script>
 @endpush

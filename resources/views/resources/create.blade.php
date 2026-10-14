@@ -51,8 +51,8 @@
                         <form id="categoryForm" novalidate>
                                 @csrf
                                 <div class="mb-3">
-                                    <label for="categoryName" class="form-label">Category name</label>
-                                    <input type="text" class="form-control" id="categoryName" name="category_name" required>
+                                    <label for="categoryName" class="form-label">Category name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="categoryName" name="category_name" placeholder="e.g., IT Equipment" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-3 feature-heading flex-wrap gap-2">
@@ -81,15 +81,15 @@
                         <form id="typeForm" novalidate>
                                 @csrf
                                 <div class="mb-3">
-                                <label class="form-label">Category</label>
+                                <label class="form-label">Category <span class="text-danger">*</span></label>
                                 <x-rm-select id="typeCategorySelect" name="category_id" class="category-select" required
                                     placeholder="Select a category"
                                     :options="[['value' => '', 'label' => 'Select a category']]" />
                                 <div class="invalid-feedback"></div>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="resourceTypeName" class="form-label">Type name</label>
-                                    <input type="text" class="form-control" id="resourceTypeName" name="resource_type" required>
+                                    <label for="resourceTypeName" class="form-label">Type name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="resourceTypeName" name="resource_type" placeholder="e.g., Laptop" required>
                                 <div class="invalid-feedback"></div>
                                 </div>
                                 <div class="mb-3">
@@ -126,16 +126,18 @@
                         <form id="linkedForm" novalidate>
                                 @csrf
                                 <div class="mb-3">
-                                <label class="form-label">Main resource</label>
+                                <label class="form-label">Main resource <span class="text-danger">*</span></label>
                                 <x-rm-select id="primaryResourceSelect" name="resource_id" class="resource-select dropup" required
                                     placeholder="Select a resource"
                                     :options="[['value' => '', 'label' => 'Select a resource']]" />
+                                <div class="invalid-feedback"></div>
                                 </div>
                                 <div class="mb-3">
-                                <label class="form-label">Related resource</label>
+                                <label class="form-label">Related resource <span class="text-danger">*</span></label>
                                 <x-rm-select id="linkedResourceSelect" name="linked_resource_id" class="resource-select dropup" required
                                     placeholder="Select a resource to link"
                                     :options="[['value' => '', 'label' => 'Select a resource to link']]" />
+                                <div class="invalid-feedback"></div>
                                 </div>
                             <button type="submit" class="btn btn-primary">Link resources</button>
                         </form>
@@ -177,8 +179,8 @@
                 <form id="editCategoryForm">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="editCategoryName" class="form-label">Category name</label>
-                            <input type="text" class="form-control" id="editCategoryName" required>
+                            <label for="editCategoryName" class="form-label">Category name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editCategoryName" placeholder="e.g., IT Equipment" required>
                             <div class="invalid-feedback">Enter a category name.</div>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-3 feature-heading flex-wrap gap-2">
@@ -217,6 +219,6 @@
         indexUrl: @json(route('resources.index')),
     };
 </script>
-<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-create.js') }}?v=7"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
+<script src="{{ asset('js/resource-create.js') }}?v=10"></script>
 @endpush
