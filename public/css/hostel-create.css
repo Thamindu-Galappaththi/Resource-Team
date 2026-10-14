@@ -68,7 +68,7 @@
 
 .hc-card:has(.dropdown-menu.show),
 .hc-card:has(.cu-dropdown-toggle.show) {
-    z-index: 20;
+    z-index: 2;
 }
 
 .hc-section-title {
@@ -121,9 +121,9 @@
     z-index: 1;
     width: 100%;
 }
-.hc-page .cu-select:has(.show) { z-index: 30; }
+.hc-page .cu-select:has(.show) { z-index: 5; }
 .hc-page .cu-dropdown-menu {
-    z-index: 1080;
+    z-index: 6;
     max-width: none;
 }
 .hc-page .cu-select.is-invalid .cu-dropdown-toggle { border-color: #dc3545; }

@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/hostel-create.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/hostel-create.css') }}?v=2">
 @endpush
 
 @section('content')
