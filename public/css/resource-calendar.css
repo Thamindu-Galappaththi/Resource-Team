@@ -518,16 +518,18 @@
     white-space: nowrap;
     word-break: break-word;
 }
-.fc .fc-timegrid-event .rc-event-title {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    text-overflow: ellipsis;
+.fc .fc-timegrid-event {
+    min-height: 44px;
     overflow: hidden;
 }
+.fc .fc-timegrid-event .rc-event-title {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: normal;
+}
 .fc .fc-timegrid-event-short .rc-event-title {
-    -webkit-line-clamp: 1;
     white-space: nowrap;
 }
 .fc .fc-daygrid-event,

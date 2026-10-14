@@ -19,8 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
         contentHeight: 'auto',
         expandRows: false,
         views: {
-            timeGridWeek: { contentHeight: 640, dayMaxEvents: 2 },
-            timeGridDay: { contentHeight: 640, dayMaxEvents: 2 },
+            timeGridWeek: { contentHeight: 640, dayMaxEvents: 2, eventMaxStack: 3 },
+            timeGridDay: { contentHeight: 640, dayMaxEvents: 2, eventMaxStack: 3 },
         },
         fixedWeekCount: false,
         firstDay: 0,
@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showDayEventList(info.date, holiday ? [holiday, ...items] : items);
         },
         datesSet() {
+            syncTimeGridEvents();
             queueMicrotask(paintMonthCells);
         },
         headerToolbar: isMobile
@@ -89,7 +90,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullLabel = `${info.timeText ? `${info.timeText} ` : ''}${info.event.title}`.trim();
                 return { html: `<span class="rc-event-title" data-full-label="${escapeHtml(fullLabel)}">${escapeHtml(fullLabel)}</span>` };
             }
-            const time = info.timeText ? `<span class="rc-event-time">${escapeHtml(info.timeText)}</span>` : '';
+            const start = details.actualStart || info.event.start;
+            const end = details.actualEnd || info.event.end;
+            const timeLabel = formatTimeRange(
+                start instanceof Date ? start : new Date(start),
+                end instanceof Date ? end : new Date(end),
+            );
+            const time = timeLabel && timeLabel !== '—' ? `<span class="rc-event-time">${escapeHtml(timeLabel)}</span>` : '';
             const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
             return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(info.event.title)}</span></div>` };
         },
@@ -126,9 +133,48 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedSchedulerResources = new Set();
     let activeDrag = null;
     let suppressSlotClick = false;
+    let lastCalendarView = null;
 
     document.getElementById('calendarEmpty').hidden = events.length > 0;
     renderUpcoming(events);
+
+    function isTimeGrid() {
+        return ['timeGridWeek', 'timeGridDay'].includes(calendar.view.type);
+    }
+
+    function forCalendarView(eventList) {
+        if (!isTimeGrid()) {
+            return [...eventList.map(withEventColors), ...holidays];
+        }
+
+        return [
+            ...eventList.map((event) => {
+                const start = new Date(event.start);
+                return withEventColors({
+                    ...event,
+                    end: Number.isNaN(start.getTime())
+                        ? event.end
+                        : new Date(start.getTime() + 45 * 60 * 1000).toISOString(),
+                    extendedProps: {
+                        ...event.extendedProps,
+                        actualStart: event.start,
+                        actualEnd: event.end,
+                    },
+                });
+            }),
+            ...holidays.filter((event) => event.display !== 'background'),
+        ];
+    }
+
+    function syncTimeGridEvents() {
+        const view = calendar.view.type;
+        if (lastCalendarView === view) return;
+        const previous = lastCalendarView;
+        lastCalendarView = view;
+        if (previous === null && !isTimeGrid()) return;
+        calendar.removeAllEvents();
+        calendar.addEventSource(forCalendarView(filteredEvents));
+    }
 
     function applyFilters() {
         const selRes = String(resourceFilter.value);
@@ -151,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredEvents = filtered;
         calendar.removeAllEvents();
-        calendar.addEventSource([...filtered.map(withEventColors), ...holidays]);
+        calendar.addEventSource(forCalendarView(filtered));
         document.getElementById('calendarEmpty').hidden = filtered.length > 0;
         toggleClear();
         renderUpcoming(filtered);
