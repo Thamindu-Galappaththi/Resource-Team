@@ -16,7 +16,7 @@ class StoreResourceRequest extends FormRequest
 
     /**
      * Shape matches the Tab 3 JS payload:
-     * { category_id, resource_type_id, location_id, resource_owner_id,
+     * { category_id, resource_type_id, location_id, resource_owner,
      *   name_model, serial_number }
      *
      * Note: category_id arrives from the frontend (it drove the type
@@ -45,16 +45,9 @@ class StoreResourceRequest extends FormRequest
             // Must reference an existing row in the locations table
             // (populates the "Location" dropdown).
             'location_id' => ['required', 'integer', Rule::exists('locations', 'id')],
-
-            // ================================================================
-            // NOTE: "Resource Owner" is currently just a hardcoded name
-            // shown in the dropdown on Tab 3 — there's no
-            // resource_owners table and no resource_owner_id column on
-            // "resources" at all right now (that's a separate task).
-            // Nothing is validated or persisted for it. If a
-            // resource_owner_id column gets added later, add a rule
-            // back here.
-            // ================================================================
+            'resource_owner' => ['nullable', 'string', 'max:255'],
+            'linked_resource_ids' => ['nullable', 'array'],
+            'linked_resource_ids.*' => ['integer', 'distinct', 'exists:resources,id'],
 
             'name_model' => ['required', 'string', 'max:255'],
 
@@ -87,6 +80,8 @@ class StoreResourceRequest extends FormRequest
             'category_id' => 'category',
             'resource_type_id' => 'type',
             'location_id' => 'location',
+            'resource_owner' => 'resource owner',
+            'linked_resource_ids' => 'linked resources',
             'name_model' => 'resource name/model',
             'serial_number' => 'serial number',
             'status' => 'status',

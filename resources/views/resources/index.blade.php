@@ -2,8 +2,13 @@
 
 @section('title', 'Existing Resources')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=20">
+@endpush
+
 @section('content')
 @php($canManageResources = auth()->user()?->hasPermission('resources.create') ?? false)
+<<<<<<< HEAD
 <div class="container-fluid mt-4 resource-index-page">
     <style>
         .resource-index-page { --ri-ink:#152238; --ri-muted:#65738a; --ri-line:#dfe5ee; color:var(--ri-ink); }
@@ -78,58 +83,98 @@
                 <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-trash" aria-hidden="true"></i></span><div class="resource-stat-label">Pending Deletion</div></div>
                 <div class="resource-stat-value" id="statPending">0</div>
                 <p class="resource-stat-description">Awaiting review</p>
+=======
+<div class="container-fluid mt-4 rm-page">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 rm-header">
+        <div>
+            <h1 class="rm-title mb-1">Existing resources</h1>
+            <p class="rm-subtitle mb-0">Search, filter, and manage the resource inventory.</p>
+        </div>
+        @if ($canManageResources)
+            <a href="{{ route('resources.create') }}" class="btn btn-primary rm-create"><i class="ti ti-plus me-2"></i>Create resource</a>
+        @endif
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl-3">
+            <div class="rm-stat p-3 p-md-4" style="--stat-color:#1769c2;--stat-icon-bg:#e8f0fa">
+                <div class="d-flex justify-content-between align-items-center"><span class="rm-stat-icon"><i class="ti ti-packages"></i></span></div>
+                <div class="rm-stat-label mt-3">Total resources</div>
+                <div class="rm-stat-number" id="statTotal">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="rm-stat p-3 p-md-4" style="--stat-color:#16a77a;--stat-icon-bg:#e7f6f0">
+                <div class="d-flex justify-content-between align-items-center"><span class="rm-stat-icon"><i class="ti ti-circle-check"></i></span></div>
+                <div class="rm-stat-label mt-3">Active</div>
+                <div class="rm-stat-number" id="statActive">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="rm-stat p-3 p-md-4" style="--stat-color:#d97706;--stat-icon-bg:#fff4e5">
+                <div class="d-flex justify-content-between align-items-center"><span class="rm-stat-icon"><i class="ti ti-tool"></i></span></div>
+                <div class="rm-stat-label mt-3">Under maintenance</div>
+                <div class="rm-stat-number" id="statMaintenance">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="rm-stat p-3 p-md-4" style="--stat-color:#dc3545;--stat-icon-bg:#fdecee">
+                <div class="d-flex justify-content-between align-items-center"><span class="rm-stat-icon"><i class="ti ti-trash"></i></span></div>
+                <div class="rm-stat-label mt-3">Pending deletion</div>
+                <div class="rm-stat-number" id="statPending">0</div>
+>>>>>>> 83fa4dc2490e6d9583ee5be9e7771a3b3088792c
             </div>
         </div>
     </div>
 
-    {{-- ===================== SEARCH + FILTERS ===================== --}}
-    <div class="card filter-card border-0 shadow-sm mb-3">
+    <div class="card border-0 rm-panel mb-3">
         <div class="card-body">
-            <div class="row g-2 align-items-center">
-                <div class="col-md-4 search-wrap">
-                    <label for="searchInput" class="visually-hidden">Search resources by name or ID</label>
-                    <i class="ti ti-search search-icon" aria-hidden="true"></i>
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-lg-4">
+                    <label for="searchInput" class="form-label">Search</label>
+                    <div class="input-group rm-search-group">
+                        <span class="input-group-text"><i class="ti ti-search"></i></span>
                     <input type="text" class="form-control" id="searchInput"
-                        placeholder="Search by name or ID..." autocomplete="off">
+                            placeholder="Search by name, ID, serial, type..." autocomplete="off">
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="categoryFilter">
-                        <option value="">All Categories</option>
-                    </select>
+                <div class="col-6 col-lg-3">
+                    <label class="form-label">Category</label>
+                    <x-rm-select id="categoryFilter" placeholder="All categories"
+                        :options="[['value' => '', 'label' => 'All categories']]" />
                 </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="statusFilter">
-                        <option value="">All Statuses</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="under_maintenance">Under Maintenance</option>
-                        <option value="decommissioned">Decommissioned</option>
-                        <option value="pending_deletion">Pending Deletion</option>
-                        <option value="deleted">Deleted</option>
-                    </select>
+                <div class="col-6 col-lg-3">
+                    <label class="form-label">Status</label>
+                    <x-rm-select id="statusFilter" placeholder="All statuses" :options="[
+                        ['value' => '', 'label' => 'All statuses'],
+                        ['value' => 'active', 'label' => 'Active'],
+                        ['value' => 'inactive', 'label' => 'Inactive'],
+                        ['value' => 'under_maintenance', 'label' => 'Under Maintenance'],
+                        ['value' => 'decommissioned', 'label' => 'Decommissioned'],
+                        ['value' => 'pending_deletion', 'label' => 'Pending Deletion'],
+                    ]" />
                 </div>
-                <div class="col-md-2">
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-primary w-100" id="applyFiltersBtn"><i class="ti ti-adjustments-horizontal me-1" aria-hidden="true"></i>Apply filters</button>
-                        <button class="btn btn-outline-secondary w-100" id="clearFiltersBtn" type="button">Clear filters</button>
+                <div class="col-12 col-lg-2">
+                    <label class="form-label d-none d-lg-block">&nbsp;</label>
+                    <div class="d-flex gap-2 rm-filter-actions">
+                        <button class="rm-clear-btn" id="clearFiltersBtn" type="button" disabled>Clear</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- ===================== RESOURCE TABLE ===================== --}}
-    <div class="card table-card border-0 shadow-sm">
+    <div class="card border-0 rm-panel">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="resourceTable">
                     <thead>
-                        <tr class="text-muted small text-uppercase">
-                            <th>Resource Name</th>
+                        <tr>
+                            <th>Resource name</th>
                             <th>Category</th>
                             <th>Type</th>
                             <th>Location</th>
-                            <th>Serial Number</th>
+                            <th>Serial number</th>
                             <th>Status</th>
                             <th class="text-end">Actions</th>
                         </tr>
@@ -139,7 +184,10 @@
                     </tbody>
                 </table>
             </div>
-            <p class="results-summary small mt-3 mb-0" id="resultCount" aria-live="polite"></p>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
+                <p class="small text-muted mb-0" id="resultCount" aria-live="polite"></p>
+                <ul class="pagination rm-pagination mb-0" id="rmPagination"></ul>
+            </div>
         </div>
     </div>
 
@@ -148,115 +196,56 @@
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header">
+                        <div class="rm-modal-heading">
                         <h5 class="modal-title" id="editResourceModalLabel">Edit Resource</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <p class="rm-modal-sub mb-0">Update inventory details and save.</p>
+                        </div>
+                        <button type="button" class="rm-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
                     </div>
                     <div class="modal-body">
-                        <div id="editResourceLoading" class="text-center text-muted py-4" role="status">Loading resource details…</div>
-                        <form id="editResourceForm" hidden>
+                        <div id="editResourceLoading" class="text-center text-muted py-4" role="status" hidden>Loading resource details…</div>
+                        <form id="editResourceForm">
                             @csrf
                             @include('resources.partials.resource-fields')
-                            <div class="d-flex justify-content-end gap-2">
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary" id="editResourceSaveButton">Save Changes</button>
+                            <div class="mb-3" id="editFeaturesWrap" hidden>
+                                <label class="form-label">Category / type features</label>
+                                <div id="editFeaturesList" class="rm-linked-list"></div>
+                            </div>
+                            <div class="mb-0" id="editLinkedWrap">
+                                <label class="form-label">Link resources</label>
+                                <div id="editLinkedList" class="rm-linked-list"></div>
+                                <p class="text-muted small mb-0 mt-2">Select related inventory items to keep with this resource.</p>
                             </div>
                         </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" form="editResourceForm" id="editResourceSaveButton">Save changes</button>
                     </div>
                 </div>
             </div>
         </div>
     @endif
-
 </div>
+@endsection
 
+@push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-let allResources = [];   // everything loaded from the server
-let categoriesSeen = new Set();
-let editResourceTypes = [];
-const canManageResources = @json($canManageResources);
-
-document.addEventListener('DOMContentLoaded', () => {
-    loadResources();
-
-    document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
-    document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
-    document.getElementById('searchInput').addEventListener('input', applyFilters);
-    document.getElementById('searchInput').addEventListener('keydown', event => {
-        if (event.key === 'Enter') applyFilters();
-    });
-});
-
-async function loadResources() {
-    try {
-        const response = await fetch('/resource-list', { headers: { 'Accept': 'application/json' } });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Could not load resources.');
-        allResources = data;
-        populateCategoryFilter(data);
-        updateStatCards(data);
-        applyFilters();
-    } catch (error) {
-        console.error('Failed to load resources', error);
-        document.getElementById('resourceTableBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${escapeHtml(error.message || 'Failed to load resources.')}</td></tr>`;
-    }
-}
-
-function populateCategoryFilter(resources) {
-    const select = document.getElementById('categoryFilter');
-    resources.forEach(r => {
-        const catName = r.type?.category?.name;
-        if (catName && !categoriesSeen.has(catName)) {
-            categoriesSeen.add(catName);
-            const opt = document.createElement('option');
-            opt.value = catName;
-            opt.textContent = catName;
-            select.appendChild(opt);
-        }
-    });
-}
-
-function updateStatCards(resources) {
-    document.getElementById('statTotal').textContent = resources.length;
-    document.getElementById('statActive').textContent =
-        resources.filter(r => r.status === 'active').length;
-    document.getElementById('statMaintenance').textContent =
-        resources.filter(r => r.status === 'under_maintenance').length;
-    document.getElementById('statPending').textContent =
-        resources.filter(r => r.status === 'pending_deletion').length;
-}
-
-function applyFilters() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const category = document.getElementById('categoryFilter').value;
-    const status = document.getElementById('statusFilter').value;
-
-    const filtered = allResources.filter(r => {
-        const matchesSearch = !search || r.name_model.toLowerCase().includes(search);
-        const matchesCategory = !category || r.type?.category?.name === category;
-        const matchesStatus = !status || r.status === status;
-        return matchesSearch && matchesCategory && matchesStatus;
-    });
-
-    renderTable(filtered);
-}
-
-function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('categoryFilter').value = '';
-    document.getElementById('statusFilter').value = '';
-    applyFilters();
-}
-
-function statusBadge(status) {
-    const map = {
-        active: 'bg-success-subtle text-success',
-        inactive: 'bg-secondary-subtle text-secondary',
-        under_maintenance: 'bg-warning-subtle text-warning',
-        decommissioned: 'bg-dark-subtle text-dark',
-        pending_deletion: 'bg-danger-subtle text-danger',
-        deleted: 'bg-secondary-subtle text-secondary',
+    window.RM = {
+        canManage: @json($canManageResources),
+        listUrl: @json(route('resources.list')),
+        showUrl: @json(route('resources.show', ['resource' => '__ID__'])),
+        updateUrl: @json(route('resources.update', ['resource' => '__ID__'])),
+        deleteUrl: @json(route('resources.destroy', ['resource' => '__ID__'])),
+        approveUrl: @json(route('resources.approve-delete', ['resource' => '__ID__'])),
+        rejectUrl: @json(route('resources.reject-delete', ['resource' => '__ID__'])),
+        categoriesUrl: @json(route('resource-categories.index')),
+        typesUrl: @json(route('resource-types.index')),
+        locationsUrl: @json(route('locations.index')),
+        lookups: @json($lookups ?? ['categories' => [], 'types' => [], 'locations' => []]),
     };
+<<<<<<< HEAD
     const labels = {
         active: 'Active',
         inactive: 'Inactive',
@@ -492,5 +481,9 @@ function postAction(url) {
         .then(() => loadResources())
         .catch(err => console.error('Action failed', err));
 }
+=======
+>>>>>>> 83fa4dc2490e6d9583ee5be9e7771a3b3088792c
 </script>
-@endsection
+<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/resource-index.js') }}?v=12"></script>
+@endpush

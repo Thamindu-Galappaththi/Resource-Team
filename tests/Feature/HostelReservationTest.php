@@ -13,7 +13,11 @@ use App\Models\ResourceType;
 use App\Models\User;
 use App\Notifications\NewReservationPending;
 use App\Notifications\ReservationCreated;
+use Database\Seeders\HostelReservationSeeder;
+use Database\Seeders\HostelRoomSeeder;
+use Database\Seeders\LocationSeeder;
 use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Notification;
@@ -226,6 +230,55 @@ class HostelReservationTest extends TestCase
             ->assertOk()
             ->assertDontSee('id="approveModal-')
             ->assertDontSee('id="rejectModal-');
+    }
+
+    public function test_cancelled_rejected_and_approved_stays_hide_repeat_actions(): void
+    {
+        $admin = User::factory()->role('admin')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($admin)
+            ->post(route('hostel.store'), $this->payload($setup))
+            ->assertRedirect();
+
+        $reservation = Reservation::query()->firstOrFail();
+
+        $reservation->update(['status' => ReservationStatus::CANCELLED->value]);
+        $this->get(route('hostel.index'))
+            ->assertOk()
+            ->assertSee('Approve unavailable', false)
+            ->assertSee('Reject unavailable', false)
+            ->assertSee('Cancel unavailable', false)
+            ->assertDontSee('Approve reservation '.$reservation->reference, false)
+            ->assertDontSee('Reject reservation '.$reservation->reference, false)
+            ->assertDontSee('Cancel reservation '.$reservation->reference, false);
+        $this->post(route('hostel.cancel', $reservation), ['cancellation_reason' => 'again'])->assertForbidden();
+        $this->post(route('hostel.approval', $reservation), [
+            'status' => ReservationStatus::APPROVED->value,
+        ])->assertForbidden();
+
+        $reservation->update(['status' => ReservationStatus::REJECTED->value]);
+        $this->get(route('hostel.index'))
+            ->assertOk()
+            ->assertSee('Approve unavailable', false)
+            ->assertSee('Reject unavailable', false)
+            ->assertSee('Cancel unavailable', false)
+            ->assertDontSee('Approve reservation '.$reservation->reference, false)
+            ->assertDontSee('Reject reservation '.$reservation->reference, false)
+            ->assertDontSee('Cancel reservation '.$reservation->reference, false);
+        $this->post(route('hostel.approval', $reservation), [
+            'status' => ReservationStatus::REJECTED->value,
+            'reason' => 'again',
+        ])->assertForbidden();
+
+        $reservation->update(['status' => ReservationStatus::APPROVED->value]);
+        $this->get(route('hostel.index'))
+            ->assertOk()
+            ->assertSee('Approve unavailable', false)
+            ->assertSee('Reject unavailable', false)
+            ->assertDontSee('Approve reservation '.$reservation->reference, false)
+            ->assertDontSee('Reject reservation '.$reservation->reference, false)
+            ->assertSee('Cancel reservation '.$reservation->reference, false);
     }
 
     public function test_hostel_approval_rejects_a_room_already_confirmed_for_overlapping_dates(): void
@@ -457,6 +510,26 @@ class HostelReservationTest extends TestCase
             $this->artisan('hostel:complete-reservations')->expectsOutput('Completed 0 hostel reservation(s).')->assertSuccessful();
             $this->assertSame($status, $reservation->fresh()->status);
         }
+    }
+
+    public function test_hostel_reservation_seeder_creates_sample_stays(): void
+    {
+        $this->seed([
+            LocationSeeder::class,
+            RolePermissionSeeder::class,
+            UserSeeder::class,
+            HostelRoomSeeder::class,
+            HostelReservationSeeder::class,
+        ]);
+
+        $stays = Reservation::query()->where('type', ReservationType::HOSTEL->value);
+
+        $this->assertGreaterThanOrEqual(12, $stays->count());
+        $this->assertDatabaseHas('hostel_stay_details', ['guest_name' => 'Kasun Madushanka']);
+        $this->assertTrue($stays->clone()->where('status', ReservationStatus::PENDING_APPROVAL->value)->exists());
+        $this->assertTrue($stays->clone()->where('status', ReservationStatus::APPROVED->value)->exists());
+        $this->assertTrue($stays->clone()->where('status', ReservationStatus::CANCELLED->value)->exists());
+        $this->assertTrue($stays->clone()->where('status', ReservationStatus::REJECTED->value)->exists());
     }
 
     public function test_checkout_must_be_after_checkin(): void

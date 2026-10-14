@@ -1,13 +1,15 @@
-﻿{{--
-    Resource Calendar – BRD aligned UI
-    Route: /resources/calendar
---}}
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Resource Calendar')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=32">
+@endpush
+
 @section('content')
 <div class="rc-page">
+<<<<<<< HEAD
 
     {{-- Header --}}
     <div class="rc-header resource-page-banner">
@@ -40,73 +42,88 @@
             <div class="resource-stat-top"><span class="resource-stat-icon"><i class="ti ti-calendar-stats" aria-hidden="true"></i></span><div class="resource-stat-label">This Month</div></div>
             <div class="resource-stat-value">{{ $stats['thisMonth'] }}</div>
             <p class="resource-stat-description">Bookings this month</p>
+=======
+    <div class="rc-header">
+        <h1 class="rc-title">Resource calendar</h1>
+        <p class="rc-subtitle">View schedules, check availability, and open reservation details.</p>
+    </div>
+
+    <div class="rc-cards">
+        <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-packages"></i></span>
+            <div class="rc-card-label">Active resources</div>
+            <div class="rc-card-value">{{ $stats['myResources'] }}</div>
+        </div>
+        <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-calendar-event"></i></span>
+            <div class="rc-card-label">Today's bookings</div>
+            <div class="rc-card-value">{{ $stats['todayBookings'] }}</div>
+        </div>
+        <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-clock-hour-4"></i></span>
+            <div class="rc-card-label">Pending approvals</div>
+            <div class="rc-card-value">{{ $stats['pendingApprovals'] }}</div>
+        </div>
+        <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-chart-bar"></i></span>
+            <div class="rc-card-label">This month</div>
+            <div class="rc-card-value">{{ $stats['thisMonth'] }}</div>
+>>>>>>> 83fa4dc2490e6d9583ee5be9e7771a3b3088792c
         </div>
     </div>
 
-    {{-- Filters --}}
     <div class="rc-filters">
         <div class="rc-filter">
             <label>Resource</label>
-            <select id="resourceFilter">
-                <option value="all">All Resources</option>
-                @foreach($resources as $resource)
-                    <option value="{{ $resource->id }}">{{ $resource->name_model }}</option>
-                @endforeach
-            </select>
+            <x-rm-select id="resourceFilter" value="all" selected-label="All resources" placeholder="All resources"
+                :options="collect([['value' => 'all', 'label' => 'All resources']])->concat($resources->map(fn ($resource) => ['value' => (string) $resource->id, 'label' => $resource->name_model]))->all()" />
         </div>
-
         <div class="rc-filter">
             <label>Location</label>
-            <select id="locationFilter">
-                <option value="all">All Locations</option>
-                @foreach($locations as $location)
-                    <option value="{{ $location->id }}">{{ $location->name }}</option>
-                @endforeach
-            </select>
+            <x-rm-select id="locationFilter" value="all" selected-label="All locations" placeholder="All locations"
+                :options="collect([['value' => 'all', 'label' => 'All locations']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
         </div>
-
         <div class="rc-filter">
             <label>Status</label>
-            <select id="statusFilter">
-                <option value="all">All Statuses</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-                <option value="cancelled">Cancelled</option>
-            </select>
+            <x-rm-select id="statusFilter" value="all" selected-label="All statuses" placeholder="All statuses" :options="[
+                ['value' => 'all', 'label' => 'All statuses'],
+                ['value' => 'approved', 'label' => 'Approved'],
+                ['value' => 'pending', 'label' => 'Pending'],
+                ['value' => 'rejected', 'label' => 'Rejected'],
+                ['value' => 'cancelled', 'label' => 'Cancelled'],
+            ]" />
         </div>
         <div class="rc-filter">
             <label>Category</label>
-            <select id="categoryFilter">
-                <option value="all">All Categories</option>
-                @foreach($categories as $category)
-                    <option value="{{ $category->id }}">{{ $category->name }}</option>
-                @endforeach
-            </select>
+            <x-rm-select id="categoryFilter" value="all" selected-label="All categories" placeholder="All categories"
+                :options="collect([['value' => 'all', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
         </div>
         <div class="rc-filter-actions">
-            <button type="button" id="applyFiltersButton" class="rc-filter-button rc-filter-apply">Apply Filter</button>
-            <button type="button" id="clearFiltersButton" class="rc-filter-button rc-filter-clear">Clear Filter</button>
+            <button type="button" id="clearFiltersButton" class="rc-filter-button rc-filter-clear" disabled>Clear</button>
         </div>
     </div>
 
     <div class="rc-view-switch" role="tablist" aria-label="Calendar layout">
         <button type="button" class="active" id="calendarViewButton" role="tab" aria-selected="true">Calendar</button>
-        <button type="button" id="schedulerViewButton" role="tab" aria-selected="false">Timeline Scheduler</button>
+        <button type="button" id="schedulerViewButton" role="tab" aria-selected="false">Timeline</button>
     </div>
 
-    {{-- Calendar --}}
     <div class="rc-calendar-card">
-        <div id="calendarLoading" class="rc-loading" role="status">Loading reservations...</div>
+        <div id="calendarLoading" class="rc-loading" role="status">Loading reservations…</div>
         <div id="calendarEmpty" class="rc-empty" hidden>No reservations match your filters.</div>
+        <div class="rc-calendar-legend" aria-label="Holiday types">
+            <span><i class="rc-holiday-swatch poya"></i>Poya</span>
+            <span><i class="rc-holiday-swatch mercantile"></i>Mercantile</span>
+            <span><i class="rc-holiday-swatch public"></i>Government / public</span>
+        </div>
         <div id="resourceCalendar"></div>
     </div>
 
     <section id="schedulerPanel" class="rc-calendar-card rc-scheduler" hidden>
         <div class="rc-scheduler-heading">
             <div>
-                <h2>Resource Timeline</h2>
-                <p>Select resources, then drag across open hours to prepare a reservation. Availability is checked again before submission.</p>
+                <h2>Resource timeline</h2>
+                <p>Select resources, then drag across open hours to prepare a reservation.</p>
                 <div id="schedulerSelectionCount" class="rc-selection-count">No extra resources selected</div>
             </div>
             <label class="rc-scheduler-date">Schedule date
@@ -122,12 +139,11 @@
         <div id="schedulerEmpty" class="rc-empty" hidden>No resources match this category.</div>
         <div id="schedulerGrid" class="rc-scheduler-scroll"></div>
         <div id="schedulerPopover" class="rc-scheduler-popover" hidden></div>
-        <div class="rc-scheduler-note">Selecting an open slot opens the reservation form; final booking and conflict checks follow the existing approval process.</div>
+        <div class="rc-scheduler-note">Selecting an open slot opens the reservation form. Final booking still follows the approval process.</div>
     </section>
 
-    {{-- Upcoming Reservations Table --}}
     <div class="rc-table-card">
-        <h3 class="rc-table-title">Upcoming Reservations</h3>
+        <h3 class="rc-table-title"><i class="ti ti-list-check"></i> Upcoming reservations</h3>
         <div class="rc-table-wrap">
             <table class="rc-table">
                 <thead>
@@ -135,81 +151,42 @@
                         <th>Resource</th>
                         <th>Date</th>
                         <th>Time</th>
-                        <th>Reserved By</th>
+                        <th>Reserved by</th>
                         <th>Status</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @forelse($calendarEvents as $event)
-                        <tr>
-                            <td>{{ $event['title'] }}</td>
-                            <td>{{ \Illuminate\Support\Carbon::parse($event['start'])->format('d M Y') }}</td>
-                            <td>{{ \Illuminate\Support\Carbon::parse($event['start'])->format('h:i A') }} - {{ \Illuminate\Support\Carbon::parse($event['end'])->format('h:i A') }}</td>
-                            <td>{{ $event['extendedProps']['owner'] ?: '—' }}</td>
-                            <td>{{ $event['extendedProps']['status'] }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="5" class="text-center text-muted">No reservations found.</td></tr>
-                    @endforelse
+                <tbody id="upcomingReservationsBody">
+                    <tr><td colspan="5" class="text-center text-muted">Loading…</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
-
 </div>
 
-{{-- Reservation Details Modal --}}
-<div id="reservationModal" class="rc-modal" aria-hidden="true">
+<div id="reservationModal" class="rc-modal" role="dialog" aria-modal="true" aria-labelledby="reservationModalTitle" aria-hidden="true">
     <div class="rc-modal-overlay"></div>
     <div class="rc-modal-box">
-        <button type="button" id="closeReservationModal" class="rc-modal-close">
-            &times;
-        </button>
-
+        <button type="button" id="closeReservationModal" class="rc-modal-close" aria-label="Close"><i class="ti ti-x"></i></button>
         <div class="rc-modal-header">
-            <div class="rc-modal-icon">
-                <i class="ti ti-calendar-event"></i>
-            </div>
+            <div class="rc-modal-icon"><i class="ti ti-calendar-event"></i></div>
             <div>
-                <h2>Reservation Details</h2>
+                <h2 id="reservationModalTitle">Reservation details</h2>
                 <p>Booking information</p>
             </div>
         </div>
-
         <div class="rc-modal-body">
-            <div class="rc-detail-row">
-                <div class="rc-detail-label">Resource</div>
-                <div id="detailResource" class="rc-detail-value">-</div>
-            </div>
-
-            <div class="rc-detail-row">
-                <div class="rc-detail-label">Date</div>
-                <div id="detailDate" class="rc-detail-value">-</div>
-            </div>
-
-            <div class="rc-detail-row">
-                <div class="rc-detail-label">Booking Time</div>
-                <div id="detailTime" class="rc-detail-value">-</div>
-            </div>
-
-            <div class="rc-detail-row">
-                <div class="rc-detail-label">Reserved By</div>
-                <div id="detailOwner" class="rc-detail-value">-</div>
-            </div>
-
-            <div class="rc-detail-row">
-                <div class="rc-detail-label">Location</div>
-                <div id="detailLocation" class="rc-detail-value">-</div>
-            </div>
-
-            <div class="rc-detail-row">
-                <div class="rc-detail-label">Status</div>
-                <div id="detailStatus" class="rc-detail-value">-</div>
-            </div>
+            <div class="rc-detail-row"><div class="rc-detail-label">Resource</div><div id="detailResource" class="rc-detail-value">—</div></div>
+            <div class="rc-detail-row"><div class="rc-detail-label">Date</div><div id="detailDate" class="rc-detail-value">—</div></div>
+            <div class="rc-detail-row"><div class="rc-detail-label">Booking time</div><div id="detailTime" class="rc-detail-value">—</div></div>
+            <div class="rc-detail-row"><div class="rc-detail-label">Reserved by</div><div id="detailOwner" class="rc-detail-value">—</div></div>
+            <div class="rc-detail-row"><div class="rc-detail-label">Location</div><div id="detailLocation" class="rc-detail-value">—</div></div>
+            <div class="rc-detail-row"><div class="rc-detail-label">Status</div><div id="detailStatus" class="rc-detail-value">—</div></div>
         </div>
     </div>
 </div>
+@endsection
 
+<<<<<<< HEAD
 {{-- Inline CSS (no external files needed) --}}
 <style>
 .rc-page {
@@ -737,492 +714,21 @@
 </style>
 
 {{-- FullCalendar + logic --}}
+=======
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+>>>>>>> 83fa4dc2490e6d9583ee5be9e7771a3b3088792c
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const calendarElement = document.getElementById('resourceCalendar');
-    if (!calendarElement) return;
-
-    const events = @json($calendarEvents);
-
-    const calendar = new FullCalendar.Calendar(calendarElement, {
-        initialView: 'dayGridMonth',
-        height: 'auto',
-        contentHeight: 650,
-        expandRows: true,
-        firstDay: 1,
-        navLinks: true,
-        editable: false,
-        selectable: false,
-        nowIndicator: true,
-        dayMaxEvents: 3,
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
-        },
-        buttonText: {
-            today: 'Today',
-            month: 'Month',
-            week: 'Week',
-            day: 'Day',
-            list: 'Agenda',
-        },
-        eventDidMount: function (info) {
-            const status = info.event.extendedProps.statusValue;
-            const colors = ['approved', 'confirmed', 'in_progress', 'completed'].includes(status)
-                ? { background: '#e2f5e8', border: '#55b978', text: '#285d3a' }
-                : ['pending_approval', 'changes_requested', 'draft'].includes(status)
-                    ? { background: '#fff0d4', border: '#e6b34f', text: '#715518' }
-                    : ['rejected', 'cancelled', 'expired'].includes(status)
-                        ? { background: '#ffe5e2', border: '#e77770', text: '#853d39' }
-                        : { background: '#e8f1ff', border: '#8bb8f0', text: '#34577f' };
-            info.el.style.backgroundColor = colors.background;
-            info.el.style.borderLeft = `3px solid ${colors.border}`;
-            info.el.style.color = colors.text;
-            info.el.title = `${info.event.title} · ${info.event.extendedProps.status}`;
-        },
-        datesSet: function (info) {
-            const view = info.view.calendar.el.querySelector('.fc-view-harness');
-            if (!view) return;
-            view.classList.remove('fc-view-transition');
-            void view.offsetWidth;
-            view.classList.add('fc-view-transition');
-        },
-        events,
-        eventClick: function (info) {
-            showReservationDetails(info.event);
-        },
-    });
-
-    calendar.render();
-    document.getElementById('calendarLoading').hidden = true;
-
-    // Filters
-    const resourceFilter = document.getElementById('resourceFilter');
-    const locationFilter = document.getElementById('locationFilter');
-    const statusFilter = document.getElementById('statusFilter');
-    const categoryFilter = document.getElementById('categoryFilter');
-    const applyFiltersButton = document.getElementById('applyFiltersButton');
-    const clearFiltersButton = document.getElementById('clearFiltersButton');
-
-    document.getElementById('calendarEmpty').hidden = events.length > 0;
-    let filteredEvents = events;
-    let appliedFilters = { resource: 'all', location: 'all', status: 'all', category: 'all' };
-
-    function applyFilters() {
-        const selRes = resourceFilter.value;
-        const selLoc = locationFilter.value;
-        const selStat = statusFilter.value;
-        appliedFilters = { resource: selRes, location: selLoc, status: selStat, category: categoryFilter.value };
-
-        calendar.removeAllEvents();
-
-        const filtered = events.filter(ev => {
-            const p = ev.extendedProps;
-            const resOk = selRes === 'all' || p.resourceId === selRes;
-            const locOk = selLoc === 'all' || p.locationId === selLoc;
-            const categoryOk = categoryFilter.value === 'all' || p.categoryId === categoryFilter.value;
-            const statOk = selStat === 'all'
-                || (selStat === 'approved' && ['approved', 'confirmed', 'in_progress', 'completed'].includes(p.statusValue))
-                || (selStat === 'pending' && ['pending_approval', 'changes_requested'].includes(p.statusValue))
-                || p.statusValue === selStat;
-            return resOk && locOk && categoryOk && statOk;
-        });
-
-        filteredEvents = filtered;
-        calendar.addEventSource(filtered);
-        document.getElementById('calendarEmpty').hidden = filtered.length > 0;
-        applyFiltersButton.classList.remove('has-pending-filters');
-        renderScheduler();
-    }
-
-    function handleFilterChange() {
-        applyFiltersButton.classList.add('has-pending-filters');
-    }
-
-    resourceFilter.addEventListener('change', handleFilterChange);
-    locationFilter.addEventListener('change', handleFilterChange);
-    statusFilter.addEventListener('change', handleFilterChange);
-    categoryFilter.addEventListener('change', handleFilterChange);
-    applyFiltersButton.addEventListener('click', () => {
-        selectedSchedulerResources.clear();
-        updateSchedulerSelectionCount();
-        applyFilters();
-    });
-    clearFiltersButton.addEventListener('click', () => {
-        resourceFilter.value = 'all';
-        locationFilter.value = 'all';
-        statusFilter.value = 'all';
-        categoryFilter.value = 'all';
-        selectedSchedulerResources.clear();
-        updateSchedulerSelectionCount();
-        applyFilters();
-    });
-
-    const schedulerResources = @json($schedulerResources);
-    const canReserve = @json($canReserve);
-    const createReservationUrl = @json(route('reservations.create'));
-    const schedulerPanel = document.getElementById('schedulerPanel');
-    const schedulerGrid = document.getElementById('schedulerGrid');
-    const schedulerDate = document.getElementById('schedulerDate');
-    const calendarCard = document.querySelector('.rc-calendar-card:not(.rc-scheduler)');
-    const calendarViewButton = document.getElementById('calendarViewButton');
-    const schedulerViewButton = document.getElementById('schedulerViewButton');
-    const schedulerHours = Array.from({ length: 12 }, (_, index) => index + 8);
-    let activeDrag = null;
-    let suppressSlotClick = false;
-    let selectedSchedulerResources = new Set();
-
-    function updateSchedulerSelectionCount() {
-        const count = selectedSchedulerResources.size;
-        document.getElementById('schedulerSelectionCount').textContent = count
-            ? `${count} resource${count === 1 ? '' : 's'} selected for booking`
-            : 'Select resources for a multi-resource booking';
-    }
-
-    function resourcesForSlot(resourceId) {
-        const selected = [...selectedSchedulerResources];
-        if (!selected.length) return [resourceId];
-        if (!selected.includes(resourceId)) selected.push(resourceId);
-        return [...new Set(selected)];
-    }
-
-    function renderScheduler() {
-        const selectedCategory = appliedFilters.category;
-        const rows = schedulerResources.filter(resource =>
-            (selectedCategory === 'all' || resource.categoryId === selectedCategory)
-            && (appliedFilters.resource === 'all' || resource.id === appliedFilters.resource)
-            && (appliedFilters.location === 'all' || resource.locationId === appliedFilters.location)
-        );
-        const date = schedulerDate.value;
-        schedulerGrid.replaceChildren();
-        document.getElementById('schedulerEmpty').hidden = rows.length > 0;
-        if (!rows.length) return;
-
-        const header = document.createElement('div');
-        header.className = 'rc-scheduler-track';
-        const resourceHeading = document.createElement('div');
-        resourceHeading.className = 'rc-scheduler-times';
-        resourceHeading.textContent = 'Resource / Load';
-        header.appendChild(resourceHeading);
-        schedulerHours.forEach(hour => {
-            const cell = document.createElement('div');
-            cell.className = 'rc-scheduler-times';
-            cell.textContent = `${String(hour).padStart(2, '0')}:00`;
-            header.appendChild(cell);
-        });
-        schedulerGrid.appendChild(header);
-
-        const grouped = rows.reduce((groups, resource) => {
-            (groups[resource.category] ||= []).push(resource);
-            return groups;
-        }, {});
-        Object.entries(grouped).forEach(([category, categoryRows]) => {
-            const categoryHeading = document.createElement('div');
-            categoryHeading.className = 'rc-scheduler-category';
-            categoryHeading.textContent = category;
-            schedulerGrid.appendChild(categoryHeading);
-            const groupedTypes = categoryRows.reduce((types, resource) => {
-                (types[resource.type || 'Other'] ||= []).push(resource);
-                return types;
-            }, {});
-            Object.entries(groupedTypes).forEach(([type, typeRows]) => {
-                const typeHeading = document.createElement('div');
-                typeHeading.className = 'rc-scheduler-type';
-                typeHeading.textContent = type;
-                schedulerGrid.appendChild(typeHeading);
-                typeRows.forEach(resource => renderResourceRow(resource, date));
-            });
-        });
-    }
-
-    function renderResourceRow(resource, date) {
-        const allResourceEvents = events.filter(event => event.extendedProps.resourceId === resource.id
-            && event.start.slice(0, 10) === date);
-        const resourceEvents = filteredEvents.filter(event => event.extendedProps.resourceId === resource.id
-            && event.start.slice(0, 10) === date);
-        const blockingEvents = allResourceEvents.filter(event => event.extendedProps.blocking);
-        const bookedMinutes = blockingEvents.reduce((total, event) => total + Math.max(0,
-            Math.min(1200, timeMinutes(event.end)) - Math.max(480, timeMinutes(event.start))), 0);
-        const load = Math.round((bookedMinutes / (12 * 60)) * 100);
-        const isMaintenance = resource.status === 'under_maintenance';
-        const track = document.createElement('div');
-        track.className = 'rc-scheduler-track';
-        const label = document.createElement('div');
-        label.className = 'rc-scheduler-resource';
-        const name = document.createElement('strong');
-        const resourceName = document.createElement('span');
-        resourceName.textContent = resource.name;
-        if (canReserve && resource.bookable) {
-            const resourceCheckbox = document.createElement('input');
-            resourceCheckbox.type = 'checkbox';
-            resourceCheckbox.className = 'rc-resource-select';
-            resourceCheckbox.checked = selectedSchedulerResources.has(resource.id);
-            resourceCheckbox.setAttribute('aria-label', `Add ${resource.name} to multi-resource booking`);
-            resourceCheckbox.addEventListener('click', event => event.stopPropagation());
-            resourceCheckbox.addEventListener('change', () => {
-                if (resourceCheckbox.checked) selectedSchedulerResources.add(resource.id);
-                else selectedSchedulerResources.delete(resource.id);
-                updateSchedulerSelectionCount();
-                renderScheduler();
-            });
-            name.append(resourceCheckbox, resourceName);
-        } else {
-            name.appendChild(resourceName);
-        }
-        const meta = document.createElement('small');
-        meta.textContent = [resource.type, resource.location].filter(Boolean).join(' · ') || resource.status;
-        label.append(name, meta);
-        const capacity = document.createElement('span');
-        capacity.className = `rc-capacity ${load > 100 ? 'overloaded' : load >= 80 ? 'near-capacity' : ''}`;
-        const bar = document.createElement('span');
-        bar.className = 'rc-capacity-track';
-        const fill = document.createElement('i');
-        fill.style.width = `${Math.min(load, 100)}%`;
-        bar.appendChild(fill);
-        const percent = document.createElement('em');
-        percent.textContent = `${load}%`;
-        capacity.append(bar, percent);
-        label.appendChild(capacity);
-        track.appendChild(label);
-
-        schedulerHours.forEach(hour => {
-            const slot = document.createElement('button');
-            slot.type = 'button';
-            slot.className = `rc-scheduler-slot ${isMaintenance ? 'rc-maintenance-slot' : ''}`;
-            slot.dataset.resourceId = resource.id;
-            slot.dataset.hour = String(hour);
-            slot.dataset.date = date;
-            slot.setAttribute('aria-label', `${resource.name}, ${date}, ${hour}:00`);
-            const collisions = blockingEvents.filter(event => overlapsHour(event, hour));
-            const selectedResourceIds = resourcesForSlot(resource.id);
-            const selectedResourceConflict = selectedResourceIds.some(resourceId => events.some(event =>
-                event.extendedProps.resourceId === resourceId
-                && event.extendedProps.blocking
-                && event.start.slice(0, 10) === date
-                && overlapsHour(event, hour)
-            ));
-            if (collisions.length || selectedResourceConflict) slot.disabled = true;
-            if (!canReserve || !resource.bookable || isMaintenance || new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`) < new Date()) {
-                slot.disabled = true;
-            }
-            slot.addEventListener('pointerdown', event => {
-                if (slot.disabled) return;
-                event.preventDefault();
-                activeDrag = { resource, resourceIds: resourcesForSlot(resource.id), date, start: hour, end: hour };
-                updateDragSelection();
-            });
-            slot.addEventListener('pointerenter', () => {
-                if (!activeDrag || activeDrag.resource.id !== resource.id) return;
-                activeDrag.end = hour;
-                updateDragSelection();
-            });
-            slot.addEventListener('click', () => {
-                if (suppressSlotClick) { suppressSlotClick = false; return; }
-                if (!slot.disabled) openReservationForm(resourcesForSlot(resource.id), date, hour, hour + 1);
-            });
-            if (collisions.length > 1) {
-                slot.classList.add('rc-overbooked-slot');
-                const warning = document.createElement('span');
-                warning.className = 'rc-conflict-flag';
-                warning.innerHTML = '<i class="ti ti-alert-triangle" aria-hidden="true"></i>';
-                warning.title = 'Overlapping bookings';
-                slot.appendChild(warning);
-            }
-            track.appendChild(slot);
-        });
-
-        if (isMaintenance) {
-            const badge = document.createElement('span');
-            badge.className = 'rc-maintenance-label';
-            badge.textContent = 'Maintenance';
-            track.appendChild(badge);
-        }
-
-        requestAnimationFrame(() => {
-            const cellWidth = (track.clientWidth - 220) / 12;
-            resourceEvents.forEach(event => {
-                const start = timeMinutes(event.start);
-                const end = timeMinutes(event.end);
-                const clippedStart = Math.max(480, start);
-                const clippedEnd = Math.min(1200, end);
-                if (clippedEnd <= clippedStart) return;
-                const block = document.createElement('button');
-                block.type = 'button';
-                block.className = `rc-scheduler-booking ${bookingState(event)}`;
-                if (allResourceEvents.some(other => other !== event && other.extendedProps.blocking
-                    && event.extendedProps.blocking && Date.parse(other.start) < Date.parse(event.end)
-                    && Date.parse(other.end) > Date.parse(event.start))) {
-                    block.classList.add('conflicted');
-                }
-                block.style.left = `${220 + ((clippedStart - 480) / 60) * cellWidth + 3}px`;
-                block.style.width = `${Math.max(34, ((clippedEnd - clippedStart) / 60) * cellWidth - 6)}px`;
-                block.textContent = `${formatClock(start)} ${event.title}`;
-                block.dataset.tooltip = `${event.title}\n${schedulerDate.value} · ${formatClock(start)}–${formatClock(end)}\n${event.extendedProps.location || 'No location'} · ${event.extendedProps.status}\nReserved by ${event.extendedProps.owner || '—'}`;
-                block.title = block.dataset.tooltip.replaceAll('\n', ' · ');
-                block.addEventListener('click', () => showReservationDetails(event));
-                block.addEventListener('pointerenter', pointer => showSchedulerPopover(block.dataset.tooltip, pointer.clientX, pointer.clientY));
-                block.addEventListener('pointermove', pointer => moveSchedulerPopover(pointer.clientX, pointer.clientY));
-                block.addEventListener('pointerleave', hideSchedulerPopover);
-                track.appendChild(block);
-            });
-        });
-        schedulerGrid.appendChild(track);
-    }
-
-    function updateDragSelection() {
-        schedulerGrid.querySelectorAll('.rc-scheduler-slot.selected').forEach(slot => slot.classList.remove('selected'));
-        if (!activeDrag) return;
-        const first = Math.min(activeDrag.start, activeDrag.end);
-        const last = Math.max(activeDrag.start, activeDrag.end);
-        for (let hour = first; hour <= last; hour++) {
-            schedulerGrid.querySelector(`.rc-scheduler-slot[data-resource-id="${activeDrag.resource.id}"][data-hour="${hour}"]`)?.classList.add('selected');
-        }
-    }
-
-    document.addEventListener('pointerup', () => {
-        if (!activeDrag) return;
-        const selection = activeDrag;
-        activeDrag = null;
-        suppressSlotClick = true;
-        setTimeout(() => { suppressSlotClick = false; }, 0);
-        const start = Math.min(selection.start, selection.end);
-        const end = Math.max(selection.start, selection.end) + 1;
-        const blocked = selection.resourceIds.some(resourceId => events.some(event =>
-            event.extendedProps.resourceId === resourceId
-            && event.extendedProps.blocking
-            && event.start.slice(0, 10) === selection.date
-            && timeMinutes(event.start) < end * 60
-            && timeMinutes(event.end) > start * 60
-        ));
-        if (blocked) {
-            window.alert('That range overlaps a booking. Choose an open time range.');
-            schedulerGrid.querySelectorAll('.rc-scheduler-slot.selected').forEach(slot => slot.classList.remove('selected'));
-            suppressSlotClick = false;
-            return;
-        }
-        openReservationForm(selection.resourceIds, selection.date, start, end);
-    });
-
-    function openReservationForm(resourceIds, date, startHour, endHour) {
-        const [primaryResourceId, ...additionalResourceIds] = resourceIds;
-        const params = new URLSearchParams({ resource_id: primaryResourceId, date, start_time: `${String(startHour).padStart(2, '0')}:00`, end_time: `${String(endHour).padStart(2, '0')}:00` });
-        additionalResourceIds.forEach(resourceId => params.append('resource_ids[]', resourceId));
-        window.location.href = `${createReservationUrl}?${params.toString()}`;
-    }
-
-    function timeMinutes(value) {
-        const time = value.slice(11, 16).split(':').map(Number);
-        return (time[0] || 0) * 60 + (time[1] || 0);
-    }
-
-    function formatClock(minutes) {
-        const hour = Math.floor(minutes / 60);
-        const minute = minutes % 60;
-        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-    }
-
-    function overlapsHour(event, hour) {
-        return timeMinutes(event.start) < (hour + 1) * 60 && timeMinutes(event.end) > hour * 60;
-    }
-
-    function bookingState(event) {
-        if (['pending_approval', 'changes_requested', 'draft'].includes(event.extendedProps.statusValue)) return 'tentative';
-        if (['rejected', 'cancelled', 'expired'].includes(event.extendedProps.statusValue)) return 'cancelled';
-        return 'confirmed';
-    }
-
-    const schedulerPopover = document.getElementById('schedulerPopover');
-    function showSchedulerPopover(content, x, y) {
-        schedulerPopover.textContent = content;
-        schedulerPopover.hidden = false;
-        moveSchedulerPopover(x, y);
-    }
-    function moveSchedulerPopover(x, y) {
-        schedulerPopover.style.left = `${Math.min(x + 14, window.innerWidth - schedulerPopover.offsetWidth - 12)}px`;
-        schedulerPopover.style.top = `${Math.min(y + 14, window.innerHeight - schedulerPopover.offsetHeight - 12)}px`;
-    }
-    function hideSchedulerPopover() {
-        schedulerPopover.hidden = true;
-    }
-
-    schedulerDate.addEventListener('change', renderScheduler);
-    document.getElementById('schedulerViewButton').addEventListener('click', () => {
-        calendarCard.hidden = true;
-        schedulerPanel.hidden = false;
-        schedulerViewButton.classList.add('active');
-        schedulerViewButton.setAttribute('aria-selected', 'true');
-        calendarViewButton.classList.remove('active');
-        calendarViewButton.setAttribute('aria-selected', 'false');
-        renderScheduler();
-    });
-    calendarViewButton.addEventListener('click', () => {
-        schedulerPanel.hidden = true;
-        calendarCard.hidden = false;
-        calendarViewButton.classList.add('active');
-        calendarViewButton.setAttribute('aria-selected', 'true');
-        schedulerViewButton.classList.remove('active');
-        schedulerViewButton.setAttribute('aria-selected', 'false');
-    });
-    window.addEventListener('resize', () => { if (!schedulerPanel.hidden) renderScheduler(); });
-
-    // Modal
-    const modal = document.getElementById('reservationModal');
-    const closeBtn = document.getElementById('closeReservationModal');
-    const overlay = document.querySelector('.rc-modal-overlay');
-
-    function openReservationModal() {
-        modal.classList.add('show');
-        modal.setAttribute('aria-hidden', 'false');
-    }
-
-    function showReservationDetails(event) {
-        const details = event.extendedProps;
-        const start = event.start instanceof Date ? event.start : new Date(event.start);
-        const end = event.end instanceof Date ? event.end : new Date(event.end);
-        document.getElementById('detailResource').textContent = details.resource || event.title;
-        document.getElementById('detailDate').textContent = formatDate(start);
-        document.getElementById('detailTime').textContent = formatTimeRange(start, end);
-        document.getElementById('detailOwner').textContent = details.owner || '-';
-        document.getElementById('detailLocation').textContent = details.location || '-';
-        document.getElementById('detailStatus').textContent = details.status || '-';
-        openReservationModal();
-    }
-
-    function closeReservationModal() {
-        modal.classList.remove('show');
-        modal.setAttribute('aria-hidden', 'true');
-    }
-
-    closeBtn.addEventListener('click', closeReservationModal);
-    overlay.addEventListener('click', closeReservationModal);
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') closeReservationModal();
-    });
-
-    function formatDate(date) {
-        if (!date) return '-';
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    }
-
-    function formatTimeRange(start, end) {
-        if (!start) return '-';
-        const st = start.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-        });
-        if (!end) return st;
-        const en = end.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-        });
-        return `${st} – ${en}`;
-    }
-});
+    window.RC = {
+        events: @json($calendarEvents),
+        holidays: @json($holidayEvents),
+        holidayImageBase: @json(asset('images/holidays')),
+        schedulerResources: @json($schedulerResources),
+        canReserve: @json($canReserve),
+        createReservationUrl: @json(route('reservations.create')),
+    };
 </script>
-@endsection
+<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=25"></script>
+@endpush

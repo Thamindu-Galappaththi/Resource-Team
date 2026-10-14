@@ -2,886 +2,203 @@
 
 @section('title', 'Reservation Calendar')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
+<link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=4">
+@endpush
+
 @section('content')
-
-<style>
-
-    /* =========================================================
-       CALENDAR CONTAINER
-       ========================================================= */
-
-    .reservation-calendar-wrapper {
-        width: 100%;
-        padding: 35px 25px 50px 25px;
-    }
-
-
-    /* =========================================================
-       MONTH NAVIGATION
-       ========================================================= */
-
-    .calendar-navigation {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 5px;
-
-        padding: 5px 10px 22px 10px;
-
-        background: rgba(255,255,255,0.75) !important;
-
-        border-radius: 10px;
-
-    }
-
-
-    /* Previous / Next buttons */
-
-    .nav-button {
-        min-width: 92px;
-        height: 38px;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        border: 1px solid #1769e8 !important;
-        border-radius: 8px !important;
-
-        background: rgba(255, 255, 255, 0.20) !important;
-
-        color: #1769d1 !important;
-
-        font-size: 14px;
-        font-weight: 500;
-
-        transition: 0.2s ease;
-    }
-
-
-    .nav-button:hover {
-        background: #1769d1 !important;
-        color: white !important;
-    }
-
-
-    /* Month title */
-
-    .month-title {
-        border: none !important;
-        border-radius: 6px !important;
-
-        background: rgba(255, 255, 255, 0.32) !important;
-
-        color: #1769e8 !important;
-
-        padding: 8px 18px;
-
-        font-size: 17px;
-        font-weight: 600;
-
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-
-        transition: 0.2s ease;
-
-
-    }
-
-
-    .month-title:hover {
-        background: rgba(255,255,255,0.95) !important;
-    }
-
-
-    /* =========================================================
-       MAIN CALENDAR CARD
-       ========================================================= */
-
-    .calendar-card {
-        border: none !important;
-        border-radius: 10px !important;
-
-        background: rgba(255,255,255,0.74) !important;
-
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-
-        box-shadow: 0 8px 25px rgba(0,0,0,0.08) !important;
-
-        overflow: hidden;
-    }
-
-
-    .calendar-card .card-body {
-        padding: 16px !important;
-    }
-
-
-    /* =========================================================
-       DAYS HEADER
-       ========================================================= */
-
-    .calendar-header {
-        margin: 0 !important;
-
-        background: rgba(238,243,250,0.75) !important;
-
-        border: none !important;
-
-        border-radius: 6px 6px 0 0;
-    }
-
-
-    .calendar-header .col {
-        padding-top: 14px !important;
-        padding-bottom: 14px !important;
-
-        color: #111827;
-
-        font-size: 14px;
-        font-weight: 500;
-
-        background: transparent !important;
-
-        border: none !important;
-    }
-
-
-    /* =========================================================
-       CALENDAR ROWS
-       ========================================================= */
-
-    .calendar-row {
-        margin: 0 !important;
-    }
-
-
-    /* =========================================================
-       DATE CELLS
-       ========================================================= */
-
-    .calendar-date,
-    .empty-date {
-
-        min-height: 105px;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        position: relative;
-
-        margin: 2px;
-
-        border: 2px solid rgba(235,238,244,0.80);
-
-        border-radius: 7px;
-
-        background: rgba(255,255,255,0.72);
-
-        transition: all 0.2s ease;
-    }
-
-
-    /* Actual date */
-
-    .calendar-date {
-        cursor: pointer;
-    }
-
-
-    .calendar-date:hover {
-        background: rgba(23, 105, 203, 0.95);
-
-        box-shadow: 0 3px 10px rgba(0,0,0,0.06);
-
-        transform: translateY(-1px);
-    }
-
-    .date-number:hover{
-        color: white;
-    }
-
-
-    /* =========================================================
-       NORMAL DATE NUMBER
-       ========================================================= */
-
-    .date-number {
-
-        padding: 50px 50px 50px 50px;
-        width: 100%;
-
-        text-align: center;
-
-        color: #111827;
-
-        font-size: 14px;
-
-        font-weight: 500;
-    }
-
-    
-
-
-    /* =========================================================
-       TODAY
-       ========================================================= */
-
-    .today-circle {
-
-        width: 47px;
-        height: 47px;
-
-        display: flex;
-
-        align-items: center;
-        justify-content: center;
-
-        border-radius: 50%;
-
-        background: #1769e8;
-
-        color: white;
-
-        font-size: 14px;
-
-        font-weight: 600;
-
-        box-shadow: 0 3px 8px rgba(23,105,232,0.25);
-    }
-
-    .today-circle:hover{
-        
-
-    }
-
-
-    /* =========================================================
-       EMPTY DATE CELLS
-       ========================================================= */
-
-    .empty-date {
-
-        cursor: default;
-
-        background: rgba(255,255,255,0.55);
-
-        border-color: rgba(235,238,244,0.65);
-    }
-
-
-    /* =========================================================
-       MONTH MODAL BUTTONS
-       ========================================================= */
-
-    .month-btn {
-
-        border-radius: 6px;
-
-        padding: 10px 5px;
-
-        font-size: 14px;
-    }
-
-
-    /* =========================================================
-       RESPONSIVE
-       ========================================================= */
-
-    @media (max-width: 992px) {
-
-        .reservation-calendar-wrapper {
-            padding: 25px 15px 40px 15px;
-        }
-
-        .calendar-date,
-        .empty-date {
-            min-height: 90px;
-        }
-
-    }
-
-
-    @media (max-width: 768px) {
-
-        .calendar-navigation {
-            padding-left: 5px;
-            padding-right: 5px;
-        }
-
-        .nav-button {
-            min-width: 80px;
-            font-size: 13px;
-        }
-
-        .month-title {
-            font-size: 15px;
-        }
-
-        .calendar-date,
-        .empty-date {
-            min-height: 75px;
-        }
-
-        .calendar-header .col {
-            font-size: 12px;
-        }
-
-    }
-
-</style>
-
-
-<!-- =============================================================
-     MAIN CALENDAR
-     ============================================================= -->
-
-<div class="reservation-calendar-wrapper">
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
+@php
+    $weekdays = [
+        ['full' => 'Sunday', 'short' => 'Sun'],
+        ['full' => 'Monday', 'short' => 'Mon'],
+        ['full' => 'Tuesday', 'short' => 'Tue'],
+        ['full' => 'Wednesday', 'short' => 'Wed'],
+        ['full' => 'Thursday', 'short' => 'Thu'],
+        ['full' => 'Friday', 'short' => 'Fri'],
+        ['full' => 'Saturday', 'short' => 'Sat'],
+    ];
+    $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    $navQuery = fn (int $year, int $month) => array_merge($calendarQuery, ['year' => $year, 'month' => $month]);
+@endphp
+
+<div class="container-fluid mt-4 rsv-page">
+    <div class="rsv-header">
         <div>
-            <h2 class="h4 mb-1">Reservation Calendar</h2>
-            <p class="text-muted mb-0">Click a date to view bookings or create one for that slot.</p>
+            <h1 class="rsv-title">Reservation Calendar</h1>
+            <p class="rsv-subtitle mb-0">Click a date to view bookings or create one for that slot.</p>
         </div>
         @if($canCreate)
-            <a href="{{ route('reservations.create') }}" class="btn btn-primary">Create Reservation</a>
+            <a href="{{ route('reservations.create') }}" class="btn rsv-create"><i class="ti ti-plus me-2"></i>Create Reservation</a>
         @endif
     </div>
 
-    <form method="GET" action="{{ route('reservations.calendar') }}" class="card border-0 shadow-sm mb-3">
-        <div class="card-body row g-2 align-items-end">
-            <input type="hidden" name="year" value="{{ $year }}">
-            <input type="hidden" name="month" value="{{ $month }}">
-            <div class="col-md-3">
-                <label class="form-label">Location</label>
-                <select name="location_id" class="form-select">
-                    <option value="">All</option>
-                    @foreach($locations as $location)
-                        <option value="{{ $location->id }}" @selected(request('location_id') == $location->id)>{{ $location->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Category</label>
-                <select name="resource_category_id" class="form-select">
-                    <option value="">All</option>
-                    @foreach($categories as $category)
-                        <option value="{{ $category->id }}" @selected(request('resource_category_id') == $category->id)>{{ $category->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Status</label>
-                <select name="status" class="form-select">
-                    <option value="">All</option>
-                    @foreach($statuses as $status)
-                        <option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-3 d-grid">
-                <button class="btn btn-outline-primary">Apply filters</button>
-            </div>
+    <div class="rsv-stats">
+        <div class="rsv-stat" style="--stat-color:#1769c2">
+            <span class="rsv-stat-icon"><i class="ti ti-calendar-event"></i></span>
+            <div class="rsv-stat-label">This month</div>
+            <div class="rsv-stat-number" id="rsv-stat-month">{{ $stats['month'] }}</div>
+        </div>
+        <div class="rsv-stat" style="--stat-color:#16a77a">
+            <span class="rsv-stat-icon"><i class="ti ti-sun"></i></span>
+            <div class="rsv-stat-label">Today</div>
+            <div class="rsv-stat-number" id="rsv-stat-today">{{ $stats['today'] }}</div>
+        </div>
+        <div class="rsv-stat" style="--stat-color:#d97706">
+            <span class="rsv-stat-icon"><i class="ti ti-clock-hour-4"></i></span>
+            <div class="rsv-stat-label">Pending</div>
+            <div class="rsv-stat-number" id="rsv-stat-pending">{{ $stats['pending'] }}</div>
+        </div>
+        <div class="rsv-stat" style="--stat-color:#7c5cbf">
+            <span class="rsv-stat-icon"><i class="ti ti-circle-check"></i></span>
+            <div class="rsv-stat-label">Approved</div>
+            <div class="rsv-stat-number" id="rsv-stat-approved">{{ $stats['approved'] }}</div>
+        </div>
+    </div>
+
+    <form method="GET" action="{{ route('reservations.calendar') }}" class="rsv-filters" id="rsv-filters">
+        <input type="hidden" name="year" id="rsv-year" value="{{ $year }}">
+        <input type="hidden" name="month" id="rsv-month" value="{{ $month }}">
+        <div class="rsv-filter">
+            <label for="locationFilter">Location</label>
+            <x-rm-select id="locationFilter" name="location_id" placeholder="All locations" :value="request('location_id', '')"
+                :options="collect([['value' => '', 'label' => 'All locations']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
+        </div>
+        <div class="rsv-filter">
+            <label for="categoryFilter">Category</label>
+            <x-rm-select id="categoryFilter" name="resource_category_id" placeholder="All categories" :value="request('resource_category_id', '')"
+                :options="collect([['value' => '', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
+        </div>
+        <div class="rsv-filter">
+            <label for="resourceFilter">Resource</label>
+            <x-rm-select id="resourceFilter" name="resource_id" placeholder="All resources" :value="request('resource_id', '')"
+                :options="collect([['value' => '', 'label' => 'All resources']])->concat($resources->map(fn ($resource) => ['value' => (string) $resource->id, 'label' => $resource->name_model]))->all()" />
+        </div>
+        <div class="rsv-filter">
+            <label for="statusFilter">Status</label>
+            <x-rm-select id="statusFilter" name="status" placeholder="All statuses" :value="request('status', '')"
+                :options="collect([['value' => '', 'label' => 'All statuses']])->concat($statuses->map(fn ($status) => ['value' => $status->value, 'label' => $status->label()]))->all()" />
+        </div>
+        <div class="rsv-filter-actions">
+            <button type="submit" class="rsv-filter-btn rsv-filter-apply">Apply</button>
+            <a href="{{ route('reservations.calendar', ['year' => $year, 'month' => $month]) }}" class="rsv-filter-btn rsv-filter-clear" id="rsv-clear">Clear</a>
         </div>
     </form>
 
-    <!-- =========================================================
-         MONTH NAVIGATION
-         ========================================================= -->
-
-    <div class="calendar-navigation">
-
-
-        <!-- Previous Month -->
-
-        <a href="{{ route('reservations.calendar', array_merge(request()->except(['year', 'month']), [
-            'year' => $currentDate->copy()->subMonth()->year,
-            'month' => $currentDate->copy()->subMonth()->month
-        ])) }}"
-           class="btn nav-button">
-           &lt; Previous
-        </a>
-
-
-
-        <!-- Month Name -->
-
-        <button type="button"
-                class="btn month-title"
-                data-bs-toggle="modal"
-                data-bs-target="#monthModal">
-
-                {{ $currentDate->format('F Y') }}
-        </button>
-
-
-        <!-- Next Month -->
-
-        <a href="{{ route('reservations.calendar', array_merge(request()->except(['year', 'month']), [
-            'year' => $currentDate->copy()->addMonth()->year,
-            'month' => $currentDate->copy()->addMonth()->month
-        ])) }}"
-           class="btn nav-button">
-           Next &gt;
-        </a>
-
-
-    </div>
-
-
-
-    <!-- =========================================================
-         CALENDAR CARD
-         ========================================================= -->
-
-    <div class="card calendar-card">
-
-        <div class="card-body">
-
-
-            <!-- =================================================
-                 DAYS
-                 ================================================= -->
-
-            <div class="row text-center fw-bold calendar-header">
-
-                <div class="col"> Sunday </div>
-
-                <div class="col"> Monday </div>
-
-                <div class="col"> Tuesday </div>
-
-                <div class="col"> Wednesday </div>
-
-                <div class="col"> Thursday </div>
-
-                <div class="col"> Friday </div>
-
-                <div class="col"> Saturday </div>
-
-            </div>
-
-
-
-            <!-- =================================================
-                 CALENDAR DATES
-                 ================================================= -->
-
-            <div class="row calendar-row">
-
-
-                {{-- Empty cells before first day --}}
-
-                @for ($i = 0; $i < $startingDayOfWeek; $i++)
-
-                    <div class="col empty-date">
-                    </div>
-
-                @endfor
-
-
-
-                {{-- Actual Dates --}}
-
-                @for ($day = 1; $day <= $daysInMonth; $day++)
-
-                    @php
-
-                        $date = $currentDate->copy()->day($day);
-
-                        $isToday = $date->isToday();
-
-                        $dayReservations = $calendarReservations
-                            ->where('reservation_date', $date->format('Y-m-d'))
-                            ->values();
-
-                    @endphp
-
-
-                    <div class="col calendar-date"
-                         data-bs-toggle="modal"
-                         data-bs-target="#eventModal"
-                         data-display-date="{{ $date->format('F d, Y') }}"
-                         data-date="{{ $date->format('Y-m-d') }}"
-                         data-reservations='@json($dayReservations)'>
-
-
-                        @if ($isToday)
-
-                            <div class="today-circle">
-
-                                {{ $day }}
-
-                            </div>
-
-                        @else
-
-                            <div class="date-number">
-
-                                {{ $day }}
-
-                            </div>
-
-                        @endif
-
-                        @if($dayReservations->count())
-                            <span class="position-absolute bottom-0 start-50 translate-middle-x mb-1 badge rounded-pill text-bg-primary">
-                                {{ $dayReservations->count() }}
-                            </span>
-                        @endif
-
-
-                    </div>
-
-
-
-                    {{-- Start new row after Saturday --}}
-
-                    @if (($startingDayOfWeek + $day) % 7 == 0)
-
-                        </div>
-
-
-                        @if ($day < $daysInMonth)
-
-                            <div class="row calendar-row">
-
-                        @endif
-
-                    @endif
-
-                @endfor
-
-
-
-                {{-- Empty cells after last day --}}
-
-                @php
-
-                    $remainingCells =
-                        (7 - (($startingDayOfWeek + $daysInMonth) % 7)) % 7;
-
-                @endphp
-
-
-                @for ($i = 0; $i < $remainingCells; $i++)
-
-                    <div class="col empty-date">
-                    </div>
-
-                @endfor
-
-
-            </div>
-
+    <div class="rsv-board" id="rsv-board">
+        <div class="rsv-loading" id="rsv-loading" hidden>Updating calendar…</div>
+        <div class="rsv-nav">
+            <a class="rsv-nav-btn" id="rsv-prev" href="{{ route('reservations.calendar', $navQuery($prev['year'], $prev['month'])) }}"><i class="ti ti-chevron-left"></i> Previous</a>
+            <button type="button" class="rsv-month-btn" id="rsv-month-label" data-bs-toggle="modal" data-bs-target="#monthModal">{{ $currentDate->format('F Y') }}</button>
+            <a class="rsv-nav-btn" id="rsv-next" href="{{ route('reservations.calendar', $navQuery($next['year'], $next['month'])) }}">Next <i class="ti ti-chevron-right"></i></a>
         </div>
-
-    </div>
-
-</div>
-
-
-
-<!-- =============================================================
-     EVENT MODAL
-     ============================================================= -->
-
-<div class="modal fade"
-     id="eventModal"
-     tabindex="-1">
-
-    <div class="modal-dialog modal-dialog-centered">
-
-        <div class="modal-content">
-
-
-            <div class="modal-header">
-
-                <h5 class="modal-title">
-                    Events
-                </h5>
-
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal">
-                </button>
-
-            </div>
-
-
-            <div class="modal-body">
-
-                <p id="selectedDate"
-                   class="text-muted">
-                </p>
-
-
-                <div id="reservationList"></div>
-
-            </div>
-
-
+        <div class="rsv-legend" aria-label="Holiday types">
+            <span><i class="rsv-holiday-swatch poya"></i>Poya</span>
+            <span><i class="rsv-holiday-swatch mercantile"></i>Mercantile</span>
+            <span><i class="rsv-holiday-swatch bank"></i>Bank</span>
+            <span><i class="rsv-holiday-swatch public"></i>Government / public</span>
         </div>
-
-    </div>
-
-</div>
-
-
-
-<!-- =============================================================
-     MONTH MODAL
-     ============================================================= -->
-
-<div class="modal fade"
-     id="monthModal"
-     tabindex="-1">
-
-    <div class="modal-dialog modal-dialog-centered">
-
-        <div class="modal-content">
-
-
-            <!-- Modal Header -->
-
-            <div class="modal-header">
-
-
-                <!-- Previous Year -->
-
-                <button type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        id="previousYear">
-
-                    &lt;
-
-                </button>
-
-
-
-                <!-- Year -->
-
-                <h5 class="modal-title"
-                    id="yearTitle">
-
-                    {{ $currentDate->year }}
-
-                </h5>
-
-
-
-                <!-- Next Year -->
-
-                <button type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        id="nextYear">
-
-                    &gt;
-
-                </button>
-
-
-            </div>
-
-
-
-            <!-- Modal Body -->
-
-            <div class="modal-body">
-
-                <div class="row g-2">
-
-
-                    @php
-
-                        $months = [
-                            'January',
-                            'February',
-                            'March',
-                            'April',
-                            'May',
-                            'June',
-                            'July',
-                            'August',
-                            'September',
-                            'October',
-                            'November',
-                            'December'
-                        ];
-
-                    @endphp
-
-
-
-                    @foreach($months as $index => $monthName)
-
-                        <div class="col-4">
-
-                            <button
-                                type="button"
-                                class="btn btn-outline-primary w-100 month-btn"
-                                data-month="{{ $index + 1 }}">
-
-                                {{ $monthName }}
-
-                            </button>
-
-                        </div>
-
-                    @endforeach
-
-
+        <div class="rsv-weekdays">
+            @foreach ($weekdays as $weekday)
+                <div class="rsv-weekday">
+                    <span class="rsv-dow-full">{{ $weekday['full'] }}</span>
+                    <span class="rsv-dow-short">{{ $weekday['short'] }}</span>
                 </div>
-
-            </div>
-
-
+            @endforeach
         </div>
-
+        <div class="rsv-grid" id="rsv-grid">
+            @foreach ($cells as $cell)
+                @if ($cell['empty'])
+                    <div class="rsv-cell is-empty" aria-hidden="true"></div>
+                @else
+                    <button type="button"
+                        class="rsv-cell is-day{{ $cell['isToday'] ? ' is-today' : '' }}{{ $cell['isWeekend'] ? ' is-weekend' : '' }}{{ ! empty($cell['holiday']) ? ' is-holiday is-holiday-'.$cell['holiday']['kind'] : '' }}"
+                        data-bs-toggle="modal"
+                        data-bs-target="#eventModal"
+                        data-date="{{ $cell['iso'] }}"
+                        data-display-date="{{ $cell['display'] }}"
+                        aria-label="{{ $cell['display'] }}{{ ! empty($cell['holiday']) ? ', '.$cell['holiday']['title'] : '' }}{{ $cell['count'] ? ', '.$cell['count'].' '.\Illuminate\Support\Str::plural('booking', $cell['count']) : '' }}">
+                        <span class="rsv-daynum">{{ $cell['day'] }}</span>
+                        <span class="rsv-events">
+                            @if (! empty($cell['holiday']))
+                                <span class="rsv-holiday-chip is-{{ $cell['holiday']['kind'] }}">{{ \Illuminate\Support\Str::limit($cell['holiday']['title'], 22) }}</span>
+                            @endif
+                            @foreach ($cell['preview'] as $booking)
+                                <span class="rsv-chip is-{{ str_replace('_', '-', $booking['status']) }}">
+                                    {{ $booking['start_time'] }} {{ \Illuminate\Support\Str::limit($booking['title'] ?: $booking['reference'], 18) }}
+                                </span>
+                            @endforeach
+                            @if ($cell['count'] > 2)
+                                <span class="rsv-more">+{{ $cell['count'] - 2 }} more</span>
+                            @endif
+                        </span>
+                    </button>
+                @endif
+            @endforeach
+        </div>
     </div>
-
 </div>
 
+<div class="modal fade rsv-modal" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5 mb-0" id="eventModalTitle">Bookings</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="selectedDate" class="fw-semibold mb-3"></p>
+                <div id="reservationList"></div>
+            </div>
+            @if($canCreate)
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <a id="createForDate" class="btn btn-primary" href="{{ route('reservations.create') }}">Create reservation</a>
+            </div>
+            @endif
+        </div>
+    </div>
+</div>
 
-
-<script>
-
-    /* =========================================================
-       EVENT POPUP
-       ========================================================= */
-
-    document.querySelectorAll('[data-bs-target="#eventModal"]')
-    .forEach(function(day) {
-
-        day.addEventListener('click', function() {
-
-            // Get selected date
-            const displayDate =
-                this.getAttribute('data-display-date');
-
-            // Get reservations from data attribute
-            const reservations =
-                JSON.parse(this.getAttribute('data-reservations'));
-
-            // Show selected date
-            document.getElementById('selectedDate').textContent =
-                displayDate;
-
-
-            // Get reservation list container
-            const reservationList =
-                document.getElementById('reservationList');
-
-
-            // Clear previous reservations
-            reservationList.innerHTML = '';
-
-
-            // If there are no reservations
-            const selectedIsoDate = this.getAttribute('data-date');
-            const canCreate = @json($canCreate);
-            const createUrl = @json(route('reservations.create'));
-
-            if (reservations.length === 0) {
-                reservationList.innerHTML = `
-                    <p>No bookings for this day.</p>
-                    ${canCreate ? `<a class="btn btn-primary btn-sm" href="${createUrl}?date=${selectedIsoDate}">Create reservation</a>` : ''}
-                `;
-                return;
-            }
-
-            reservations.forEach(function(reservation) {
-                reservationList.innerHTML += `
-                    <div class="border rounded p-3 mb-2">
-                        <div class="d-flex justify-content-between">
-                            <h6 class="mb-1">${reservation.reference ?? reservation.title}</h6>
-                            <span class="badge bg-light text-dark">${reservation.status_label ?? ''}</span>
-                        </div>
-                        <p class="mb-1">${reservation.title ?? ''}</p>
-                        <small class="text-muted d-block">${reservation.resources ?? ''}</small>
-                        <small class="text-muted d-block">${reservation.requester ?? ''} · ${reservation.location ?? ''}</small>
-                        <small class="text-muted d-block">${reservation.start_time} - ${reservation.end_time}</small>
-                        ${reservation.url ? `<a class="btn btn-sm btn-outline-primary mt-2" href="${reservation.url}">View details</a>` : ''}
-                    </div>
-                `;
-            });
-
-            if (canCreate) {
-                reservationList.innerHTML += `<a class="btn btn-primary btn-sm" href="${createUrl}?date=${selectedIsoDate}">Create reservation</a>`;
-            }
-
-        });
-
-    });
-
-
-
-    /* =========================================================
-       MONTH POPUP
-       ========================================================= */
-
-    let selectedYear = {{ $currentDate->year }};
-
-
-    const yearTitle =
-        document.getElementById('yearTitle');
-
-
-
-    /* =========================================================
-       PREVIOUS YEAR
-       ========================================================= */
-
-    document.getElementById('previousYear')
-        .addEventListener('click', function() {
-
-            selectedYear--;
-
-            yearTitle.textContent = selectedYear;
-
-        });
-
-
-
-    /* =========================================================
-       NEXT YEAR
-       ========================================================= */
-
-    document.getElementById('nextYear')
-        .addEventListener('click', function() {
-
-            selectedYear++;
-
-            yearTitle.textContent = selectedYear;
-
-        });
-
-
-
-    /* =========================================================
-       SELECT MONTH
-       ========================================================= */
-
-    document.querySelectorAll('.month-btn')
-        .forEach(function(month) {
-
-            month.addEventListener('click', function() {
-
-                let selectedMonth =
-                    this.getAttribute('data-month');
-
-
-                window.location.href =
-                    "{{ route('reservations.calendar') }}"
-                    + "?year=" + selectedYear
-                    + "&month=" + selectedMonth;
-
-            });
-
-        });
-
-</script>
-
+<div class="modal fade rsv-modal" id="monthModal" tabindex="-1" aria-labelledby="yearTitle">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="rsv-year-nav">
+                    <button type="button" class="btn btn-sm btn-outline-light" id="previousYear" aria-label="Previous year"><i class="ti ti-chevron-left"></i></button>
+                    <h2 class="modal-title h5 mb-0" id="yearTitle">{{ $year }}</h2>
+                    <button type="button" class="btn btn-sm btn-outline-light" id="nextYear" aria-label="Next year"><i class="ti ti-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="rsv-month-grid">
+                    @foreach ($months as $index => $monthName)
+                        <button type="button" class="rsv-month-pick{{ $index + 1 === $month ? ' is-current' : '' }}" data-month="{{ $index + 1 }}">{{ $monthName }}</button>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
+<script>
+window.RSVCal = {
+    year: {{ $year }},
+    month: {{ $month }},
+    prev: @json($prev),
+    next: @json($next),
+    calendarUrl: @json(route('reservations.calendar')),
+    createUrl: @json(route('reservations.create')),
+    canCreate: @json((bool) $canCreate),
+    query: @json($calendarQuery),
+    reservationsByDate: @json($reservationsByDate),
+    holidaysByDate: @json($holidaysByDate),
+    holidayImageBase: @json(asset('images/holidays')),
+};
+</script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=4"></script>
+@endpush

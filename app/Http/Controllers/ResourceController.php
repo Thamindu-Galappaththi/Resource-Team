@@ -3,29 +3,43 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreResourceRequest;
+use App\Models\Location;
 use App\Models\Resource;
+use App\Models\ResourceCategory;
+use App\Models\ResourceType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class ResourceController extends Controller
 {
+    /** GET /resources: inventory page with dropdown lookups for the edit modal. */
+    public function inventoryPage(): View
+    {
+        $canManage = auth()->user()?->hasPermission('resources.create') ?? false;
+
+        return view('resources.index', [
+            'lookups' => $canManage ? [
+                'categories' => ResourceCategory::query()->orderBy('name')->get(['id', 'name']),
+                'types' => ResourceType::query()->orderBy('name')->get(['id', 'name', 'resource_category_id']),
+                'locations' => Location::query()->ordered()->get(['id', 'name']),
+            ] : [
+                'categories' => [],
+                'types' => [],
+                'locations' => [],
+            ],
+        ]);
+    }
+
     /**
      * GET /resource-list
      *
      * Returns all resources, each with its type (and, through that,
-     * its category) and location eager-loaded. Used to populate Tab
-     * 4's (Linked Resource) dropdowns.
-     *
-     * TEMPORARY: 'owner' is left out of with(...) below because the
-     * resource_owners table doesn't exist yet — eager-loading a
-     * relation that points at a nonexistent table throws a SQL error.
-     * Add 'owner' back into both with(...) calls in this file once
-     * that table exists (see StoreResourceRequest for the matching
-     * TEMP note on validation).
+     * its category) and location eager-loaded.
      */
     public function index(): JsonResponse
     {
-        $resources = Resource::with(['type.category', 'location'])
+        $resources = Resource::with(['type.category', 'location', 'linkedResources'])
             ->orderBy('name_model')
             ->get();
 
@@ -35,7 +49,34 @@ class ResourceController extends Controller
     /** GET /resources/{resource}: details for the read-only view. */
     public function show(Resource $resource): JsonResponse
     {
-        return response()->json($resource->load(['type.category', 'location', 'linkedResources.type.category', 'linkedResources.location']));
+        $resource->load([
+            'type.category.features',
+            'type.featureValues.feature',
+            'location',
+            'linkedResources.type.category',
+            'linkedResources.location',
+            'linkedFrom.type.category',
+            'linkedFrom.location',
+        ]);
+
+        $payload = $resource->toArray();
+        $payload['linked_resources'] = $resource->linkedResources
+            ->concat($resource->linkedFrom)
+            ->unique('id')
+            ->values()
+            ->map(fn (Resource $item) => [
+                'id' => $item->id,
+                'name_model' => $item->name_model,
+                'serial_number' => $item->serial_number,
+                'status' => $item->status,
+                'location' => $item->location ? [
+                    'id' => $item->location->id,
+                    'name' => $item->location->name,
+                ] : null,
+            ])
+            ->all();
+
+        return response()->json($payload);
     }
 
     /**
@@ -54,18 +95,12 @@ class ResourceController extends Controller
         $resource = Resource::create([
             'resource_type_id' => $validated['resource_type_id'],
             'location_id' => $validated['location_id'],
-            // NOTE: no resource_owner_id here — that column doesn't
-            // exist on "resources" yet (separate task). The Resource
-            // Owner dropdown on Tab 3 is currently just a hardcoded
-            // display name, nothing is sent to or stored by the
-            // backend for it.
+            'resource_owner' => $validated['resource_owner'] ?? null,
             'name_model' => $validated['name_model'],
             'serial_number' => $validated['serial_number'] ?? null,
             'status' => $validated['status'],
         ]);
 
-        // TEMPORARY: 'owner' left out of load(...) below — see the
-        // note on index() above.
         return response()->json(
             $resource->load(['type.category', 'location']),
             201
@@ -79,12 +114,21 @@ class ResourceController extends Controller
         $resource->update([
             'resource_type_id' => $validated['resource_type_id'],
             'location_id' => $validated['location_id'],
+            'resource_owner' => $validated['resource_owner'] ?? null,
             'name_model' => $validated['name_model'],
             'serial_number' => $validated['serial_number'] ?? null,
             'status' => $validated['status'],
         ]);
 
-        return response()->json($resource->fresh()->load(['type.category', 'location']));
+        $linkedIds = collect($validated['linked_resource_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn ($id) => $id === (int) $resource->id)
+            ->unique()
+            ->values()
+            ->all();
+        $resource->linkedResources()->sync($linkedIds);
+
+        return response()->json($resource->fresh()->load(['type.category', 'location', 'linkedResources']));
     }
 
     /**

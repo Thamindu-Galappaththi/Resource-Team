@@ -3,21 +3,61 @@
     --cu-border: #dfe5ea;
 }
 
+.cu-page .cu-header {
+    background: linear-gradient(120deg, #123a7a 0%, #1769c2 52%, #5b4fc9 100%);
+    border-radius: 1rem;
+    padding: 1.35rem 1.5rem;
+    box-shadow: 0 .6rem 1.6rem rgba(23, 58, 130, .28);
+}
+
 .cu-page .cu-title {
     font-size: clamp(1.5rem, 2.4vw, 2rem);
     font-weight: 700;
+    color: #fff;
+    letter-spacing: -.04em;
+}
+
+.cu-page .cu-subtitle {
+    color: rgba(255, 255, 255, .82);
+}
+
+.cu-page .cu-back {
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, .72);
+    background: transparent;
+    border-radius: .65rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.cu-page .cu-back:hover {
+    color: #1769c2;
+    background: #fff;
+    border-color: #fff;
 }
 
 .cu-page .cu-card {
-    background: rgba(255, 255, 255, .98);
-    border: 1px solid var(--cu-border);
+    background: linear-gradient(180deg, #f5f8ff 0%, #fff 96px);
+    border: 1px solid #d5def0;
     border-radius: 1rem;
-    box-shadow: 0 .3rem 1rem rgba(24, 39, 75, .09);
+    box-shadow: 0 12px 32px rgba(28, 55, 110, .1);
+}
+
+.cu-page .cu-section-title {
+    color: #fff;
+    background: linear-gradient(120deg, #123a7a 0%, #1769c2 100%);
+    padding: .75rem 1rem;
+    border-radius: .75rem;
+    font-weight: 700;
+}
+
+.cu-page .cu-directory {
+    background: #eef3ff !important;
+    border-color: #d5def0 !important;
 }
 
 .cu-page .form-label {
     font-weight: 600;
-    color: #243039;
+    color: #24324a;
 }
 
 .cu-page .form-control,
@@ -202,11 +242,28 @@
     display: block;
 }
 
-@media (max-width: 767.98px) {
-    .cu-page .cu-actions {
-        width: 100%;
-    }
+.cu-page .cu-actions {
+    margin-top: 1.25rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid #d5def0;
+}
 
+.cu-page .cu-actions .btn-primary {
+    background: #1769c2;
+    border-color: #1769c2;
+    font-weight: 600;
+    border-radius: .65rem;
+}
+
+.cu-page .cu-actions .btn-outline-secondary {
+    color: #1769c2;
+    border-color: #1769c2;
+    background: #fff;
+    font-weight: 600;
+    border-radius: .65rem;
+}
+
+@media (max-width: 767.98px) {
     .cu-page .cu-actions .btn {
         width: 100%;
     }

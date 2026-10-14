@@ -1,11 +1,13 @@
-<li class="nav-item dropdown nb-bell" data-mark-read-url="{{ route('notifications.mark-read') }}">
+<li class="nav-item dropdown nb-bell">
     <a class="nav-link nav-icon-hover nb-toggle" href="javascript:void(0)" id="notificationsDropdown" role="button"
         data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
         aria-label="Notifications{{ $unreadNotificationCount > 0 ? ' ('.$unreadNotificationCount.' unread)' : '' }}">
-        <i class="ti ti-bell"></i>
-        @if ($unreadNotificationCount > 0)
-            <span class="nb-badge">{{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}</span>
-        @endif
+        <span class="nb-icon-wrap">
+            <i class="ti ti-bell"></i>
+            @if ($unreadNotificationCount > 0)
+                <span class="nb-badge">{{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}</span>
+            @endif
+        </span>
     </a>
     <div class="dropdown-menu dropdown-menu-end nb-menu" aria-labelledby="notificationsDropdown">
         <div class="nb-heading">
@@ -16,14 +18,25 @@
         </div>
         <div class="nb-list">
             @forelse ($headerNotifications as $notification)
-                <a class="nb-item {{ $notification['unread'] ? 'is-unread' : '' }}"
-                    @if ($notification['url']) href="{{ $notification['url'] }}" @endif>
+                <div class="nb-item {{ $notification['unread'] ? 'is-unread' : '' }}" data-notification-id="{{ $notification['id'] }}"
+                    data-read-url="{{ route('notifications.read', $notification['id']) }}"
+                    data-unread-url="{{ route('notifications.unread', $notification['id']) }}">
+                    @if ($notification['url'])
+                        <a class="nb-content" href="{{ $notification['url'] }}">
+                    @else
+                        <span class="nb-content">
+                    @endif
                     <span class="nb-icon"><i class="ti {{ $notification['icon'] }}"></i></span>
                     <span class="nb-copy">
                         <span class="nb-message">{{ $notification['message'] }}</span>
                         <small class="nb-time">{{ $notification['time'] }}</small>
                     </span>
-                </a>
+                    @if ($notification['url'])</a>@else</span>@endif
+                    <button type="button" class="nb-status" aria-label="{{ $notification['unread'] ? 'Mark as read' : 'Mark as unread' }}"
+                        title="{{ $notification['unread'] ? 'Mark as read' : 'Mark as unread' }}">
+                        <i class="ti {{ $notification['unread'] ? 'ti-mail' : 'ti-mail-opened' }}"></i>
+                    </button>
+                </div>
             @empty
                 <div class="nb-empty">
                     <i class="ti ti-bell-off"></i>

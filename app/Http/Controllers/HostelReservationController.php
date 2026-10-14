@@ -46,7 +46,7 @@ class HostelReservationController extends Controller
                 'check_in_to' => $request->input('check_in_to'),
             ]);
 
-        $reservations = $query->paginate(15)->appends($request->query());
+        $reservations = $query->paginate(10)->appends($request->query());
 
         $base = Reservation::query()->where('type', ReservationType::HOSTEL->value);
         $this->restrictToOwnUnlessStaff($base);
@@ -134,7 +134,7 @@ class HostelReservationController extends Controller
             'requester',
             'createdBy',
             'location',
-            'items.resource',
+            'items.resource.type.category',
             'hostelStay.roomType',
             'statusHistory.actor',
         ]);

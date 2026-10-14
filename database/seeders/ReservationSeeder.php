@@ -2,10 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Location;
 use App\Models\Resource;
-use App\Models\ResourceCategory;
-use App\Models\ResourceType;
 use App\Models\User;
 use App\Services\ReservationBookingService;
 use Illuminate\Database\Seeder;
@@ -14,47 +11,45 @@ class ReservationSeeder extends Seeder
 {
     public function run(): void
     {
-        $actor = User::query()->first();
+        $actor = User::query()->where('email', 'admin@nebula.local')->first()
+            ?? User::query()->first();
         if (! $actor) {
             return;
         }
 
-        $location = Location::query()->first()
-            ?? Location::query()->create(['name' => 'Welisara']);
-
-        $category = ResourceCategory::query()->firstOrCreate(['name' => 'Physical Space']);
-        $type = ResourceType::query()->firstOrCreate(
-            ['resource_category_id' => $category->id, 'name' => 'Lecture Hall'],
-            ['description' => 'Standard teaching hall']
-        );
-
-        $resource = Resource::query()->firstOrCreate(
-            ['serial_number' => 'LH-WEL-A-001'],
-            [
-                'resource_type_id' => $type->id,
-                'location_id' => $location->id,
-                'name_model' => 'Hall A',
-                'status' => 'active',
-            ]
-        );
-
         $service = app(ReservationBookingService::class);
-        $date = now($service->timezone())->addDays(5)->toDateString();
+        $today = now($service->timezone());
 
-        try {
-            $service->create([
-                'resource_ids' => [$resource->id],
-                'requester_id' => $actor->id,
-                'location_id' => $location->id,
-                'reservation_date' => $date,
-                'start_time' => '09:00',
-                'end_time' => '12:00',
-                'purpose' => 'CCNA Batch 12 practical lab',
-                'title' => 'CCNA Batch 12 Practical',
-                'attendee_count' => 24,
-            ], $actor);
-        } catch (\Throwable) {
-            // Safe to re-run: overlapping sample rows are ignored.
+        $bookings = [
+            ['serial' => 'LH-WEL-A-001', 'days' => 0, 'start' => '10:00', 'end' => '12:00', 'title' => 'CCNA Batch 12 Practical', 'purpose' => 'Lab session'],
+            ['serial' => 'MR-WEL-101', 'days' => 0, 'start' => '14:00', 'end' => '16:00', 'title' => 'Staff coordination meeting', 'purpose' => 'Weekly standup'],
+            ['serial' => 'LT-WEL-001', 'days' => 1, 'start' => '09:00', 'end' => '11:00', 'title' => 'Field visit laptop booking', 'purpose' => 'Site visit'],
+            ['serial' => 'PJ-WEL-001', 'days' => 2, 'start' => '13:00', 'end' => '15:00', 'title' => 'Orientation projector', 'purpose' => 'New intake briefing'],
+            ['serial' => 'LAB-WEL-03', 'days' => 3, 'start' => '09:00', 'end' => '12:00', 'title' => 'Programming workshop', 'purpose' => 'Hands-on training'],
+            ['serial' => 'LH-WEL-B-002', 'days' => 5, 'start' => '09:00', 'end' => '12:00', 'title' => 'Guest lecture', 'purpose' => 'Industry talk'],
+        ];
+
+        foreach ($bookings as $booking) {
+            $resource = Resource::query()->where('serial_number', $booking['serial'])->first();
+            if (! $resource || $resource->status !== 'active') {
+                continue;
+            }
+
+            try {
+                $service->create([
+                    'resource_ids' => [$resource->id],
+                    'requester_id' => $actor->id,
+                    'location_id' => $resource->location_id,
+                    'reservation_date' => $today->copy()->addDays($booking['days'])->toDateString(),
+                    'start_time' => $booking['start'],
+                    'end_time' => $booking['end'],
+                    'purpose' => $booking['purpose'],
+                    'title' => $booking['title'],
+                    'attendee_count' => 12,
+                ], $actor);
+            } catch (\Throwable) {
+                // Safe to re-run: overlapping sample rows are ignored.
+            }
         }
     }
 }

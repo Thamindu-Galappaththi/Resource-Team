@@ -5,6 +5,10 @@ body {
     overflow-x: hidden;
 }
 
+#main-wrapper[data-layout=vertical][data-header-position=fixed] .app-header {
+    z-index: 50;
+}
+
 .left-sidebar {
     display: flex;
     flex-direction: column;
@@ -104,6 +108,7 @@ body.sidebar-open {
 
     #main-wrapper[data-layout=vertical][data-header-position=fixed] .app-header {
         width: calc(100% - 270px) !important;
+        z-index: 50;
     }
 
     .sidebar-backdrop,

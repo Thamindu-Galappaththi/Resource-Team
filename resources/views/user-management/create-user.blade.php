@@ -3,19 +3,19 @@
 @section('title', 'Create User')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=13">
+<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 @endpush
 
 @section('content')
 <div class="container-fluid py-4 cu-page">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 cu-header">
         <div>
-            <h1 class="cu-title text-white mb-2">Create User</h1>
-            <p class="text-white-50 mb-0">Provision an account, assign roles, and review the access that comes with
+            <h1 class="cu-title mb-2">Create User</h1>
+            <p class="cu-subtitle mb-0">Provision an account, assign roles, and review the access that comes with
                 them.</p>
         </div>
         @if(auth()->user()->hasPermission('user.management'))
-        <a href="{{ route('user.management') }}" class="btn btn-outline-light">Back to user list</a>
+        <a href="{{ route('user.management') }}" class="btn cu-back"><i class="ti ti-arrow-left me-1"></i>Back to user list</a>
         @endif
     </div>
 
@@ -31,8 +31,8 @@
 
     <form method="POST" action="{{ route('create.user.store') }}" id="create-user-form" class="cu-card p-3 p-md-4">
         @csrf
-        <section class="mb-4">
-            <h2 class="h5 mb-3">Employee details</h2>
+        <section class="mb-4 cu-section">
+            <h2 class="h5 mb-3 cu-section-title">Employee details</h2>
             <div class="row g-3">
                 <div class="col-12 col-md-6">
                     <label class="form-label">SLT employee <span class="text-danger">*</span></label>
@@ -73,7 +73,7 @@
                     <small id="lookupMessage" class="form-text"></small>
                 </div>
                 <div id="employeeDetails" class="col-12 cu-details">
-                    <div class="border rounded-3 p-3 bg-light">
+                    <div class="border rounded-3 p-3 cu-directory">
                         <div class="fw-semibold mb-2">Directory record</div>
                         <div class="row g-2 small" id="employeeDetailsBody"></div>
                     </div>
@@ -145,7 +145,8 @@
             </div>
         </section>
 
-        <section class="mb-4">
+        <section class="mb-4 cu-section">
+            <h2 class="h5 mb-3 cu-section-title">Roles and permissions</h2>
             <div class="row g-3 cu-align-fields">
                 <div class="col-12 col-lg-6">
                     <label class="form-label" for="rolesDropdown">Roles <span class="text-danger">*</span></label>
