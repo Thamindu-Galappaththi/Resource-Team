@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=13">
-<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=14">
+<link rel="stylesheet" href="{{ asset('css/user-management.css') }}?v=17">
 @endpush
 
 @section('content')
@@ -115,8 +115,7 @@
                     </ul>
                 </div>
                 <div class="um-toolbar-btns">
-                    <button class="btn btn-outline-secondary px-3" type="button" id="um-clear" @disabled(!
-                        request()->hasAny(['search', 'location', 'role', 'status']))>Clear</button>
+                    <button class="um-filter-clear" type="button" id="um-clear" @disabled(! request()->hasAny(['search', 'location', 'role', 'status']))>Clear</button>
                 </div>
             </div>
         </form>

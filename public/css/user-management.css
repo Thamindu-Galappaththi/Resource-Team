@@ -313,20 +313,42 @@
     max-width: 100%;
 }
 
-.user-management-page #um-clear {
-    color: var(--um-blue);
-    background: #fff;
-    border: 1.5px solid var(--um-blue);
-    font-weight: 600;
+.user-management-page .um-filter-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 42px;
+    padding: 0 16px;
+    border: 1.5px solid var(--um-blue);
     border-radius: .65rem;
+    background: #fff;
+    color: var(--um-blue);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
 }
-.user-management-page #um-clear:hover:not(:disabled) {
+.user-management-page .um-filter-clear:hover,
+.user-management-page .um-filter-clear:focus {
     color: #fff;
     background: var(--um-blue);
+    border-color: var(--um-blue);
 }
-.user-management-page #um-clear:disabled {
+.user-management-page .um-filter-clear:disabled {
+    color: var(--um-blue);
+    background: #fff;
+    border-color: var(--um-blue);
     opacity: .55;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.user-management-page .um-filter-clear:disabled:hover,
+.user-management-page .um-filter-clear:disabled:focus {
+    color: #fff;
+    background: var(--um-blue);
+    border-color: var(--um-blue);
+    opacity: .55;
+    cursor: not-allowed;
 }
 
 .user-management-page .um-table-wrap {
@@ -629,8 +651,9 @@
         flex: 1 1 100%;
     }
 
-    .user-management-page .um-toolbar-btns .btn {
+    .user-management-page .um-toolbar-btns .um-filter-clear {
         flex: 1;
+        width: 100%;
     }
 
     .user-management-page .um-actions {
