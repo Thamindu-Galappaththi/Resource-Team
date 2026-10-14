@@ -1,0 +1,231 @@
+.rp-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 1.25rem 0 2rem;
+    color: #132033;
+}
+
+.rp-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    margin-bottom: 1.1rem;
+    padding: 1.35rem 1.4rem 1.3rem;
+    border-radius: 20px;
+    background: linear-gradient(120deg, #123a7a 0%, #1769c2 52%, #5b4fc9 100%);
+    box-shadow: 0 .6rem 1.6rem rgba(23, 58, 130, .22);
+}
+
+.rp-heading h1 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -.03em;
+}
+
+.rp-heading p {
+    max-width: 46rem;
+    margin: .4rem 0 0;
+    color: rgba(255, 255, 255, .82);
+    font-size: .95rem;
+}
+
+.rp-eyebrow {
+    display: block;
+    margin-bottom: .35rem;
+    color: rgba(255, 255, 255, .72);
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+}
+
+.rp-history {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    min-height: 40px;
+    padding: .4rem .9rem;
+    border: 1px solid rgba(255, 255, 255, .72);
+    border-radius: 999px;
+    background: #fff;
+    color: #1769c2;
+    font-size: .86rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.rp-history:hover { background: #eef4ff; color: #123a7a; }
+
+.rp-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(310px, .9fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.rp-main-column { display: grid; gap: 1rem; min-width: 0; }
+
+.rp-card,
+.rp-invoice {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #b7e2d9;
+    border-radius: 18px;
+    background: #ecf8f6;
+    box-shadow: 0 12px 32px rgba(15, 118, 110, .12);
+}
+
+.rp-card-title {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .9rem 1.15rem;
+    background: linear-gradient(120deg, #115e59 0%, #0d9488 55%, #0891b2 100%);
+}
+
+.rp-usage-card .rp-card-title { margin: 0; }
+
+.rp-title-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+    font-size: 1.05rem;
+}
+
+.rp-title-icon i { display: block; line-height: 1; }
+
+.rp-card-title h2 {
+    margin: 0;
+    color: #fff;
+    font-size: .98rem;
+    font-weight: 800;
+}
+
+.rp-card-title p { margin: .15rem 0 0; color: rgba(255, 255, 255, .78); font-size: .75rem; }
+
+.rp-search-form { padding: 1rem 1.15rem .25rem; }
+.rp-search-form label,
+.rp-label { display: block; margin-bottom: .4rem; color: #52647a; font-size: .72rem; font-weight: 700; }
+.rp-search-row { display: flex; gap: .55rem; }
+.rp-search-row input { min-width: 0; height: 42px; flex: 1; padding: 0 .75rem; border: 1px solid #cdd9e5; border-radius: 9px; background: #fff; color: #24364a; font-size: .82rem; }
+.rp-search-row input:focus { border-color: #1769c2; box-shadow: 0 0 0 3px rgba(23, 105, 194, .12) !important; }
+.rp-search-row button { min-width: 90px; height: 42px; border: 0; border-radius: 9px; background: #1769c2; color: #fff; font-size: .82rem; font-weight: 700; }
+.rp-search-row button:disabled { opacity: .6; }
+.rp-message { min-height: 17px; margin-top: .4rem; color: #718096; font-size: .7rem; }
+.rp-message.is-success { color: #087354; }
+.rp-message.is-warning { color: #946414; }
+.rp-message.is-error { color: #b13b3b; }
+
+.rp-reservation { min-width: 0; margin: .25rem 1.15rem 1.1rem; border: 1px solid #cce5df; border-radius: 12px; background: #fff; }
+.rp-reservation-summary { display: flex; min-width: 0; align-items: center; gap: .7rem; padding: .55rem .7rem; }
+.rp-resource-icon { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 10px; background: #e3edff; color: #1769c2; font-size: 1.15rem; }
+.rp-resource-copy { display: grid; min-width: 0; flex: 1; gap: .15rem; }
+.rp-resource-copy strong { overflow: hidden; color: #24364a; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
+.rp-resource-copy span { overflow: hidden; color: #718096; font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
+.rp-date { display: grid; flex-shrink: 0; gap: .15rem; text-align: right; }
+.rp-date small { color: #8090a2; font-size: .58rem; font-weight: 700; letter-spacing: .06em; }
+.rp-date b { color: #344a62; font-size: .7rem; }
+.rp-expand-button { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border: 1px solid #dce6e4; border-radius: 50%; background: #f7fbfa; color: #477365; transition: transform .2s ease, background .2s ease; }
+.rp-expand-button:hover { background: #eaf6f2; }
+.rp-expand-button[aria-expanded="true"] i { transform: rotate(180deg); }
+.rp-expand-button i { transition: transform .2s ease; }
+.rp-reservation-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem 1rem; padding: .75rem .9rem; border-top: 1px solid #e6efed; background: #f8fcfb; }
+.rp-reservation-details[hidden] { display: none; }
+.rp-reservation-details > div { display: grid; min-width: 0; gap: .1rem; }
+.rp-reservation-details span { color: #8090a2; font-size: .62rem; }
+.rp-reservation-details strong { overflow: hidden; color: #344a62; font-size: .72rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+
+.rp-usage-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; padding: 1rem 1.15rem 0; }
+.rp-usage-grid > div { min-width: 0; }
+.rp-usage-grid .rp-label { min-height: 1rem; margin-bottom: .4rem; }
+.rp-time-range { display: grid; min-height: 56px; grid-template-columns: 1fr 1fr; align-items: center; border: 1px solid #d4e3e0; border-radius: 10px; background: #fff; }
+.rp-time-range span { padding: .5rem .7rem; color: #8290a0; font-size: .68rem; }
+.rp-time-range span + span { border-left: 1px solid #e5ecea; }
+.rp-time-range b { display: block; margin-top: .15rem; color: #24364a; font-size: .75rem; }
+.rp-hours-control { display: grid; height: 56px; grid-template-columns: 24px minmax(3.4rem, 1fr) 24px minmax(38px, auto); align-items: center; column-gap: .25rem; padding: .2rem .55rem; border: 1px solid #d4e3e0; border-radius: 10px; background: #fff; }
+.rp-hours-control button { display: grid; width: 24px; height: 32px; place-items: center; padding: 0; border: 0; background: transparent; color: #1769c2; font-size: .85rem; }
+.rp-hours-control input { display: block; width: 100%; min-width: 0; height: 42px; padding: 0; border: 0; outline: 0; background: transparent; color: #1769c2; font-size: 1.7rem; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
+.rp-hours-control input:focus { box-shadow: none !important; }
+.rp-hours-control span { justify-self: end; color: #718096; font-size: .65rem; white-space: nowrap; }
+.rp-usage-grid > div > small { display: block; min-height: 1.8rem; margin-top: .35rem; color: #7b8999; font-size: .65rem; line-height: 1.35; }
+.rp-usage-foot { display: flex; align-items: center; gap: .4rem; margin: .9rem 1.15rem 1rem; padding-top: .7rem; border-top: 1px solid #d5e7e3; color: #68798a; font-size: .7rem; line-height: 1.45; }
+.rp-usage-foot i { color: #1769c2; font-size: .95rem; }
+.rp-payment-note { display: flex; align-items: flex-start; gap: .55rem; padding: .75rem .9rem; border: 1px solid #c9ddf4; border-radius: 13px; background: #edf5ff; color: #496686; font-size: .72rem; line-height: 1.45; }
+.rp-payment-note i { color: #1769c2; font-size: 1rem; }
+
+.rp-invoice { position: sticky; top: 92px; background: #fff; border-color: #d5def0; box-shadow: 0 12px 32px rgba(28, 55, 110, .1); }
+.rp-invoice-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 1rem 1.1rem .85rem; border-bottom: 1px solid #e3eaf2; background: linear-gradient(180deg, #f5f8ff 0%, #fff 100%); }
+.rp-invoice-header .rp-eyebrow { color: #1769c2; }
+.rp-invoice-header h2 { margin: .1rem 0 .2rem; color: #132033; font-size: 1.2rem; font-weight: 800; }
+.rp-invoice-header > div > span:last-child { color: #718096; font-size: .7rem; }
+.rp-status { padding: .28rem .55rem; border-radius: 999px; background: #fff3d7; color: #946414; font-size: .58rem; font-weight: 800; letter-spacing: .05em; white-space: nowrap; }
+.rp-invoice-body { padding: 1rem 1.1rem .85rem; }
+.rp-invoice-recipient { display: grid; gap: .18rem; padding-bottom: .8rem; border-bottom: 1px solid #e8edf3; }
+.rp-invoice-recipient span { color: #8090a2; font-size: .66rem; }
+.rp-invoice-recipient strong { color: #24364a; font-size: .82rem; }
+.rp-invoice-recipient small { color: #718096; font-size: .68rem; }
+.rp-line-items { padding: .25rem 0; }
+.rp-line { display: flex; justify-content: space-between; gap: .7rem; padding: .65rem 0; border-bottom: 1px solid #edf0f4; color: #536477; font-size: .7rem; }
+.rp-line > span { display: grid; gap: .18rem; }
+.rp-line small { color: #8995a3; font-size: .62rem; }
+.rp-line strong { color: #24364a; font-size: .72rem; white-space: nowrap; }
+.rp-total { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .85rem 0; }
+.rp-total div { display: grid; gap: .2rem; }
+.rp-total div span { color: #1769c2; font-size: .62rem; font-weight: 800; letter-spacing: .05em; }
+.rp-total small { color: #8995a3; font-size: .58rem; }
+.rp-total > strong { color: #132033; font-size: clamp(1.25rem, 2vw, 1.55rem); font-weight: 800; letter-spacing: -.03em; white-space: nowrap; }
+.rp-rate-warning, .rp-secure-note { display: flex; align-items: flex-start; gap: .45rem; padding: .6rem; border-radius: 9px; font-size: .65rem; line-height: 1.45; }
+.rp-rate-warning { border: 1px solid #f1dfb9; background: #fff7e8; color: #8b651d; }
+.rp-rate-warning i { font-size: .9rem; }
+.rp-rate-warning.is-hidden { display: none; }
+.rp-secure-note { margin-top: .5rem; border: 1px solid #dce8f8; background: #f1f6fd; color: #496686; }
+.rp-secure-note i { color: #1769c2; font-size: .9rem; }
+.rp-invoice-actions { display: grid; gap: .5rem; padding: .85rem 1.1rem .65rem; border-top: 1px solid #e8edf3; background: #f8faff; }
+.rp-pay-button, .rp-print-button { display: flex; height: 41px; align-items: center; justify-content: center; gap: .4rem; border-radius: 9px; font-size: .72rem; font-weight: 800; }
+.rp-pay-button { border: 1px solid #1769c2; background: linear-gradient(120deg, #1769c2, #123a7a); color: #fff; }
+.rp-pay-button:disabled { cursor: not-allowed; opacity: .48; }
+.rp-print-button { border: 1px solid #1769c2; background: #fff; color: #1769c2; }
+.rp-invoice-foot { padding: 0 .7rem .75rem; background: #f8faff; color: #8995a3; font-size: .6rem; text-align: center; }
+.rp-invoice-foot i { margin-right: .15rem; }
+
+@media (max-width: 900px) {
+    .rp-grid { grid-template-columns: minmax(0, 1fr); }
+    .rp-invoice { position: static; }
+}
+
+@media (max-width: 580px) {
+    .rp-page { padding-top: .75rem; }
+    .rp-heading { flex-direction: column; padding: 1.1rem; }
+    .rp-history { align-self: flex-start; }
+    .rp-usage-grid { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
+    .rp-usage-grid .rp-label { min-height: 0; }
+    .rp-usage-grid > div > small { min-height: 0; }
+    .rp-search-form { padding-right: .8rem; padding-left: .8rem; }
+    .rp-reservation { margin-right: .8rem; margin-left: .8rem; }
+    .rp-date { display: none; }
+    .rp-reservation-details { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
+}
+
+@media print {
+    body { background: #fff !important; }
+    .left-sidebar, .app-header, .footer-wrapper, .rp-heading, .rp-main-column, .rp-invoice-actions, .rp-invoice-foot { display: none !important; }
+    .body-wrapper { margin: 0 !important; }
+    .body-wrapper > .container-fluid { max-width: none !important; padding: 0 !important; }
+    .rp-page { max-width: 760px; margin: 20px auto; }
+    .rp-grid { display: block; }
+    .rp-invoice { position: static; border: 1px solid #bbc4ce; box-shadow: none; }
+    .rp-invoice-header, .rp-invoice-body { padding: 20px 25px; }
+    .rp-invoice-header { background: #fff; }
+    .rp-status { border: 1px solid #ccc; background: #fff; color: #333; }
+    .rp-rate-warning { display: none; }
+}
