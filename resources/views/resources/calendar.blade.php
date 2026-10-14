@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=33">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=35">
 @endpush
 
 @section('content')
@@ -125,6 +125,10 @@
                 </tbody>
             </table>
         </div>
+        <div class="rc-table-footer">
+            <p class="rc-table-count" id="upcomingResultCount" aria-live="polite"></p>
+            <ul class="pagination rc-pagination mb-0" id="upcomingPagination"></ul>
+        </div>
     </div>
 </div>
 
@@ -164,6 +168,6 @@
         createReservationUrl: @json(route('reservations.create')),
     };
 </script>
-<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=26"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=30"></script>
 @endpush

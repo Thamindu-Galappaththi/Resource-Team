@@ -127,7 +127,7 @@
                     </div>
                     <div class="modal-body">
                         <div id="editResourceLoading" class="text-center text-muted py-4" role="status" hidden>Loading resource details…</div>
-                        <form id="editResourceForm">
+                        <form id="editResourceForm" novalidate>
                             @csrf
                             @include('resources.partials.resource-fields')
                             <div class="mb-3" id="editFeaturesWrap" hidden>
@@ -169,6 +169,6 @@
         lookups: @json($lookups ?? ['categories' => [], 'types' => [], 'locations' => []]),
     };
 </script>
-<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-index.js') }}?v=12"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
+<script src="{{ asset('js/resource-index.js') }}?v=13"></script>
 @endpush

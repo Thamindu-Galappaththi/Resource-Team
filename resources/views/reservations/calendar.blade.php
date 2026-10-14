@@ -119,6 +119,6 @@
         holidayImageBase: @json(asset('images/holidays')),
     };
 </script>
-<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/reservation-calendar.js') }}?v=8"></script>
 @endpush

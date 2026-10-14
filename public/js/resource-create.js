@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editResourceId = new URLSearchParams(window.location.search).get('edit');
     const swalFire = (options) => window.RMSwal.fire(options);
     let editingCategoryId = null;
+    const categoryPageSize = 10;
+    let categoryPage = 1;
 
     const state = { categories: [], types: [], resources: [], locations: [] };
     const nextTab = { categoryForm: 'type-tab', typeForm: 'resource-tab', resourceForm: 'linked-tab' };
@@ -25,9 +27,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('typeForm')?.addEventListener('submit', submitType);
     document.getElementById('resourceForm')?.addEventListener('submit', submitResource);
     document.getElementById('linkedForm')?.addEventListener('submit', submitLink);
-    document.getElementById('typeCategorySelect')?.addEventListener('change', (event) => renderCategoryFeatures(event.target.value));
-    document.getElementById('resourceCategorySelect')?.addEventListener('change', (event) => refreshTypeSelectForCategory(event.target.value));
+    document.getElementById('typeCategorySelect')?.addEventListener('change', (event) => {
+        clearFieldError('typeCategorySelect');
+        renderCategoryFeatures(event.target.value);
+    });
+    document.getElementById('resourceCategorySelect')?.addEventListener('change', (event) => {
+        clearFieldError('resourceCategorySelect');
+        refreshTypeSelectForCategory(event.target.value);
+    });
+    ['resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'primaryResourceSelect', 'linkedResourceSelect'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', () => clearFieldError(id));
+    });
     document.getElementById('existingCategoriesBody')?.addEventListener('click', onCategoryTableClick);
+    document.getElementById('existingCategoriesPagination')?.addEventListener('click', onCategoryPaginationClick);
 
     ['categoryName', 'resourceTypeName', 'resourceNameModel', 'serialNumber'].forEach((id) => {
         document.getElementById(id)?.addEventListener('input', () => clearFieldError(id));
@@ -100,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const result = await postJSON(config.categoriesUrl, { category_name: categoryName, features });
             state.categories.push({ id: result.id, name: result.name || categoryName, features: result.features || [] });
+            categoryPage = Math.max(1, Math.ceil(state.categories.length / categoryPageSize));
             refreshCategorySelects();
             event.target.reset();
             featuresContainer.replaceChildren();
@@ -112,7 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function submitType(event) {
         event.preventDefault();
-        const categoryId = document.getElementById('typeCategorySelect').value;
+        clearFieldError('typeCategorySelect');
+        clearFieldError('resourceTypeName');
+        const categoryId = window.RMSelect.getValue('typeCategorySelect');
         const typeName = document.getElementById('resourceTypeName').value.trim();
         if (!categoryId) return showFieldError('typeCategorySelect', 'Select a category.');
         if (!typeName) return showFieldError('resourceTypeName', 'Enter a type name.');
@@ -120,8 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const result = await postJSON(config.typesUrl, { category_id: categoryId, resource_type: typeName });
             state.types.push({ id: result.id, category_id: categoryId, name: typeName });
-            event.target.reset();
-            renderCategoryFeatures('');
+            document.getElementById('resourceTypeName').value = '';
+            const category = state.categories.find((item) => String(item.id) === String(categoryId));
+            window.RMSelect.setValue('typeCategorySelect', categoryId, category?.name || 'Select a category');
+            renderCategoryFeatures(categoryId);
             await success('Resource type created successfully.', 'typeForm');
         } catch (error) {
             await swalFire({ icon: 'error', title: 'Could not create type', text: error.message });
@@ -132,14 +149,19 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         clearResourceErrors();
         const payload = {
-            category_id: document.getElementById('resourceCategorySelect').value,
-            resource_type_id: document.getElementById('resourceTypeSelect').value,
-            location_id: document.getElementById('resourceLocationSelect').value,
+            category_id: window.RMSelect.getValue('resourceCategorySelect'),
+            resource_type_id: window.RMSelect.getValue('resourceTypeSelect'),
+            location_id: window.RMSelect.getValue('resourceLocationSelect'),
             name_model: document.getElementById('resourceNameModel').value.trim(),
             serial_number: document.getElementById('serialNumber').value.trim() || null,
             resource_owner: document.getElementById('resourceOwner')?.value.trim() || null,
-            status: document.getElementById('resourceStatusSelect').value,
+            status: window.RMSelect.getValue('resourceStatusSelect'),
         };
+        if (!payload.category_id) return showFieldError('resourceCategorySelect', 'Select a category.');
+        if (!payload.resource_type_id) return showFieldError('resourceTypeSelect', 'Select a type.');
+        if (!payload.location_id) return showFieldError('resourceLocationSelect', 'Select a location.');
+        if (!payload.status) return showFieldError('resourceStatusSelect', 'Select a status.');
+        if (!payload.name_model) return showFieldError('resourceNameModel', 'Enter a resource name/model.');
 
         try {
             const result = editResourceId
@@ -179,22 +201,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function submitLink(event) {
         event.preventDefault();
-        const resourceId = document.getElementById('primaryResourceSelect').value;
-        const linkedResourceId = document.getElementById('linkedResourceSelect').value;
-        if (!resourceId || !linkedResourceId) {
-            await swalFire({ icon: 'warning', title: 'Select both resources', text: 'Choose a main resource and a related resource.' });
-            return;
-        }
+        clearFieldError('primaryResourceSelect');
+        clearFieldError('linkedResourceSelect');
+        const resourceId = window.RMSelect.getValue('primaryResourceSelect');
+        const linkedResourceId = window.RMSelect.getValue('linkedResourceSelect');
+        if (!resourceId) showFieldError('primaryResourceSelect', 'Select a main resource.');
+        if (!linkedResourceId) showFieldError('linkedResourceSelect', 'Select a related resource.');
+        if (!resourceId || !linkedResourceId) return;
         if (resourceId === linkedResourceId) {
-            await swalFire({ icon: 'warning', title: 'Invalid link', text: 'A resource cannot be linked to itself.' });
+            showFieldError('linkedResourceSelect', 'A resource cannot be linked to itself.');
             return;
         }
 
         try {
             await postJSON(config.linksUrl, { resource_id: resourceId, linked_resource_id: linkedResourceId });
-            event.target.reset();
+            window.RMSelect.setValue('primaryResourceSelect', '', 'Select a resource');
+            window.RMSelect.setValue('linkedResourceSelect', '', 'Select a resource to link');
             await swalFire({ icon: 'success', title: 'Resources linked', text: 'The relationship was saved.' });
         } catch (error) {
+            showRequestErrors(error, {
+                resource_id: 'primaryResourceSelect',
+                linked_resource_id: 'linkedResourceSelect',
+            });
             await swalFire({ icon: 'error', title: 'Could not link resources', text: error.message });
         }
     }
@@ -281,13 +309,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderExistingCategories() {
         const body = document.getElementById('existingCategoriesBody');
+        const count = document.getElementById('existingCategoriesCount');
         if (!body) return;
         body.replaceChildren();
         if (!state.categories.length) {
             body.innerHTML = '<tr><td colspan="3" class="text-muted">No active categories found.</td></tr>';
+            if (count) count.textContent = '';
+            renderCategoryPagination(0);
             return;
         }
-        state.categories.forEach((category) => {
+
+        const totalPages = Math.max(1, Math.ceil(state.categories.length / categoryPageSize));
+        if (categoryPage > totalPages) categoryPage = totalPages;
+        const start = (categoryPage - 1) * categoryPageSize;
+        const pageRows = state.categories.slice(start, start + categoryPageSize);
+        pageRows.forEach((category) => {
             const row = document.createElement('tr');
             const name = document.createElement('td');
             name.textContent = category.name;
@@ -302,6 +338,53 @@ document.addEventListener('DOMContentLoaded', () => {
             row.append(name, features, actions);
             body.appendChild(row);
         });
+        if (count) count.textContent = `Showing ${start + 1}–${start + pageRows.length} of ${state.categories.length}`;
+        renderCategoryPagination(totalPages);
+    }
+
+    function categoryVisiblePages(total, current) {
+        if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+        const pages = new Set([1, total, current, current - 1, current + 1]);
+        const ordered = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
+        return ordered.reduce((list, page, index) => {
+            if (index && page - ordered[index - 1] > 1) list.push('…');
+            list.push(page);
+            return list;
+        }, []);
+    }
+
+    function renderCategoryPagination(totalPages) {
+        const nav = document.getElementById('existingCategoriesPagination');
+        if (!nav) return;
+        nav.replaceChildren();
+        if (totalPages <= 1) return;
+
+        const addItem = (label, page, disabled, active) => {
+            const li = document.createElement('li');
+            li.className = `page-item${disabled ? ' disabled' : ''}${active ? ' active' : ''}`;
+            li.innerHTML = `<button type="button" class="page-link" data-page="${page}">${label}</button>`;
+            nav.appendChild(li);
+        };
+
+        addItem('Prev', categoryPage - 1, categoryPage === 1, false);
+        categoryVisiblePages(totalPages, categoryPage).forEach((page) => {
+            if (page === '…') {
+                const li = document.createElement('li');
+                li.className = 'page-item disabled';
+                li.innerHTML = '<span class="page-link">…</span>';
+                nav.appendChild(li);
+                return;
+            }
+            addItem(String(page), page, false, page === categoryPage);
+        });
+        addItem('Next', categoryPage + 1, categoryPage === totalPages, false);
+    }
+
+    function onCategoryPaginationClick(event) {
+        const button = event.target.closest('[data-page]');
+        if (!button || button.parentElement.classList.contains('disabled')) return;
+        categoryPage = Number(button.dataset.page);
+        renderExistingCategories();
     }
 
     function refreshResourceSelects() {
@@ -389,6 +472,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const types = await fetchJSON(config.typesUrl);
             state.types = types.map((type) => ({ id: type.id, category_id: type.resource_category_id, name: type.name }));
+            const selectedCategory = window.RMSelect.getValue('resourceCategorySelect');
+            if (selectedCategory) refreshTypeSelectForCategory(selectedCategory);
         } catch (error) { console.error(error); }
 
         try {

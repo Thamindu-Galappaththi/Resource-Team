@@ -3,35 +3,49 @@ window.RMSelect = {
         (root || document).querySelectorAll('[data-cu-select]').forEach((wrap) => {
             if (wrap.dataset.bound === '1') return;
             wrap.dataset.bound = '1';
-            wrap.addEventListener('click', (event) => {
-                const item = event.target.closest('[data-value]');
-                if (!item || !wrap.contains(item)) return;
-                this.setValue(wrap, item.dataset.value, item.dataset.label || item.textContent.trim());
-            });
+            wrap.addEventListener('mousedown', (event) => this.handleItemEvent(wrap, event));
+            wrap.addEventListener('click', (event) => this.handleItemEvent(wrap, event));
         });
     },
 
+    handleItemEvent(wrap, event) {
+        const item = event.target.closest('[data-value]');
+        if (!item || !wrap.contains(item)) return;
+        event.preventDefault();
+        this.setValue(wrap, item.getAttribute('data-value') ?? '', item.getAttribute('data-label') || item.textContent.trim());
+    },
+
     wrapFor(id) {
-        const input = document.getElementById(id);
-        return input ? input.closest('[data-cu-select]') : null;
+        const node = document.getElementById(id);
+        if (!node) return null;
+        return node.matches('[data-cu-select]') ? node : node.closest('[data-cu-select]');
+    },
+
+    inputFor(id) {
+        const wrap = this.wrapFor(id);
+        if (!wrap) return document.getElementById(id);
+        return wrap.querySelector('input[type="hidden"]') || document.getElementById(id);
     },
 
     getValue(id) {
-        return document.getElementById(id)?.value || '';
+        return this.inputFor(id)?.value || '';
     },
 
     setValue(wrapOrId, value, label) {
         const wrap = typeof wrapOrId === 'string' ? this.wrapFor(wrapOrId) : wrapOrId;
         if (!wrap) return;
         const input = wrap.querySelector('input[type="hidden"]');
+        if (!input) return;
         const labelEl = wrap.querySelector('.js-select-label');
+        const next = value == null ? '' : String(value);
         const previous = input.value;
-        input.value = value ?? '';
+        input.value = next;
         if (labelEl) {
             labelEl.textContent = label || this.placeholder(wrap);
-            labelEl.classList.toggle('text-muted', !input.value);
+            labelEl.classList.toggle('text-muted', !next);
         }
         wrap.querySelector('.cu-dropdown-toggle')?.classList.remove('is-invalid');
+        wrap.parentElement?.querySelector('.invalid-feedback')?.classList.remove('d-block');
         if (previous !== input.value) {
             input.dispatchEvent(new Event('change', { bubbles: true }));
         }
@@ -51,8 +65,8 @@ window.RMSelect = {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'dropdown-item';
-            button.dataset.value = String(item.value ?? '');
-            button.dataset.label = item.label;
+            button.setAttribute('data-value', String(item.value ?? ''));
+            button.setAttribute('data-label', item.label);
             button.textContent = item.label;
             li.appendChild(button);
             menu.appendChild(li);
@@ -71,7 +85,7 @@ window.RMSelect = {
     },
 
     placeholder(wrap) {
-        return wrap.dataset.placeholder || wrap.querySelector('[data-value]')?.dataset.label || 'Select an option';
+        return wrap.dataset.placeholder || wrap.querySelector('[data-value]')?.getAttribute('data-label') || 'Select an option';
     },
 };
 

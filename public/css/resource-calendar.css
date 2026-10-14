@@ -199,6 +199,8 @@
 
 .rc-calendar-card { padding: 16px; margin-bottom: 18px; overflow: visible; }
 .rc-loading, .rc-empty { padding: 24px; text-align: center; color: var(--rc-muted); }
+#calendarLoading[hidden],
+.rc-loading[hidden] { display: none !important; }
 .rc-empty { border: 1px dashed #cbd5e1; border-radius: 8px; margin-bottom: 12px; }
 
 .fc .fc-toolbar { padding: 2px 2px 16px; gap: 8px; }
@@ -829,6 +831,43 @@
 .rc-table tbody tr:hover td { background: #eaf1ff; }
 .rc-table tbody tr:last-child td { border-bottom: 0; }
 .rc-table td:first-child { color: #14315e; font-weight: 700; }
+.rc-table-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+}
+.rc-table-count {
+    margin: 0;
+    color: var(--rc-muted, #64748b);
+    font-size: 13px;
+}
+.rc-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem;
+    justify-content: flex-end;
+    margin: 0;
+}
+.rc-pagination .page-link {
+    min-width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border-color: #d5def0;
+    color: #1769c2;
+}
+.rc-pagination .page-item.active .page-link {
+    background: #1769c2;
+    border-color: #1769c2;
+    color: #fff;
+    font-weight: 700;
+}
+.rc-pagination .page-item.disabled .page-link { color: #9aa3ae; }
 .rc-badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
 .rc-badge-approved { background: #bbf7d0; color: #14532d; }
 .rc-badge-pending { background: #fde68a; color: #78350f; }

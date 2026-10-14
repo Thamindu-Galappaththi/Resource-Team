@@ -15,10 +15,10 @@
         $currentLabel = $match['label'] ?? $placeholder;
     }
 @endphp
-<div {{ $attributes->class(['dropdown', 'cu-select', 'is-disabled' => $disabled]) }} data-cu-select data-placeholder="{{ $placeholder }}">
-    <input type="hidden" id="{{ $id }}" name="{{ $name ?? $id }}" value="{{ $value }}" @required($required)>
-    <button class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown"
-        aria-expanded="false" @disabled($disabled)>
+<div {{ $attributes->except(['id', 'name', 'required', 'disabled'])->class(['dropdown', 'cu-select', 'is-disabled' => $disabled]) }} data-cu-select data-placeholder="{{ $placeholder }}">
+    <input type="hidden" id="{{ $id }}" name="{{ $name ?? $id }}" value="{{ $value }}">
+    <button class="btn cu-dropdown-toggle dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-display="static"
+        aria-expanded="false" aria-required="{{ $required ? 'true' : 'false' }}" @disabled($disabled)>
         <span class="js-select-label {{ $value === '' || $value === null ? 'text-muted' : '' }}">{{ $currentLabel }}</span>
     </button>
     <ul class="dropdown-menu cu-dropdown-menu">

@@ -1,9 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const calendarElement = document.getElementById('resourceCalendar');
-    if (!calendarElement || typeof FullCalendar === 'undefined') return;
+    const loading = document.getElementById('calendarLoading');
+    const hideLoading = () => { if (loading) loading.hidden = true; };
 
     const config = window.RC || {};
-    const events = config.events || [];
+    const events = (config.events || []).filter((event) => /^\d{4}-\d{2}-\d{2}/.test(String(event?.start || '')));
     let filteredEvents = events;
     const holidays = config.holidays || [];
     const holidayImageBase = (config.holidayImageBase || '/images/holidays').replace(/\/$/, '');
@@ -11,7 +12,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const canReserve = Boolean(config.canReserve);
     const createReservationUrl = config.createReservationUrl;
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
-    const swalFire = (options) => window.RMSwal.fire(options);
+    const swalFire = (options) => window.RMSwal?.fire ? window.RMSwal.fire(options) : window.Swal?.fire(options);
+    let lastCalendarView = null;
+    let calendarReady = false;
+    const upcomingPageSize = 10;
+    let upcomingRows = [];
+    let upcomingPage = 1;
+    document.getElementById('upcomingPagination')?.addEventListener('click', onUpcomingPaginationClick);
+
+    try {
+        renderUpcoming(events);
+        const empty = document.getElementById('calendarEmpty');
+        if (empty) empty.hidden = events.length > 0;
+    } catch (error) {
+        console.error('Resource calendar upcoming list failed', error);
+    }
+
+    if (!calendarElement || typeof FullCalendar === 'undefined') {
+        hideLoading();
+        return;
+    }
 
     const calendar = new FullCalendar.Calendar(calendarElement, {
         initialView: isMobile ? 'listWeek' : 'dayGridMonth',
@@ -45,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showDayEventList(info.date, holiday ? [holiday, ...items] : items);
         },
         datesSet() {
-            syncTimeGridEvents();
+            if (calendarReady) syncTimeGridEvents();
             queueMicrotask(paintMonthCells);
         },
         headerToolbar: isMobile
@@ -111,9 +131,15 @@ document.addEventListener('DOMContentLoaded', () => {
         },
     });
 
-    calendar.render();
-    document.getElementById('calendarLoading').hidden = true;
-    paintMonthCells();
+    try {
+        calendar.render();
+        calendarReady = true;
+        paintMonthCells();
+    } catch (error) {
+        console.error('Resource calendar failed to render', error);
+    } finally {
+        hideLoading();
+    }
 
     const resourceFilter = document.getElementById('resourceFilter');
     const locationFilter = document.getElementById('locationFilter');
@@ -133,10 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedSchedulerResources = new Set();
     let activeDrag = null;
     let suppressSlotClick = false;
-    let lastCalendarView = null;
 
-    document.getElementById('calendarEmpty').hidden = events.length > 0;
-    renderUpcoming(events);
+    const calendarEmpty = document.getElementById('calendarEmpty');
+    if (calendarEmpty) calendarEmpty.hidden = events.length > 0;
 
     function isTimeGrid() {
         return ['timeGridWeek', 'timeGridDay'].includes(calendar.view.type);
@@ -215,13 +240,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     [resourceFilter, locationFilter, statusFilter, categoryFilter].forEach((el) => {
-        el.addEventListener('change', () => {
+        el?.addEventListener('change', () => {
             selectedSchedulerResources.clear();
             updateSchedulerSelectionCount();
             applyFilters();
         });
     });
-    clearFiltersButton.addEventListener('click', () => {
+    clearFiltersButton?.addEventListener('click', () => {
         if (clearFiltersButton.disabled) return;
         window.RMSelect.setValue('resourceFilter', 'all', 'All resources');
         window.RMSelect.setValue('locationFilter', 'all', 'All locations');
@@ -234,19 +259,30 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleClear();
 
     function renderUpcoming(list) {
-        const body = document.getElementById('upcomingReservationsBody');
-        if (!body) return;
         const now = Date.now();
-        const rows = [...list]
+        upcomingRows = [...list]
             .filter((event) => Date.parse(event.end || event.start) >= now)
-            .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
-            .slice(0, 12);
+            .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+        upcomingPage = 1;
+        paintUpcomingPage();
+    }
 
+    function paintUpcomingPage() {
+        const body = document.getElementById('upcomingReservationsBody');
+        const count = document.getElementById('upcomingResultCount');
+        if (!body) return;
         body.replaceChildren();
-        if (!rows.length) {
+        if (!upcomingRows.length) {
             body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No upcoming reservations match your filters.</td></tr>';
+            if (count) count.textContent = '';
+            renderUpcomingPagination(0);
             return;
         }
+
+        const totalPages = Math.max(1, Math.ceil(upcomingRows.length / upcomingPageSize));
+        if (upcomingPage > totalPages) upcomingPage = totalPages;
+        const start = (upcomingPage - 1) * upcomingPageSize;
+        const rows = upcomingRows.slice(start, start + upcomingPageSize);
         rows.forEach((event) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -258,6 +294,53 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             body.appendChild(tr);
         });
+        if (count) count.textContent = `Showing ${start + 1}–${start + rows.length} of ${upcomingRows.length}`;
+        renderUpcomingPagination(totalPages);
+    }
+
+    function upcomingVisiblePages(total, current) {
+        if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+        const pages = new Set([1, total, current, current - 1, current + 1]);
+        const ordered = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
+        return ordered.reduce((list, page, index) => {
+            if (index && page - ordered[index - 1] > 1) list.push('…');
+            list.push(page);
+            return list;
+        }, []);
+    }
+
+    function renderUpcomingPagination(totalPages) {
+        const nav = document.getElementById('upcomingPagination');
+        if (!nav) return;
+        nav.replaceChildren();
+        if (totalPages <= 1) return;
+
+        const addItem = (label, page, disabled, active) => {
+            const li = document.createElement('li');
+            li.className = `page-item${disabled ? ' disabled' : ''}${active ? ' active' : ''}`;
+            li.innerHTML = `<button type="button" class="page-link" data-page="${page}">${label}</button>`;
+            nav.appendChild(li);
+        };
+
+        addItem('Prev', upcomingPage - 1, upcomingPage === 1, false);
+        upcomingVisiblePages(totalPages, upcomingPage).forEach((page) => {
+            if (page === '…') {
+                const li = document.createElement('li');
+                li.className = 'page-item disabled';
+                li.innerHTML = '<span class="page-link">…</span>';
+                nav.appendChild(li);
+                return;
+            }
+            addItem(String(page), page, false, page === upcomingPage);
+        });
+        addItem('Next', upcomingPage + 1, upcomingPage === totalPages, false);
+    }
+
+    function onUpcomingPaginationClick(event) {
+        const button = event.target.closest('[data-page]');
+        if (!button || button.parentElement.classList.contains('disabled')) return;
+        upcomingPage = Number(button.dataset.page);
+        paintUpcomingPage();
     }
 
     function updateSchedulerSelectionCount() {
@@ -531,12 +614,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeReservationModal(); });
 
     function dateKey(value) {
+        const match = String(value ?? '').match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
         if (value instanceof Date && !Number.isNaN(value.getTime())) {
             const month = String(value.getMonth() + 1).padStart(2, '0');
             const day = String(value.getDate()).padStart(2, '0');
             return `${value.getFullYear()}-${month}-${day}`;
         }
-        return String(value || '').slice(0, 10);
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) {
+            const month = String(parsed.getMonth() + 1).padStart(2, '0');
+            const day = String(parsed.getDate()).padStart(2, '0');
+            return `${parsed.getFullYear()}-${month}-${day}`;
+        }
+        return '';
     }
 
     function bookingsOn(date) {
