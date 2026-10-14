@@ -57,7 +57,7 @@
                     <label for="searchInput" class="form-label">Search</label>
                     <div class="input-group rm-search-group">
                         <span class="input-group-text"><i class="ti ti-search"></i></span>
-                        <input type="text" class="form-control" id="searchInput"
+                    <input type="text" class="form-control" id="searchInput"
                             placeholder="Search by name, ID, serial, type..." autocomplete="off">
                     </div>
                 </div>
@@ -120,7 +120,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <div class="rm-modal-heading">
-                            <h5 class="modal-title" id="editResourceModalLabel">Edit Resource</h5>
+                        <h5 class="modal-title" id="editResourceModalLabel">Edit Resource</h5>
                             <p class="rm-modal-sub mb-0">Update inventory details and save.</p>
                         </div>
                         <button type="button" class="rm-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
