@@ -15,6 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const swalFire = (options) => window.RMSwal?.fire ? window.RMSwal.fire(options) : window.Swal?.fire(options);
     let lastCalendarView = null;
     let calendarReady = false;
+    const upcomingPageSize = 10;
+    let upcomingRows = [];
+    let upcomingPage = 1;
+    document.getElementById('upcomingPagination')?.addEventListener('click', onUpcomingPaginationClick);
 
     try {
         renderUpcoming(events);
@@ -255,19 +259,30 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleClear();
 
     function renderUpcoming(list) {
-        const body = document.getElementById('upcomingReservationsBody');
-        if (!body) return;
         const now = Date.now();
-        const rows = [...list]
+        upcomingRows = [...list]
             .filter((event) => Date.parse(event.end || event.start) >= now)
-            .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
-            .slice(0, 12);
+            .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+        upcomingPage = 1;
+        paintUpcomingPage();
+    }
 
+    function paintUpcomingPage() {
+        const body = document.getElementById('upcomingReservationsBody');
+        const count = document.getElementById('upcomingResultCount');
+        if (!body) return;
         body.replaceChildren();
-        if (!rows.length) {
+        if (!upcomingRows.length) {
             body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No upcoming reservations match your filters.</td></tr>';
+            if (count) count.textContent = '';
+            renderUpcomingPagination(0);
             return;
         }
+
+        const totalPages = Math.max(1, Math.ceil(upcomingRows.length / upcomingPageSize));
+        if (upcomingPage > totalPages) upcomingPage = totalPages;
+        const start = (upcomingPage - 1) * upcomingPageSize;
+        const rows = upcomingRows.slice(start, start + upcomingPageSize);
         rows.forEach((event) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -279,6 +294,53 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             body.appendChild(tr);
         });
+        if (count) count.textContent = `Showing ${start + 1}–${start + rows.length} of ${upcomingRows.length}`;
+        renderUpcomingPagination(totalPages);
+    }
+
+    function upcomingVisiblePages(total, current) {
+        if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+        const pages = new Set([1, total, current, current - 1, current + 1]);
+        const ordered = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
+        return ordered.reduce((list, page, index) => {
+            if (index && page - ordered[index - 1] > 1) list.push('…');
+            list.push(page);
+            return list;
+        }, []);
+    }
+
+    function renderUpcomingPagination(totalPages) {
+        const nav = document.getElementById('upcomingPagination');
+        if (!nav) return;
+        nav.replaceChildren();
+        if (totalPages <= 1) return;
+
+        const addItem = (label, page, disabled, active) => {
+            const li = document.createElement('li');
+            li.className = `page-item${disabled ? ' disabled' : ''}${active ? ' active' : ''}`;
+            li.innerHTML = `<button type="button" class="page-link" data-page="${page}">${label}</button>`;
+            nav.appendChild(li);
+        };
+
+        addItem('Prev', upcomingPage - 1, upcomingPage === 1, false);
+        upcomingVisiblePages(totalPages, upcomingPage).forEach((page) => {
+            if (page === '…') {
+                const li = document.createElement('li');
+                li.className = 'page-item disabled';
+                li.innerHTML = '<span class="page-link">…</span>';
+                nav.appendChild(li);
+                return;
+            }
+            addItem(String(page), page, false, page === upcomingPage);
+        });
+        addItem('Next', upcomingPage + 1, upcomingPage === totalPages, false);
+    }
+
+    function onUpcomingPaginationClick(event) {
+        const button = event.target.closest('[data-page]');
+        if (!button || button.parentElement.classList.contains('disabled')) return;
+        upcomingPage = Number(button.dataset.page);
+        paintUpcomingPage();
     }
 
     function updateSchedulerSelectionCount() {

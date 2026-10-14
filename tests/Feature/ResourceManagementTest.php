@@ -204,6 +204,8 @@ class ResourceManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Resource calendar')
             ->assertSee('id="resourceCalendar"', false)
+            ->assertSee('id="upcomingPagination"', false)
+            ->assertSee('id="upcomingResultCount"', false)
             ->assertSee('Active resources')
             ->assertDontSee('My Resources')
             ->assertSee('Independence Day')
