@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const config = window.RC || {};
     const events = config.events || [];
+    let filteredEvents = events;
     const holidays = config.holidays || [];
     const holidayImageBase = (config.holidayImageBase || '/images/holidays').replace(/\/$/, '');
     const schedulerResources = config.schedulerResources || [];
@@ -18,8 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
         contentHeight: 'auto',
         expandRows: false,
         views: {
-            timeGridWeek: { contentHeight: 640 },
-            timeGridDay: { contentHeight: 640 },
+            timeGridWeek: { contentHeight: 640, dayMaxEvents: 2 },
+            timeGridDay: { contentHeight: 640, dayMaxEvents: 2 },
         },
         fixedWeekCount: false,
         firstDay: 0,
@@ -27,9 +28,25 @@ document.addEventListener('DOMContentLoaded', () => {
         editable: false,
         selectable: false,
         nowIndicator: true,
-        dayMaxEvents: true,
-        moreLinkClick: 'popover',
-        moreLinkText: (n) => `+${n} more`,
+        dayMaxEvents: 2,
+        dateClick(info) {
+            if (info.view.type !== 'dayGridMonth') return;
+            const holiday = holidayOn(info.date);
+            if (info.jsEvent?.target?.closest('[data-holiday]')) {
+                if (holiday) showHolidayDialog(holiday);
+                return;
+            }
+            const items = bookingsOn(info.date);
+            if (!items.length && holiday) {
+                showHolidayDialog(holiday);
+                return;
+            }
+            if (!items.length) return;
+            showDayEventList(info.date, holiday ? [holiday, ...items] : items);
+        },
+        datesSet() {
+            queueMicrotask(paintMonthCells);
+        },
         headerToolbar: isMobile
             ? { left: 'prev,next', center: 'title', right: 'today' }
             : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
@@ -70,8 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (info.view.type === 'dayGridMonth') {
                 const fullLabel = `${info.timeText ? `${info.timeText} ` : ''}${info.event.title}`.trim();
-                const label = `${info.timeText ? `${info.timeText} ` : ''}${limitText(info.event.title, 18)}`.trim();
-                return { html: `<span class="rc-event-title" data-full-label="${escapeHtml(fullLabel)}">${escapeHtml(label)}</span>` };
+                return { html: `<span class="rc-event-title" data-full-label="${escapeHtml(fullLabel)}">${escapeHtml(fullLabel)}</span>` };
             }
             const time = info.timeText ? `<span class="rc-event-time">${escapeHtml(info.timeText)}</span>` : '';
             const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
@@ -81,23 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         eventClick(info) {
             if (info.event.extendedProps?.isHoliday) {
                 if (info.event.display === 'background') return;
-                const details = info.event.extendedProps || {};
-                const image = details.holidayImage || 'public.svg';
-                swalFire({
-                    html: `<div class="rc-holiday-dialog">
-                        <img class="rc-holiday-art" src="${holidayImageBase}/${encodeURIComponent(image)}?v=2" alt="">
-                        <div class="rc-holiday-copy">
-                            <strong>${escapeHtml(info.event.title)}</strong>
-                            <p>${escapeHtml(details.holidayTypeLabel || 'Sri Lankan holiday')}</p>
-                        </div>
-                    </div>`,
-                    confirmButtonText: 'Close',
-                    customClass: {
-                        ...window.RMSwal.base.customClass,
-                        popup: 'rm-swal rc-holiday-swal',
-                        container: 'rc-holiday-backdrop',
-                    },
-                });
+                showHolidayDialog(info.event);
                 return;
             }
             showReservationDetails(info.event);
@@ -106,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     calendar.render();
     document.getElementById('calendarLoading').hidden = true;
+    paintMonthCells();
 
     const resourceFilter = document.getElementById('resourceFilter');
     const locationFilter = document.getElementById('locationFilter');
@@ -121,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const schedulerHours = Array.from({ length: 12 }, (_, index) => index + 8);
     const schedulerPopover = document.getElementById('schedulerPopover');
 
-    let filteredEvents = events;
     let appliedFilters = { resource: 'all', location: 'all', status: 'all', category: 'all' };
     let selectedSchedulerResources = new Set();
     let activeDrag = null;
@@ -155,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('calendarEmpty').hidden = filtered.length > 0;
         toggleClear();
         renderUpcoming(filtered);
+        queueMicrotask(paintMonthCells);
         if (!schedulerPanel.hidden) renderScheduler();
     }
 
@@ -482,6 +483,150 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeReservationModal').addEventListener('click', closeReservationModal);
     document.querySelector('.rc-modal-overlay').addEventListener('click', closeReservationModal);
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeReservationModal(); });
+
+    function dateKey(value) {
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+            const month = String(value.getMonth() + 1).padStart(2, '0');
+            const day = String(value.getDate()).padStart(2, '0');
+            return `${value.getFullYear()}-${month}-${day}`;
+        }
+        return String(value || '').slice(0, 10);
+    }
+
+    function bookingsOn(date) {
+        const key = dateKey(date);
+        return filteredEvents.filter((event) => dateKey(event.start) === key);
+    }
+
+    function holidayOn(date) {
+        const key = dateKey(date);
+        return holidays.find((event) => event.extendedProps?.isHoliday && event.display !== 'background' && dateKey(event.start) === key)
+            || holidays.find((event) => event.extendedProps?.isHoliday && dateKey(event.start) === key)
+            || null;
+    }
+
+    function showHolidayDialog(holiday) {
+        if (!holiday) return;
+        const details = holiday.extendedProps || {};
+        const image = details.holidayImage || 'public.svg';
+        swalFire({
+            html: `<div class="rc-holiday-dialog">
+                <img class="rc-holiday-art" src="${holidayImageBase}/${encodeURIComponent(image)}?v=2" alt="">
+                <div class="rc-holiday-copy">
+                    <strong>${escapeHtml(holiday.title)}</strong>
+                    <p>${escapeHtml(details.holidayTypeLabel || 'Sri Lankan holiday')}</p>
+                </div>
+            </div>`,
+            confirmButtonText: 'Close',
+            customClass: {
+                ...window.RMSwal.base.customClass,
+                popup: 'rm-swal rc-holiday-swal',
+                container: 'rc-holiday-backdrop',
+            },
+        });
+    }
+
+    function formatChipTime(value) {
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '').toLowerCase();
+    }
+
+    function paintMonthCells() {
+        if (calendar.view.type !== 'dayGridMonth') return;
+        calendarElement.querySelectorAll('.fc-daygrid-day').forEach((cell) => {
+            const frame = cell.querySelector('.fc-daygrid-day-frame');
+            if (!frame) return;
+            const date = cell.getAttribute('data-date');
+            const items = bookingsOn(date);
+            const holiday = holidayOn(date);
+            const kind = holiday?.extendedProps?.holidayKind || 'public';
+            frame.classList.remove('is-holiday', 'is-holiday-poya', 'is-holiday-mercantile', 'is-holiday-public');
+            if (holiday) {
+                frame.classList.add('is-holiday', `is-holiday-${kind}`);
+            }
+            let summary = frame.querySelector('.rc-month-summary');
+            if (!summary) {
+                summary = document.createElement('div');
+                summary.className = 'rc-month-summary';
+                frame.appendChild(summary);
+            }
+            if (!items.length && !holiday) {
+                summary.replaceChildren();
+                summary.hidden = true;
+                return;
+            }
+            const previewLimit = holiday ? 1 : 2;
+            const preview = items.slice(0, previewLimit);
+            const extra = items.length - preview.length;
+            const holidayChip = holiday
+                ? `<span class="rc-month-holiday rc-holiday-${escapeHtml(kind)}" data-holiday="1" title="${escapeHtml(holiday.title)}">${escapeHtml(limitText(holiday.title, 22))}</span>`
+                : '';
+            const chips = preview.map((event) => {
+                const colors = eventColors(event.extendedProps?.statusValue);
+                const label = `${formatChipTime(event.start)} ${event.extendedProps?.resource || event.title}`.trim();
+                return `<span class="rc-month-chip" style="background:${colors.background};color:${colors.text}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+            }).join('');
+            summary.hidden = false;
+            summary.innerHTML = `${holidayChip}<div class="rc-month-chips">${chips}</div>${extra > 0 ? `<span class="rc-month-more">+${extra} more</span>` : ''}`;
+        });
+    }
+
+    function uniqueEvents(eventList) {
+        const seen = new Set();
+        return eventList.filter((event) => {
+            const key = String(event.id || `${event.title}-${event.start}`);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }
+
+    async function showDayEventList(date, eventList) {
+        const bookings = eventList
+            .filter((event) => !event.extendedProps?.isHoliday)
+            .sort((left, right) => {
+                const leftStart = left.start instanceof Date ? left.start : new Date(left.start);
+                const rightStart = right.start instanceof Date ? right.start : new Date(right.start);
+                return leftStart - rightStart;
+            });
+        const holiday = eventList.find((event) => event.extendedProps?.isHoliday);
+        const rows = bookings.map((event, index) => {
+            const details = event.extendedProps || {};
+            const colors = eventColors(details.statusValue);
+            const start = event.start instanceof Date ? event.start : new Date(event.start);
+            const end = event.end instanceof Date ? event.end : new Date(event.end);
+            const meta = [details.location, details.status].filter(Boolean).join(' · ');
+            return `<button type="button" class="rc-day-item" data-index="${index}" style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
+                <span class="rc-day-item-time">${escapeHtml(formatTimeRange(start, end))}</span>
+                <span class="rc-day-item-title">${escapeHtml(details.resource || event.title)}</span>
+                ${meta ? `<span class="rc-day-item-meta">${escapeHtml(meta)}</span>` : ''}
+            </button>`;
+        }).join('');
+        const holidayRow = holiday
+            ? `<div class="rc-day-holiday">${escapeHtml(holiday.title)}${holiday.extendedProps?.holidayTypeLabel ? ` · ${escapeHtml(holiday.extendedProps.holidayTypeLabel)}` : ''}</div>`
+            : '';
+        await swalFire({
+            title: formatDate(date),
+            html: `<div class="rc-day-list">${holidayRow}${rows || '<p class="rc-day-empty">No reservations on this day.</p>'}</div>`,
+            confirmButtonText: 'Close',
+            width: 560,
+            customClass: {
+                ...window.RMSwal.base.customClass,
+                container: 'rm-swal-backdrop',
+                htmlContainer: 'rc-day-list-wrap',
+            },
+            didOpen(popup) {
+                popup.querySelectorAll('.rc-day-item').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        const event = bookings[Number(button.dataset.index)];
+                        if (window.Swal) window.Swal.close();
+                        if (event) showReservationDetails(event);
+                    });
+                });
+            },
+        });
+    }
 
     function showReservationDetails(event) {
         const details = event.extendedProps || {};
