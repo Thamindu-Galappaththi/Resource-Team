@@ -177,6 +177,8 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
         Route::post('/mark-read', 'markAllRead')->name('mark-read');
+        Route::post('/{notification}/read', 'markRead')->name('read');
+        Route::post('/{notification}/unread', 'markUnread')->name('unread');
     });
 
     Route::prefix('logout')->controller(AuthController::class)->group(function () {
