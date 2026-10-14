@@ -111,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const locationFilter = document.getElementById('locationFilter');
     const statusFilter = document.getElementById('statusFilter');
     const categoryFilter = document.getElementById('categoryFilter');
-    const applyFiltersButton = document.getElementById('applyFiltersButton');
     const clearFiltersButton = document.getElementById('clearFiltersButton');
     const schedulerPanel = document.getElementById('schedulerPanel');
     const schedulerGrid = document.getElementById('schedulerGrid');
@@ -154,20 +153,29 @@ document.addEventListener('DOMContentLoaded', () => {
         calendar.removeAllEvents();
         calendar.addEventSource([...filtered.map(withEventColors), ...holidays]);
         document.getElementById('calendarEmpty').hidden = filtered.length > 0;
-        applyFiltersButton.classList.remove('has-pending-filters');
+        toggleClear();
         renderUpcoming(filtered);
         if (!schedulerPanel.hidden) renderScheduler();
     }
 
+    function hasFilters() {
+        return [resourceFilter, locationFilter, statusFilter, categoryFilter]
+            .some((el) => String(el.value) !== 'all');
+    }
+
+    function toggleClear() {
+        if (clearFiltersButton) clearFiltersButton.disabled = !hasFilters();
+    }
+
     [resourceFilter, locationFilter, statusFilter, categoryFilter].forEach((el) => {
-        el.addEventListener('change', () => applyFiltersButton.classList.add('has-pending-filters'));
-    });
-    applyFiltersButton.addEventListener('click', () => {
-        selectedSchedulerResources.clear();
-        updateSchedulerSelectionCount();
-        applyFilters();
+        el.addEventListener('change', () => {
+            selectedSchedulerResources.clear();
+            updateSchedulerSelectionCount();
+            applyFilters();
+        });
     });
     clearFiltersButton.addEventListener('click', () => {
+        if (clearFiltersButton.disabled) return;
         window.RMSelect.setValue('resourceFilter', 'all', 'All resources');
         window.RMSelect.setValue('locationFilter', 'all', 'All locations');
         window.RMSelect.setValue('statusFilter', 'all', 'All statuses');
@@ -176,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSchedulerSelectionCount();
         applyFilters();
     });
+    toggleClear();
 
     function renderUpcoming(list) {
         const body = document.getElementById('upcomingReservationsBody');

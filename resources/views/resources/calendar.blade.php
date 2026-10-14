@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=28">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=29">
 @endpush
 
 @section('content')
@@ -64,8 +64,7 @@
                 :options="collect([['value' => 'all', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
         </div>
         <div class="rc-filter-actions">
-            <button type="button" id="applyFiltersButton" class="rc-filter-button rc-filter-apply">Apply</button>
-            <button type="button" id="clearFiltersButton" class="rc-filter-button rc-filter-clear">Clear</button>
+            <button type="button" id="clearFiltersButton" class="rc-filter-button rc-filter-clear" disabled>Clear</button>
         </div>
     </div>
 
@@ -166,5 +165,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=21"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=22"></script>
 @endpush

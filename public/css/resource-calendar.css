@@ -143,20 +143,34 @@
     font-size: 13px;
     font-weight: 700;
     line-height: 1;
+    white-space: nowrap;
 }
-.rc-filter-apply { color: #fff; background: var(--rc-blue); }
-.rc-filter-apply:hover { background: #12579f; }
-.rc-filter-apply.has-pending-filters { box-shadow: 0 0 0 3px rgba(23, 105, 194, .18); }
 .rc-filter-clear {
     color: var(--rc-blue);
     background: #fff;
-    border-color: var(--rc-blue);
-    border-width: 1.5px;
+    border: 1.5px solid var(--rc-blue);
 }
 .rc-filter-clear:hover,
 .rc-filter-clear:focus {
     color: #fff;
     background: var(--rc-blue);
+    border-color: var(--rc-blue);
+}
+.rc-filter-clear:disabled {
+    color: var(--rc-blue);
+    background: #fff;
+    border-color: var(--rc-blue);
+    opacity: .55;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.rc-filter-clear:disabled:hover,
+.rc-filter-clear:disabled:focus {
+    color: #fff;
+    background: var(--rc-blue);
+    border-color: var(--rc-blue);
+    opacity: .55;
+    cursor: not-allowed;
 }
 
 .rc-view-switch {
