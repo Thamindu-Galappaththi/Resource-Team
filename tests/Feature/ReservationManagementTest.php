@@ -109,10 +109,13 @@ class ReservationManagementTest extends TestCase
     public function test_missing_resource_only_reports_the_resource_field(): void
     {
         $user = User::factory()->role('coordinator')->create();
+        $resource = Resource::factory()->create();
 
         $this->actingAs($user)
             ->from(route('reservations.create'))
             ->post(route('reservations.store'), [
+                'location_id' => $resource->location_id,
+                'category_id' => $resource->type->resource_category_id,
                 'reservation_date' => now()->toDateString(),
                 'start_time' => '09:00',
                 'end_time' => '10:00',
@@ -298,6 +301,7 @@ class ReservationManagementTest extends TestCase
             'resource_ids' => [$resource->id],
             'requester_id' => $user->id,
             'location_id' => $resource->location_id,
+            'category_id' => $resource->type->resource_category_id,
             'reservation_date' => now()->addDay()->toDateString(),
             'start_time' => '09:00',
             'end_time' => '12:00',

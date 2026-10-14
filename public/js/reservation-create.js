@@ -49,9 +49,10 @@
     function filteredResources() {
         const locationId = window.RMSelect.getValue('location_id');
         const categoryId = window.RMSelect.getValue('category_id');
+        if (!locationId || !categoryId) return [];
         return (lookups.resources || []).filter((resource) => {
-            if (locationId && String(resource.location_id) !== String(locationId)) return false;
-            if (categoryId && String(resource.category_id) !== String(categoryId)) return false;
+            if (String(resource.location_id) !== String(locationId)) return false;
+            if (String(resource.category_id) !== String(categoryId)) return false;
             return true;
         });
     }
@@ -195,6 +196,20 @@
     });
 
     form?.addEventListener('submit', (event) => {
+        const locationId = window.RMSelect.getValue('location_id');
+        const categoryId = window.RMSelect.getValue('category_id');
+        if (!locationId) {
+            event.preventDefault();
+            showFlash('Select a location.');
+            document.getElementById('location_id')?.closest('.cu-select')?.classList.add('is-invalid');
+            return;
+        }
+        if (!categoryId) {
+            event.preventDefault();
+            showFlash('Select a resource category.');
+            document.getElementById('category_id')?.closest('.cu-select')?.classList.add('is-invalid');
+            return;
+        }
         if (!resourceSelect.value) {
             event.preventDefault();
             showFlash('Select a resource.');

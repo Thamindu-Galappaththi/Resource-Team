@@ -46,7 +46,8 @@ class StoreReservationRequest extends FormRequest
             'resource_ids' => ['array'],
             'resource_ids.*' => ['integer', Rule::exists('resources', 'id')],
             'requester_id' => ['required', 'integer', 'exists:users,id'],
-            'location_id' => ['nullable', 'integer', 'exists:locations,id'],
+            'location_id' => ['required', 'integer', 'exists:locations,id'],
+            'category_id' => ['required', 'integer', 'exists:resource_categories,id'],
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
@@ -62,6 +63,8 @@ class StoreReservationRequest extends FormRequest
         return [
             'resource_id' => 'resource',
             'resource_ids' => 'resource',
+            'location_id' => 'location',
+            'category_id' => 'resource category',
             'reservation_date' => 'reservation date',
             'start_time' => 'start time',
             'end_time' => 'end time',
@@ -74,15 +77,23 @@ class StoreReservationRequest extends FormRequest
         return [
             'resource_id.required' => 'Select a resource.',
             'resource_id.exists' => 'The selected resource could not be found.',
+            'location_id.required' => 'Select a location.',
+            'category_id.required' => 'Select a resource category.',
         ];
     }
 
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            $resource = Resource::query()->find($this->input('resource_id'));
+            $resource = Resource::query()->with('type')->find($this->input('resource_id'));
             if ($resource && $resource->status !== 'active') {
                 $validator->errors()->add('resource_id', 'The selected resource is not available for booking.');
+            }
+            if ($resource && $this->filled('location_id') && (int) $resource->location_id !== (int) $this->input('location_id')) {
+                $validator->errors()->add('location_id', 'The resource does not belong to the selected location.');
+            }
+            if ($resource && $this->filled('category_id') && (int) $resource->type?->resource_category_id !== (int) $this->input('category_id')) {
+                $validator->errors()->add('category_id', 'The resource does not belong to the selected category.');
             }
         });
     }
