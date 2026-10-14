@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\CanteenReservationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HostelReservationController;
@@ -66,7 +67,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('approvals')->name('approvals.')->group(function () {
-        Route::get('/', fn () => view('approvals.index'))->middleware('permission:approvals.index')->name('index');
+        Route::get('/', [ApprovalController::class, 'index'])->middleware('permission:approvals.index')->name('index');
+        Route::post('/{reservation}/decision', [ApprovalController::class, 'decide'])->middleware('permission:approvals.index')->name('decision');
         Route::get('/special', fn () => view('approvals.special'))->middleware('permission:approvals.special')->name('special');
     });
 
