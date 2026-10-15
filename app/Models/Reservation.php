@@ -143,6 +143,42 @@ class Reservation extends Model
             ->implode(', ');
     }
 
+    public function scopeVisibleTo(Builder $query, ?User $user): Builder
+    {
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'management')) {
+            return $query;
+        }
+
+        if ($user->hasRole('resource_owner')) {
+            $owners = array_values(array_filter([$user->name, $user->email, $user->service_id]));
+
+            return $query->where(function (Builder $inner) use ($user, $owners) {
+                if ($owners !== []) {
+                    $inner->whereHas('items.resource', fn (Builder $resources) => $resources->whereIn('resource_owner', $owners));
+                }
+                $inner->orWhere('requester_id', $user->id)
+                    ->orWhere('created_by_user_id', $user->id);
+            });
+        }
+
+        if ($user->hasRole('hostel_manager')) {
+            return $query->where(function (Builder $inner) use ($user) {
+                $inner->where('type', ReservationType::HOSTEL->value)
+                    ->orWhere('requester_id', $user->id)
+                    ->orWhere('created_by_user_id', $user->id);
+            });
+        }
+
+        return $query->where(function (Builder $inner) use ($user) {
+            $inner->where('requester_id', $user->id)
+                ->orWhere('created_by_user_id', $user->id);
+        });
+    }
+
     public function scopeSearch(Builder $query, ?string $search): Builder
     {
         if (! filled($search)) {

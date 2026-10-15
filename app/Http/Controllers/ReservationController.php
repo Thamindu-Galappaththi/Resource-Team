@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReservationStatus;
+use App\Enums\ReservationType;
 use App\Exceptions\ReservationConflictException;
 use App\Http\Requests\CancelReservationRequest;
 use App\Http\Requests\StoreReservationRequest;
@@ -500,15 +501,7 @@ class ReservationController extends Controller
 
     private function restrictToOwnUnlessStaff($query): void
     {
-        $user = auth()->user();
-        if ($user?->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'resource_owner')) {
-            return;
-        }
-
-        $query->where(function ($inner) use ($user) {
-            $inner->where('requester_id', $user?->id)
-                ->orWhere('created_by_user_id', $user?->id);
-        });
+        $query->visibleTo(auth()->user());
     }
 
     private function formLookups(Request $request): array
@@ -629,7 +622,7 @@ class ReservationController extends Controller
                             'statusKey' => $reservation->status,
                             'statusValue' => $reservation->status,
                             'conflict' => $conflict,
-                        'url' => request()->user()?->can('view', $reservation) ? route('reservations.show', $reservation) : null,
+                        'url' => $this->calendarReservationUrl($reservation),
                     ],
                 ];
             }
@@ -638,5 +631,19 @@ class ReservationController extends Controller
         }
 
         return $segments;
+    }
+
+    private function calendarReservationUrl(Reservation $reservation): ?string
+    {
+        $user = request()->user();
+        if ($reservation->type === ReservationType::HOSTEL->value && $user?->can('viewHostel', $reservation)) {
+            return route('hostel.show', $reservation);
+        }
+
+        if ($user?->can('view', $reservation) && $user?->hasPermission('reservations.index')) {
+            return route('reservations.show', $reservation);
+        }
+
+        return null;
     }
 }

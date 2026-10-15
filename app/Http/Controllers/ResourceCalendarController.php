@@ -18,6 +18,7 @@ class ResourceCalendarController extends Controller
     {
         $reservations = Reservation::query()
             ->with(['requester', 'location', 'items.resource.type.category'])
+            ->visibleTo($request->user())
             ->get();
         $timezone = config('reservations.display_timezone', 'Asia/Colombo');
         $events = $reservations->flatMap(function (Reservation $reservation) use ($timezone) {
