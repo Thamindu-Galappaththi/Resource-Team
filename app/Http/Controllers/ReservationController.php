@@ -572,10 +572,15 @@ class ReservationController extends Controller
         $start = $item->starts_at->timezone($timezone);
         $end = $item->ends_at->timezone($timezone);
         $minutes = max(0, (int) $start->diffInMinutes($end));
+        $overnight = $start->toDateString() !== $end->copy()->subSecond()->toDateString();
         $duration = trim(implode(' ', array_filter([
             intdiv($minutes, 60) ? intdiv($minutes, 60).' hr' : null,
             $minutes % 60 ? ($minutes % 60).' min' : null,
         ]))) ?: 'Less than a minute';
+        if ($reservation->type === ReservationType::HOSTEL->value && $overnight) {
+            $nights = max(1, (int) $start->copy()->startOfDay()->diffInDays($end->copy()->subSecond()->startOfDay()));
+            $duration = $nights === 1 ? '1 night' : $nights.' nights';
+        }
         $conflict = isset($conflicts[$reservation->id]);
         [$color, $textColor] = match ($reservation->status) {
             ReservationStatus::APPROVED->value, ReservationStatus::CONFIRMED->value, ReservationStatus::IN_PROGRESS->value => ['#16845b', '#fff'],
@@ -618,6 +623,7 @@ class ReservationController extends Controller
                         'owner' => $reservation->requester?->name ?? 'Unknown',
                         'location' => $reservation->location?->name ?? '—',
                         'duration' => $duration,
+                        'reservationType' => $reservation->type,
                             'status' => $reservation->statusEnum()->label(),
                             'statusKey' => $reservation->status,
                             'statusValue' => $reservation->status,

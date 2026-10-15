@@ -302,6 +302,8 @@ class RoleFunctionAccessTest extends TestCase
 
         $hostel = $this->pendingReservation($coordinator, $room);
         $hostel->update(['type' => ReservationType::HOSTEL->value]);
+        $stay = $hostel->items()->first();
+        $stay->update(['ends_at' => $stay->starts_at->copy()->addHours(61)]);
         $lab = $this->pendingReservation($employee, $hall);
 
         $range = [
@@ -317,6 +319,9 @@ class RoleFunctionAccessTest extends TestCase
         $this->assertTrue($events->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $hostel->id));
         $this->assertFalse($events->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $lab->id));
         $this->assertTrue($events->contains(fn ($event) => ($event['extendedProps']['url'] ?? null) === route('hostel.show', $hostel)));
+        $this->assertTrue($events->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $hostel->id
+            && ($event['extendedProps']['reservationType'] ?? null) === ReservationType::HOSTEL->value
+            && str_contains((string) ($event['extendedProps']['duration'] ?? ''), 'night')));
     }
 
     public function test_sms_users_cannot_create_and_canteen_cannot_open_create_form(): void

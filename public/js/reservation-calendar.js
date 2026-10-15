@@ -128,6 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 failure(new Error('Calendar filters are missing.'));
                 return;
             }
+            if (bookings.length || holidays.length) {
+                success(forCalendarView(bookings, holidays));
+                queueMicrotask(paintMonthCells);
+            }
             const params = new URLSearchParams({ start: fetchInfo.startStr, end: fetchInfo.endStr });
             new FormData(filters).forEach((value, key) => {
                 if (value && key !== 'year' && key !== 'month') params.set(key, value);
@@ -146,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 queueMicrotask(paintMonthCells);
             } catch (error) {
                 if (loading) loading.hidden = true;
-                failure(error);
+                if (!bookings.length && !holidays.length) failure(error);
             }
         },
         eventDidMount(info) {
@@ -244,6 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pendingStat) pendingStat.textContent = payload.stats.pending;
                 if (approvedStat) approvedStat.textContent = payload.stats.approved;
             }).catch(() => {});
+            compactTimeGridEvents();
             queueMicrotask(paintMonthCells);
         },
         eventsSet() {
@@ -421,10 +426,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const end = details.reservationEnd ? new Date(details.reservationEnd) : (event.end instanceof Date ? event.end : new Date(event.end));
         document.getElementById('reservationModalTitle').textContent = details.reference || 'Reservation details';
         document.getElementById('detailResource').textContent = details.resource || event.title || '—';
-        document.getElementById('detailDate').textContent = formatDate(start);
-        document.getElementById('detailTime').textContent = details.duration
-            ? `${formatTimeRange(start, end)} · ${details.duration}`
-            : formatTimeRange(start, end);
+        document.getElementById('detailDate').textContent = formatStayDates(start, end);
+        document.getElementById('detailTime').textContent = formatStayTimes(start, end, details.duration, details.reservationType);
         document.getElementById('detailOwner').textContent = details.owner || '—';
         document.getElementById('detailLocation').textContent = details.location || '—';
         document.getElementById('detailPurpose').textContent = details.purpose || '—';
@@ -447,6 +450,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function isTimeGrid() {
         return ['timeGridWeek', 'timeGridDay'].includes(calendar.view.type);
+    }
+
+    function compactTimeGridEvents() {
+        if (!isTimeGrid()) return;
+        const compactMs = 45 * 60 * 1000;
+        const toRemove = [];
+        calendar.batchRendering(() => {
+            calendar.getEvents().forEach((event) => {
+                if (event.extendedProps?.isHoliday && event.display === 'background') {
+                    toRemove.push(event);
+                    return;
+                }
+                if (event.extendedProps?.isHoliday || !event.start) return;
+                const compactEnd = new Date(event.start.getTime() + compactMs);
+                if (event.end && event.end.getTime() <= compactEnd.getTime() + 1000) return;
+                event.setEnd(compactEnd);
+            });
+            toRemove.forEach((event) => event.remove());
+        });
     }
 
     function forCalendarView(eventList, holidayList) {
@@ -499,12 +521,45 @@ document.addEventListener('DOMContentLoaded', () => {
         return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
+    function formatClock(date) {
+        if (!date || Number.isNaN(date.getTime())) return '—';
+        return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    }
+
+    function stayEndDate(end) {
+        if (end.getHours() === 0 && end.getMinutes() === 0) {
+            return new Date(end.getTime() - 1000);
+        }
+        return end;
+    }
+
+    function isOvernightStay(start, end) {
+        if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+        return localDateKey(start) !== localDateKey(stayEndDate(end));
+    }
+
+    function formatStayDates(start, end) {
+        if (!start || Number.isNaN(start.getTime())) return '—';
+        if (!end || Number.isNaN(end.getTime()) || !isOvernightStay(start, end)) return formatDate(start);
+        return `${formatDate(start)} – ${formatDate(stayEndDate(end))}`;
+    }
+
+    function formatStayTimes(start, end, duration, type) {
+        if (!start || Number.isNaN(start.getTime())) return '—';
+        if (type === 'hostel' || isOvernightStay(start, end)) {
+            const endLabel = end && !Number.isNaN(end.getTime()) ? formatClock(end) : '—';
+            const time = `Check-in ${formatClock(start)} · Check-out ${endLabel}`;
+            return duration ? `${time} · ${duration}` : time;
+        }
+        const time = formatTimeRange(start, end);
+        return duration ? `${time} · ${duration}` : time;
+    }
+
     function formatTimeRange(start, end) {
         if (!start || Number.isNaN(start.getTime())) return '—';
-        const options = { hour: 'numeric', minute: '2-digit' };
-        const startText = start.toLocaleTimeString('en-GB', options);
+        const startText = formatClock(start);
         if (!end || Number.isNaN(end.getTime())) return startText;
-        return `${startText} – ${end.toLocaleTimeString('en-GB', options)}`;
+        return `${startText} – ${formatClock(end)}`;
     }
 
     function escapeHtml(value) {
