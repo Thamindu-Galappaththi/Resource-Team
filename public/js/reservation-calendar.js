@@ -116,6 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
         selectAllow: (info) => info.view.type !== 'dayGridMonth',
         nowIndicator: true,
         dayMaxEvents: 2,
+        moreLinkClick(info) {
+            info.jsEvent?.preventDefault();
+            info.jsEvent?.stopPropagation();
+            const date = info.date;
+            const items = eventsFromMoreLink(info);
+            const holiday = holidayOn(date);
+            showDayEventList(date, holiday ? [holiday, ...items] : items);
+        },
         headerToolbar: isMobile
             ? { left: 'prev,next', center: 'title', right: 'today' }
             : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
@@ -301,9 +309,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return String(value || '').slice(0, 10);
     }
 
+    function uniqueDayBookings(list) {
+        const seen = new Set();
+        return list.filter((event) => {
+            const props = event.extendedProps || {};
+            const key = String(props.reservationId || event.id || `${event.title}-${event.start}`);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }
+
+    function eventsFromMoreLink(info) {
+        let items = uniqueDayBookings(bookingsOn(info.date));
+        if (items.length) return items;
+        const segs = [...(info.allSegs || []), ...(info.hiddenSegs || [])];
+        return uniqueDayBookings(segs.map((seg) => {
+            const event = seg.event || {};
+            return {
+                id: event.id,
+                start: event.start,
+                end: event.end,
+                title: event.title,
+                extendedProps: event.extendedProps || {},
+            };
+        }).filter((event) => event.title || event.extendedProps?.resource));
+    }
+
     function bookingsOn(date) {
         const key = dateKey(date);
-        return bookings.filter((event) => dateKey(event.start) === key);
+        return uniqueDayBookings(bookings.filter((event) => dateKey(event.start) === key));
     }
 
     function holidayOn(date) {
@@ -379,20 +414,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function showDayEventList(date, eventList) {
-        const dayBookings = eventList
+        const dayBookings = uniqueDayBookings(eventList
             .filter((event) => !event.extendedProps?.isHoliday)
-            .sort((left, right) => new Date(left.start) - new Date(right.start));
+            .sort((left, right) => new Date(left.start) - new Date(right.start)));
         const holiday = eventList.find((event) => event.extendedProps?.isHoliday);
         const rows = dayBookings.map((event, index) => {
             const details = event.extendedProps || {};
             const colors = eventColors(details.statusValue || details.statusKey);
-            const start = event.start instanceof Date ? event.start : new Date(event.start);
-            const end = details.reservationEnd ? new Date(details.reservationEnd) : (event.end instanceof Date ? event.end : new Date(event.end));
-            const meta = [details.location, details.status].filter(Boolean).join(' · ');
+            const start = details.reservationStart ? new Date(details.reservationStart)
+                : (event.start instanceof Date ? event.start : new Date(event.start));
+            const end = details.reservationEnd ? new Date(details.reservationEnd)
+                : (event.end instanceof Date ? event.end : new Date(event.end));
+            const time = formatStayTimes(start, end, details.duration, details.reservationType);
+            const meta = [details.location, details.reference].filter(Boolean).join(' · ');
+            const badge = details.status
+                ? statusBadge(details.statusValue || details.statusKey, details.status)
+                : '';
             return `<button type="button" class="rc-day-item" data-index="${index}" style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
-                <span class="rc-day-item-time">${escapeHtml(formatTimeRange(start, end))}</span>
                 <span class="rc-day-item-title">${escapeHtml(details.resource || event.title)}</span>
-                ${meta ? `<span class="rc-day-item-meta">${escapeHtml(meta)}</span>` : ''}
+                <span class="rc-day-item-time">${escapeHtml(time)}</span>
+                <span class="rc-day-item-meta">${badge}${meta ? `<span>${escapeHtml(meta)}</span>` : ''}</span>
             </button>`;
         }).join('');
         const holidayRow = holiday
