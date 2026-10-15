@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const canReserve = Boolean(config.canReserve);
     const createReservationUrl = config.createReservationUrl;
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
+    const partsFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const swalFire = (options) => window.RMSwal?.fire ? window.RMSwal.fire(options) : window.Swal?.fire(options);
     let lastCalendarView = null;
     const upcomingPageSize = 10;
@@ -258,9 +259,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderUpcoming(list) {
         const now = Date.now();
-        upcomingRows = [...list]
-            .filter((event) => Date.parse(event.end || event.start) >= now)
-            .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+        upcomingRows = uniqueEvents(list)
+            .filter((event) => Date.parse(event.extendedProps?.reservationEnd || event.end || event.start) >= now)
+            .sort((a, b) => Date.parse(a.extendedProps?.reservationStart || a.start) - Date.parse(b.extendedProps?.reservationStart || b.start));
         upcomingPage = 1;
         paintUpcomingPage();
     }
@@ -282,13 +283,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const start = (upcomingPage - 1) * upcomingPageSize;
         const rows = upcomingRows.slice(start, start + upcomingPageSize);
         rows.forEach((event) => {
+            const details = event.extendedProps || {};
+            const start = details.reservationStart ? new Date(details.reservationStart) : new Date(event.start);
+            const end = details.reservationEnd ? new Date(details.reservationEnd) : new Date(event.end);
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${escapeHtml(event.title)}</td>
-                <td>${formatDate(new Date(event.start))}</td>
-                <td>${formatTimeRange(new Date(event.start), new Date(event.end))}</td>
-                <td>${escapeHtml(event.extendedProps?.owner || '—')}</td>
-                <td>${statusBadge(event.extendedProps?.statusValue, event.extendedProps?.status)}</td>
+                <td>${escapeHtml(details.resource || event.title)}</td>
+                <td>${formatStayDates(start, end)}</td>
+                <td>${formatStayTimes(start, end, details.duration, details.reservationType)}</td>
+                <td>${escapeHtml(details.owner || '—')}</td>
+                <td>${statusBadge(details.statusValue, details.status)}</td>
             `;
             body.appendChild(tr);
         });
@@ -413,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const allResourceEvents = events.filter((event) => String(event.extendedProps.resourceId) === String(resource.id) && event.start.slice(0, 10) === date);
         const resourceEvents = filteredEvents.filter((event) => String(event.extendedProps.resourceId) === String(resource.id) && event.start.slice(0, 10) === date);
         const blockingEvents = allResourceEvents.filter((event) => event.extendedProps.blocking);
-        const bookedMinutes = blockingEvents.reduce((total, event) => total + Math.max(0, Math.min(1200, timeMinutes(event.end)) - Math.max(480, timeMinutes(event.start))), 0);
+        const bookedMinutes = blockingEvents.reduce((total, event) => total + Math.max(0, Math.min(1200, eventEndMinutes(event)) - Math.max(480, timeMinutes(event.start))), 0);
         const load = Math.round((bookedMinutes / (12 * 60)) * 100);
         const isMaintenance = resource.status === 'under_maintenance';
         const track = document.createElement('div');
@@ -512,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cellWidth = (track.clientWidth - 220) / 12;
             resourceEvents.forEach((event) => {
                 const start = timeMinutes(event.start);
-                const end = timeMinutes(event.end);
+                const end = eventEndMinutes(event);
                 const clippedStart = Math.max(480, start);
                 const clippedEnd = Math.min(1200, end);
                 if (clippedEnd <= clippedStart) return;
@@ -711,7 +715,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const seen = new Set();
         return eventList.filter((event) => {
             const props = event.extendedProps || {};
-            const key = String(props.reservationId || event.id || `${event.title}-${event.start}`);
+            const key = String(props.reservationId && props.resourceId
+                ? `${props.reservationId}-${props.resourceId}`
+                : props.reservationId || event.id || `${event.title}-${event.start}`);
             if (seen.has(key)) return false;
             seen.add(key);
             return true;
@@ -735,13 +741,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function showDayEventList(date, eventList) {
-        const bookings = eventList
+        const bookings = uniqueEvents(eventList
             .filter((event) => !event.extendedProps?.isHoliday)
             .sort((left, right) => {
                 const leftStart = left.start instanceof Date ? left.start : new Date(left.start);
                 const rightStart = right.start instanceof Date ? right.start : new Date(right.start);
                 return leftStart - rightStart;
-            });
+            }));
         const holiday = eventList.find((event) => event.extendedProps?.isHoliday);
         const rows = bookings.map((event, index) => {
             const details = event.extendedProps || {};
@@ -752,11 +758,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const end = details.reservationEnd ? new Date(details.reservationEnd)
                 : details.actualEnd ? new Date(details.actualEnd)
                 : (event.end instanceof Date ? event.end : new Date(event.end));
+            const time = formatStayTimes(start, end, details.duration, details.reservationType);
             const meta = [details.location, details.reference].filter(Boolean).join(' · ');
             const badge = details.status ? statusBadge(details.statusValue, details.status) : '';
             return `<button type="button" class="rc-day-item" data-index="${index}" style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
                 <span class="rc-day-item-title">${escapeHtml(details.resource || event.title)}</span>
-                <span class="rc-day-item-time">${escapeHtml(formatTimeRange(start, end))}</span>
+                <span class="rc-day-item-time">${escapeHtml(time)}</span>
                 <span class="rc-day-item-meta">${badge}${meta ? `<span>${escapeHtml(meta)}</span>` : ''}</span>
             </button>`;
         }).join('');
@@ -787,14 +794,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showReservationDetails(event) {
         const details = event.extendedProps || {};
-        const start = event.start instanceof Date ? event.start : new Date(event.start);
-        const end = event.end instanceof Date ? event.end : new Date(event.end);
-        document.getElementById('detailResource').textContent = details.resource || event.title;
-        document.getElementById('detailDate').textContent = formatDate(start);
-        document.getElementById('detailTime').textContent = formatTimeRange(start, end);
+        const start = details.reservationStart ? new Date(details.reservationStart)
+            : (event.start instanceof Date ? event.start : new Date(event.start));
+        const end = details.reservationEnd ? new Date(details.reservationEnd)
+            : (event.end instanceof Date ? event.end : new Date(event.end));
+        const title = document.getElementById('reservationModalTitle');
+        if (title) title.textContent = details.reference || 'Reservation details';
+        document.getElementById('detailResource').textContent = details.resource || event.title || '—';
+        document.getElementById('detailDate').textContent = formatStayDates(start, end);
+        document.getElementById('detailTime').textContent = formatStayTimes(start, end, details.duration, details.reservationType);
         document.getElementById('detailOwner').textContent = details.owner || '—';
         document.getElementById('detailLocation').textContent = details.location || '—';
+        const purpose = document.getElementById('detailPurpose');
+        if (purpose) purpose.textContent = details.purpose || '—';
         document.getElementById('detailStatus').innerHTML = statusBadge(details.statusValue, details.status);
+        const conflict = document.getElementById('detailConflict');
+        const link = document.getElementById('detailLink');
+        if (conflict) conflict.hidden = !details.conflict;
+        if (link) {
+            link.hidden = !details.url;
+            if (details.url) link.href = details.url;
+        }
         modal.classList.add('show');
         modal.setAttribute('aria-hidden', 'false');
     }
@@ -819,11 +839,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const time = String(value).slice(11, 16).split(':').map(Number);
         return (time[0] || 0) * 60 + (time[1] || 0);
     }
+    function eventEndMinutes(event) {
+        const startDate = String(event.start || '').slice(0, 10);
+        const endDate = String(event.end || '').slice(0, 10);
+        const minutes = timeMinutes(event.end);
+        if (endDate && startDate && endDate > startDate && minutes === 0) return 24 * 60;
+        return minutes;
+    }
     function formatClock(minutes) {
         return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
     }
     function overlapsHour(event, hour) {
-        return timeMinutes(event.start) < (hour + 1) * 60 && timeMinutes(event.end) > hour * 60;
+        return timeMinutes(event.start) < (hour + 1) * 60 && eventEndMinutes(event) > hour * 60;
     }
     function bookingState(event) {
         if (['pending_approval', 'changes_requested', 'draft'].includes(event.extendedProps.statusValue)) return 'tentative';
@@ -852,12 +879,44 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!date || Number.isNaN(date.getTime())) return '—';
         return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
     }
+    function formatEventClock(date) {
+        if (!date || Number.isNaN(date.getTime())) return '—';
+        return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    }
+    function localDateKey(date) {
+        const parts = Object.fromEntries(partsFormat.formatToParts(date).map(({ type, value }) => [type, value]));
+        return `${parts.year}-${parts.month}-${parts.day}`;
+    }
+    function stayEndDate(end) {
+        if (end.getHours() === 0 && end.getMinutes() === 0) {
+            return new Date(end.getTime() - 1000);
+        }
+        return end;
+    }
+    function isOvernightStay(start, end) {
+        if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+        return localDateKey(start) !== localDateKey(stayEndDate(end));
+    }
+    function formatStayDates(start, end) {
+        if (!start || Number.isNaN(start.getTime())) return '—';
+        if (!end || Number.isNaN(end.getTime()) || !isOvernightStay(start, end)) return formatDate(start);
+        return `${formatDate(start)} – ${formatDate(stayEndDate(end))}`;
+    }
+    function formatStayTimes(start, end, duration, type) {
+        if (!start || Number.isNaN(start.getTime())) return '—';
+        if (type === 'hostel' || isOvernightStay(start, end)) {
+            const endLabel = end && !Number.isNaN(end.getTime()) ? formatEventClock(end) : '—';
+            const time = `Check-in ${formatEventClock(start)} · Check-out ${endLabel}`;
+            return duration ? `${time} · ${duration}` : time;
+        }
+        const time = formatTimeRange(start, end);
+        return duration ? `${time} · ${duration}` : time;
+    }
     function formatTimeRange(start, end) {
         if (!start || Number.isNaN(start.getTime())) return '—';
-        const options = { hour: 'numeric', minute: '2-digit' };
-        const startText = start.toLocaleTimeString('en-GB', options);
+        const startText = formatEventClock(start);
         if (!end || Number.isNaN(end.getTime())) return startText;
-        return `${startText} – ${end.toLocaleTimeString('en-GB', options)}`;
+        return `${startText} – ${formatEventClock(end)}`;
     }
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (character) => ({
