@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
     const swalFire = (options) => window.RMSwal?.fire ? window.RMSwal.fire(options) : window.Swal?.fire(options);
     let lastCalendarView = null;
-    let calendarReady = false;
     const upcomingPageSize = 10;
     let upcomingRows = [];
     let upcomingPage = 1;
@@ -49,6 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
         selectable: false,
         nowIndicator: true,
         dayMaxEvents: 2,
+        lazyFetching: false,
+        moreLinkClick(info) {
+            info.jsEvent?.preventDefault();
+            info.jsEvent?.stopPropagation();
+            const date = info.date;
+            const items = eventsFromMoreLink(info);
+            const holiday = holidayOn(date);
+            showDayEventList(date, holiday ? [holiday, ...items] : items);
+        },
         dateClick(info) {
             if (info.view.type !== 'dayGridMonth') return;
             const holiday = holidayOn(info.date);
@@ -64,8 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!items.length) return;
             showDayEventList(info.date, holiday ? [holiday, ...items] : items);
         },
-        datesSet() {
-            if (calendarReady) syncTimeGridEvents();
+        datesSet(info) {
+            lastCalendarView = info.view.type;
             queueMicrotask(paintMonthCells);
         },
         headerToolbar: isMobile
@@ -120,7 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
             return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(info.event.title)}</span></div>` };
         },
-        events: [...events.map(withEventColors), ...holidays],
+        events(fetchInfo, success) {
+            success(forCalendarView(filteredEvents, fetchInfo.view?.type || lastCalendarView));
+        },
         eventClick(info) {
             if (info.event.extendedProps?.isHoliday) {
                 if (info.event.display === 'background') return;
@@ -133,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
         calendar.render();
-        calendarReady = true;
         paintMonthCells();
     } catch (error) {
         console.error('Resource calendar failed to render', error);
@@ -163,12 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendarEmpty = document.getElementById('calendarEmpty');
     if (calendarEmpty) calendarEmpty.hidden = events.length > 0;
 
-    function isTimeGrid() {
-        return ['timeGridWeek', 'timeGridDay'].includes(calendar.view.type);
+    function isTimeGrid(viewType) {
+        return ['timeGridWeek', 'timeGridDay'].includes(viewType);
     }
 
-    function forCalendarView(eventList) {
-        if (!isTimeGrid()) {
+    function forCalendarView(eventList, viewType) {
+        if (!isTimeGrid(viewType)) {
             return [...eventList.map(withEventColors), ...holidays];
         }
 
@@ -191,16 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
     }
 
-    function syncTimeGridEvents() {
-        const view = calendar.view.type;
-        if (lastCalendarView === view) return;
-        const previous = lastCalendarView;
-        lastCalendarView = view;
-        if (previous === null && !isTimeGrid()) return;
-        calendar.removeAllEvents();
-        calendar.addEventSource(forCalendarView(filteredEvents));
-    }
-
     function applyFilters() {
         const selRes = String(resourceFilter.value);
         const selLoc = String(locationFilter.value);
@@ -221,8 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         filteredEvents = filtered;
-        calendar.removeAllEvents();
-        calendar.addEventSource(forCalendarView(filtered));
+        calendar.refetchEvents();
         document.getElementById('calendarEmpty').hidden = filtered.length > 0;
         toggleClear();
         renderUpcoming(filtered);
@@ -712,11 +710,28 @@ document.addEventListener('DOMContentLoaded', () => {
     function uniqueEvents(eventList) {
         const seen = new Set();
         return eventList.filter((event) => {
-            const key = String(event.id || `${event.title}-${event.start}`);
+            const props = event.extendedProps || {};
+            const key = String(props.reservationId || event.id || `${event.title}-${event.start}`);
             if (seen.has(key)) return false;
             seen.add(key);
             return true;
         });
+    }
+
+    function eventsFromMoreLink(info) {
+        let items = uniqueEvents(bookingsOn(info.date));
+        if (items.length) return items;
+        const segs = [...(info.allSegs || []), ...(info.hiddenSegs || [])];
+        return uniqueEvents(segs.map((seg) => {
+            const event = seg.event || {};
+            return {
+                id: event.id,
+                start: event.start,
+                end: event.end,
+                title: event.title,
+                extendedProps: event.extendedProps || {},
+            };
+        }).filter((event) => event.title || event.extendedProps?.resource));
     }
 
     async function showDayEventList(date, eventList) {
@@ -731,13 +746,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const rows = bookings.map((event, index) => {
             const details = event.extendedProps || {};
             const colors = eventColors(details.statusValue);
-            const start = event.start instanceof Date ? event.start : new Date(event.start);
-            const end = event.end instanceof Date ? event.end : new Date(event.end);
-            const meta = [details.location, details.status].filter(Boolean).join(' · ');
+            const start = details.reservationStart ? new Date(details.reservationStart)
+                : details.actualStart ? new Date(details.actualStart)
+                : (event.start instanceof Date ? event.start : new Date(event.start));
+            const end = details.reservationEnd ? new Date(details.reservationEnd)
+                : details.actualEnd ? new Date(details.actualEnd)
+                : (event.end instanceof Date ? event.end : new Date(event.end));
+            const meta = [details.location, details.reference].filter(Boolean).join(' · ');
+            const badge = details.status ? statusBadge(details.statusValue, details.status) : '';
             return `<button type="button" class="rc-day-item" data-index="${index}" style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
-                <span class="rc-day-item-time">${escapeHtml(formatTimeRange(start, end))}</span>
                 <span class="rc-day-item-title">${escapeHtml(details.resource || event.title)}</span>
-                ${meta ? `<span class="rc-day-item-meta">${escapeHtml(meta)}</span>` : ''}
+                <span class="rc-day-item-time">${escapeHtml(formatTimeRange(start, end))}</span>
+                <span class="rc-day-item-meta">${badge}${meta ? `<span>${escapeHtml(meta)}</span>` : ''}</span>
             </button>`;
         }).join('');
         const holidayRow = holiday

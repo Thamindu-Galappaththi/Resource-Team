@@ -408,10 +408,7 @@
     background: #1769c2;
 }
 .fc .fc-more-popover {
-    border: 1px solid #c9d6ee;
-    border-radius: 12px;
-    box-shadow: 0 16px 40px rgba(18, 58, 122, .18);
-    z-index: 20;
+    display: none !important;
 }
 .fc .fc-more-popover .fc-popover-title {
     background: linear-gradient(180deg, #1e4f9c, #1769c2);
@@ -671,8 +668,10 @@
     cursor: pointer;
 }
 .rc-day-item-time {
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.35;
+    white-space: normal;
 }
 .rc-day-item-title {
     font-size: 13px;
@@ -680,8 +679,16 @@
     overflow-wrap: anywhere;
 }
 .rc-day-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
     font-size: 11px;
-    opacity: .85;
+    opacity: .9;
+}
+.rc-day-item-meta .rc-badge {
+    font-size: 10px;
+    padding: 2px 8px;
 }
 .swal2-html-container:has(.rc-holiday-dialog) {
     margin: 0 !important;
