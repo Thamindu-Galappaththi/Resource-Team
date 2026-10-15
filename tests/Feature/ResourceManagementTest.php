@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ReservationType;
 use App\Models\Location;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
@@ -245,6 +246,35 @@ class ResourceManagementTest extends TestCase
             ->assertSee('Hall A', false)
             ->assertSee($start->copy()->timezone('Asia/Colombo')->format('Y-m-d\TH:i:s'), false)
             ->assertDontSee('"start":"T', false);
+    }
+
+    public function test_resource_calendar_uses_nights_and_stay_bounds_for_hostel_bookings(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Moratuwa Single 101', 'status' => 'active']);
+        $start = now('Asia/Colombo')->addDays(5)->setTime(11, 0, 0);
+        $end = $start->copy()->addHours(61);
+        $reservation = Reservation::factory()->create([
+            'requester_id' => $user->id,
+            'created_by_user_id' => $user->id,
+            'type' => ReservationType::HOSTEL->value,
+            'title' => 'Hostel stay',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'resource_id' => $resource->id,
+            'starts_at' => $start->copy()->utc(),
+            'ends_at' => $end->copy()->utc(),
+            'resource_name_snapshot' => 'Moratuwa Single 101',
+        ]);
+
+        $this->actingAs($user)->get(route('resources.calendar'))
+            ->assertOk()
+            ->assertSee('Moratuwa Single 101', false)
+            ->assertSee('2 nights', false)
+            ->assertSee('"reservationType":"hostel"', false)
+            ->assertDontSee('61 hr', false);
     }
 
     public function test_resource_calendar_shows_other_users_bookings_to_developer(): void

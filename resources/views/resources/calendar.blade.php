@@ -149,7 +149,10 @@
             <div class="rc-detail-row"><div class="rc-detail-label">Booking time</div><div id="detailTime" class="rc-detail-value">—</div></div>
             <div class="rc-detail-row"><div class="rc-detail-label">Reserved by</div><div id="detailOwner" class="rc-detail-value">—</div></div>
             <div class="rc-detail-row"><div class="rc-detail-label">Location</div><div id="detailLocation" class="rc-detail-value">—</div></div>
+            <div class="rc-detail-row"><div class="rc-detail-label">Purpose</div><div id="detailPurpose" class="rc-detail-value">—</div></div>
             <div class="rc-detail-row"><div class="rc-detail-label">Status</div><div id="detailStatus" class="rc-detail-value">—</div></div>
+            <div id="detailConflict" class="alert alert-danger mt-2 mb-0" hidden>This booking overlaps another reservation for the same resource.</div>
+            <a id="detailLink" class="btn btn-primary mt-2" hidden>View reservation</a>
         </div>
     </div>
 </div>
@@ -169,5 +172,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=33"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=34"></script>
 @endpush
