@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
     const swalFire = (options) => window.RMSwal?.fire ? window.RMSwal.fire(options) : window.Swal?.fire(options);
     let lastCalendarView = null;
-    let calendarReady = false;
     const upcomingPageSize = 10;
     let upcomingRows = [];
     let upcomingPage = 1;
@@ -49,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectable: false,
         nowIndicator: true,
         dayMaxEvents: 2,
+        lazyFetching: false,
         moreLinkClick(info) {
             info.jsEvent?.preventDefault();
             info.jsEvent?.stopPropagation();
@@ -72,8 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!items.length) return;
             showDayEventList(info.date, holiday ? [holiday, ...items] : items);
         },
-        datesSet() {
-            if (calendarReady) syncTimeGridEvents();
+        datesSet(info) {
+            lastCalendarView = info.view.type;
             queueMicrotask(paintMonthCells);
         },
         headerToolbar: isMobile
@@ -128,7 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
             return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(info.event.title)}</span></div>` };
         },
-        events: [...events.map(withEventColors), ...holidays],
+        events(fetchInfo, success) {
+            success(forCalendarView(filteredEvents, fetchInfo.view?.type || lastCalendarView));
+        },
         eventClick(info) {
             if (info.event.extendedProps?.isHoliday) {
                 if (info.event.display === 'background') return;
@@ -141,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
         calendar.render();
-        calendarReady = true;
         paintMonthCells();
     } catch (error) {
         console.error('Resource calendar failed to render', error);
@@ -171,12 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendarEmpty = document.getElementById('calendarEmpty');
     if (calendarEmpty) calendarEmpty.hidden = events.length > 0;
 
-    function isTimeGrid() {
-        return ['timeGridWeek', 'timeGridDay'].includes(calendar.view.type);
+    function isTimeGrid(viewType) {
+        return ['timeGridWeek', 'timeGridDay'].includes(viewType);
     }
 
-    function forCalendarView(eventList) {
-        if (!isTimeGrid()) {
+    function forCalendarView(eventList, viewType) {
+        if (!isTimeGrid(viewType)) {
             return [...eventList.map(withEventColors), ...holidays];
         }
 
@@ -199,16 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
     }
 
-    function syncTimeGridEvents() {
-        const view = calendar.view.type;
-        if (lastCalendarView === view) return;
-        const previous = lastCalendarView;
-        lastCalendarView = view;
-        if (previous === null && !isTimeGrid()) return;
-        calendar.removeAllEvents();
-        calendar.addEventSource(forCalendarView(filteredEvents));
-    }
-
     function applyFilters() {
         const selRes = String(resourceFilter.value);
         const selLoc = String(locationFilter.value);
@@ -229,8 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         filteredEvents = filtered;
-        calendar.removeAllEvents();
-        calendar.addEventSource(forCalendarView(filtered));
+        calendar.refetchEvents();
         document.getElementById('calendarEmpty').hidden = filtered.length > 0;
         toggleClear();
         renderUpcoming(filtered);

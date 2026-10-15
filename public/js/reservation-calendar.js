@@ -22,6 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let bookings = [];
     let holidays = [];
+    let loadedRangeStart = null;
+    let loadedRangeEnd = null;
+    let lastViewType = null;
+    let lastStatsKey = '';
+    let eventsRequest = 0;
 
     const inputTimeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
     const partsFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -116,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectAllow: (info) => info.view.type !== 'dayGridMonth',
         nowIndicator: true,
         dayMaxEvents: 2,
+        lazyFetching: false,
         moreLinkClick(info) {
             info.jsEvent?.preventDefault();
             info.jsEvent?.stopPropagation();
@@ -131,35 +137,21 @@ document.addEventListener('DOMContentLoaded', () => {
         eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
         slotLabelFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
         displayEventTime: true,
-        events: async (fetchInfo, success, failure) => {
+        events(fetchInfo, success, failure) {
             if (!filters) {
                 failure(new Error('Calendar filters are missing.'));
                 return;
             }
+            const viewType = fetchInfo.view?.type || lastViewType;
             if (bookings.length || holidays.length) {
-                success(forCalendarView(bookings, holidays));
+                success(forCalendarView(bookings, holidays, viewType));
                 queueMicrotask(paintMonthCells);
             }
-            const params = new URLSearchParams({ start: fetchInfo.startStr, end: fetchInfo.endStr });
-            new FormData(filters).forEach((value, key) => {
-                if (value && key !== 'year' && key !== 'month') params.set(key, value);
-            });
-            try {
-                const response = await fetch(`${calendarElement.dataset.eventsUrl}?${params}`, {
-                    headers: { Accept: 'application/json' },
-                });
-                if (!response.ok) throw new Error('Reservations could not be loaded.');
-                const events = await response.json();
-                bookings = events.filter((event) => !event.extendedProps?.isHoliday);
-                holidays = events.filter((event) => event.extendedProps?.isHoliday);
-                if (empty) empty.hidden = bookings.length > 0;
-                if (loading) loading.hidden = true;
-                success(forCalendarView(bookings, holidays));
-                queueMicrotask(paintMonthCells);
-            } catch (error) {
-                if (loading) loading.hidden = true;
-                if (!bookings.length && !holidays.length) failure(error);
-            }
+            const start = Date.parse(fetchInfo.startStr);
+            const end = Date.parse(fetchInfo.endStr);
+            const covered = loadedRangeStart != null && loadedRangeStart <= start && loadedRangeEnd >= end;
+            if (covered) return;
+            loadCalendarEvents(fetchInfo, success, failure);
         },
         eventDidMount(info) {
             const details = info.event.extendedProps || {};
@@ -230,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
             calendar.unselect();
         },
         datesSet(info) {
+            lastViewType = info.view.type;
             const date = info.view.currentStart;
             const year = String(date.getFullYear());
             const month = String(date.getMonth() + 1);
@@ -237,26 +230,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const monthInput = document.getElementById('rsv-month');
             if (yearInput) yearInput.value = year;
             if (monthInput) monthInput.value = month;
-            const params = new URLSearchParams({ year, month });
-            if (filters) {
-                new FormData(filters).forEach((value, key) => {
-                    if (value && key !== 'year' && key !== 'month') params.set(key, value);
-                });
+            const statsKey = `${year}-${month}`;
+            if (statsKey !== lastStatsKey) {
+                lastStatsKey = statsKey;
+                const params = new URLSearchParams({ year, month });
+                if (filters) {
+                    new FormData(filters).forEach((value, key) => {
+                        if (value && key !== 'year' && key !== 'month') params.set(key, value);
+                    });
+                }
+                fetch(`${window.RSVCal?.calendarUrl || '/reservations/calendar'}?${params}`, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                }).then((response) => (response.ok ? response.json() : null)).then((payload) => {
+                    if (!payload?.stats) return;
+                    const monthStat = document.getElementById('rsv-stat-month');
+                    const todayStat = document.getElementById('rsv-stat-today');
+                    const pendingStat = document.getElementById('rsv-stat-pending');
+                    const approvedStat = document.getElementById('rsv-stat-approved');
+                    if (monthStat) monthStat.textContent = payload.stats.month;
+                    if (todayStat) todayStat.textContent = payload.stats.today;
+                    if (pendingStat) pendingStat.textContent = payload.stats.pending;
+                    if (approvedStat) approvedStat.textContent = payload.stats.approved;
+                }).catch(() => {});
             }
-            fetch(`${window.RSVCal?.calendarUrl || '/reservations/calendar'}?${params}`, {
-                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            }).then((response) => (response.ok ? response.json() : null)).then((payload) => {
-                if (!payload?.stats) return;
-                const monthStat = document.getElementById('rsv-stat-month');
-                const todayStat = document.getElementById('rsv-stat-today');
-                const pendingStat = document.getElementById('rsv-stat-pending');
-                const approvedStat = document.getElementById('rsv-stat-approved');
-                if (monthStat) monthStat.textContent = payload.stats.month;
-                if (todayStat) todayStat.textContent = payload.stats.today;
-                if (pendingStat) pendingStat.textContent = payload.stats.pending;
-                if (approvedStat) approvedStat.textContent = payload.stats.approved;
-            }).catch(() => {});
-            compactTimeGridEvents();
             queueMicrotask(paintMonthCells);
         },
         eventsSet() {
@@ -276,10 +272,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     filters?.addEventListener('change', () => {
         toggleClear();
+        resetLoadedRange();
         calendar.refetchEvents();
     });
     filters?.addEventListener('submit', (event) => {
         event.preventDefault();
+        resetLoadedRange();
         calendar.refetchEvents();
     });
     clearFiltersButton?.addEventListener('click', () => {
@@ -289,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.RMSelect.setValue(id, '', filterLabels[id]);
         });
         toggleClear();
+        resetLoadedRange();
         calendar.refetchEvents();
     });
     toggleClear();
@@ -301,6 +300,41 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) calendar.refetchEvents();
     });
+
+    function resetLoadedRange() {
+        loadedRangeStart = null;
+        loadedRangeEnd = null;
+    }
+
+    function loadCalendarEvents(fetchInfo, success, failure) {
+        const requestId = ++eventsRequest;
+        const params = new URLSearchParams({ start: fetchInfo.startStr, end: fetchInfo.endStr });
+        new FormData(filters).forEach((value, key) => {
+            if (value && key !== 'year' && key !== 'month') params.set(key, value);
+        });
+        fetch(`${calendarElement.dataset.eventsUrl}?${params}`, {
+            headers: { Accept: 'application/json' },
+        }).then((response) => {
+            if (!response.ok) throw new Error('Reservations could not be loaded.');
+            return response.json();
+        }).then((events) => {
+            if (requestId !== eventsRequest) return;
+            bookings = events.filter((event) => !event.extendedProps?.isHoliday);
+            holidays = events.filter((event) => event.extendedProps?.isHoliday);
+            const start = Date.parse(fetchInfo.startStr);
+            const end = Date.parse(fetchInfo.endStr);
+            loadedRangeStart = loadedRangeStart == null ? start : Math.min(loadedRangeStart, start);
+            loadedRangeEnd = loadedRangeEnd == null ? end : Math.max(loadedRangeEnd, end);
+            if (empty) empty.hidden = bookings.length > 0;
+            if (loading) loading.hidden = true;
+            success(forCalendarView(bookings, holidays, fetchInfo.view?.type || lastViewType));
+            queueMicrotask(paintMonthCells);
+        }).catch((error) => {
+            if (requestId !== eventsRequest) return;
+            if (loading) loading.hidden = true;
+            if (!bookings.length && !holidays.length) failure(error);
+        });
+    }
 
     function dateKey(value) {
         if (value instanceof Date && !Number.isNaN(value.getTime())) {
@@ -489,31 +523,12 @@ document.addEventListener('DOMContentLoaded', () => {
         modal?.setAttribute('aria-hidden', 'true');
     }
 
-    function isTimeGrid() {
-        return ['timeGridWeek', 'timeGridDay'].includes(calendar.view.type);
+    function isTimeGrid(viewType) {
+        return ['timeGridWeek', 'timeGridDay'].includes(viewType);
     }
 
-    function compactTimeGridEvents() {
-        if (!isTimeGrid()) return;
-        const compactMs = 45 * 60 * 1000;
-        const toRemove = [];
-        calendar.batchRendering(() => {
-            calendar.getEvents().forEach((event) => {
-                if (event.extendedProps?.isHoliday && event.display === 'background') {
-                    toRemove.push(event);
-                    return;
-                }
-                if (event.extendedProps?.isHoliday || !event.start) return;
-                const compactEnd = new Date(event.start.getTime() + compactMs);
-                if (event.end && event.end.getTime() <= compactEnd.getTime() + 1000) return;
-                event.setEnd(compactEnd);
-            });
-            toRemove.forEach((event) => event.remove());
-        });
-    }
-
-    function forCalendarView(eventList, holidayList) {
-        if (!isTimeGrid()) {
+    function forCalendarView(eventList, holidayList, viewType) {
+        if (!isTimeGrid(viewType)) {
             return [...eventList.map(withEventColors), ...holidayList];
         }
 
