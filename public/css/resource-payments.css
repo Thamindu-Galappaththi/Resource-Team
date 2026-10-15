@@ -169,6 +169,7 @@
 .rp-invoice-header h2 { margin: .1rem 0 .2rem; color: #132033; font-size: 1.2rem; font-weight: 800; }
 .rp-invoice-header > div > span:last-child { color: #718096; font-size: .7rem; }
 .rp-status { padding: .28rem .55rem; border-radius: 999px; background: #fff3d7; color: #946414; font-size: .58rem; font-weight: 800; letter-spacing: .05em; white-space: nowrap; }
+.rp-print-button:disabled { cursor: not-allowed; opacity: .48; }
 .rp-invoice-body { padding: 1rem 1.1rem .85rem; }
 .rp-invoice-recipient { display: grid; gap: .18rem; padding-bottom: .8rem; border-bottom: 1px solid #e8edf3; }
 .rp-invoice-recipient span { color: #8090a2; font-size: .66rem; }

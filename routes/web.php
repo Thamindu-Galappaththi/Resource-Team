@@ -13,6 +13,7 @@ use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ResourceCalendarController;
 use App\Http\Controllers\ResourceCategoryController;
 use App\Http\Controllers\ResourceController;
+use App\Http\Controllers\ResourcePaymentController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\LectureFeeController;
@@ -90,8 +91,10 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/lecture-fees', [LectureFeeController::class, 'index'])->middleware('permission:payments.view')->name('lecture-fees');
-        Route::get('/resources', [\App\Http\Controllers\ResourcePaymentController::class, 'index'])->middleware('permission:payments.view')->name('resources');
-        Route::get('/resources/lookup', [\App\Http\Controllers\ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
+        Route::get('/resources', [ResourcePaymentController::class, 'index'])->middleware('permission:payments.view')->name('resources');
+        Route::get('/resources/lookup', [ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
+        Route::get('/resources/invoices/{reference}/print', [ResourcePaymentController::class, 'print'])->middleware('permission:payments.view')->name('resources.print');
+        Route::get('/resources/invoices/{reference}/print', [\App\Http\Controllers\ResourcePaymentController::class, 'print'])->middleware('permission:payments.view')->name('resources.print');
     });
 
     Route::get('/reports', fn () => view('reports.index'))->middleware('permission:reports.view')->name('reports.index');
