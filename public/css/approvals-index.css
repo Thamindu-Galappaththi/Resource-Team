@@ -41,17 +41,40 @@
     color: #65738a;
     font-size: .9rem;
 }
-.ap-page .ap-decision-comment {
+.ap-page .ap-decision-comment,
+.rsv-modal .ap-decision-comment {
     min-height: 88px;
     padding: .7rem .9rem;
     resize: vertical;
 }
-.ap-page .ap-decision-actions {
+.ap-page .ap-decision-actions,
+.rsv-modal .ap-decision-actions {
     display: flex;
     flex-wrap: wrap;
     gap: .5rem;
 }
-.ap-page .ap-decision-actions .btn { min-height: 42px; }
+.ap-page .ap-decision-actions .btn,
+.rsv-modal .ap-decision-actions .btn { min-height: 42px; }
+.rsv-modal .rsv-modal-heading {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .4rem .75rem;
+}
+.rsv-modal .rsv-modal-heading .modal-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.rsv-modal .rsv-modal-heading .rsv-modal-sub {
+    flex: 1 1 100%;
+}
+.rsv-modal .rsv-modal-heading .badge {
+    margin: 0;
+    flex: 0 0 auto;
+}
 
 .ap-page .rsv-search-group .form-control::placeholder {
     color: #7d8aa0;
@@ -64,26 +87,100 @@
     white-space: nowrap;
 }
 
+@media (max-width: 1199.98px) {
+    .ap-page .rsv-purpose {
+        max-width: none;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+    }
+}
+
 @media (max-width: 991.98px) {
     .ap-page .ap-panel-title {
         flex-direction: column;
         align-items: flex-start;
         gap: .25rem;
     }
+    .ap-page .rsv-hide-md { display: none !important; }
 }
 
 @media (max-width: 767.98px) {
+    .ap-page.container-fluid {
+        padding-left: .75rem;
+        padding-right: .75rem;
+    }
     .ap-page .rsv-header { padding: 1rem 1.1rem; }
     .ap-page .rsv-header-actions,
     .ap-page .rsv-header-btn { width: 100%; }
-    .ap-page .ap-decision-actions .btn {
-        flex: 1 1 100%;
-    }
+    .ap-page .ap-stats .rsv-stat { min-height: 96px; }
+    .ap-page .rsv-stat-number { font-size: 1.25rem; }
     .ap-page .rsv-purpose {
         max-width: none;
         white-space: normal;
         overflow: visible;
         text-overflow: unset;
+    }
+    .rsv-modal .modal-dialog {
+        width: calc(100vw - 1rem);
+        max-width: none;
+        margin: .5rem auto;
+    }
+    .rsv-modal .modal-content {
+        max-height: calc(100vh - 1rem);
+    }
+    .rsv-modal .modal-header {
+        align-items: flex-start;
+        gap: 10px;
+        padding: 1rem 3.15rem 1rem 1rem;
+    }
+    .rsv-modal .rsv-modal-heading {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: .35rem;
+    }
+    .rsv-modal .modal-title {
+        font-size: 1.05rem;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+    .rsv-modal .modal-header .badge {
+        margin: 0;
+    }
+    .rsv-modal .modal-body { padding: .9rem 1rem 1rem; }
+    .rsv-modal .ap-decision-actions {
+        flex-direction: column;
+    }
+    .ap-page .ap-decision-actions .btn,
+    .rsv-modal .ap-decision-actions .btn {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+    .ap-page .rsv-pager,
+    .ap-page .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .ap-page .ap-stats {
+        gap: 8px;
+    }
+    .ap-page .ap-stats .rsv-stat {
+        min-height: 88px;
+        padding: .85rem !important;
+    }
+    .ap-page .rsv-stat-icon {
+        width: 32px;
+        height: 32px;
+        font-size: .95rem;
+    }
+    .rsv-modal-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1.05rem;
     }
 }
 
@@ -179,9 +276,6 @@
     -webkit-backdrop-filter: blur(4px);
 }
 
-@media (max-width: 991.98px) {
-    .ap-page .rsv-hide-md { display: none !important; }
-}
 @media (max-width: 575.98px) {
     .rm-swal-btn { min-width: calc(50% - .4rem); }
 }
