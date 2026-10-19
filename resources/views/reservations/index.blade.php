@@ -168,8 +168,9 @@
 <script>
 window.RSVIndex = {
     url: @json(route('reservations.index')),
+    feed: @json(route('reservations.feed')),
     payload: @json($payload),
 };
 </script>
-<script src="{{ asset('js/reservation-index.js') }}?v=6"></script>
+<script src="{{ asset('js/reservation-index.js') }}?v=8"></script>
 @endpush

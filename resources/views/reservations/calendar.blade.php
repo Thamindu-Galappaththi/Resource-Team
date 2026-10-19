@@ -116,9 +116,10 @@
 <script>
     window.RSVCal = {
         calendarUrl: @json(route('reservations.calendar')),
+        statsUrl: @json(route('reservations.calendar.stats')),
         holidayImageBase: @json(asset('images/holidays')),
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=13"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=14"></script>
 @endpush

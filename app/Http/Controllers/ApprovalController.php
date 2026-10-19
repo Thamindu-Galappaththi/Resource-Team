@@ -14,6 +14,7 @@ use App\Services\ReservationBookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -22,22 +23,28 @@ class ApprovalController extends Controller
 {
     public function __construct(private readonly ReservationBookingService $bookings) {}
 
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): Response
+    {
+        return $this->htmlPage('approvals.index', $this->indexViewData($request));
+    }
+
+    public function feed(Request $request): JsonResponse
+    {
+        return $this->uncachedJson($this->indexPayload($request));
+    }
+
+    private function indexViewData(Request $request): array
     {
         $payload = $this->indexPayload($request);
 
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json($payload);
-        }
-
-        return view('approvals.index', [
+        return [
             'payload' => $payload,
             'categories' => ResourceCategory::query()->orderBy('name')->get(),
             'locations' => Location::query()->ordered()->get(),
             'filters' => $payload['filters'],
             'hasFilters' => $payload['meta']['has_filters'],
             'canDecide' => $payload['can_decide'],
-        ]);
+        ];
     }
 
     public function special(Request $request): View
@@ -184,7 +191,8 @@ class ApprovalController extends Controller
             ->orderBy('reservation_date')
             ->orderBy('start_time')
             ->paginate(10, ['*'], 'pending_page')
-            ->withQueryString();
+            ->withQueryString()
+            ->setPath(route('approvals.index'));
 
         $history = $this->applyListFilters(
             (clone $base)->whereIn('status', [
@@ -198,7 +206,8 @@ class ApprovalController extends Controller
             ->with($relations)
             ->latest('updated_at')
             ->paginate(10, ['*'], 'history_page')
-            ->withQueryString();
+            ->withQueryString()
+            ->setPath(route('approvals.index'));
 
         return [
             'pending' => $pending->getCollection()->map(fn (Reservation $reservation) => $this->present($reservation))->values(),

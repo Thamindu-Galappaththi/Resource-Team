@@ -175,13 +175,28 @@
         document.body.style.removeProperty('padding-right');
     }
 
+    function pageUrl(url) {
+        const source = new URL(url || config.url, window.location.origin);
+        const page = new URL(config.url, window.location.origin);
+        page.search = source.search;
+        page.searchParams.delete('partial');
+        return page;
+    }
+
+    function feedUrl(url) {
+        const page = pageUrl(url);
+        const feed = new URL(config.feed, window.location.origin);
+        feed.search = page.search;
+        return feed.toString();
+    }
+
     function fetchList(url, push = true) {
         closeModals();
         const target = url || `${config.url}${Object.keys(currentParams()).length ? `?${new URLSearchParams(currentParams())}` : ''}`;
         if (request) request.abort();
         setLoading(true);
         request = new AbortController();
-        fetch(target, { headers: headers(), signal: request.signal, credentials: 'same-origin' })
+        fetch(feedUrl(target), { headers: headers(), signal: request.signal, credentials: 'same-origin', cache: 'no-store' })
             .then((response) => {
                 if (!response.ok) throw new Error('Could not update the list.');
                 return response.json();
@@ -189,8 +204,8 @@
             .then((payload) => {
                 render(payload);
                 if (push) {
-                    const next = new URL(target, window.location.origin);
-                    history.replaceState({}, '', `${window.location.pathname}${next.search}`);
+                    const page = pageUrl(target);
+                    history.replaceState({}, '', `${page.pathname}${page.search}`);
                 }
             })
             .catch((error) => {

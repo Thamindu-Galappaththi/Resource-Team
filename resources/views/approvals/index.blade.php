@@ -169,9 +169,10 @@
 <script>
     window.APIndex = {
         url: @json(route('approvals.index')),
+        feed: @json(route('approvals.feed')),
         canDecide: @json($canDecide),
         payload: @json($payload),
     };
 </script>
-<script src="{{ asset('js/approvals-index.js') }}?v=4"></script>
+<script src="{{ asset('js/approvals-index.js') }}?v=7"></script>
 @endpush

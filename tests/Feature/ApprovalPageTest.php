@@ -59,11 +59,17 @@ class ApprovalPageTest extends TestCase
             ->assertDontSee('Hide this request', false);
 
         $json = $this->actingAs($admin)
-            ->getJson(route('approvals.index', ['search' => $keep->reference]))
+            ->getJson(route('approvals.feed', ['search' => $keep->reference]))
             ->assertOk()
             ->json();
         $this->assertTrue(collect($json['pending'])->contains(fn ($row) => $row['reference'] === $keep->reference));
         $this->assertFalse(collect($json['pending'])->contains(fn ($row) => $row['title'] === 'Hide this request'));
+
+        $this->actingAs($admin)
+            ->getJson(route('approvals.index', ['search' => $keep->reference]))
+            ->assertOk()
+            ->assertHeader('content-type', 'text/html; charset=UTF-8')
+            ->assertSee('Approvals', false);
     }
 
     public function test_pending_pagination_uses_named_page_query(): void

@@ -138,7 +138,8 @@ $(function () {
     }
 
     function fetchUsers(url) {
-        const requestUrl = url || (indexUrl + ($.param(currentParams()) ? '?' + $.param(currentParams()) : ''));
+        const pageUrl = url || (indexUrl + ($.param(currentParams()) ? '?' + $.param(currentParams()) : ''));
+        const requestUrl = pageUrl + (pageUrl.indexOf('?') === -1 ? '?' : '&') + 'partial=1';
 
         if (request) {
             request.abort();
@@ -149,10 +150,11 @@ $(function () {
             url: requestUrl,
             method: 'GET',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            cache: false,
         }).done(function (html) {
             $('#um-results').html(html);
             if (window.history && window.history.pushState) {
-                window.history.pushState({}, '', requestUrl);
+                window.history.pushState({}, '', pageUrl);
             }
             toggleClear();
         }).always(function () {
