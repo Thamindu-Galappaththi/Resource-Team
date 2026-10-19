@@ -15,6 +15,13 @@ class NotificationController extends Controller
         return response()->json(['success' => true, 'unread_count' => 0]);
     }
 
+    public function clearAll(Request $request): JsonResponse
+    {
+        $request->user()->notifications()->delete();
+
+        return response()->json(['success' => true, 'unread_count' => 0]);
+    }
+
     public function markRead(Request $request, string $notification): JsonResponse
     {
         $item = $this->notificationForUser($request, $notification);
@@ -27,6 +34,14 @@ class NotificationController extends Controller
     {
         $item = $this->notificationForUser($request, $notification);
         $item->markAsUnread();
+
+        return $this->statusResponse($request);
+    }
+
+    public function destroy(Request $request, string $notification): JsonResponse
+    {
+        $item = $this->notificationForUser($request, $notification);
+        $item->delete();
 
         return $this->statusResponse($request);
     }
