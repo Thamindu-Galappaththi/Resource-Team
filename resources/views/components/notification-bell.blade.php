@@ -25,7 +25,8 @@
             @forelse ($headerNotifications as $notification)
                 <div class="nb-item {{ $notification['unread'] ? 'is-unread' : '' }}" data-notification-id="{{ $notification['id'] }}"
                     data-read-url="{{ route('notifications.read', $notification['id']) }}"
-                    data-unread-url="{{ route('notifications.unread', $notification['id']) }}">
+                    data-unread-url="{{ route('notifications.unread', $notification['id']) }}"
+                    data-delete-url="{{ route('notifications.destroy', $notification['id']) }}">
                     @if ($notification['url'])
                         <a class="nb-content" href="{{ $notification['url'] }}">
                     @else
@@ -40,6 +41,9 @@
                     <button type="button" class="nb-status" aria-label="{{ $notification['unread'] ? 'Mark as read' : 'Mark as unread' }}"
                         title="{{ $notification['unread'] ? 'Mark as read' : 'Mark as unread' }}">
                         <i class="ti {{ $notification['unread'] ? 'ti-mail' : 'ti-mail-opened' }}"></i>
+                    </button>
+                    <button type="button" class="nb-delete" aria-label="Delete notification" title="Delete notification">
+                        <i class="ti ti-trash"></i>
                     </button>
                 </div>
             @empty

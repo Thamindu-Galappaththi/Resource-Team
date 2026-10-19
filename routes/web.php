@@ -184,6 +184,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/mark-read', 'markAllRead')->name('mark-read');
         Route::post('/{notification}/read', 'markRead')->name('read');
         Route::post('/{notification}/unread', 'markUnread')->name('unread');
+        Route::delete('/{notification}', 'destroy')->name('destroy');
     });
 
     Route::prefix('logout')->controller(AuthController::class)->group(function () {

@@ -99,6 +99,18 @@
     color: inherit;
     text-decoration: none;
     transition: background-color 0.15s ease;
+    touch-action: pan-y;
+    will-change: transform, opacity;
+}
+
+.nb-item.is-dismissing {
+    transform: translateX(105%);
+    opacity: 0;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.nb-item.nb-delete-failed {
+    background: #fef0f0;
 }
 
 .nb-content {
@@ -138,6 +150,26 @@
 .nb-status:disabled {
     opacity: 0.55;
     cursor: wait;
+}
+
+.nb-delete {
+    display: grid;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #9aa3ae;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+.nb-delete:hover,
+.nb-delete:focus-visible {
+    background: #fef0f0;
+    color: #c0393e;
 }
 
 .nb-item:last-child {

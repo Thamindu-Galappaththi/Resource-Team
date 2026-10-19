@@ -38,6 +38,14 @@ class NotificationController extends Controller
         return $this->statusResponse($request);
     }
 
+    public function destroy(Request $request, string $notification): JsonResponse
+    {
+        $item = $this->notificationForUser($request, $notification);
+        $item->delete();
+
+        return $this->statusResponse($request);
+    }
+
     private function notificationForUser(Request $request, string $id): DatabaseNotification
     {
         return $request->user()->notifications()->whereKey($id)->firstOrFail();
