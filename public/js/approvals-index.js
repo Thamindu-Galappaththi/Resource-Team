@@ -45,6 +45,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (clearButton) clearButton.disabled = !hasFilters();
     }
 
+    function showFlash(message, type = 'success') {
+        const flash = document.getElementById('ap-flash');
+        if (!flash || !message) return;
+        flash.className = `alert alert-${type} rsv-auto-alert`;
+        flash.textContent = message;
+        flash.style.opacity = '1';
+        clearTimeout(flash._apTimer);
+        flash._apTimer = setTimeout(() => {
+            flash.style.transition = 'opacity .3s ease';
+            flash.style.opacity = '0';
+            setTimeout(() => {
+                flash.classList.add('d-none');
+                flash.style.opacity = '';
+                flash.textContent = '';
+            }, 300);
+        }, 5000);
+    }
+
     function headers() {
         return {
             Accept: 'application/json',
@@ -300,16 +318,52 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (!result.isConfirmed) return;
 
-        const formEl = document.createElement('form');
-        formEl.method = 'POST';
-        formEl.action = row.archive_url;
-        formEl.innerHTML = `
-            <input type="hidden" name="_token" value="${escapeHtml(csrf || '')}">
-            <input type="hidden" name="_method" value="DELETE">
-            <input type="hidden" name="archive_reason" value="${escapeHtml(String(result.value || '').trim())}">
-        `;
-        document.body.appendChild(formEl);
-        formEl.submit();
+        swalFire({
+            title: 'Removing...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            customClass: {
+                ...window.RMSwal.base.customClass,
+                popup: 'rm-swal is-busy',
+                container: 'rm-swal-backdrop',
+            },
+            didOpen: () => Swal.showLoading(),
+        });
+
+        try {
+            const response = await fetch(row.archive_url, {
+                method: 'POST',
+                headers: {
+                    ...headers(),
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                credentials: 'same-origin',
+                body: new URLSearchParams({
+                    _token: csrf || '',
+                    _method: 'DELETE',
+                    archive_reason: String(result.value || '').trim(),
+                }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const reason = payload.errors?.archive_reason?.[0];
+                throw new Error(reason || payload.message || 'Could not remove this reservation.');
+            }
+            Swal.close();
+            showFlash(payload.status || 'Reservation removed from Approvals.');
+            fetchList(window.location.href, false);
+        } catch (error) {
+            await swalFire({
+                icon: 'error',
+                title: 'Remove failed',
+                text: error.message || 'Could not remove this reservation.',
+                customClass: {
+                    ...window.RMSwal.base.customClass,
+                    container: 'rm-swal-backdrop',
+                },
+            });
+        }
     }
 
     document.querySelectorAll('.rsv-auto-alert').forEach((alert) => {

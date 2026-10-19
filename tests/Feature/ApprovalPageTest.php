@@ -106,6 +106,13 @@ class ApprovalPageTest extends TestCase
         $this->actingAs($admin)->get(route('approvals.index'))
             ->assertOk()
             ->assertDontSee('Needs removal', false);
+
+        $ajax = $this->pendingReservation($requester, $resource, 'Needs ajax removal');
+        $this->actingAs($admin)
+            ->deleteJson(route('approvals.archive', $ajax), ['archive_reason' => 'Duplicate request'])
+            ->assertOk()
+            ->assertJsonPath('status', 'Reservation removed from Approvals. Its reservation and history remain available in Existing Reservations.');
+        $this->assertNotNull($ajax->fresh()->approval_archived_at);
     }
 
     public function test_special_approvals_page_matches_the_shared_layout_and_records_an_override(): void

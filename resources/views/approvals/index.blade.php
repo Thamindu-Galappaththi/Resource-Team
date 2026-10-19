@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=7">
+<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=8">
 @endpush
 
 @section('content')
@@ -39,6 +39,7 @@
     @if($errors->any())
         <div class="alert alert-danger rsv-auto-alert" role="alert">{{ $errors->first() }}</div>
     @endif
+    <div id="ap-flash" class="alert alert-success rsv-auto-alert d-none" role="status"></div>
 
     <div class="ap-stats">
         <div class="rsv-stat p-3" style="--stat-color:#d97706;--stat-icon-bg:#fff4e5">
@@ -174,5 +175,5 @@
         payload: @json($payload),
     };
 </script>
-<script src="{{ asset('js/approvals-index.js') }}?v=8"></script>
+<script src="{{ asset('js/approvals-index.js') }}?v=11"></script>
 @endpush

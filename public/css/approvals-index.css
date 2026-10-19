@@ -139,7 +139,6 @@
 .rm-swal-icon { margin: 1.1rem auto .15rem !important; }
 .rm-swal textarea.swal2-textarea,
 .rm-swal-input {
-    display: block !important;
     min-height: 96px !important;
     margin: .35rem 1.4rem 1rem !important;
     width: calc(100% - 2.8rem) !important;
@@ -150,6 +149,11 @@
     border: 1px solid #cbd3da !important;
     border-radius: .65rem !important;
     box-shadow: none !important;
+}
+.rm-swal.is-busy textarea.swal2-textarea,
+.rm-swal.is-busy .swal2-input,
+.rm-swal.is-busy .swal2-html-container:empty {
+    display: none !important;
 }
 .rm-swal-actions {
     display: flex !important;

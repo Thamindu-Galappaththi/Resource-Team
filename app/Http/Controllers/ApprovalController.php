@@ -70,7 +70,7 @@ class ApprovalController extends Controller
         return $this->applyDecision($request, $reservation, false);
     }
 
-    public function archive(Request $request, Reservation $reservation): RedirectResponse
+    public function archive(Request $request, Reservation $reservation): RedirectResponse|JsonResponse
     {
         $this->authorizeApprover($request->user());
         abort_unless($this->visibleQuery($request->user())->whereKey($reservation->id)->exists(), 403);
@@ -106,7 +106,13 @@ class ApprovalController extends Controller
             }
         });
 
-        return back()->with('success', 'Reservation removed from Approvals. Its reservation and history remain available in Existing Reservations.');
+        $message = 'Reservation removed from Approvals. Its reservation and history remain available in Existing Reservations.';
+
+        if ($request->expectsJson()) {
+            return response()->json(['status' => $message]);
+        }
+
+        return back()->with('success', $message);
     }
 
     private function applyDecision(Request $request, Reservation $reservation, bool $specialOverride): RedirectResponse

@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=7">
+<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=8">
 @endpush
 
 @section('content')
@@ -188,5 +188,5 @@
         payload: @json($payload),
     };
 </script>
-<script src="{{ asset('js/approvals-index.js') }}?v=8"></script>
+<script src="{{ asset('js/approvals-index.js') }}?v=11"></script>
 @endpush
