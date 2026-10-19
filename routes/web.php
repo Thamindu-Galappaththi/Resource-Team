@@ -71,7 +71,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('approvals')->name('approvals.')->group(function () {
         Route::get('/', [ApprovalController::class, 'index'])->middleware('permission:approvals.index')->name('index');
         Route::post('/{reservation}/decision', [ApprovalController::class, 'decide'])->middleware('permission:approvals.index')->name('decision');
-        Route::get('/special', fn () => view('approvals.special'))->middleware('permission:approvals.special')->name('special');
+        Route::delete('/{reservation}', [ApprovalController::class, 'archive'])->middleware('permission:approvals.index')->name('archive');
+        Route::get('/special', [ApprovalController::class, 'special'])->middleware('permission:approvals.special')->name('special');
+        Route::post('/{reservation}/special-decision', [ApprovalController::class, 'specialDecision'])->middleware('permission:approvals.special')->name('special-decision');
     });
 
     Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
