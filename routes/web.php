@@ -13,6 +13,7 @@ use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\ResourceCalendarController;
 use App\Http\Controllers\ResourceCategoryController;
 use App\Http\Controllers\ResourceController;
+use App\Http\Controllers\ResourcePaymentController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\LectureFeeController;
@@ -71,7 +72,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('approvals')->name('approvals.')->group(function () {
         Route::get('/', [ApprovalController::class, 'index'])->middleware('permission:approvals.index')->name('index');
         Route::post('/{reservation}/decision', [ApprovalController::class, 'decide'])->middleware('permission:approvals.index')->name('decision');
-        Route::get('/special', fn () => view('approvals.special'))->middleware('permission:approvals.special')->name('special');
+        Route::delete('/{reservation}', [ApprovalController::class, 'archive'])->middleware('permission:approvals.index')->name('archive');
+        Route::get('/special', [ApprovalController::class, 'special'])->middleware('permission:approvals.special')->name('special');
+        Route::post('/{reservation}/special-decision', [ApprovalController::class, 'specialDecision'])->middleware('permission:approvals.special')->name('special-decision');
     });
 
     Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
@@ -91,8 +94,10 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/lecture-fees', [LectureFeeController::class, 'index'])->middleware('permission:payments.view')->name('lecture-fees');
-        Route::get('/resources', [\App\Http\Controllers\ResourcePaymentController::class, 'index'])->middleware('permission:payments.view')->name('resources');
-        Route::get('/resources/lookup', [\App\Http\Controllers\ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
+        Route::get('/resources', [ResourcePaymentController::class, 'index'])->middleware('permission:payments.view')->name('resources');
+        Route::get('/resources/lookup', [ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
+        Route::get('/resources/invoices/{reference}/print', [ResourcePaymentController::class, 'print'])->middleware('permission:payments.view')->name('resources.print');
+        Route::post('/resources/usage/confirm', [ResourcePaymentController::class, 'confirmUsage'])->middleware('permission:payments.view')->name('resources.usage.confirm');
     });
 
     Route::prefix('reports')->name('reports.')->middleware('permission:reports.view')->controller(ReportController::class)->group(function () {
@@ -184,9 +189,11 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
+        Route::post('/clear-all', 'clearAll')->name('clear-all');
         Route::post('/mark-read', 'markAllRead')->name('mark-read');
         Route::post('/{notification}/read', 'markRead')->name('read');
         Route::post('/{notification}/unread', 'markUnread')->name('unread');
+        Route::delete('/{notification}', 'destroy')->name('destroy');
     });
 
     Route::prefix('logout')->controller(AuthController::class)->group(function () {
