@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ReservationItemStatus;
 use App\Models\Reservation;
 
 class ResourceReservationFeeCalculator
@@ -11,7 +12,7 @@ class ResourceReservationFeeCalculator
      * Rate snapshots may store a fixed amount (`amount`/`rate`) or an hourly
      * rate (`hourly_rate` in major units, or `hourly_rate_minor`).
      *
-     * @return array{base_fee: float, extra_hours: float, extra_hourly_rate: float, extra_hour_fee: float, total: float, has_rate: bool, has_extra_hourly_rate: bool}
+     * @return array{base_fee: float, extra_hours: float, extra_hourly_rate: float, extra_hour_fee: float, tax_fee: float, service_fee: float, discount: float, total: float, has_rate: bool, has_extra_hourly_rate: bool}
      */
     public function breakdown(Reservation $reservation, float $extraHours = 0): array
     {
@@ -22,6 +23,10 @@ class ResourceReservationFeeCalculator
         $hasRate = false;
 
         foreach ($reservation->items as $item) {
+            if ($item->status === ReservationItemStatus::CANCELLED->value) {
+                continue;
+            }
+
             $snapshot = $item->rate_snapshot;
             if (! is_array($snapshot)) {
                 continue;
@@ -59,6 +64,9 @@ class ResourceReservationFeeCalculator
             'extra_hours' => $extraHours,
             'extra_hourly_rate' => $this->minorToMajor($extraHourlyMinor),
             'extra_hour_fee' => $this->minorToMajor($extraFeeMinor),
+            'tax_fee' => 0.0,
+            'service_fee' => 0.0,
+            'discount' => 0.0,
             'total' => $this->minorToMajor($baseMinor + $extraFeeMinor),
             'has_rate' => $hasRate && $baseMinor > 0,
             'has_extra_hourly_rate' => $extraHourlyMinor > 0,
