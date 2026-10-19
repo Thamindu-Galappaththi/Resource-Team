@@ -13,7 +13,7 @@ return new class extends Migration
 
             // Lecturer who delivered the session
             $table->foreignId('lecturer_id')
-                ->constrained('users')
+                ->constrained('lecturer_profiles')
                 ->restrictOnDelete();
 
             // Session information
