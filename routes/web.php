@@ -16,6 +16,7 @@ use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\LectureFeeController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -94,7 +95,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/resources/lookup', [\App\Http\Controllers\ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
     });
 
-    Route::get('/reports', fn () => view('reports.index'))->middleware('permission:reports.view')->name('reports.index');
+    Route::prefix('reports')->name('reports.')->middleware('permission:reports.view')->controller(ReportController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/export', 'exportCsv')->name('export');
+    });
 
     Route::get('/profile', [ProfileController::class, 'show'])->name('user.profile');
     Route::put('/profile', [ProfileController::class, 'update'])->name('user.profile.update');
