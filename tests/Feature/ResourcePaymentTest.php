@@ -20,6 +20,21 @@ class ResourcePaymentTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
+    public function test_payment_page_starts_with_usage_locked_and_rate_warning_hidden(): void
+    {
+        $user = User::factory()->role('admin')->create();
+
+        $this->actingAs($user)
+            ->get(route('payments.resources'))
+            ->assertOk()
+            ->assertSee('id="rp-extra-hours" type="number" min="0" max="24" step="0.5"', false)
+            ->assertSee('id="rp-rate-warning" class="rp-rate-warning is-hidden"', false)
+            ->assertSee('aria-live="polite"', false)
+            ->assertSee('Find reservation')
+            ->assertSee('Confirm usage')
+            ->assertSee('Pay now');
+    }
+
     public function test_reference_lookup_returns_base_and_extra_fee_breakdown(): void
     {
         $user = User::factory()->role('admin')->create();
@@ -89,6 +104,57 @@ class ResourcePaymentTest extends TestCase
             ->getJson(route('payments.resources.lookup', ['reference' => 'RRS-2026-999999']))
             ->assertNotFound()
             ->assertJsonPath('message', 'No payable reservation was found for that reference.');
+    }
+
+    public function test_usage_confirmation_records_server_calculated_breakdown_for_auditing(): void
+    {
+        $user = User::factory()->role('admin')->create();
+        $reservation = $this->reservationWithRate(['hourly_rate_minor' => 10000]);
+
+        $this->actingAs($user)
+            ->postJson(route('payments.resources.usage.confirm'), [
+                'reference' => $reservation->reference,
+                'extra_hours' => 1.5,
+                'total' => 0.01,
+            ])
+            ->assertOk()
+            ->assertJsonPath('extra_hour_fee', 150)
+            ->assertJsonPath('total', 450)
+            ->assertJsonPath('payment_status', 'pending');
+
+        $this->assertDatabaseHas('resource_payment_usage_audits', [
+            'reservation_id' => $reservation->id,
+            'actor_id' => $user->id,
+            'extra_hours' => 1.5,
+        ]);
+    }
+
+    public function test_usage_confirmation_rejects_invalid_increment_and_large_extra_hours(): void
+    {
+        $user = User::factory()->role('admin')->create();
+        $reservation = $this->reservationWithRate(['hourly_rate_minor' => 10000]);
+
+        $this->actingAs($user)
+            ->postJson(route('payments.resources.usage.confirm'), ['reference' => $reservation->reference, 'extra_hours' => 0.3])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('extra_hours');
+
+        $this->actingAs($user)
+            ->postJson(route('payments.resources.usage.confirm'), ['reference' => $reservation->reference, 'extra_hours' => 24.5])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('extra_hours');
+
+        $this->assertDatabaseCount('resource_payment_usage_audits', 0);
+    }
+
+    public function test_usage_confirmation_requires_payment_permission(): void
+    {
+        $user = User::factory()->role('nebula_sms_user')->create();
+        $reservation = $this->reservationWithRate(['hourly_rate_minor' => 10000]);
+
+        $this->actingAs($user)
+            ->postJson(route('payments.resources.usage.confirm'), ['reference' => $reservation->reference, 'extra_hours' => 0])
+            ->assertForbidden();
     }
 
     public function test_print_invoice_uses_same_zero_extra_fee_fallback(): void

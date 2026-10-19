@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v={{ @filemtime(public_path('css/resource-payments.css')) ?: time() }}">
     <style>
         body { min-height: 100vh; margin: 0; padding: 32px 16px; background: #f3f6fb; }
-        .rp-print-sheet { max-width: 760px; margin: 0 auto; overflow: hidden; border: 1px solid #d5def0; border-radius: 18px; background: #fff; box-shadow: 0 12px 32px rgba(28,55,110,.1); }
+        .rp-print-sheet { position: relative; max-width: 760px; margin: 0 auto; overflow: hidden; border: 1px solid #d5def0; border-radius: 18px; background: #fff; box-shadow: 0 12px 32px rgba(28,55,110,.1); }
+        .rp-print-watermark { position: absolute; top: 44%; left: 50%; z-index: 0; transform: translate(-50%,-50%) rotate(-24deg); color: rgba(23,105,194,.08); font-size: clamp(64px,14vw,128px); font-weight: 900; letter-spacing: .08em; pointer-events: none; }
         .rp-print-brand { padding: 26px 30px; color: #fff; background: linear-gradient(120deg,#123a7a,#1769c2 52%,#5b4fc9); }
         .rp-print-brand small { color: rgba(255,255,255,.75); font-size: 11px; font-weight: 700; letter-spacing: .1em; }
         .rp-print-brand h1 { margin: 7px 0 0; font-size: 27px; }
@@ -34,18 +35,25 @@
     <main class="rp-print-sheet">
         <header class="rp-print-brand"><small>RESOURCE RESERVATION SYSTEM</small><h1>Invoice Preview</h1></header>
         <section class="rp-print-content">
+            <div class="rp-print-watermark" aria-hidden="true">DRAFT</div>
             <div class="rp-print-meta">
                 <div><span>Reservation reference</span><strong>{{ $reservation->reference }}</strong></div>
                 <div><span>Reservation date</span><strong>{{ $reservation->reservation_date?->format('d M Y') }}</strong></div>
+                <div><span>Invoice number</span><strong>DRAFT-{{ $reservation->reference }}</strong></div>
+                <div><span>Issue date</span><strong>{{ $issueDate->format('d M Y') }}</strong></div>
                 <div><span>Resource</span><strong>{{ $reservation->resourceNames() ?: 'Resource reservation' }}</strong></div>
                 <div><span>Bill to</span><strong>{{ $reservation->requester?->name ?? $reservation->createdBy?->name ?? 'Reservation user' }}</strong></div>
+                <div><span>Email</span><strong>{{ $reservation->requester?->email ?? $reservation->createdBy?->email ?? 'Not available' }}</strong></div>
             </div>
             <div class="rp-print-lines">
                 <div class="rp-print-line"><span>Base reservation fee</span><strong>LKR {{ number_format($breakdown['base_fee'], 2) }}</strong></div>
                 <div class="rp-print-line"><span>Extra hours ({{ number_format($breakdown['extra_hours'], 2) }})</span><strong>LKR {{ number_format($breakdown['extra_hour_fee'], 2) }}</strong></div>
+                <div class="rp-print-line"><span>Tax</span><strong>LKR {{ number_format($breakdown['tax_fee'], 2) }}</strong></div>
+                <div class="rp-print-line"><span>Service fee</span><strong>LKR {{ number_format($breakdown['service_fee'], 2) }}</strong></div>
+                <div class="rp-print-line"><span>Discount</span><strong>− LKR {{ number_format($breakdown['discount'], 2) }}</strong></div>
             </div>
             <div class="rp-print-total"><span>TOTAL AMOUNT DUE</span><strong>LKR {{ number_format($breakdown['total'], 2) }}</strong></div>
-            <div class="rp-print-pending">Online payment status: Pending. Payment gateway integration is not yet available.</div>
+            <div class="rp-print-pending">Online payment status: Pending. This draft is not a tax invoice until issued by Finance.</div>
         </section>
     </main>
 </body>
