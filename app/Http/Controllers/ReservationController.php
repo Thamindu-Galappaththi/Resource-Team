@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -24,23 +25,24 @@ class ReservationController extends Controller
 {
     public function __construct(private readonly ReservationBookingService $bookings) {}
 
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Reservation::class);
 
-        $payload = $this->indexPayload($request);
-
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json($payload);
-        }
-
-        return view('reservations.index', [
-            'payload' => $payload,
+        return $this->htmlPage('reservations.index', [
+            'payload' => $this->indexPayload($request),
             'locations' => Location::query()->ordered()->get(),
             'categories' => ResourceCategory::query()->orderBy('name')->get(),
             'resources' => Resource::query()->orderBy('name_model')->get(['id', 'name_model', 'serial_number']),
             'statuses' => ReservationStatus::cases(),
         ]);
+    }
+
+    public function feed(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Reservation::class);
+
+        return $this->uncachedJson($this->indexPayload($request));
     }
 
     public function create(Request $request): View
@@ -78,7 +80,7 @@ class ReservationController extends Controller
         return view('reservations.show', compact('reservation'));
     }
 
-    public function cancel(CancelReservationRequest $request, Reservation $reservation): RedirectResponse
+    public function cancel(CancelReservationRequest $request, Reservation $reservation): RedirectResponse|JsonResponse
     {
         $this->authorize('cancel', $reservation);
 
@@ -97,16 +99,11 @@ class ReservationController extends Controller
             ->with('success', 'Reservation cancelled successfully.');
     }
 
-    public function calendar(Request $request): View|JsonResponse
+    public function calendar(Request $request): Response
     {
         $this->authorize('viewAny', Reservation::class);
-        $payload = $this->calendarPayload($request);
 
-        if ($request->wantsJson()) {
-            return response()->json(collect($payload)->except('currentDate')->all());
-        }
-
-        return view('reservations.calendar', $payload + [
+        return $this->htmlPage('reservations.calendar', $this->calendarPayload($request) + [
             'locations' => Location::query()->ordered()->get(),
             'categories' => ResourceCategory::query()->orderBy('name')->get(),
             'resources' => Resource::query()->orderBy('name_model')->get(['id', 'name_model']),
@@ -120,6 +117,13 @@ class ReservationController extends Controller
             'availabilityUrl' => route('reservations.availability'),
             'createUrl' => route('reservations.create'),
         ]);
+    }
+
+    public function calendarStats(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Reservation::class);
+
+        return $this->uncachedJson(collect($this->calendarPayload($request))->except('currentDate')->all());
     }
 
     public function calendarEvents(Request $request): JsonResponse
@@ -393,7 +397,7 @@ class ReservationController extends Controller
                 'resource_category_id' => $request->input('resource_category_id'),
             ]);
 
-        $reservations = $query->paginate(10)->appends($request->query());
+        $reservations = $query->paginate(10)->appends($request->except('partial'))->setPath(route('reservations.index'));
         $user = $request->user();
 
         $base = Reservation::query();

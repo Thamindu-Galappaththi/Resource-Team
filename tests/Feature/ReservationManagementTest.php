@@ -161,6 +161,18 @@ class ReservationManagementTest extends TestCase
             'reservation_id' => $reservation->id,
             'status' => 'cancelled',
         ]);
+
+        $this->actingAs($user)->post(route('reservations.store'), $this->payload($resource, $user, [
+            'reservation_date' => now('Asia/Colombo')->addDays(2)->toDateString(),
+        ]));
+        $second = Reservation::query()->latest('id')->first();
+        $this->actingAs($user)
+            ->postJson(route('reservations.cancel', $second), [
+                'cancellation_reason' => 'Room no longer needed',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Reservation cancelled successfully.');
+        $this->assertSame(ReservationStatus::CANCELLED->value, $second->fresh()->status);
     }
 
     public function test_cancelled_and_rejected_reservations_hide_cancel_for_admin(): void
@@ -188,7 +200,7 @@ class ReservationManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->getJson(route('reservations.index'))
+            ->getJson(route('reservations.feed'))
             ->assertOk()
             ->assertJsonFragment(['id' => $cancelled->id, 'can_cancel' => false])
             ->assertJsonFragment(['id' => $rejected->id, 'can_cancel' => false])
@@ -237,10 +249,16 @@ class ReservationManagementTest extends TestCase
             ->assertDontSee('Cancelled hall booking');
 
         $this->actingAs($admin)
-            ->getJson(route('reservations.index', ['status' => ReservationStatus::PENDING_APPROVAL->value]))
+            ->getJson(route('reservations.feed', ['status' => ReservationStatus::PENDING_APPROVAL->value]))
             ->assertOk()
             ->assertJsonFragment(['purpose' => 'Pending hall booking'])
             ->assertJsonMissing(['purpose' => 'Cancelled hall booking']);
+
+        $this->actingAs($admin)
+            ->getJson(route('reservations.index', ['search' => 'tt']))
+            ->assertOk()
+            ->assertHeader('content-type', 'text/html; charset=UTF-8')
+            ->assertSee('Existing Reservations', false);
     }
 
     public function test_calendar_and_create_pages_render(): void
@@ -262,7 +280,7 @@ class ReservationManagementTest extends TestCase
         $user = User::factory()->role('coordinator')->create();
 
         $this->actingAs($user)
-            ->getJson(route('reservations.calendar', ['year' => 2026, 'month' => 10]))
+            ->getJson(route('reservations.calendar.stats', ['year' => 2026, 'month' => 10]))
             ->assertOk()
             ->assertJsonPath('year', 2026)
             ->assertJsonPath('month', 10)

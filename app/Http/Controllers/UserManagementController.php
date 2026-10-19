@@ -61,7 +61,7 @@ class UserManagementController extends Controller
         $users = $usersQuery->latest('id')->paginate(10)->withQueryString();
         $permissionGroups = config('rbac.permission_groups', []);
 
-        if ($request->ajax()) {
+        if ($request->boolean('partial') && $request->ajax()) {
             return view('user-management._users-table', [
                 'users' => $users,
                 'permissionGroups' => $permissionGroups,

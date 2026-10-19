@@ -36,6 +36,7 @@ class Reservation extends Model
         'approved_at',
         'cancelled_at',
         'cancellation_reason',
+        'approval_archived_at',
         'version',
     ];
 
@@ -46,6 +47,7 @@ class Reservation extends Model
             'submitted_at' => 'datetime',
             'approved_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'approval_archived_at' => 'datetime',
         ];
     }
 

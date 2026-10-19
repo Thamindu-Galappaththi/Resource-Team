@@ -16,7 +16,7 @@ return new class extends Migration
                 ->restrictOnDelete();
 
             $table->foreignId('lecturer_id')
-                ->constrained('users')
+                ->constrained('lecturer_profiles')
                 ->restrictOnDelete();
 
             $table->foreignId('rate_card_id')

@@ -102,6 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (empty) empty.hidden = Boolean(editFeaturesContainer?.querySelector('.feature-row'));
     }
 
+    function runBusy(form, work) {
+        return window.RMAction ? window.RMAction.around(form, work) : work();
+    }
+
     async function submitCategory(event) {
         event.preventDefault();
         const categoryName = document.getElementById('categoryName').value.trim();
@@ -109,18 +113,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const features = collectFeatures(featuresContainer);
 
-        try {
-            const result = await postJSON(config.categoriesUrl, { category_name: categoryName, features });
-            state.categories.push({ id: result.id, name: result.name || categoryName, features: result.features || [] });
-            categoryPage = Math.max(1, Math.ceil(state.categories.length / categoryPageSize));
-            refreshCategorySelects();
-            event.target.reset();
-            featuresContainer.replaceChildren();
-            await success('Category created successfully.', 'categoryForm');
-        } catch (error) {
-            showRequestErrors(error, { category_name: 'categoryName' });
-            await swalFire({ icon: 'error', title: 'Could not create category', text: error.message });
-        }
+        await runBusy(event.target, async () => {
+            try {
+                const result = await postJSON(config.categoriesUrl, { category_name: categoryName, features });
+                state.categories.push({ id: result.id, name: result.name || categoryName, features: result.features || [] });
+                categoryPage = Math.max(1, Math.ceil(state.categories.length / categoryPageSize));
+                refreshCategorySelects();
+                event.target.reset();
+                featuresContainer.replaceChildren();
+                await success('Category created successfully.', 'categoryForm');
+            } catch (error) {
+                showRequestErrors(error, { category_name: 'categoryName' });
+                await swalFire({ icon: 'error', title: 'Could not create category', text: error.message });
+            }
+        });
     }
 
     async function submitType(event) {
@@ -132,17 +138,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!categoryId) return showFieldError('typeCategorySelect', 'Select a category.');
         if (!typeName) return showFieldError('resourceTypeName', 'Enter a type name.');
 
-        try {
-            const result = await postJSON(config.typesUrl, { category_id: categoryId, resource_type: typeName });
-            state.types.push({ id: result.id, category_id: categoryId, name: typeName });
-            document.getElementById('resourceTypeName').value = '';
-            const category = state.categories.find((item) => String(item.id) === String(categoryId));
-            window.RMSelect.setValue('typeCategorySelect', categoryId, category?.name || 'Select a category');
-            renderCategoryFeatures(categoryId);
-            await success('Resource type created successfully.', 'typeForm');
-        } catch (error) {
-            await swalFire({ icon: 'error', title: 'Could not create type', text: error.message });
-        }
+        await runBusy(event.target, async () => {
+            try {
+                const result = await postJSON(config.typesUrl, { category_id: categoryId, resource_type: typeName });
+                state.types.push({ id: result.id, category_id: categoryId, name: typeName });
+                document.getElementById('resourceTypeName').value = '';
+                const category = state.categories.find((item) => String(item.id) === String(categoryId));
+                window.RMSelect.setValue('typeCategorySelect', categoryId, category?.name || 'Select a category');
+                renderCategoryFeatures(categoryId);
+                await success('Resource type created successfully.', 'typeForm');
+            } catch (error) {
+                await swalFire({ icon: 'error', title: 'Could not create type', text: error.message });
+            }
+        });
     }
 
     async function submitResource(event) {
@@ -163,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!payload.status) return showFieldError('resourceStatusSelect', 'Select a status.');
         if (!payload.name_model) return showFieldError('resourceNameModel', 'Enter a resource name/model.');
 
+        await runBusy(event.target, async () => {
         try {
             const result = editResourceId
                 ? await requestJSON(`${config.resourceUrl}/${editResourceId}`, 'PUT', payload)
@@ -197,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             await swalFire({ icon: 'error', title: 'Could not save resource', text: error.message });
         }
+        });
     }
 
     async function submitLink(event) {
@@ -213,18 +223,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        try {
-            await postJSON(config.linksUrl, { resource_id: resourceId, linked_resource_id: linkedResourceId });
-            window.RMSelect.setValue('primaryResourceSelect', '', 'Select a resource');
-            window.RMSelect.setValue('linkedResourceSelect', '', 'Select a resource to link');
-            await swalFire({ icon: 'success', title: 'Resources linked', text: 'The relationship was saved.' });
-        } catch (error) {
-            showRequestErrors(error, {
-                resource_id: 'primaryResourceSelect',
-                linked_resource_id: 'linkedResourceSelect',
-            });
-            await swalFire({ icon: 'error', title: 'Could not link resources', text: error.message });
-        }
+        await runBusy(event.target, async () => {
+            try {
+                await postJSON(config.linksUrl, { resource_id: resourceId, linked_resource_id: linkedResourceId });
+                window.RMSelect.setValue('primaryResourceSelect', '', 'Select a resource');
+                window.RMSelect.setValue('linkedResourceSelect', '', 'Select a resource to link');
+                await swalFire({ icon: 'success', title: 'Resources linked', text: 'The relationship was saved.' });
+            } catch (error) {
+                showRequestErrors(error, {
+                    resource_id: 'primaryResourceSelect',
+                    linked_resource_id: 'linkedResourceSelect',
+                });
+                await swalFire({ icon: 'error', title: 'Could not link resources', text: error.message });
+            }
+        });
     }
 
     async function onCategoryTableClick(event) {
@@ -278,21 +290,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const category = state.categories.find((item) => String(item.id) === String(editingCategoryId));
         if (!category) return;
-        try {
-            const updated = await requestJSON(`${config.categoriesUrl}/${editingCategoryId}`, 'PUT', {
-                category_name: name,
-                features: collectFeatures(editFeaturesContainer),
-            });
-            category.name = updated.name;
-            category.features = updated.features || [];
-            refreshCategorySelects();
-            const selectedTypeCategory = document.getElementById('typeCategorySelect')?.value;
-            if (String(selectedTypeCategory) === String(category.id)) renderCategoryFeatures(category.id);
-            bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
-            await swalFire({ icon: 'success', title: 'Updated', text: 'Category details saved.', timer: 2000, showConfirmButton: false });
-        } catch (error) {
-            await swalFire({ icon: 'error', title: 'Update failed', text: error.message });
-        }
+        await runBusy(event.target, async () => {
+            try {
+                const updated = await requestJSON(`${config.categoriesUrl}/${editingCategoryId}`, 'PUT', {
+                    category_name: name,
+                    features: collectFeatures(editFeaturesContainer),
+                });
+                category.name = updated.name;
+                category.features = updated.features || [];
+                refreshCategorySelects();
+                const selectedTypeCategory = document.getElementById('typeCategorySelect')?.value;
+                if (String(selectedTypeCategory) === String(category.id)) renderCategoryFeatures(category.id);
+                bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
+                await swalFire({ icon: 'success', title: 'Updated', text: 'Category details saved.', timer: 2000, showConfirmButton: false });
+            } catch (error) {
+                await swalFire({ icon: 'error', title: 'Update failed', text: error.message });
+            }
+        });
     });
 
     function refreshCategorySelects() {

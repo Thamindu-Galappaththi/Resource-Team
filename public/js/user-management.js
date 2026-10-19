@@ -138,7 +138,8 @@ $(function () {
     }
 
     function fetchUsers(url) {
-        const requestUrl = url || (indexUrl + ($.param(currentParams()) ? '?' + $.param(currentParams()) : ''));
+        const pageUrl = url || (indexUrl + ($.param(currentParams()) ? '?' + $.param(currentParams()) : ''));
+        const requestUrl = pageUrl + (pageUrl.indexOf('?') === -1 ? '?' : '&') + 'partial=1';
 
         if (request) {
             request.abort();
@@ -149,10 +150,11 @@ $(function () {
             url: requestUrl,
             method: 'GET',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            cache: false,
         }).done(function (html) {
             $('#um-results').html(html);
             if (window.history && window.history.pushState) {
-                window.history.pushState({}, '', requestUrl);
+                window.history.pushState({}, '', pageUrl);
             }
             toggleClear();
         }).always(function () {
@@ -501,7 +503,12 @@ $(function () {
     });
 
     $(document).on('click', '.js-toggle-user', function () {
+        const $button = $(this);
+        if ($button.prop('disabled')) {
+            return;
+        }
         const user = rowUser(this);
+        $button.prop('disabled', true);
         $.ajax({
             url: user.toggle_url,
             method: 'POST',
@@ -512,6 +519,8 @@ $(function () {
             fetchUsers(window.location.href);
         }).fail(function (xhr) {
             showFlash(xhr.responseJSON?.message || 'Could not update user status.', 'error');
+        }).always(function () {
+            $button.prop('disabled', false);
         });
     });
 
@@ -702,6 +711,7 @@ $(function () {
         }
 
         clearResetPasswordErrors();
+        window.RMAction?.lock($form[0]);
         $submit.prop('disabled', true);
 
         $.ajax({
@@ -722,6 +732,7 @@ $(function () {
             }
             showFlash(xhr.responseJSON?.message || 'The password could not be reset.', 'error');
         }).always(function () {
+            window.RMAction?.unlock($form[0]);
             $submit.prop('disabled', false);
         });
     });
