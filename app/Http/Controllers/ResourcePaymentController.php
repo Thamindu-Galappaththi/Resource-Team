@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\ReservationStatus;
 use App\Models\Reservation;
+use App\Services\ResourceReservationFeeCalculator;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ResourcePaymentController extends Controller
@@ -15,72 +19,119 @@ class ResourcePaymentController extends Controller
         return view('payments.resources');
     }
 
-    public function lookup(Request $request): JsonResponse
+    public function lookup(Request $request, ResourceReservationFeeCalculator $fees): JsonResponse
     {
-        $data = $request->validate(['query' => ['required', 'string', 'min:2', 'max:120']]);
-        $query = trim($data['query']);
+        $data = $request->validate([
+            'reference' => ['required', 'string', 'regex:/^(RRS|HST)-[0-9]{4}-[0-9]{6}$/i'],
+            'extra_hours' => ['sometimes', 'numeric', 'min:0', 'max:24', 'multiple_of:0.5'],
+        ], [
+            'reference.regex' => 'Enter a reservation reference in the format RRS-YYYY-000000 or HST-YYYY-000000.',
+        ]);
+        $reference = strtoupper(trim($data['reference']));
         $reservation = Reservation::query()
             ->with(['requester', 'createdBy', 'items'])
-            ->whereNotIn('status', [ReservationStatus::DRAFT->value, ReservationStatus::CANCELLED->value, ReservationStatus::REJECTED->value])
-            ->where(function ($builder) use ($query) {
-                $builder->where('reference', $query)
-                    ->orWhereHas('items', fn ($items) => $items->where('resource_name_snapshot', 'like', '%'.$query.'%'));
-            })
-            ->orderByDesc('reservation_date')
+            ->whereIn('status', [ReservationStatus::CONFIRMED->value, ReservationStatus::IN_PROGRESS->value, ReservationStatus::COMPLETED->value])
+            ->where('reference', $reference)
             ->first();
 
         if (! $reservation) {
-            return response()->json(['message' => 'No active reservation matched that reference or resource name.'], 404);
+            return response()->json(['message' => 'No payable reservation was found for that reference.'], 404);
         }
 
         $start = substr((string) $reservation->start_time, 0, 5);
         $end = substr((string) $reservation->end_time, 0, 5);
-        $hours = max(0, (strtotime($end) - strtotime($start)) / 3600);
-        $rates = $reservation->items->map(fn ($item) => $item->rate_snapshot ?? [])->filter(fn ($rate) => is_array($rate) && count($rate));
-        $base = $rates->sum(function ($rate) use ($hours) {
-            $fixedAmount = $rate['amount'] ?? $rate['rate'] ?? null;
-            if ($fixedAmount !== null) {
-                return (float) $fixedAmount;
-            }
-
-            $hourlyRate = $rate['hourly_rate'] ?? null;
-            if ($hourlyRate !== null) {
-                return (float) $hourlyRate * $hours;
-            }
-
-            $hourlyRateMinor = $rate['hourly_rate_minor'] ?? null;
-            if ($hourlyRateMinor !== null) {
-                return ((float) $hourlyRateMinor / 100) * $hours;
-            }
-
-            return 0;
-        });
-        $extraHourlyRate = $rates->sum(function ($rate) {
-            if (isset($rate['hourly_rate'])) {
-                return max(0, (float) $rate['hourly_rate']);
-            }
-
-            if (isset($rate['hourly_rate_minor'])) {
-                return max(0, (float) $rate['hourly_rate_minor'] / 100);
-            }
-
-            return 0;
-        });
-
-        return response()->json([
+        $hours = $this->reservedHours($reservation->reservation_date?->toDateString(), $start, $end);
+        $breakdown = $fees->breakdown($reservation, (float) ($data['extra_hours'] ?? 0));
+        $payload = [
             'reference' => $reservation->reference,
             'title' => $reservation->title ?: $reservation->purpose ?: 'Resource reservation',
             'resource' => $reservation->resourceNames() ?: 'Resource reservation',
             'requester' => $reservation->requester?->name ?? $reservation->createdBy?->name ?? 'Reservation user',
+            'bill_to_email' => $reservation->requester?->email ?? $reservation->createdBy?->email,
             'date' => $reservation->reservation_date?->format('M d, Y'),
+            'reservation_status' => $reservation->statusEnum()->label(),
+            'issue_date' => now()->format('d M Y'),
             'start' => $start,
             'end' => $end,
             'hours' => round($hours, 2),
-            'base_fee' => round($base, 2),
-            'extra_hourly_rate' => round($extraHourlyRate, 2),
-            'has_rate' => $rates->isNotEmpty() && $base > 0,
-            'has_extra_hourly_rate' => $extraHourlyRate > 0,
-            'rate_note' => $rates->isEmpty() ? 'No rate is stored for this reservation; finance must configure rates before charging.' : ($extraHourlyRate <= 0 ? 'The reservation has a base amount, but no hourly rate is stored for extra usage.' : null),
+            'payment_status' => 'pending',
+            'payment_method' => 'online',
+            'currency' => 'LKR',
+            'rate_note' => ! $breakdown['has_rate'] ? 'No rate is stored for this reservation; finance must configure rates before charging.' : (! $breakdown['has_extra_hourly_rate'] ? 'No hourly rate is stored for extra usage; the extra fee is zero.' : null),
+        ] + $breakdown;
+
+        return response()->json($payload);
+    }
+
+    public function confirmUsage(Request $request, ResourceReservationFeeCalculator $fees): JsonResponse
+    {
+        $data = $request->validate([
+            'reference' => ['required', 'string', 'regex:/^(RRS|HST)-[0-9]{4}-[0-9]{6}$/i'],
+            'extra_hours' => ['required', 'numeric', 'min:0', 'max:24', 'multiple_of:0.5'],
+        ], [
+            'reference.regex' => 'Enter a reservation reference in the format RRS-YYYY-000000 or HST-YYYY-000000.',
+            'extra_hours.multiple_of' => 'Extra hours must be entered in 0.5 hour increments.',
         ]);
+        $reservation = Reservation::query()
+            ->with(['requester', 'createdBy', 'items'])
+            ->whereIn('status', [ReservationStatus::CONFIRMED->value, ReservationStatus::IN_PROGRESS->value, ReservationStatus::COMPLETED->value])
+            ->where('reference', strtoupper(trim($data['reference'])))
+            ->first();
+
+        if (! $reservation) {
+            return response()->json(['message' => 'No payable reservation was found for that reference.'], 404);
+        }
+
+        $breakdown = $fees->breakdown($reservation, (float) $data['extra_hours']);
+        DB::table('resource_payment_usage_audits')->insert([
+            'reservation_id' => $reservation->id,
+            'actor_id' => $request->user()->id,
+            'extra_hours' => $breakdown['extra_hours'],
+            'fee_breakdown' => json_encode($breakdown, JSON_THROW_ON_ERROR),
+            'ip_address' => $request->ip(),
+            'created_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Usage confirmed and recorded.',
+            'reference' => $reservation->reference,
+            'payment_status' => 'pending',
+            ...$breakdown,
+        ]);
+    }
+
+    public function print(Request $request, string $reference, ResourceReservationFeeCalculator $fees): View|Response
+    {
+        validator(['reference' => $reference], [
+            'reference' => ['required', 'string', 'regex:/^(RRS|HST)-[0-9]{4}-[0-9]{6}$/i'],
+        ])->validate();
+
+        $data = $request->validate(['extra_hours' => ['sometimes', 'numeric', 'min:0', 'max:24', 'multiple_of:0.5']]);
+        $reservation = Reservation::query()
+            ->with(['requester', 'createdBy', 'items'])
+            ->whereIn('status', [ReservationStatus::CONFIRMED->value, ReservationStatus::IN_PROGRESS->value, ReservationStatus::COMPLETED->value])
+            ->where('reference', strtoupper($reference))
+            ->firstOrFail();
+
+        return view('payments.resource-invoice-print', [
+            'reservation' => $reservation,
+            'breakdown' => $fees->breakdown($reservation, (float) ($data['extra_hours'] ?? 0)),
+            'issueDate' => now(),
+        ]);
+    }
+
+    private function reservedHours(?string $date, string $start, string $end): float
+    {
+        if (! $date) {
+            return 0;
+        }
+
+        $startsAt = Carbon::parse($date.' '.$start);
+        $endsAt = Carbon::parse($date.' '.$end);
+        if ($endsAt->lessThanOrEqualTo($startsAt)) {
+            $endsAt->addDay();
+        }
+
+        return round($startsAt->diffInMinutes($endsAt) / 60, 2);
     }
 }

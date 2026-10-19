@@ -3,8 +3,70 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!bell) return;
 
     var csrf = document.querySelector('meta[name="csrf-token"]');
+    var activeSwipe = null;
+
+    bell.addEventListener('pointerdown', function (event) {
+        var item = event.target.closest('.nb-item');
+        if (!item || event.target.closest('button')) return;
+
+        activeSwipe = {
+            item: item,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+        };
+    });
+
+    bell.addEventListener('pointerup', function (event) {
+        if (!activeSwipe || activeSwipe.pointerId !== event.pointerId) return;
+
+        var swipe = activeSwipe;
+        activeSwipe = null;
+        var deltaX = event.clientX - swipe.startX;
+        var deltaY = event.clientY - swipe.startY;
+
+        if (deltaX < 80 || deltaX < Math.abs(deltaY) * 1.3) return;
+        dismissNotification(swipe.item);
+    });
+
+    bell.addEventListener('pointercancel', function () {
+        activeSwipe = null;
+    });
 
     bell.addEventListener('click', function (event) {
+        var clearButton = event.target.closest('.nb-clear-all');
+        if (clearButton) {
+            if (clearButton.disabled) return;
+            clearButton.disabled = true;
+            fetch(bell.dataset.clearAllUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrf ? csrf.content : '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+            }).then(function (response) {
+                if (!response.ok) throw new Error('Could not clear notifications.');
+                return response.json();
+            }).then(function (data) {
+                bell.querySelectorAll('.nb-item').forEach(function (item) { item.remove(); });
+                clearButton.remove();
+                showEmptyState();
+                updateUnreadCount(data.unread_count);
+            }).catch(function () {
+                clearButton.disabled = false;
+                clearButton.title = 'Could not clear notifications. Try again.';
+            });
+            return;
+        }
+
+        var deleteButton = event.target.closest('.nb-delete');
+        if (deleteButton) {
+            dismissNotification(deleteButton.closest('.nb-item'));
+            return;
+        }
+
         var button = event.target.closest('.nb-status');
         if (!button) return;
 
@@ -41,6 +103,45 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    function dismissNotification(item) {
+        if (!item || item.dataset.deleting === 'true') return;
+        item.dataset.deleting = 'true';
+
+        fetch(item.dataset.deleteUrl, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': csrf ? csrf.content : '',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            credentials: 'same-origin',
+        }).then(function (response) {
+            if (!response.ok) throw new Error('Could not delete notification.');
+            return response.json();
+        }).then(function (data) {
+            item.classList.add('is-dismissing');
+            window.setTimeout(function () {
+                item.remove();
+                if (!bell.querySelector('.nb-item')) showEmptyState();
+            }, 180);
+            updateUnreadCount(data.unread_count);
+        }).catch(function () {
+            delete item.dataset.deleting;
+            item.classList.add('nb-delete-failed');
+            window.setTimeout(function () { item.classList.remove('nb-delete-failed'); }, 1200);
+        });
+    }
+
+    function showEmptyState() {
+        var clearButton = bell.querySelector('.nb-clear-all');
+        if (clearButton) clearButton.remove();
+
+        var empty = document.createElement('div');
+        empty.className = 'nb-empty';
+        empty.innerHTML = '<i class="ti ti-bell-off"></i><span>You\'re all caught up.</span>';
+        bell.querySelector('.nb-list').appendChild(empty);
+    }
+
     function updateUnreadCount(count) {
         var badge = bell.querySelector('.nb-badge');
         var headingCount = bell.querySelector('.nb-count');
@@ -57,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!headingCount) {
                 headingCount = document.createElement('span');
                 headingCount.className = 'nb-count';
-                bell.querySelector('.nb-heading').appendChild(headingCount);
+                bell.querySelector('.nb-heading-actions').appendChild(headingCount);
             }
             headingCount.textContent = count + ' new';
         } else {
