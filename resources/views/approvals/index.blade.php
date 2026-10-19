@@ -8,29 +8,22 @@
     .rs-approvals .rs-dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .rs-approvals .approval-card { padding: 1rem; background: #fff; border: 1px solid #b7e2d9; border-radius: 14px; }
     .rs-approvals .approval-card + .approval-card { margin-top: .75rem; }
-    .rs-approvals .approval-disclosure > summary { list-style: none; cursor: pointer; }
-    .rs-approvals .approval-disclosure > summary::-webkit-details-marker { display: none; }
-    .rs-approvals .approval-disclosure > summary:focus-visible { outline: 3px solid rgba(23, 105, 194, .35); outline-offset: 4px; border-radius: 8px; }
-    .rs-approvals .approval-summary { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(150px, .8fr) auto; align-items: center; gap: .5rem 1rem; }
+    .rs-approvals .approval-summary { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(180px, .8fr) auto; align-items: center; gap: .5rem 1rem; }
     .rs-approvals .approval-summary__main { min-width: 0; }
     .rs-approvals .approval-summary__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .rs-approvals .approval-summary__meta { color: #718096; font-size: .8rem; }
-    .rs-approvals .approval-summary__toggle { color: #1769c2; font-size: .82rem; font-weight: 700; white-space: nowrap; }
-    .rs-approvals .approval-summary__toggle .is-open { display: none; }
-    .rs-approvals details[open] .approval-summary__toggle .is-open { display: inline; }
-    .rs-approvals details[open] .approval-summary__toggle .is-closed { display: none; }
-    .rs-approvals .approval-expanded { border-top: 1px solid #e1eee9; margin-top: 1rem; padding-top: 1rem; }
+    .rs-approvals .approval-actions { display: flex; justify-content: flex-end; gap: .4rem; white-space: nowrap; }
+    .rs-approvals .approval-actions .btn { width: 36px; height: 36px; display: inline-grid; place-items: center; padding: 0; }
     .rs-approvals .approval-action { background: #f0fdfa; border: 1px solid #b7e2d9; border-radius: 12px; padding: 1rem; }
     .rs-approvals .approval-filters { background: #fff; border: 1px solid #b7e2d9; border-radius: 12px; padding: 1rem; }
     .rs-approvals .approval-history { background: #fff; border: 1px solid #b7e2d9; border-radius: 12px; padding: 1rem; }
     .rs-approvals .approval-history + .approval-history { margin-top: .75rem; }
     .rs-approvals .rs-dash-panel__body { gap: .75rem; }
-    .rs-approvals .approval-comment { border-left: 3px solid #0d9488; padding-left: .75rem; }
     @media (max-width: 575.98px) { .rs-approvals .rs-dash-kpis { grid-template-columns: 1fr; } }
     @media (max-width: 767.98px) {
         .rs-approvals .approval-summary { grid-template-columns: minmax(0, 1fr) auto; }
         .rs-approvals .approval-summary__date { grid-column: 1; }
-        .rs-approvals .approval-summary__toggle { grid-column: 2; grid-row: 1 / span 2; }
+        .rs-approvals .approval-actions { grid-column: 2; grid-row: 1 / span 2; }
     }
 </style>
 @endpush
@@ -57,53 +50,68 @@
     </section>
 
     <section class="rs-dash-panel mb-3" aria-labelledby="pending-heading">
-        <div class="rs-dash-panel__head"><h2 id="pending-heading">Pending requests <span class="opacity-75">· {{ $pending->count() }} awaiting a decision</span></h2><i class="ti ti-inbox fs-5 text-white"></i></div>
+        <div class="rs-dash-panel__head"><h2 id="pending-heading">Pending requests <span class="opacity-75">· {{ $pendingCount }} awaiting a decision</span></h2><i class="ti ti-inbox fs-5 text-white"></i></div>
         <div class="rs-dash-panel__body">
             @forelse($pending as $reservation)
                 <article class="approval-card">
-                    <details class="approval-disclosure">
-                        <summary class="approval-summary">
+                    <div class="approval-summary">
                             <span class="approval-summary__main">
                                 <span class="d-flex flex-wrap align-items-center gap-2"><strong>{{ $reservation->reference }}</strong><span class="badge bg-warning text-dark">Pending</span></span>
                                 <span class="d-block fw-semibold approval-summary__title mt-1">{{ $reservation->title ?: $reservation->purpose }}</span>
                                 <span class="approval-summary__meta">{{ $reservation->requester?->name ?? 'Unknown' }} · {{ $reservation->resourceNames() ?: 'Resource not listed' }}</span>
                             </span>
                             <span class="approval-summary__date small">{{ $reservation->reservation_date?->format('D, d M Y') }} · {{ substr((string)$reservation->start_time, 0, 5) }}–{{ substr((string)$reservation->end_time, 0, 5) }}</span>
-                            <span class="approval-summary__toggle"><span class="is-closed">Review <i class="ti ti-chevron-down"></i></span><span class="is-open">Close <i class="ti ti-chevron-up"></i></span></span>
-                        </summary>
-                        <div class="approval-expanded">
-                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-                        <div class="flex-grow-1">
-                            <div class="d-flex flex-wrap align-items-center gap-2 mb-2"><a class="fw-semibold text-decoration-none" href="{{ route('reservations.show', $reservation) }}">{{ $reservation->reference }}</a><span class="badge bg-warning text-dark">Pending approval</span><span class="text-muted small">Submitted {{ $reservation->submitted_at?->timezone(config('reservations.display_timezone', 'Asia/Colombo'))->format('d M Y, H:i') ?? '—' }}</span></div>
-                            <h3 class="h6 mb-2">{{ $reservation->title ?: $reservation->purpose }}</h3>
-                            <div class="row g-2 small">
-                                <div class="col-md-4"><span class="text-muted">Requester</span><div>{{ $reservation->requester?->name ?? 'Unknown' }} <span class="text-muted">{{ $reservation->requester?->email }}</span></div></div>
-                                <div class="col-md-4"><span class="text-muted">Date and time</span><div>{{ $reservation->reservation_date?->format('D, d M Y') }} · {{ substr((string)$reservation->start_time, 0, 5) }}–{{ substr((string)$reservation->end_time, 0, 5) }}</div></div>
-                                <div class="col-md-4"><span class="text-muted">Purpose</span><div>{{ $reservation->purpose }}</div></div>
-                                <div class="col-md-8"><span class="text-muted">Resources</span><div>@foreach($reservation->items as $item)<span class="badge bg-light text-dark border me-1 mb-1">{{ $item->resource_name_snapshot }} <span class="text-muted">· {{ $item->resource?->type?->category?->name ?? 'Uncategorized' }}</span></span>@endforeach</div></div>
-                                <div class="col-md-4"><span class="text-muted">Location / attendees</span><div>{{ $reservation->location?->name ?? '—' }} · {{ $reservation->attendee_count ?? '—' }} attendees</div></div>
+                            <div class="approval-actions">
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#approval-view-{{ $reservation->id }}" aria-label="View {{ $reservation->reference }}" title="View"><i class="ti ti-eye"></i></button>
+                                @if($canDecide)
+                                    <form method="POST" action="{{ route('approvals.archive', $reservation) }}" data-approval-archive>
+                                        @csrf @method('DELETE')
+                                        <input type="hidden" name="archive_reason" value="">
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Delete {{ $reservation->reference }} from approvals" title="Delete"><i class="ti ti-trash"></i></button>
+                                    </form>
+                                @endif
                             </div>
-                            @if($reservation->description)<p class="small text-muted mt-2 mb-0">{{ $reservation->description }}</p>@endif
-                        </div>
-                        @if($canDecide)
-                            <form method="POST" action="{{ route('approvals.decision', $reservation) }}" class="approval-action" style="min-width:min(100%, 300px);max-width:360px">
-                                @csrf
-                                <label class="form-label small fw-semibold" for="comment-{{ $reservation->id }}">Decision comment <span class="text-danger">*</span></label>
-                                <textarea class="form-control form-control-sm mb-2" id="comment-{{ $reservation->id }}" name="comment" rows="2" maxlength="2000" required placeholder="Add a note for the requester"></textarea>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <button class="btn btn-success btn-sm" name="decision" value="approve"><i class="ti ti-check me-1"></i>Approve</button>
-                                    <button class="btn btn-outline-warning btn-sm" name="decision" value="request_changes"><i class="ti ti-edit me-1"></i>Request changes</button>
-                                    <button class="btn btn-outline-danger btn-sm" name="decision" value="reject"><i class="ti ti-x me-1"></i>Reject</button>
+                    </div>
+                    <div class="modal fade" id="approval-view-{{ $reservation->id }}" tabindex="-1" aria-labelledby="approval-view-title-{{ $reservation->id }}" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <div><h2 class="modal-title fs-5" id="approval-view-title-{{ $reservation->id }}">{{ $reservation->reference }}</h2><span class="badge bg-warning text-dark">Pending approval</span></div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
-                            </form>
-                        @endif
+                                <div class="modal-body">
+                                    <h3 class="h6">{{ $reservation->title ?: $reservation->purpose }}</h3>
+                                    <div class="row g-3 small mb-3">
+                                        <div class="col-md-6"><span class="text-muted">Requester</span><div>{{ $reservation->requester?->name ?? 'Unknown' }} · {{ $reservation->requester?->email }}</div></div>
+                                        <div class="col-md-6"><span class="text-muted">Submitted</span><div>{{ $reservation->submitted_at?->timezone(config('reservations.display_timezone', 'Asia/Colombo'))->format('d M Y, H:i') ?? '—' }}</div></div>
+                                        <div class="col-md-6"><span class="text-muted">Reservation date and time</span><div>{{ $reservation->reservation_date?->format('D, d M Y') }} · {{ substr((string)$reservation->start_time, 0, 5) }}–{{ substr((string)$reservation->end_time, 0, 5) }}</div></div>
+                                        <div class="col-md-6"><span class="text-muted">Location and attendees</span><div>{{ $reservation->location?->name ?? '—' }} · {{ $reservation->attendee_count ?? '—' }} attendees</div></div>
+                                        <div class="col-12"><span class="text-muted">Purpose</span><div>{{ $reservation->purpose ?: '—' }}</div></div>
+                                        <div class="col-12"><span class="text-muted">Resources</span><div>@foreach($reservation->items as $item)<span class="badge bg-light text-dark border me-1">{{ $item->resource_name_snapshot }} · {{ $item->resource?->type?->category?->name ?? 'Uncategorized' }}</span>@endforeach</div></div>
+                                        @if($reservation->description)<div class="col-12"><span class="text-muted">Additional details</span><div>{{ $reservation->description }}</div></div>@endif
+                                    </div>
+                                    <a href="{{ route('reservations.show', $reservation) }}" class="small text-decoration-none"><i class="ti ti-external-link me-1"></i>Open full reservation page</a>
+                                    @if($canDecide)
+                                        <form method="POST" action="{{ route('approvals.decision', $reservation) }}" class="approval-action mt-3">
+                                            @csrf
+                                            <label class="form-label small fw-semibold" for="comment-{{ $reservation->id }}">Decision comment <span class="text-danger">*</span></label>
+                                            <textarea class="form-control form-control-sm mb-2" id="comment-{{ $reservation->id }}" name="comment" rows="2" maxlength="2000" required placeholder="Add a note for the requester"></textarea>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <button class="btn btn-success btn-sm" name="decision" value="approve"><i class="ti ti-check me-1"></i>Approve</button>
+                                                <button class="btn btn-outline-warning btn-sm" name="decision" value="request_changes"><i class="ti ti-edit me-1"></i>Request changes</button>
+                                                <button class="btn btn-outline-danger btn-sm" name="decision" value="reject"><i class="ti ti-x me-1"></i>Reject</button>
+                                            </div>
+                                        </form>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
-                        </div>
-                    </details>
+                    </div>
                 </article>
             @empty
                 <div class="rs-dash-empty text-center"><i class="ti ti-circle-check text-success fs-3 d-block mb-2"></i><strong>You’re all caught up</strong><div>No pending requests are assigned to you.</div></div>
             @endforelse
+            @if($pending->hasPages())<div class="pt-2">{{ $pending->links() }}</div>@endif
         </div>
     </section>
 
@@ -120,28 +128,46 @@
             </form>
         @forelse($history as $reservation)
             <article class="approval-history">
-                <details class="approval-disclosure">
-                    <summary class="approval-summary">
+                <div class="approval-summary">
                         <span class="approval-summary__main">
                             <span class="d-flex flex-wrap align-items-center gap-2"><strong>{{ $reservation->reference }}</strong><span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span></span>
                             <span class="d-block fw-semibold approval-summary__title mt-1">{{ $reservation->title ?: $reservation->purpose }}</span>
                             <span class="approval-summary__meta">{{ $reservation->requester?->name ?? 'Unknown' }} · {{ $reservation->resourceNames() }}</span>
                         </span>
                         <span class="approval-summary__date small text-muted">{{ $reservation->reservation_date?->format('d M Y') }} · {{ substr((string)$reservation->start_time,0,5) }}–{{ substr((string)$reservation->end_time,0,5) }}</span>
-                        <span class="approval-summary__toggle"><span class="is-closed">Details <i class="ti ti-chevron-down"></i></span><span class="is-open">Close <i class="ti ti-chevron-up"></i></span></span>
-                    </summary>
-                    <div class="approval-expanded">
-                <div class="small text-muted mb-2">{{ $reservation->title }} · Requested by {{ $reservation->requester?->name ?? 'Unknown' }} · {{ $reservation->resourceNames() }}</div>
-                @foreach($reservation->statusHistory->whereIn('to_status', ['approved','rejected','changes_requested']) as $entry)
-                    <div class="d-flex align-items-start gap-2 small mt-2 approval-comment"><i class="ti ti-message-circle text-primary mt-1"></i><div><strong>{{ $entry->actor?->name ?? 'System' }}</strong> · {{ $entry->created_at?->timezone(config('reservations.display_timezone', 'Asia/Colombo'))->format('d M Y, H:i') }}<div class="text-muted">{{ $entry->reason ?: 'No comment recorded.' }}</div></div></div>
-                @endforeach
-                    </div>
-                </details>
+                        <div class="approval-actions">
+                            <a href="{{ route('reservations.show', $reservation) }}" class="btn btn-sm btn-outline-primary" aria-label="View {{ $reservation->reference }}" title="View"><i class="ti ti-eye"></i></a>
+                            @if($canDecide)
+                                <form method="POST" action="{{ route('approvals.archive', $reservation) }}" data-approval-archive>
+                                    @csrf @method('DELETE')
+                                    <input type="hidden" name="archive_reason" value="">
+                                    <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Delete {{ $reservation->reference }} from approvals" title="Delete"><i class="ti ti-trash"></i></button>
+                                </form>
+                            @endif
+                        </div>
+                </div>
             </article>
         @empty
             <div class="rs-dash-empty text-center">No decisions match these filters.</div>
         @endforelse
-        @if($history->hasPages())<div class="pt-2">{{ $history->links() }}</div>@endif
+        @if($history->hasPages())<div class="pt-2">{{ $history->appends(request()->except('pending_page'))->links() }}</div>@endif
     </section>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.querySelectorAll('[data-approval-archive]').forEach((form) => {
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            if (!window.confirm('Remove this reservation from the Approvals page? Reservation history will be kept.')) return;
+
+            const reason = window.prompt('Add a reason for the audit history:');
+            if (!reason || !reason.trim()) return;
+
+            form.querySelector('[name="archive_reason"]').value = reason.trim();
+            form.submit();
+        });
+    });
+</script>
+@endpush
