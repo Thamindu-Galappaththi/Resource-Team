@@ -139,7 +139,8 @@
 
 <div class="modal fade rsv-modal" id="rsv-cancel-modal" tabindex="-1" aria-labelledby="rsv-cancel-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form id="rsv-cancel-form" class="modal-content">
+        <form id="rsv-cancel-form" method="POST" class="modal-content">
+            @csrf
             <div class="modal-header">
                 <span class="rsv-modal-icon" aria-hidden="true"><i class="ti ti-ban"></i></span>
                 <div>
@@ -172,5 +173,5 @@ window.RSVIndex = {
     payload: @json($payload),
 };
 </script>
-<script src="{{ asset('js/reservation-index.js') }}?v=8"></script>
+<script src="{{ asset('js/reservation-index.js') }}?v=10"></script>
 @endpush

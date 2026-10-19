@@ -161,6 +161,18 @@ class ReservationManagementTest extends TestCase
             'reservation_id' => $reservation->id,
             'status' => 'cancelled',
         ]);
+
+        $this->actingAs($user)->post(route('reservations.store'), $this->payload($resource, $user, [
+            'reservation_date' => now('Asia/Colombo')->addDays(2)->toDateString(),
+        ]));
+        $second = Reservation::query()->latest('id')->first();
+        $this->actingAs($user)
+            ->postJson(route('reservations.cancel', $second), [
+                'cancellation_reason' => 'Room no longer needed',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Reservation cancelled successfully.');
+        $this->assertSame(ReservationStatus::CANCELLED->value, $second->fresh()->status);
     }
 
     public function test_cancelled_and_rejected_reservations_hide_cancel_for_admin(): void

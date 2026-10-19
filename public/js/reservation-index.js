@@ -341,10 +341,10 @@
         const reason = document.getElementById('rsv-cancel-reason');
         const error = document.getElementById('rsv-cancel-error');
         const submit = document.getElementById('rsv-cancel-submit');
-        const body = new FormData();
+        const form = event.currentTarget;
+        const body = new FormData(form);
         body.set('cancellation_reason', reason.value.trim());
-        submit.disabled = true;
-        fetch(active.cancel_url, { method: 'POST', headers: headers(), body, credentials: 'same-origin' })
+        const run = () => fetch(active.cancel_url, { method: 'POST', headers: headers(), body, credentials: 'same-origin' })
             .then(async (response) => {
                 const data = await response.json().catch(() => ({}));
                 if (response.status === 422) {
@@ -361,8 +361,13 @@
             })
             .catch((error) => {
                 if (error.message !== 'invalid') showFlash(error.message, 'danger');
-            })
-            .finally(() => { submit.disabled = false; });
+            });
+        if (window.RMAction) {
+            window.RMAction.around(form, run);
+            return;
+        }
+        submit.disabled = true;
+        run().finally(() => { submit.disabled = false; });
     });
 
     document.querySelectorAll('.rsv-auto-alert').forEach((alert) => dismissAlert(alert));

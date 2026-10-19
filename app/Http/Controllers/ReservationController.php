@@ -80,7 +80,7 @@ class ReservationController extends Controller
         return view('reservations.show', compact('reservation'));
     }
 
-    public function cancel(CancelReservationRequest $request, Reservation $reservation): RedirectResponse
+    public function cancel(CancelReservationRequest $request, Reservation $reservation): RedirectResponse|JsonResponse
     {
         $this->authorize('cancel', $reservation);
 

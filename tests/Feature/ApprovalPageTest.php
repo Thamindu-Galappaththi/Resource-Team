@@ -41,7 +41,8 @@ class ApprovalPageTest extends TestCase
             ->assertDontSee('href="#pending-heading"', false)
             ->assertDontSee('href="#history-heading"', false)
             ->assertDontSee('data-bs-target="#approval-view-', false)
-            ->assertSee('ap-stats', false);
+            ->assertSee('ap-stats', false)
+            ->assertSee('js/action-lock.js', false);
     }
 
     public function test_approvals_search_filters_pending_requests(): void

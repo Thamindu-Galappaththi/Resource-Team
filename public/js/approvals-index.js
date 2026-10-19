@@ -331,6 +331,8 @@ document.addEventListener('DOMContentLoaded', () => {
             didOpen: () => Swal.showLoading(),
         });
 
+        const group = document.querySelector(`[data-ap-archive="${row.id}"]`)?.closest('.rsv-action-group');
+        window.RMAction?.lock(group || page);
         try {
             const response = await fetch(row.archive_url, {
                 method: 'POST',
@@ -363,6 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     container: 'rm-swal-backdrop',
                 },
             });
+        } finally {
+            window.RMAction?.unlock(group || page);
         }
     }
 

@@ -503,7 +503,12 @@ $(function () {
     });
 
     $(document).on('click', '.js-toggle-user', function () {
+        const $button = $(this);
+        if ($button.prop('disabled')) {
+            return;
+        }
         const user = rowUser(this);
+        $button.prop('disabled', true);
         $.ajax({
             url: user.toggle_url,
             method: 'POST',
@@ -514,6 +519,8 @@ $(function () {
             fetchUsers(window.location.href);
         }).fail(function (xhr) {
             showFlash(xhr.responseJSON?.message || 'Could not update user status.', 'error');
+        }).always(function () {
+            $button.prop('disabled', false);
         });
     });
 
@@ -704,6 +711,7 @@ $(function () {
         }
 
         clearResetPasswordErrors();
+        window.RMAction?.lock($form[0]);
         $submit.prop('disabled', true);
 
         $.ajax({
@@ -724,6 +732,7 @@ $(function () {
             }
             showFlash(xhr.responseJSON?.message || 'The password could not be reset.', 'error');
         }).always(function () {
+            window.RMAction?.unlock($form[0]);
             $submit.prop('disabled', false);
         });
     });
