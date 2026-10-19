@@ -96,7 +96,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/resources', [ResourcePaymentController::class, 'index'])->middleware('permission:payments.view')->name('resources');
         Route::get('/resources/lookup', [ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
         Route::get('/resources/invoices/{reference}/print', [ResourcePaymentController::class, 'print'])->middleware('permission:payments.view')->name('resources.print');
-        Route::get('/resources/invoices/{reference}/print', [\App\Http\Controllers\ResourcePaymentController::class, 'print'])->middleware('permission:payments.view')->name('resources.print');
+        Route::post('/resources/usage/confirm', [ResourcePaymentController::class, 'confirmUsage'])->middleware('permission:payments.view')->name('resources.usage.confirm');
     });
 
     Route::get('/reports', fn () => view('reports.index'))->middleware('permission:reports.view')->name('reports.index');
