@@ -180,6 +180,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
+        Route::post('/clear-all', 'clearAll')->name('clear-all');
         Route::post('/mark-read', 'markAllRead')->name('mark-read');
         Route::post('/{notification}/read', 'markRead')->name('read');
         Route::post('/{notification}/unread', 'markUnread')->name('unread');

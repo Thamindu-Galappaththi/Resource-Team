@@ -1,4 +1,4 @@
-<li class="nav-item dropdown nb-bell">
+<li class="nav-item dropdown nb-bell" data-clear-all-url="{{ route('notifications.clear-all') }}">
     <a class="nav-link nav-icon-hover nb-toggle" href="javascript:void(0)" id="notificationsDropdown" role="button"
         data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
         aria-label="Notifications{{ $unreadNotificationCount > 0 ? ' ('.$unreadNotificationCount.' unread)' : '' }}">
@@ -12,9 +12,14 @@
     <div class="dropdown-menu dropdown-menu-end nb-menu" aria-labelledby="notificationsDropdown">
         <div class="nb-heading">
             <span>Notifications</span>
-            @if ($unreadNotificationCount > 0)
-                <span class="nb-count">{{ $unreadNotificationCount }} new</span>
-            @endif
+            <div class="nb-heading-actions">
+                @if ($unreadNotificationCount > 0)
+                    <span class="nb-count">{{ $unreadNotificationCount }} new</span>
+                @endif
+                @if ($headerNotifications->isNotEmpty())
+                    <button type="button" class="nb-clear-all">Clear all</button>
+                @endif
+            </div>
         </div>
         <div class="nb-list">
             @forelse ($headerNotifications as $notification)

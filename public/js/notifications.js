@@ -5,6 +5,36 @@ document.addEventListener('DOMContentLoaded', function () {
     var csrf = document.querySelector('meta[name="csrf-token"]');
 
     bell.addEventListener('click', function (event) {
+        var clearButton = event.target.closest('.nb-clear-all');
+        if (clearButton) {
+            if (clearButton.disabled) return;
+            clearButton.disabled = true;
+            fetch(bell.dataset.clearAllUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrf ? csrf.content : '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+            }).then(function (response) {
+                if (!response.ok) throw new Error('Could not clear notifications.');
+                return response.json();
+            }).then(function (data) {
+                bell.querySelectorAll('.nb-item').forEach(function (item) { item.remove(); });
+                var empty = document.createElement('div');
+                empty.className = 'nb-empty';
+                empty.innerHTML = '<i class="ti ti-bell-off"></i><span>You\'re all caught up.</span>';
+                bell.querySelector('.nb-list').appendChild(empty);
+                clearButton.remove();
+                updateUnreadCount(data.unread_count);
+            }).catch(function () {
+                clearButton.disabled = false;
+                clearButton.title = 'Could not clear notifications. Try again.';
+            });
+            return;
+        }
+
         var button = event.target.closest('.nb-status');
         if (!button) return;
 
