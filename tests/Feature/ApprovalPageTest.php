@@ -108,6 +108,39 @@ class ApprovalPageTest extends TestCase
             ->assertDontSee('Needs removal', false);
     }
 
+    public function test_special_approvals_page_matches_the_shared_layout_and_records_an_override(): void
+    {
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $resource = Resource::factory()->create(['status' => 'active', 'name_model' => 'Board Room']);
+        $pending = $this->pendingReservation($requester, $resource, 'Executive briefing');
+
+        $this->actingAs($admin)->get(route('approvals.special'))
+            ->assertOk()
+            ->assertSee('Waiting for override', false)
+            ->assertSee('Override history', false)
+            ->assertSee('Executive briefing', false)
+            ->assertSee('ap-stats', false)
+            ->assertDontSee('special-view-'.$pending->id, false);
+
+        $this->actingAs($admin)
+            ->getJson(route('approvals.special', ['search' => 'Executive']))
+            ->assertOk()
+            ->assertHeader('content-type', 'text/html; charset=UTF-8');
+
+        $this->actingAs($admin)
+            ->post(route('approvals.special-decision', $pending), [
+                'decision' => 'approve',
+                'comment' => 'Director approved the exception',
+            ])
+            ->assertRedirect(route('approvals.special'));
+
+        $this->assertSame('approved', $pending->fresh()->status);
+        $this->actingAs($admin)->get(route('approvals.special'))
+            ->assertOk()
+            ->assertSee('Director approved the exception', false);
+    }
+
     private function pendingReservation(User $requester, Resource $resource, string $title): Reservation
     {
         $start = now('UTC')->addDay()->setTime(4, 30);

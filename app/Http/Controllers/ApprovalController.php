@@ -47,31 +47,20 @@ class ApprovalController extends Controller
         ];
     }
 
-    public function special(Request $request): View
+    public function special(Request $request): Response
     {
-        $reservations = Reservation::query()
-            ->whereNull('approval_archived_at')
-            ->where('status', ReservationStatus::PENDING_APPROVAL->value)
-            ->with(['requester', 'location', 'items.resource.type.category', 'statusHistory.actor'])
-            ->orderBy('submitted_at')
-            ->paginate(10)
-            ->withQueryString();
+        return $this->htmlPage('approvals.special', $this->specialViewData($request));
+    }
 
-        return view('approvals.special', [
-            'reservations' => $reservations,
-            'overrideHistory' => ReservationStatusHistory::query()
-                ->whereJsonContains('context->action', 'special_override')
-                ->with(['reservation.requester', 'actor'])
-                ->latest('created_at')
-                ->paginate(10, ['*'], 'override_history_page')
-                ->withQueryString(),
-            'canOverride' => $request->user()->hasRole('developer', 'super_admin'),
-        ]);
+    public function specialFeed(Request $request): JsonResponse
+    {
+        return $this->uncachedJson($this->specialPayload($request));
     }
 
     public function specialDecision(Request $request, Reservation $reservation): RedirectResponse
     {
-        abort_unless($request->user()->hasRole('developer', 'super_admin'), 403);
+        abort_unless($request->user()->hasPermission('approvals.special'), 403);
+
         return $this->applyDecision($request, $reservation, true);
     }
 
@@ -164,10 +153,87 @@ class ApprovalController extends Controller
         return redirect()->route($specialOverride ? 'approvals.special' : 'approvals.index')->with('success', 'Reservation '.$reservation->reference.' '.$status->label().'.');
     }
 
-    private function indexPayload(Request $request): array
+    private function specialViewData(Request $request): array
     {
-        $user = $request->user();
-        $filters = $request->validate([
+        $payload = $this->specialPayload($request);
+
+        return [
+            'payload' => $payload,
+            'categories' => ResourceCategory::query()->orderBy('name')->get(),
+            'locations' => Location::query()->ordered()->get(),
+            'filters' => $payload['filters'],
+            'hasFilters' => $payload['meta']['has_filters'],
+            'canDecide' => $request->user()->hasPermission('approvals.special'),
+        ];
+    }
+
+    private function specialPayload(Request $request): array
+    {
+        $filters = $this->listFilters($request);
+        $relations = ['requester', 'location', 'items.resource.type.category', 'statusHistory.actor'];
+
+        $pending = $this->applyListFilters(
+            Reservation::query()
+                ->whereNull('approval_archived_at')
+                ->where('status', ReservationStatus::PENDING_APPROVAL->value),
+            $filters,
+            withStatus: false,
+        )
+            ->with($relations)
+            ->orderBy('reservation_date')
+            ->orderBy('start_time')
+            ->paginate(10, ['*'], 'pending_page')
+            ->withQueryString()
+            ->setPath(route('approvals.special'));
+
+        $history = ReservationStatusHistory::query()
+            ->whereJsonContains('context->action', 'special_override')
+            ->whereHas('reservation', function ($query) use ($filters) {
+                $this->applyListFilters($query, $filters, withStatus: true);
+            })
+            ->with(['reservation.requester', 'reservation.location', 'reservation.items.resource.type.category', 'actor'])
+            ->latest('created_at')
+            ->paginate(10, ['*'], 'history_page')
+            ->withQueryString()
+            ->setPath(route('approvals.special'));
+
+        return [
+            'pending' => $pending->getCollection()->map(function (Reservation $reservation) {
+                $row = $this->present($reservation);
+                $row['decision_url'] = route('approvals.special-decision', $reservation);
+
+                return $row;
+            })->values(),
+            'history' => $history->getCollection()->map(function (ReservationStatusHistory $entry) {
+                $row = $this->present($entry->reservation);
+                $status = ReservationStatus::tryFrom((string) $entry->to_status);
+                $row['status'] = $entry->to_status;
+                $row['status_label'] = $status?->label() ?? $entry->to_status;
+                $row['status_badge'] = $status?->badgeClass() ?? 'bg-secondary';
+                $row['comment'] = $entry->reason;
+                $row['actor'] = $entry->actor?->name ?? 'System';
+                $row['pending'] = false;
+                $row['decision_url'] = route('approvals.special-decision', $entry->reservation);
+
+                return $row;
+            })->values(),
+            'summary' => [
+                'pending' => $pending->total(),
+                'history' => $history->total(),
+            ],
+            'pending_pager' => $this->pagerPayload($pending),
+            'history_pager' => $this->pagerPayload($history),
+            'filters' => $filters,
+            'meta' => [
+                'has_filters' => collect($filters)->contains(fn ($value) => filled($value)),
+            ],
+            'can_decide' => $request->user()->hasPermission('approvals.special'),
+        ];
+    }
+
+    private function listFilters(Request $request): array
+    {
+        return $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', Rule::in([
                 ReservationStatus::APPROVED->value,
@@ -179,6 +245,12 @@ class ApprovalController extends Controller
             'from_date' => ['nullable', 'date'],
             'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
         ]);
+    }
+
+    private function indexPayload(Request $request): array
+    {
+        $user = $request->user();
+        $filters = $this->listFilters($request);
         $base = $this->visibleQuery($user);
         $relations = ['requester', 'location', 'items.resource.type.category', 'statusHistory.actor'];
 

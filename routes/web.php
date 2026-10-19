@@ -76,6 +76,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/{reservation}/decision', [ApprovalController::class, 'decide'])->middleware('permission:approvals.index')->name('decision');
         Route::delete('/{reservation}', [ApprovalController::class, 'archive'])->middleware('permission:approvals.index')->name('archive');
         Route::get('/special', [ApprovalController::class, 'special'])->middleware('permission:approvals.special')->name('special');
+        Route::get('/special/feed', [ApprovalController::class, 'specialFeed'])->middleware('permission:approvals.special')->name('special.feed');
         Route::post('/{reservation}/special-decision', [ApprovalController::class, 'specialDecision'])->middleware('permission:approvals.special')->name('special-decision');
     });
 

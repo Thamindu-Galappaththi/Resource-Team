@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const search = document.getElementById('search');
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
     const canDecide = Boolean(config.canDecide);
+    const allowArchive = config.allowArchive !== false && canDecide;
     const viewModalEl = document.getElementById('ap-view-modal');
     const viewModal = viewModalEl && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(viewModalEl) : null;
     const swalFire = (options) => window.RMSwal.fire(options);
@@ -54,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function actionButtons(row) {
         const view = `<button type="button" class="btn btn-sm btn-outline-secondary rsv-icon-btn" data-ap-view="${row.id}" title="View" aria-label="View ${escapeHtml(row.reference)}"><i class="ti ti-eye"></i></button>`;
-        const archive = canDecide
+        const archive = allowArchive
             ? `<button type="button" class="btn btn-sm btn-outline-danger rsv-icon-btn" data-ap-archive="${row.id}" title="Remove" aria-label="Remove ${escapeHtml(row.reference)} from approvals"><i class="ti ti-trash"></i></button>`
             : '';
         return `<span class="rsv-action-group">${view}${archive}</span>`;
@@ -133,11 +134,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pendingEl) pendingEl.textContent = Number(payload.summary?.pending || 0).toLocaleString();
         if (historyEl) historyEl.textContent = Number(payload.summary?.history || 0).toLocaleString();
         const pendingCount = document.getElementById('ap-pending-count');
-        if (pendingCount) pendingCount.textContent = `${payload.summary?.pending || 0} awaiting a decision`;
+        if (pendingCount) pendingCount.textContent = `${payload.summary?.pending || 0} ${config.pendingLabel || 'awaiting a decision'}`;
         const pendingRoot = document.getElementById('ap-pending-results');
         const historyRoot = document.getElementById('ap-history-results');
         if (pendingRoot) {
-            pendingRoot.innerHTML = renderTable(payload.pending || [], payload.pending_pager, {
+            pendingRoot.innerHTML = renderTable(payload.pending || [], payload.pending_pager, config.pendingList || {
                 statusLabel: 'Status',
                 emptyIcon: 'ti-circle-check',
                 emptyTitle: 'You’re all caught up',
@@ -145,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         if (historyRoot) {
-            historyRoot.innerHTML = renderTable(payload.history || [], payload.history_pager, {
+            historyRoot.innerHTML = renderTable(payload.history || [], payload.history_pager, config.historyList || {
                 statusLabel: 'Decision',
                 emptyIcon: 'ti-history',
                 emptyTitle: 'No decisions match these filters.',
@@ -255,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('ap-view-body').innerHTML = `
             <div class="rsv-details">
                 ${detailRow('Requester', escapeHtml([row.requester, row.requester_email].filter(Boolean).join(' · ')))}
+                ${row.actor ? detailRow('Override by', escapeHtml(row.actor)) : ''}
                 ${detailRow('Submitted', escapeHtml(row.submitted || '—'))}
                 ${detailRow('Schedule', escapeHtml(`${row.date || '—'} · ${row.time || '—'}`))}
                 ${detailRow('Location', escapeHtml(row.location || '—'))}

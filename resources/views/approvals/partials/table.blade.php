@@ -4,6 +4,7 @@
     $emptyTitle = $emptyTitle ?? 'No records found.';
     $emptyCopy = $emptyCopy ?? 'Try a different search or clear the filters.';
     $emptyIcon = $emptyIcon ?? 'ti-calendar-off';
+    $showArchive = $showArchive ?? ($canDecide ?? false);
 @endphp
 @if(! count($rows))
     <div class="rsv-empty">
@@ -37,7 +38,7 @@
                         <td class="text-end text-nowrap rsv-actions" data-label="Actions">
                             <span class="rsv-action-group">
                                 <button type="button" class="btn btn-sm btn-outline-secondary rsv-icon-btn" data-ap-view="{{ $row['id'] }}" title="View" aria-label="View {{ $row['reference'] }}"><i class="ti ti-eye"></i></button>
-                                @if($canDecide)
+                                @if($showArchive)
                                     <button type="button" class="btn btn-sm btn-outline-danger rsv-icon-btn" data-ap-archive="{{ $row['id'] }}" title="Remove" aria-label="Remove {{ $row['reference'] }} from approvals"><i class="ti ti-trash"></i></button>
                                 @endif
                             </span>

@@ -174,5 +174,5 @@
         payload: @json($payload),
     };
 </script>
-<script src="{{ asset('js/approvals-index.js') }}?v=7"></script>
+<script src="{{ asset('js/approvals-index.js') }}?v=8"></script>
 @endpush
