@@ -23,20 +23,15 @@ class CanteenReservationStatusUpdated extends Notification
 
     public function toArray($notifiable): array
     {
-        $message = 'Your canteen reservation '.$this->reservation->reservation_ref.' is now '.$this->reservation->status.'.';
-
-        if ($this->reservation->status === 'rejected' && filled($this->reservation->approval_comments)) {
-            $message .= ' Comment: '.$this->reservation->approval_comments;
-        }
-
         return [
             'reservation_id' => $this->reservation->id,
             'reservation_ref' => $this->reservation->reservation_ref,
             'status' => $this->reservation->status,
+            'comment' => $this->reservation->approval_comments,
             'icon' => 'ti-tools-kitchen-2',
             'title' => 'Canteen reservation update',
             'url' => route('canteen.show', $this->reservation),
-            'message' => $message,
+            'message' => 'Canteen reservation '.$this->reservation->reservation_ref.' is now '.$this->reservation->status.'.',
         ];
     }
 }

@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Enums\ReservationType;
 use App\Models\CanteenReservation;
 use App\Models\Reservation;
+use App\Models\Resource;
 use App\Models\User;
 use App\Notifications\CanteenReservationCreated;
 use App\Notifications\NewReservationPending;
 use App\Notifications\NewUserCreated;
 use App\Notifications\ReservationCreated;
+use App\Services\NotificationPresenter;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -80,7 +82,7 @@ class NotificationTest extends TestCase
         $this->post(route('notifications.mark-read'))->assertRedirect(route('login'));
     }
 
-    public function test_creating_a_user_notifies_other_active_admins_only(): void
+    public function test_creating_a_user_notifies_users_who_can_manage_users(): void
     {
         Notification::fake();
         $this->withoutMiddleware(ValidateCsrfToken::class);
@@ -88,8 +90,10 @@ class NotificationTest extends TestCase
         $creator = User::factory()->role('admin')->create();
         $otherAdmin = User::factory()->role('admin')->create();
         $superAdmin = User::factory()->role('super_admin')->create();
+        $developer = User::factory()->role('developer')->create();
         $inactiveAdmin = User::factory()->role('admin')->inactive()->create();
         $coordinator = User::factory()->role('coordinator')->create();
+        $finance = User::factory()->role('finance')->create();
 
         $this->actingAs($creator)
             ->post(route('create.user.store'), [
@@ -105,10 +109,57 @@ class NotificationTest extends TestCase
 
         $newUser = User::query()->where('email', 'new.admin@example.com')->firstOrFail();
 
-        Notification::assertSentTo([$otherAdmin, $superAdmin], NewUserCreated::class, function (NewUserCreated $notification) use ($newUser, $creator) {
+        Notification::assertSentTo([$otherAdmin, $superAdmin, $developer], NewUserCreated::class, function (NewUserCreated $notification) use ($newUser, $creator) {
             return $notification->user->is($newUser) && $notification->creator->is($creator);
         });
-        Notification::assertNotSentTo([$creator, $inactiveAdmin, $coordinator, $newUser], NewUserCreated::class);
+        Notification::assertNotSentTo([$creator, $inactiveAdmin, $coordinator, $finance, $newUser], NewUserCreated::class);
+    }
+
+    public function test_new_resource_reservation_notifies_approval_permission_holders(): void
+    {
+        Notification::fake();
+
+        $requester = User::factory()->role('coordinator')->create();
+        $approver = User::factory()->role('resource_owner')->create();
+        $admin = User::factory()->role('admin')->create();
+        $finance = User::factory()->role('finance')->create();
+        $resource = Resource::factory()->create();
+
+        $this->actingAs($requester)->post(route('reservations.store'), [
+            'resource_id' => $resource->id,
+            'resource_ids' => [$resource->id],
+            'requester_id' => $requester->id,
+            'location_id' => $resource->location_id,
+            'category_id' => $resource->type->resource_category_id,
+            'reservation_date' => now()->addDay()->toDateString(),
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'purpose' => 'Training session',
+            'attendee_count' => 10,
+        ])->assertRedirect();
+
+        Notification::assertSentTo($requester, ReservationCreated::class);
+        Notification::assertSentTo([$approver, $admin], NewReservationPending::class);
+        Notification::assertNotSentTo([$requester, $finance], NewReservationPending::class);
+    }
+
+    public function test_notification_messages_are_limited_in_the_bell(): void
+    {
+        $viewer = User::factory()->role('admin')->create();
+        $creator = User::factory()->role('admin')->create(['name' => str_repeat('Asha ', 12)]);
+        $newUser = User::factory()->role('coordinator')->create(['name' => str_repeat('Nimal ', 12)]);
+        $viewer->notify(new NewUserCreated($newUser, $creator));
+
+        $payload = NotificationPresenter::toArray($viewer->notifications()->firstOrFail());
+        $this->assertLessThanOrEqual(NotificationPresenter::MESSAGE_LIMIT + 3, mb_strlen($payload['message']));
+        $this->assertStringEndsWith('...', $payload['message']);
+        $this->assertStringContainsString($newUser->name, $payload['full_message']);
+
+        $this->actingAs($viewer)
+            ->get(route('user.profile'))
+            ->assertOk()
+            ->assertSee($payload['message'], false)
+            ->assertSee('title="'.$payload['full_message'].'"', false);
     }
 
     public function test_notifications_link_to_the_relevant_page(): void

@@ -166,7 +166,9 @@ document.addEventListener('DOMContentLoaded', function () {
         var copy = document.createElement('span');
         copy.className = 'nb-copy';
         copy.appendChild(textEl('span', 'nb-title', notification.title || 'Notification'));
-        copy.appendChild(textEl('span', 'nb-message', notification.message || 'You have a new notification.'));
+        var message = textEl('span', 'nb-message', notification.message || 'You have a new notification.');
+        if (notification.full_message) message.title = notification.full_message;
+        copy.appendChild(message);
         copy.appendChild(textEl('small', 'nb-time', notification.time || 'Just now'));
 
         content.appendChild(icon);

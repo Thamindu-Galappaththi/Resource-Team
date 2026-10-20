@@ -43,7 +43,7 @@ class ReservationDecision extends Notification
             'icon' => $status === ReservationStatus::REJECTED ? 'ti-calendar-x' : 'ti-calendar-check',
             'title' => 'Reservation '.$status->label(),
             'url' => $this->reservation->destinationUrl(),
-            'message' => 'Reservation '.$this->reservation->reference.' is '.$status->label().'. Comment: '.$this->comment,
+            'message' => 'Reservation '.$this->reservation->reference.' is '.$status->label().'.',
         ];
     }
 }

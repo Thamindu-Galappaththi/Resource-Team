@@ -9,10 +9,10 @@ use App\Http\Requests\UpdateCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationStatusRequest;
 use App\Models\CanteenReservation;
 use App\Models\Location;
-use App\Models\User;
 use App\Notifications\CanteenReservationCreated;
 use App\Notifications\CanteenReservationStatusUpdated;
 use App\Notifications\NewCanteenReservationPending;
+use App\Services\NotificationRecipients;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -153,13 +153,11 @@ class CanteenReservationController extends Controller
             $reservation->requestedBy()->first()?->notify(new CanteenReservationCreated($reservation));
 
             if ($reservation->status === CanteenReservationStatus::PENDING->value) {
-                $approvers = User::query()->whereHas('role', function ($query) {
-                    $query->whereIn('slug', ['developer', 'super_admin', 'admin', 'coordinator', 'canteen']);
-                })->whereKeyNot(auth()->id())->get();
-
-                foreach ($approvers as $approver) {
-                    $approver->notify(new NewCanteenReservationPending($reservation));
-                }
+                NotificationRecipients::notify(
+                    'canteen.manage',
+                    new NewCanteenReservationPending($reservation),
+                    except: [auth()->id()]
+                );
             }
 
             return $reservation;

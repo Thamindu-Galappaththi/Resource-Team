@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Notifications\NewReservationPending;
 use App\Notifications\ReservationCancelled;
 use App\Notifications\ReservationCreated;
+use App\Services\NotificationRecipients;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -124,16 +125,15 @@ class ReservationBookingService
             $reservation->load(['requester', 'items', 'location']);
             $reservation->requester?->notify(new ReservationCreated($reservation));
 
-            $approverRoles = ['super_admin', 'admin', 'coordinator'];
-            if (($payload['type'] ?? ReservationType::STANDARD->value) === ReservationType::HOSTEL->value) {
-                $approverRoles[] = 'hostel_manager';
-            }
+            $approverPermission = $reservation->type === ReservationType::HOSTEL->value
+                ? 'hostel.manage'
+                : 'approvals.index';
 
-            User::query()
-                ->whereHas('role', fn ($query) => $query->whereIn('slug', $approverRoles))
-                ->whereKeyNot($reservation->requester_id)
-                ->get()
-                ->each(fn (User $approver) => $approver->notify(new NewReservationPending($reservation)));
+            NotificationRecipients::notify(
+                $approverPermission,
+                new NewReservationPending($reservation),
+                except: [$reservation->requester_id]
+            );
 
             return $reservation;
         });

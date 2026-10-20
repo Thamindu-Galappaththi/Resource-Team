@@ -4,9 +4,12 @@ namespace App\Services;
 
 use App\Enums\ReservationType;
 use App\Models\DatabaseNotification;
+use Illuminate\Support\Str;
 
 class NotificationPresenter
 {
+    public const MESSAGE_LIMIT = 90;
+
     private const ICONS = [
         'NewUserCreated' => 'ti-user-plus',
         'ReservationCreated' => 'ti-calendar-plus',
@@ -34,6 +37,7 @@ class NotificationPresenter
      *     id: string,
      *     title: string,
      *     message: string,
+     *     full_message: string,
      *     icon: string,
      *     url: string|null,
      *     time: string|null,
@@ -48,11 +52,13 @@ class NotificationPresenter
     {
         $type = class_basename($notification->type);
         $data = $notification->data;
+        $fullMessage = trim((string) ($data['message'] ?? 'You have a new notification.'));
 
         return [
             'id' => $notification->id,
             'title' => $data['title'] ?? self::TITLES[$type] ?? 'Notification',
-            'message' => $data['message'] ?? 'You have a new notification.',
+            'message' => Str::limit($fullMessage, self::MESSAGE_LIMIT),
+            'full_message' => $fullMessage,
             'icon' => $data['icon'] ?? self::ICONS[$type] ?? 'ti-bell',
             'url' => self::url($notification),
             'time' => $notification->created_at?->diffForHumans(),

@@ -41,7 +41,7 @@
                     <span class="nb-icon"><i class="ti {{ $notification['icon'] }}"></i></span>
                     <span class="nb-copy">
                         <span class="nb-title">{{ $notification['title'] }}</span>
-                        <span class="nb-message">{{ $notification['message'] }}</span>
+                        <span class="nb-message" title="{{ $notification['full_message'] }}">{{ $notification['message'] }}</span>
                         <small class="nb-time">{{ $notification['time'] }}</small>
                     </span>
                     @if ($notification['url'])</a>@else</span>@endif
