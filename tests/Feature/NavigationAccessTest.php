@@ -112,6 +112,7 @@ class NavigationAccessTest extends TestCase
             ->assertSee('Existing Canteen Reservations')
             ->assertSee('Lecture Fees')
             ->assertSee('Resource Payments')
+            ->assertSee('Resource Rates')
             ->assertSee('Reports & Analytics', false)
             ->assertDontSee('hide-menu">Maintenance', false);
     }

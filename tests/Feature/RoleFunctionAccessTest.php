@@ -38,6 +38,8 @@ class RoleFunctionAccessTest extends TestCase
         'canteen.index' => 'canteen.index',
         'canteen.create' => 'canteen.create',
         'payments.lecture-fees' => 'payments.view',
+        'payments.resources' => 'payments.view',
+        'payments.rates.index' => 'payments.rates.manage',
         'reports.index' => 'reports.view',
     ];
 
@@ -55,6 +57,7 @@ class RoleFunctionAccessTest extends TestCase
         'approvals.special' => 'hide-menu">Special Approvals',
         'hostel.create' => 'hide-menu">Create Hostel Reservation',
         'canteen.create' => 'hide-menu">Create Canteen Reservation',
+        'payments.rates.manage' => 'hide-menu">Resource Rates',
         'reports.view' => 'hide-menu">Reports',
     ];
 

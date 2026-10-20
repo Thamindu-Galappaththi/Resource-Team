@@ -3,15 +3,22 @@
 @section('title', 'Resource Rates')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v={{ @filemtime(public_path('css/resource-payments.css')) ?: time() }}">
-<style>
-    .rr-admin{max-width:1440px;margin:0 auto;padding:24px}.rr-admin-header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px}.rr-admin h1{margin:0;color:#17263c}.rr-admin-card{margin:18px 0;padding:22px;border:1px solid #e1e8f1;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(28,55,110,.06)}.rr-admin-form{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;align-items:end}.rr-admin label{display:grid;gap:5px;color:#50647d;font-size:12px;font-weight:700}.rr-admin input,.rr-admin select{min-height:40px;padding:8px 10px;border:1px solid #ccd7e5;border-radius:8px}.rr-admin button{padding:10px 14px;border:0;border-radius:8px;background:#1769c2;color:#fff;font-weight:700;cursor:pointer}.rr-admin table{width:100%;border-collapse:collapse}.rr-admin th,.rr-admin td{padding:11px 9px;border-bottom:1px solid #e8edf3;text-align:left;font-size:13px}.rr-admin th{color:#60738a}.rr-admin .rr-muted{color:#74859b;font-size:12px}.rr-admin .rr-deactivate{background:#fff;color:#a53a3a;border:1px solid #f0cccc}.rr-admin .rr-alert{padding:12px;border-radius:9px;background:#ecf8f1;color:#246b45;margin:12px 0}.rr-admin .rr-errors{color:#a53a3a}@media(max-width:900px){.rr-admin-form{grid-template-columns:repeat(2,minmax(130px,1fr))}.rr-admin-card{overflow-x:auto}}@media(max-width:560px){.rr-admin{padding:14px}.rr-admin-form{grid-template-columns:1fr}}
-</style>
+<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
+<link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
+<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=4">
 @endpush
 
 @section('content')
-<main class="rr-admin">
-    <header class="rr-admin-header"><div><p class="rp-eyebrow">FINANCE · RESOURCE PRICING</p><h1>Resource Rates</h1><p class="rr-muted">Configure effective-dated rates for resources and resource types.</p></div><a href="{{ route('payments.resources') }}" class="rp-history">Back to invoicing</a></header>
+<div class="container-fluid mt-4 rsv-page rp-page rr-admin">
+    <div class="rsv-header">
+        <div>
+            <h1 class="rsv-title">Resource Rates</h1>
+            <p class="rsv-subtitle mb-0">Configure effective-dated rates for resources and resource types.</p>
+        </div>
+        <div class="rsv-header-actions">
+            <a href="{{ route('payments.resources') }}" class="btn rsv-header-btn rsv-calendar-btn"><i class="ti ti-receipt me-1"></i> Back to invoicing</a>
+        </div>
+    </div>
     @if(session('success'))<div class="rr-alert">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="rr-alert rr-errors">{{ $errors->first() }}</div>@endif
     <section class="rr-admin-card"><h2>Add rate</h2>
@@ -55,5 +62,5 @@
     <section class="rr-admin-card"><h2>Recent changes</h2><table><thead><tr><th>When</th><th>Rate</th><th>Action</th><th>Actor</th><th>Details</th></tr></thead><tbody>
     @forelse($audits as $audit)<tr><td>{{ $audit->created_at?->format('d M Y H:i') }}</td><td>{{ $audit->rate?->resourceType?->name ?? 'Deleted rate' }}</td><td>{{ ucfirst($audit->action) }}</td><td>{{ $audit->actor?->name ?? 'Unknown' }}</td><td><details><summary>View values</summary><pre>{{ json_encode(['before'=>$audit->old_values,'after'=>$audit->new_values], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES) }}</pre></details></td></tr>@empty<tr><td colspan="5">No changes recorded.</td></tr>@endforelse
     </tbody></table></section>
-</main>
+</div>
 @endsection

@@ -1,13 +1,12 @@
 .rp-page {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 1.25rem 0 2rem;
+    max-width: none;
+    margin: 0;
+    padding: 0 0 2rem;
     color: #132033;
+    min-width: 0;
 }
-
-body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%, #f2f4fb 100%) fixed !important; }
-.rp-steps { display: flex; align-items: center; gap: .6rem; margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid #d5def0; border-radius: 14px; background: rgba(255,255,255,.94); list-style: none; }
-.rp-steps li { display: flex; align-items: center; gap: .45rem; color: #65758a; font-size: .75rem; font-weight: 700; }
+.rp-steps { display: flex; align-items: center; gap: .6rem; margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid #d5def0; border-radius: 14px; background: rgba(255,255,255,.94); list-style: none; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.rp-steps li { display: flex; align-items: center; gap: .45rem; color: #65758a; font-size: .75rem; font-weight: 700; flex: 0 0 auto; white-space: nowrap; }
 .rp-steps li + li::before { width: clamp(14px, 6vw, 64px); height: 1px; margin-right: .2rem; background: #cbd6e2; content: ''; }
 .rp-steps li span { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; background: #e8edf4; color: #52647a; font-size: .7rem; }
 .rp-steps li.is-current { color: #123a7a; }
@@ -54,6 +53,7 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
 .rp-history {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: .4rem;
     min-height: 40px;
     padding: .4rem .9rem;
@@ -68,7 +68,32 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
 }
 
 .rp-history:hover { background: #eef4ff; color: #123a7a; }
-.rp-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: .65rem; flex-wrap: wrap; }
+.rp-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: .65rem; flex-wrap: wrap; min-width: 0; }
+
+.rr-admin { max-width: none; }
+.rr-admin .rr-muted { color: #74859b; font-size: .8rem; }
+.rr-admin-card { min-width: 0; margin: 1rem 0; padding: 1.25rem 1.35rem; overflow-x: auto; border: 1px solid #e1e8f1; border-radius: 16px; background: #fff; box-shadow: 0 8px 24px rgba(28, 55, 110, .06); }
+.rr-admin-card h2 { margin: 0 0 .85rem; color: #17263c; font-size: 1.05rem; }
+.rr-admin-form { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; align-items: end; }
+.rr-admin-form label { display: grid; gap: 5px; color: #50647d; font-size: 12px; font-weight: 700; }
+.rr-admin-form input, .rr-admin-form select { min-height: 40px; padding: 8px 10px; border: 1px solid #ccd7e5; border-radius: 8px; background: #fff; }
+.rr-admin-form button, .rr-admin button[type="submit"] { padding: 10px 14px; border: 0; border-radius: 8px; background: #1769c2; color: #fff; font-weight: 700; cursor: pointer; }
+.rr-admin table { width: 100%; border-collapse: collapse; }
+.rr-admin th, .rr-admin td { padding: 11px 9px; border-bottom: 1px solid #e8edf3; text-align: left; font-size: 13px; vertical-align: top; }
+.rr-admin th { color: #60738a; }
+.rr-admin .rr-deactivate { background: #fff; color: #a53a3a; border: 1px solid #f0cccc; }
+.rr-admin .rr-alert { padding: 12px; border-radius: 9px; background: #ecf8f1; color: #246b45; margin: 12px 0; }
+.rr-admin .rr-errors { color: #a53a3a; background: #fdecec; }
+.rr-admin details { min-width: 0; }
+.rr-admin pre { max-width: 100%; overflow: auto; white-space: pre-wrap; }
+
+@media (max-width: 900px) {
+    .rr-admin-form { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+}
+
+@media (max-width: 560px) {
+    .rr-admin-form { grid-template-columns: minmax(0, 1fr); }
+}
 
 .rp-grid {
     display: grid;
@@ -83,10 +108,10 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
 .rp-invoice {
     min-width: 0;
     overflow: hidden;
-    border: 1px solid #b7e2d9;
-    border-radius: 18px;
-    background: #ecf8f6;
-    box-shadow: 0 12px 32px rgba(15, 118, 110, .12);
+    border: 1px solid #d5def0;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(28, 55, 110, .1);
 }
 
 .rp-card-title {
@@ -94,7 +119,7 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
     align-items: center;
     gap: .65rem;
     padding: .9rem 1.15rem;
-    background: linear-gradient(120deg, #115e59 0%, #0d9488 55%, #0891b2 100%);
+    background: linear-gradient(120deg, #123a7a 0%, #1769c2 100%);
 }
 
 .rp-usage-card .rp-card-title { margin: 0; }
@@ -126,8 +151,9 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
 .rp-search-form { padding: 1rem 1.15rem .25rem; }
 .rp-search-form label,
 .rp-label { display: block; margin-bottom: .4rem; color: #52647a; font-size: .72rem; font-weight: 700; }
-.rp-search-row { display: flex; gap: .55rem; }
+.rp-search-row { display: flex; gap: .55rem; min-width: 0; }
 .rp-search-row input { min-width: 0; height: 42px; flex: 1; padding: 0 .75rem; border: 1px solid #cdd9e5; border-radius: 9px; background: #fff; color: #24364a; font-size: .82rem; }
+.rp-search-row input::placeholder { color: #8a97a8; opacity: 1; }
 .rp-search-row input:focus { border-color: #1769c2; box-shadow: 0 0 0 3px rgba(23, 105, 194, .12) !important; }
 .rp-search-row button { min-width: 90px; height: 42px; border: 0; border-radius: 9px; background: #1769c2; color: #fff; font-size: .82rem; font-weight: 700; }
 .rp-search-row button:disabled { opacity: .6; }
@@ -140,7 +166,7 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
 .rp-message.is-error { color: #b13b3b; }
 
 .rp-reservation { min-width: 0; margin: .25rem 1.15rem 1.1rem; border: 1px solid #cce5df; border-radius: 12px; background: #fff; }
-.rp-reservation-summary { display: flex; min-width: 0; align-items: center; gap: .7rem; padding: .55rem .7rem; }
+.rp-reservation-summary { display: flex; min-width: 0; align-items: center; gap: .7rem; padding: .55rem .7rem; flex-wrap: wrap; }
 .rp-resource-icon { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 10px; background: #e3edff; color: #1769c2; font-size: 1.15rem; }
 .rp-resource-copy { display: grid; min-width: 0; flex: 1; gap: .15rem; }
 .rp-resource-copy strong { overflow: hidden; color: #24364a; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -209,7 +235,7 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
 .rp-total div { display: grid; gap: .2rem; }
 .rp-total div span { color: #1769c2; font-size: .62rem; font-weight: 800; letter-spacing: .05em; }
 .rp-total small { color: #8995a3; font-size: .58rem; }
-.rp-total > strong { color: #132033; font-size: clamp(1.25rem, 2vw, 1.55rem); font-weight: 800; letter-spacing: -.03em; white-space: nowrap; }
+.rp-total > strong { color: #132033; font-size: clamp(1.1rem, 2vw, 1.55rem); font-weight: 800; letter-spacing: -.03em; white-space: nowrap; }
 .rp-rate-warning, .rp-secure-note { display: flex; align-items: flex-start; gap: .45rem; padding: .6rem; border-radius: 9px; font-size: .65rem; line-height: 1.45; }
 .rp-rate-warning { border: 1px solid #f1dfb9; background: #fff7e8; color: #8b651d; }
 .rp-rate-warning i { font-size: .9rem; }
@@ -230,32 +256,51 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
 }
 
 @media (max-width: 580px) {
-    .rp-page { padding-top: .75rem; }
-    .rp-heading { flex-direction: column; padding: 1.1rem; }
-    .rp-header-actions { align-self: flex-start; justify-content: flex-start; }
+    .rp-page { padding: 0 0 1.5rem; }
+    .rp-search-row { flex-direction: column; }
+    .rp-search-row button { width: 100%; min-width: 0; }
     .rp-usage-grid { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
     .rp-usage-grid .rp-label { min-height: 0; }
     .rp-usage-grid > div > small { min-height: 0; }
     .rp-search-form { padding-right: .8rem; padding-left: .8rem; }
     .rp-reservation { margin-right: .8rem; margin-left: .8rem; }
-    .rp-date { display: none; }
+    .rp-date { margin-left: 46px; text-align: left; }
     .rp-reservation-details { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
-    .rp-steps { justify-content: space-between; gap: .2rem; padding: .6rem; }
-    .rp-steps li { gap: .25rem; font-size: .62rem; }
-    .rp-steps li + li::before { width: 10px; }
+    .rp-steps { justify-content: flex-start; gap: .55rem; padding: .6rem; }
+    .rp-steps li { gap: .25rem; font-size: .68rem; }
+    .rp-steps li + li::before { width: 12px; }
     .rp-actual-summary { flex-direction: column; gap: .3rem; }
     .rp-usage-foot { flex-wrap: wrap; }
     .rp-confirm-usage { width: 100%; margin: .2rem 0 0; }
+    .rp-line { flex-wrap: wrap; }
+    .rp-line strong, .rp-total > strong { white-space: normal; }
+    .rp-invoice-meta { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media print {
-    body { background: #fff !important; }
-    .left-sidebar, .app-header, .footer-wrapper, .rp-heading, .rp-main-column, .rp-invoice-actions, .rp-invoice-foot { display: none !important; }
-    .body-wrapper { margin: 0 !important; }
-    .body-wrapper > .container-fluid { max-width: none !important; padding: 0 !important; }
-    .rp-page { max-width: 760px; margin: 20px auto; }
+    @page { size: auto; margin: 12mm; }
+    html, body {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        display: block !important;
+        background: #fff !important;
+    }
+    .left-sidebar, .sidebar-backdrop, .app-header, .footer-wrapper, .rsv-header, .rp-heading, .rp-steps, .rp-main-column, .rp-invoice-actions, .rp-invoice-foot { display: none !important; }
+    #main-wrapper, .page-wrapper, .body-wrapper {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .body-wrapper > .container-fluid { max-width: none !important; padding: 0 !important; overflow: visible !important; }
+    .rp-page { max-width: 760px; margin: 0 auto; padding: 0; overflow: visible; }
     .rp-grid { display: block; }
-    .rp-invoice { position: static; border: 1px solid #bbc4ce; box-shadow: none; }
+    .rp-invoice { position: static; overflow: visible; border: 1px solid #bbc4ce; box-shadow: none; }
     .rp-invoice-header, .rp-invoice-body { padding: 20px 25px; }
     .rp-invoice-header { background: #fff; }
     .rp-status { border: 1px solid #ccc; background: #fff; color: #333; }

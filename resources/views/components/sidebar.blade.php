@@ -18,6 +18,7 @@
         $canCanteenCreate = $user->hasPermission('canteen.create');
         $canCanteenIndex = $user->hasPermission('canteen.index');
         $canPayments = $user->hasPermission('payments.view');
+        $canPaymentRates = $user->hasPermission('payments.rates.manage');
         $canReports = $user->hasPermission('reports.view');
     @endphp
 
@@ -233,6 +234,14 @@
                         <span class="hide-menu">Resource Payments</span>
                     </a>
                 </li>
+                @if($canPaymentRates)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('payments.rates.*') ? 'active' : '' }}" href="{{ route('payments.rates.index') }}">
+                            <span><i class="ti ti-tag"></i></span>
+                            <span class="hide-menu">Resource Rates</span>
+                        </a>
+                    </li>
+                @endif
             @endif
 
             @if($canReports)

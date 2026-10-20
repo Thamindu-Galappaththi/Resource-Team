@@ -180,6 +180,7 @@ return [
             'canteen.create',
             'canteen.manage',
             'payments.view',
+            'payments.rates.manage',
             'reports.view',
         ],
         'coordinator' => [
@@ -226,6 +227,7 @@ return [
             'reservations.calendar',
             'resources.index',
             'payments.view',
+            'payments.rates.manage',
             'reports.view',
         ],
         'finance' => [

@@ -32,7 +32,31 @@ class ResourcePaymentTest extends TestCase
             ->assertSee('id="rp-extra-hours" type="number" min="0" max="24" step="0.5"', false)
             ->assertSee('id="rp-rate-warning" class="rp-rate-warning is-hidden"', false)
             ->assertSee('Includes first', false)
-            ->assertSee('aria-live="polite"', false);
+            ->assertSee('aria-live="polite"', false)
+            ->assertSee('Reservation history', false)
+            ->assertSee('Manage resource rates', false)
+            ->assertDontSee('>Lecture fees<', false);
+    }
+
+    public function test_header_and_sidebar_actions_follow_payment_permissions(): void
+    {
+        $finance = User::factory()->role('finance')->create();
+        $this->actingAs($finance)->get(route('payments.resources'))
+            ->assertOk()
+            ->assertSee('Manage resource rates', false)
+            ->assertSee('hide-menu">Resource Rates', false)
+            ->assertSee('hide-menu">Lecture Fees', false)
+            ->assertSee('hide-menu">Resource Payments', false)
+            ->assertDontSee('Reservation history', false)
+            ->assertDontSee('>Lecture fees<', false);
+
+        $management = User::factory()->role('management')->create();
+        $this->actingAs($management)->get(route('payments.resources'))
+            ->assertOk()
+            ->assertSee('Manage resource rates', false)
+            ->assertSee('hide-menu">Resource Rates', false)
+            ->assertDontSee('Reservation history', false)
+            ->assertDontSee('>Lecture fees<', false);
     }
 
     public function test_seeded_catalog_has_every_requested_resource_type_and_lkr_amount(): void
@@ -165,6 +189,19 @@ class ResourcePaymentTest extends TestCase
             ->assertNotFound()->assertJsonPath('message', 'No payable reservation was found for that reference.');
     }
 
+    public function test_lookup_print_and_usage_work_for_finance_with_lowercase_reference(): void
+    {
+        $finance = User::factory()->role('finance')->create();
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
+
+        $this->actingAs($finance)->getJson(route('payments.resources.lookup', ['reference' => strtolower($reservation->reference)]))
+            ->assertOk()->assertJsonPath('has_rate', true)->assertJsonPath('base_fee', 5000);
+        $this->get(route('payments.resources.print', ['reference' => strtolower($reservation->reference), 'extra_hours' => 0.5]))
+            ->assertOk()->assertSee('LKR 6,250.00');
+        $this->postJson(route('payments.resources.usage.confirm'), ['reference' => strtolower($reservation->reference), 'extra_hours' => 0.5])
+            ->assertOk()->assertJsonPath('total', 6250);
+    }
+
     public function test_client_totals_are_ignored_and_confirmed_breakdown_is_audited(): void
     {
         $user = User::factory()->role('admin')->create();
@@ -236,8 +273,8 @@ class ResourcePaymentTest extends TestCase
         $this->actingAs($finance)->postJson(route('payments.rates.store'), $overlap)->assertUnprocessable()->assertJsonValidationErrors('effective_from');
         $this->postJson(route('payments.rates.store'), array_replace($overlap, ['effective_from' => '2028-01-01', 'base_fee' => -1]))->assertUnprocessable()->assertJsonValidationErrors('base_fee');
 
-        $admin = User::factory()->role('admin')->create();
-        $this->actingAs($admin)->get(route('payments.rates.index'))->assertForbidden();
+        $this->actingAs(User::factory()->role('admin')->create())->get(route('payments.rates.index'))->assertOk()->assertSee('Rate catalog');
+        $this->actingAs(User::factory()->role('coordinator')->create())->get(route('payments.rates.index'))->assertForbidden();
     }
 
     public function test_print_invoice_uses_server_rate_breakdown(): void
