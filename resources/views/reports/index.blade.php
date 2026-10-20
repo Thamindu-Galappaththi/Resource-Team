@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/reports.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('css/reports.css') }}?v=5">
 @endpush
 
 @section('content')
@@ -23,8 +23,8 @@
         </div>
         <div class="rpt-header-actions">
             <button type="button" id="rpt-print" class="rpt-btn rpt-btn-outline"><i class="ti ti-printer"></i> Print</button>
-            <div class="dropdown">
-                <button type="button" class="rpt-btn rpt-btn-white dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="dropdown rpt-export">
+                <button type="button" class="rpt-btn rpt-btn-white dropdown-toggle" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
                     <i class="ti ti-download"></i> Export
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0">

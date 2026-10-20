@@ -21,6 +21,9 @@
     background: linear-gradient(120deg, #123a7a 0%, #1769c2 55%, #5b4fc9 100%);
     box-shadow: 0 .6rem 1.6rem rgba(23, 58, 130, .26);
     color: #fff;
+    overflow: visible;
+    position: relative;
+    z-index: 4;
 }
 .rpt-page .rpt-kicker {
     font-size: .82rem;
@@ -41,8 +44,33 @@
 .rpt-page .rpt-header-actions {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: .65rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    margin-left: auto;
+    position: relative;
+    z-index: 5;
+}
+.rpt-export {
+    position: relative;
+}
+.rpt-export .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    left: auto !important;
+    transform: none !important;
+    min-width: 16.5rem;
+    max-width: min(22rem, calc(100vw - 1.5rem));
+    z-index: 1080;
+    padding: .4rem;
+    border-radius: .75rem;
+}
+.rpt-export .dropdown-item {
+    white-space: normal;
+    border-radius: .5rem;
+    font-size: .88rem;
+    line-height: 1.3;
 }
 .rpt-page .rpt-btn {
     display: inline-flex;
@@ -380,9 +408,9 @@
 @media (max-width: 991.98px) {
     .rpt-page .rpt-header { padding: 1.15rem 1.2rem; }
     .rpt-page .rpt-header-actions { width: 100%; }
-    .rpt-page .rpt-header-actions .rpt-btn,
-    .rpt-page .rpt-header-actions .dropdown { flex: 1 1 calc(50% - .35rem); }
-    .rpt-page .rpt-header-actions .dropdown .rpt-btn { width: 100%; }
+    .rpt-page .rpt-header-actions > .rpt-btn,
+    .rpt-page .rpt-export { flex: 1 1 0; min-width: 0; }
+    .rpt-page .rpt-export > .rpt-btn { width: 100%; }
 }
 
 @media (max-width: 767.98px) {
@@ -392,8 +420,13 @@
     .rpt-filter-search { grid-column: auto; }
     .rpt-filter-actions { width: 100%; }
     .rpt-filter-actions .btn { flex: 1; }
-    .rpt-page .rpt-header-actions .rpt-btn,
-    .rpt-page .rpt-header-actions .dropdown { flex: 1 1 100%; }
+    .rpt-page .rpt-header-actions > .rpt-btn,
+    .rpt-page .rpt-export { flex: 1 1 100%; }
+    .rpt-export .dropdown-menu {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+    }
     .rpt-kpi { min-height: 136px; padding: 1rem 1.1rem; }
     .rpt-kpi-value { font-size: 1.55rem; }
     .rpt-kpi-money { font-size: 1.1rem; }
