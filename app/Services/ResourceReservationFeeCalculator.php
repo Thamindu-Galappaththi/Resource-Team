@@ -4,107 +4,153 @@ namespace App\Services;
 
 use App\Enums\ReservationItemStatus;
 use App\Models\Reservation;
+use App\Models\ResourceRate;
+use App\Models\ResourcePaymentDiscountRule;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class ResourceReservationFeeCalculator
 {
     /**
-     * Build a deterministic fee breakdown using integer minor units.
-     * Rate snapshots may store a fixed amount (`amount`/`rate`) or an hourly
-     * rate (`hourly_rate` in major units, or `hourly_rate_minor`).
-     *
-     * @return array{base_fee: float, extra_hours: float, extra_hourly_rate: float, extra_hour_fee: float, tax_fee: float, service_fee: float, discount: float, total: float, has_rate: bool, has_extra_hourly_rate: bool}
+     * Resolve current rates and calculate every amount in integer cents.
+     * extraHours is additional usage beyond the reserved duration.
      */
     public function breakdown(Reservation $reservation, float $extraHours = 0): array
     {
-        $reservedHours = max(0, $this->minutesBetween($reservation->start_time, $reservation->end_time) / 60);
-        $extraHours = $this->roundHours(min(24, max(0, $extraHours)));
+        $extraHours = round(min(24, max(0, $extraHours)), 2, PHP_ROUND_HALF_UP);
+        $reservationDate = $reservation->reservation_date?->toDateString() ?? now()->toDateString();
         $baseMinor = 0;
-        $extraHourlyMinor = 0;
-        $hasRate = false;
+        $extraMinor = 0;
+        $baseDuration = 0.0;
+        $extraRatesMinor = 0;
+        $hasRate = true;
+        $lines = [];
 
         foreach ($reservation->items as $item) {
             if ($item->status === ReservationItemStatus::CANCELLED->value) {
                 continue;
             }
 
-            $snapshot = $item->rate_snapshot;
-            if (! is_array($snapshot)) {
+            $resource = $item->resource;
+            $typeId = $resource?->resource_type_id;
+            if (! $typeId) {
+                $hasRate = false;
                 continue;
             }
-            $itemHours = $this->itemHours($item->starts_at, $item->ends_at, $reservedHours);
-            $quantity = max(0, (float) ($item->quantity ?? 1));
 
-            if (isset($snapshot['amount_minor']) || isset($snapshot['rate_minor'])) {
-                $baseMinor += (int) round(max(0, (int) ($snapshot['amount_minor'] ?? $snapshot['rate_minor'])) * $quantity, 0, PHP_ROUND_HALF_UP);
-                $hasRate = true;
-            } elseif (isset($snapshot['amount']) || isset($snapshot['rate'])) {
-                $baseMinor += (int) round($this->majorToMinor($snapshot['amount'] ?? $snapshot['rate']) * $quantity, 0, PHP_ROUND_HALF_UP);
-                $hasRate = true;
-            } elseif (isset($snapshot['hourly_rate_minor'])) {
-                $hourlyMinor = max(0, (int) $snapshot['hourly_rate_minor']);
-                $baseMinor += (int) round($hourlyMinor * $itemHours * $quantity, 0, PHP_ROUND_HALF_UP);
-                $hasRate = true;
-            } elseif (isset($snapshot['hourly_rate'])) {
-                $hourlyMinor = $this->majorToMinor($snapshot['hourly_rate']);
-                $baseMinor += (int) round($hourlyMinor * $itemHours * $quantity, 0, PHP_ROUND_HALF_UP);
-                $hasRate = true;
+            $rate = $this->resolveRate($typeId, $resource->id, $reservationDate);
+            if (! $rate) {
+                $hasRate = false;
+                continue;
             }
 
-            if (isset($snapshot['hourly_rate_minor'])) {
-                $extraHourlyMinor += (int) round(max(0, (int) $snapshot['hourly_rate_minor']) * $quantity, 0, PHP_ROUND_HALF_UP);
-            } elseif (isset($snapshot['hourly_rate'])) {
-                $extraHourlyMinor += (int) round($this->majorToMinor($snapshot['hourly_rate']) * $quantity, 0, PHP_ROUND_HALF_UP);
-            }
+            $quantity = max(1, (float) ($item->quantity ?? 1));
+            $scheduledHours = $this->itemHours($item->starts_at, $item->ends_at, $reservation);
+            $actualHours = round($scheduledHours + $extraHours, 2, PHP_ROUND_HALF_UP);
+            $billableExtraHours = round(max(0, $actualHours - (float) $rate->base_duration_hours), 2, PHP_ROUND_HALF_UP);
+            $lineBaseMinor = $this->toMinor($rate->base_fee * $quantity);
+            $lineRateMinor = $this->toMinor($rate->extra_hour_rate * $quantity);
+            $lineExtraMinor = (int) round($lineRateMinor * $billableExtraHours, 0, PHP_ROUND_HALF_UP);
+
+            $baseMinor += $lineBaseMinor;
+            $extraRatesMinor += $lineRateMinor;
+            $extraMinor += $lineExtraMinor;
+            $baseDuration = max($baseDuration, (float) $rate->base_duration_hours);
+            $lines[] = [
+                'resource' => $item->resource_name_snapshot ?: $resource->name_model,
+                'base_fee' => $this->toMajor($lineBaseMinor),
+                'base_duration_hours' => (float) $rate->base_duration_hours,
+                'extra_hours' => $billableExtraHours,
+                'extra_hourly_rate' => $this->toMajor($lineRateMinor),
+                'extra_hour_fee' => $this->toMajor($lineExtraMinor),
+                'subtotal_minor' => $lineBaseMinor + $lineExtraMinor,
+                'tax_percent' => (float) $rate->tax_percent,
+            ];
         }
 
-        $extraFeeMinor = (int) round($extraHourlyMinor * $extraHours, 0, PHP_ROUND_HALF_UP);
+        // Do not issue a partial invoice when one of the reservation items
+        // has no applicable rate.
+        if (! $hasRate || $lines === []) {
+            $baseMinor = $extraMinor = $extraRatesMinor = 0;
+            $lines = [];
+        }
+
+        $subtotalMinor = $baseMinor + $extraMinor;
+        $category = Str::slug((string) ($reservation->requester?->user_type ?: $reservation->requester?->roleSlug() ?: 'default'), '_');
+        $discountRule = ResourcePaymentDiscountRule::query()->where('customer_category', $category)->first();
+        $configuredDiscount = $discountRule
+            ? ($discountRule->is_active ? (float) $discountRule->discount_percent : 0)
+            : (float) config('payments.resource_rate_discounts.'.$category, 0);
+        $discountPercent = min(100, max(0, $configuredDiscount));
+        $discountMinor = (int) round($subtotalMinor * $discountPercent / 100, 0, PHP_ROUND_HALF_UP);
+        $taxMinor = 0;
+        $allocatedDiscount = 0;
+        foreach ($lines as $index => $line) {
+            $lineDiscount = $index === array_key_last($lines)
+                ? $discountMinor - $allocatedDiscount
+                : (int) floor($line['subtotal_minor'] * $discountPercent / 100);
+            $allocatedDiscount += $lineDiscount;
+            $taxMinor += (int) round(($line['subtotal_minor'] - $lineDiscount) * $line['tax_percent'] / 100, 0, PHP_ROUND_HALF_UP);
+        }
+        $taxRates = array_values(array_unique(array_column($lines, 'tax_percent')));
+        $taxPercent = count($taxRates) === 1 ? (float) $taxRates[0] : null;
+        $totalMinor = max(0, $subtotalMinor - $discountMinor + $taxMinor);
 
         return [
-            'base_fee' => $this->minorToMajor($baseMinor),
-            'extra_hours' => $extraHours,
-            'extra_hourly_rate' => $this->minorToMajor($extraHourlyMinor),
-            'extra_hour_fee' => $this->minorToMajor($extraFeeMinor),
-            'tax_fee' => 0.0,
+            'base_fee' => $this->toMajor($baseMinor),
+            'extra_hours' => array_sum(array_column($lines, 'extra_hours')),
+            'billable_extra_hours' => array_sum(array_column($lines, 'extra_hours')),
+            'usage_extension_hours' => $extraHours,
+            'extra_hourly_rate' => $this->toMajor($extraRatesMinor),
+            'extra_hour_fee' => $this->toMajor($extraMinor),
+            'subtotal' => $this->toMajor($subtotalMinor),
+            'discount_percent' => $discountPercent,
+            'discount' => $this->toMajor($discountMinor),
+            'tax_percent' => $taxPercent,
+            'tax_fee' => $this->toMajor($taxMinor),
             'service_fee' => 0.0,
-            'discount' => 0.0,
-            'total' => $this->minorToMajor($baseMinor + $extraFeeMinor),
-            'has_rate' => $hasRate && $baseMinor > 0,
-            'has_extra_hourly_rate' => $extraHourlyMinor > 0,
+            'total' => $this->toMajor($totalMinor),
+            'base_duration_hours' => $baseDuration,
+            'has_rate' => $hasRate && count($lines) > 0,
+            'has_extra_hourly_rate' => $extraRatesMinor > 0,
+            'rate_note' => $hasRate && count($lines) > 0 ? null : 'Rate details are not available for this resource and reservation date.',
+            'lines' => $lines,
         ];
     }
 
-    private function minutesBetween(string $start, string $end): int
+    private function resolveRate(int $typeId, int $resourceId, string $date): ?ResourceRate
     {
-        [$startHour, $startMinute] = array_map('intval', explode(':', substr($start, 0, 5)));
-        [$endHour, $endMinute] = array_map('intval', explode(':', substr($end, 0, 5)));
-        $minutes = (($endHour * 60) + $endMinute) - (($startHour * 60) + $startMinute);
+        $base = ResourceRate::query()
+            ->where('resource_type_id', $typeId)
+            ->where('is_active', true)
+            ->whereDate('effective_from', '<=', $date)
+            ->where(fn ($query) => $query->whereNull('effective_to')->orWhereDate('effective_to', '>=', $date));
 
-        return max(0, $minutes);
+        $specific = (clone $base)->where('resource_id', $resourceId)->orderByDesc('effective_from')->first();
+
+        return $specific ?? (clone $base)->whereNull('resource_id')->orderByDesc('effective_from')->first();
     }
 
-    private function itemHours(mixed $start, mixed $end, float $fallback): float
+    private function itemHours(mixed $startsAt, mixed $endsAt, Reservation $reservation): float
     {
-        if (! $start || ! $end) {
-            return $fallback;
+        if ($startsAt && $endsAt) {
+            return max(0, ($endsAt->getTimestamp() - $startsAt->getTimestamp()) / 3600);
         }
 
-        $minutes = max(0, (int) floor(($end->getTimestamp() - $start->getTimestamp()) / 60));
+        [$sh, $sm] = array_map('intval', explode(':', substr((string) $reservation->start_time, 0, 5)));
+        [$eh, $em] = array_map('intval', explode(':', substr((string) $reservation->end_time, 0, 5)));
+        $minutes = (($eh * 60 + $em) - ($sh * 60 + $sm) + 1440) % 1440;
 
         return $minutes / 60;
     }
 
-    private function majorToMinor(mixed $amount): int
+    private function toMinor(float|int|string $amount): int
     {
-        return max(0, (int) round((float) $amount * 100, 0, PHP_ROUND_HALF_UP));
+        return (int) round((float) $amount * 100, 0, PHP_ROUND_HALF_UP);
     }
 
-    private function minorToMajor(int $amount): float
+    private function toMajor(int $minor): float
     {
-        return round($amount / 100, 2, PHP_ROUND_HALF_UP);
-    }
-
-    private function roundHours(float $hours): float
-    {
-        return round($hours * 100, 0, PHP_ROUND_HALF_UP) / 100;
+        return round($minor / 100, 2, PHP_ROUND_HALF_UP);
     }
 }

@@ -46,13 +46,15 @@
                 <div><span>Email</span><strong>{{ $reservation->requester?->email ?? $reservation->createdBy?->email ?? 'Not available' }}</strong></div>
             </div>
             <div class="rp-print-lines">
-                <div class="rp-print-line"><span>Base reservation fee</span><strong>LKR {{ number_format($breakdown['base_fee'], 2) }}</strong></div>
-                <div class="rp-print-line"><span>Extra hours ({{ number_format($breakdown['extra_hours'], 2) }})</span><strong>LKR {{ number_format($breakdown['extra_hour_fee'], 2) }}</strong></div>
-                <div class="rp-print-line"><span>Tax</span><strong>LKR {{ number_format($breakdown['tax_fee'], 2) }}</strong></div>
-                <div class="rp-print-line"><span>Service fee</span><strong>LKR {{ number_format($breakdown['service_fee'], 2) }}</strong></div>
-                <div class="rp-print-line"><span>Discount</span><strong>− LKR {{ number_format($breakdown['discount'], 2) }}</strong></div>
+                @foreach($breakdown['lines'] as $line)
+                    <div class="rp-print-line"><span>{{ $line['resource'] }} · base fee includes first {{ number_format($line['base_duration_hours'], 2) }} hrs</span><strong>LKR {{ number_format($line['base_fee'], 2) }}</strong></div>
+                    <div class="rp-print-line"><span>{{ $line['resource'] }} · {{ number_format($line['extra_hours'], 2) }} extra hrs × LKR {{ number_format($line['extra_hourly_rate'], 2) }}/hr</span><strong>LKR {{ number_format($line['extra_hour_fee'], 2) }}</strong></div>
+                @endforeach
+                <div class="rp-print-line"><span>Discount ({{ number_format($breakdown['discount_percent'], 2) }}%)</span><strong>− LKR {{ number_format($breakdown['discount'], 2) }}</strong></div>
+                <div class="rp-print-line"><span>Tax ({{ $breakdown['tax_percent'] === null ? 'per resource rate' : number_format($breakdown['tax_percent'], 3).'%' }})</span><strong>LKR {{ number_format($breakdown['tax_fee'], 2) }}</strong></div>
             </div>
             <div class="rp-print-total"><span>TOTAL AMOUNT DUE</span><strong>LKR {{ number_format($breakdown['total'], 2) }}</strong></div>
+            @unless($breakdown['has_rate'])<div class="rp-print-pending">Rate details are not available for this resource and reservation date. Finance must configure an applicable rate before collecting payment.</div>@endunless
             <div class="rp-print-pending">Online payment status: Pending. This draft is not a tax invoice until issued by Finance.</div>
         </section>
     </main>

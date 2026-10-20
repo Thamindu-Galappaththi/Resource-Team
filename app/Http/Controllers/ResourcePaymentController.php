@@ -57,7 +57,7 @@ class ResourcePaymentController extends Controller
             'payment_status' => 'pending',
             'payment_method' => 'online',
             'currency' => 'LKR',
-            'rate_note' => ! $breakdown['has_rate'] ? 'No rate is stored for this reservation; finance must configure rates before charging.' : (! $breakdown['has_extra_hourly_rate'] ? 'No hourly rate is stored for extra usage; the extra fee is zero.' : null),
+            'rate_note' => $breakdown['rate_note'],
         ] + $breakdown;
 
         return response()->json($payload);
@@ -83,10 +83,13 @@ class ResourcePaymentController extends Controller
         }
 
         $breakdown = $fees->breakdown($reservation, (float) $data['extra_hours']);
+        if (! $breakdown['has_rate']) {
+            return response()->json(['message' => $breakdown['rate_note']], 422);
+        }
         DB::table('resource_payment_usage_audits')->insert([
             'reservation_id' => $reservation->id,
             'actor_id' => $request->user()->id,
-            'extra_hours' => $breakdown['extra_hours'],
+            'extra_hours' => $breakdown['usage_extension_hours'],
             'fee_breakdown' => json_encode($breakdown, JSON_THROW_ON_ERROR),
             'ip_address' => $request->ip(),
             'created_at' => now(),

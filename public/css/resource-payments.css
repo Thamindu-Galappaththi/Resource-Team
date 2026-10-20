@@ -68,6 +68,7 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
 }
 
 .rp-history:hover { background: #eef4ff; color: #123a7a; }
+.rp-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: .65rem; flex-wrap: wrap; }
 
 .rp-grid {
     display: grid;
@@ -231,7 +232,7 @@ body:has(.rp-page) { background: linear-gradient(135deg, #edf3f8 0%, #e7f0f1 48%
 @media (max-width: 580px) {
     .rp-page { padding-top: .75rem; }
     .rp-heading { flex-direction: column; padding: 1.1rem; }
-    .rp-history { align-self: flex-start; }
+    .rp-header-actions { align-self: flex-start; justify-content: flex-start; }
     .rp-usage-grid { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
     .rp-usage-grid .rp-label { min-height: 0; }
     .rp-usage-grid > div > small { min-height: 0; }
