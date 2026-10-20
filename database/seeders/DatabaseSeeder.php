@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             HostelReservationSeeder::class,           
             HumanResourceSeeder::class,
             LecturerResourceSeeder::class,
+            LectureFeeSeeder::class,
         ]);
     }
 }
