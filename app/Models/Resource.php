@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Resource extends Model
 {
@@ -125,6 +126,11 @@ class Resource extends Model
     public function lecturerProfile(): HasOne
     {
         return $this->hasOne(LecturerProfile::class);
+    }
+
+    public function rates(): HasMany
+    {
+        return $this->hasMany(ResourceRate::class);
     }
     
 }

@@ -42,6 +42,10 @@ return [
             'name' => 'Management',
             'description' => 'Oversight and decision-making reports for the assigned role.',
         ],
+        'finance' => [
+            'name' => 'Finance',
+            'description' => 'Manages resource pricing and reviews financial records.',
+        ],
         'canteen' => [
             'name' => 'Canteen',
             'description' => 'Views meal forecasts and manages large group canteen orders.',
@@ -72,6 +76,7 @@ return [
         'canteen.create' => ['name' => 'Create canteen reservations', 'module' => 'canteen'],
         'canteen.manage' => ['name' => 'Manage canteen reservations', 'module' => 'canteen'],
         'payments.view' => ['name' => 'View payments', 'module' => 'payments'],
+        'payments.rates.manage' => ['name' => 'Manage resource rates', 'module' => 'payments'],
         'reports.view' => ['name' => 'Reports and analytics', 'module' => 'reports'],
     ],
 
@@ -137,6 +142,7 @@ return [
             'section' => 'Payments',
             'actions' => [
                 ['slug' => 'payments.view', 'action' => 'View'],
+                ['slug' => 'payments.rates.manage', 'action' => 'Manage rates'],
             ],
         ],
         [
@@ -221,6 +227,11 @@ return [
             'resources.index',
             'payments.view',
             'reports.view',
+        ],
+        'finance' => [
+            'dashboard',
+            'payments.view',
+            'payments.rates.manage',
         ],
         'canteen' => [
             'dashboard',

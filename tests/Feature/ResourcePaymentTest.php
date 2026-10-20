@@ -5,7 +5,11 @@ namespace Tests\Feature;
 use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
+use App\Models\ResourceCategory;
+use App\Models\ResourceRate;
+use App\Models\ResourceType;
 use App\Models\User;
+use Database\Seeders\ResourceRateSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,172 +24,257 @@ class ResourcePaymentTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_payment_page_starts_with_usage_locked_and_rate_warning_hidden(): void
+    public function test_payment_page_shows_locked_usage_and_hides_missing_rate_warning_until_lookup(): void
     {
         $user = User::factory()->role('admin')->create();
-
-        $this->actingAs($user)
-            ->get(route('payments.resources'))
+        $this->actingAs($user)->get(route('payments.resources'))
             ->assertOk()
             ->assertSee('id="rp-extra-hours" type="number" min="0" max="24" step="0.5"', false)
             ->assertSee('id="rp-rate-warning" class="rp-rate-warning is-hidden"', false)
-            ->assertSee('aria-live="polite"', false)
-            ->assertSee('Find reservation')
-            ->assertSee('Confirm usage')
-            ->assertSee('Pay now');
+            ->assertSee('Includes first', false)
+            ->assertSee('aria-live="polite"', false);
     }
 
-    public function test_reference_lookup_returns_base_and_extra_fee_breakdown(): void
+    public function test_seeded_catalog_has_every_requested_resource_type_and_lkr_amount(): void
     {
-        $user = User::factory()->role('admin')->create();
-        $reservation = $this->reservationWithRate(['hourly_rate_minor' => 12550]);
+        $this->seed(ResourceRateSeeder::class);
+        $expected = [
+            'Lecture Hall' => [5000, 2, 2500], 'Lecture Hall (small)' => [3000, 2, 1500],
+            'Computer Lab' => [4000, 2, 2000], 'Auditorium' => [15000, 3, 6000],
+            'Meeting Room' => [2000, 1, 1500], 'Seminar Room' => [2500, 2, 1200],
+            'Projector' => [1000, 1, 500], 'Sports Facility' => [3500, 2, 1800],
+        ];
 
-        $this->actingAs($user)
-            ->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference, 'extra_hours' => 0.5]))
-            ->assertOk()
-            ->assertJsonPath('base_fee', 376.5)
-            ->assertJsonPath('extra_hours', 0.5)
-            ->assertJsonPath('extra_hourly_rate', 125.5)
-            ->assertJsonPath('extra_hour_fee', 62.75)
-            ->assertJsonPath('total', 439.25)
-            ->assertJsonPath('payment_status', 'pending');
+        foreach ($expected as $typeName => [$base, $duration, $extra]) {
+            $rate = ResourceRate::query()->whereHas('resourceType', fn ($q) => $q->where('name', $typeName))->first();
+            $this->assertNotNull($rate, $typeName);
+            $this->assertEquals($base, (float) $rate->base_fee);
+            $this->assertEquals($duration, (float) $rate->base_duration_hours);
+            $this->assertEquals($extra, (float) $rate->extra_hour_rate);
+        }
     }
 
-    public function test_fee_without_extra_hours_returns_zero_extra_fee_and_rounds_half_up(): void
+    public function test_lookup_resolves_a_price_for_each_seeded_resource_type(): void
     {
+        $this->seed(ResourceRateSeeder::class);
         $user = User::factory()->role('admin')->create();
-        $reservation = $this->reservationWithRate(['hourly_rate_minor' => 10001], '09:00:00', '09:30:00');
+        $rates = ResourceRate::query()->with('resourceType')->get();
 
-        $this->actingAs($user)
-            ->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
-            ->assertOk()
-            ->assertJsonPath('base_fee', 50.01)
-            ->assertJsonPath('extra_hours', 0)
-            ->assertJsonPath('extra_hour_fee', 0)
-            ->assertJsonPath('total', 50.01);
+        foreach ($rates as $rate) {
+            $resource = Resource::factory()->create(['resource_type_id' => $rate->resource_type_id]);
+            $reservation = Reservation::factory()->create([
+                'reference' => 'RRS-'.now()->format('Y').'-'.fake()->unique()->numerify('######'),
+                'reservation_date' => now()->addDay()->toDateString(), 'status' => 'confirmed',
+                'start_time' => '09:00:00', 'end_time' => '11:00:00',
+            ]);
+            ReservationItem::factory()->create([
+                'reservation_id' => $reservation->id, 'resource_id' => $resource->id,
+                'starts_at' => $reservation->reservation_date->copy()->setTime(9, 0),
+                'ends_at' => $reservation->reservation_date->copy()->setTime(11, 0),
+            ]);
+
+            $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
+                ->assertOk()->assertJsonPath('has_rate', true)->assertJsonPath('base_fee', (int) $rate->base_fee);
+        }
     }
 
-    public function test_extra_hours_are_clamped_to_twenty_four_hours(): void
+    public function test_specific_resource_rate_takes_precedence_over_type_rate(): void
     {
         $user = User::factory()->role('admin')->create();
-        $reservation = $this->reservationWithRate(['hourly_rate_minor' => 100]);
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500]);
+        $resource = $reservation->items->first()->resource;
+        $this->makeRate($resource->type, ['resource_id' => $resource->id, 'base_fee' => 7000, 'base_duration_hours' => 2, 'extra_hour_rate' => 100]);
 
-        $this->actingAs($user)
-            ->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference, 'extra_hours' => 24]))
-            ->assertOk()
-            ->assertJsonPath('extra_hours', 24)
-            ->assertJsonPath('extra_hour_fee', 24);
+        $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
+            ->assertOk()->assertJsonPath('base_fee', 7000)->assertJsonPath('has_rate', true);
     }
 
-    public function test_reservation_without_extra_surcharge_returns_zero_extra_fee(): void
+    public function test_zero_extra_hours_returns_base_fee_with_no_extra_charge(): void
     {
         $user = User::factory()->role('admin')->create();
-        $reservation = $this->reservationWithRate(['amount_minor' => 25000]);
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
 
-        $this->actingAs($user)
-            ->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference, 'extra_hours' => 2]))
-            ->assertOk()
-            ->assertJsonPath('base_fee', 250)
-            ->assertJsonPath('extra_hourly_rate', 0)
-            ->assertJsonPath('extra_hour_fee', 0)
-            ->assertJsonPath('total', 250);
+        $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
+            ->assertOk()->assertJsonPath('base_fee', 5000)->assertJsonPath('billable_extra_hours', 0)
+            ->assertJsonPath('extra_hour_fee', 0)->assertJsonPath('total', 5000);
     }
 
-    public function test_lookup_validates_reference_format_and_reports_missing_reservation(): void
+    public function test_decimal_extra_hours_bill_only_actual_usage_above_included_duration(): void
     {
         $user = User::factory()->role('admin')->create();
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
 
-        $this->actingAs($user)
-            ->getJson(route('payments.resources.lookup', ['reference' => 'not-a-reference']))
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('reference');
-
-        $this->actingAs($user)
-            ->getJson(route('payments.resources.lookup', ['reference' => 'RRS-2026-999999']))
-            ->assertNotFound()
-            ->assertJsonPath('message', 'No payable reservation was found for that reference.');
+        $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference, 'extra_hours' => 0.5]))
+            ->assertOk()->assertJsonPath('extra_hours', 0.5)->assertJsonPath('billable_extra_hours', 0.5)
+            ->assertJsonPath('extra_hour_fee', 1250)->assertJsonPath('total', 6250);
     }
 
-    public function test_usage_confirmation_records_server_calculated_breakdown_for_auditing(): void
+    public function test_extra_time_inside_included_base_duration_has_no_surcharge(): void
     {
         $user = User::factory()->role('admin')->create();
-        $reservation = $this->reservationWithRate(['hourly_rate_minor' => 10000]);
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '10:00:00');
 
-        $this->actingAs($user)
-            ->postJson(route('payments.resources.usage.confirm'), [
-                'reference' => $reservation->reference,
-                'extra_hours' => 1.5,
-                'total' => 0.01,
-            ])
-            ->assertOk()
-            ->assertJsonPath('extra_hour_fee', 150)
-            ->assertJsonPath('total', 450)
-            ->assertJsonPath('payment_status', 'pending');
-
-        $this->assertDatabaseHas('resource_payment_usage_audits', [
-            'reservation_id' => $reservation->id,
-            'actor_id' => $user->id,
-            'extra_hours' => 1.5,
-        ]);
+        $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference, 'extra_hours' => 0.5]))
+            ->assertOk()->assertJsonPath('billable_extra_hours', 0)->assertJsonPath('extra_hour_fee', 0)->assertJsonPath('total', 5000);
     }
 
-    public function test_usage_confirmation_rejects_invalid_increment_and_large_extra_hours(): void
+    public function test_tax_is_applied_after_discount_and_currency_rounds_half_up_to_cents(): void
+    {
+        config(['payments.resource_rate_discounts.staff' => 10]);
+        $user = User::factory()->role('admin')->create();
+        $requester = User::factory()->create(['user_type' => 'staff']);
+        $reservation = $this->reservationWithRate(['base_fee' => 100.01, 'base_duration_hours' => 1, 'extra_hour_rate' => 10.01, 'tax_percent' => 10], '09:00:00', '10:00:00', $requester);
+
+        $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference, 'extra_hours' => 0.5]))
+            ->assertOk()->assertJsonPath('extra_hour_fee', 5.01)->assertJsonPath('subtotal', 105.02)
+            ->assertJsonPath('discount', 10.5)->assertJsonPath('tax_fee', 9.45)->assertJsonPath('total', 103.97);
+    }
+
+    public function test_100_percent_customer_category_discount_reduces_taxable_total_to_zero(): void
+    {
+        config(['payments.resource_rate_discounts.student' => 100]);
+        $user = User::factory()->role('admin')->create();
+        $requester = User::factory()->create(['user_type' => 'student']);
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500, 'tax_percent' => 15], '09:00:00', '11:00:00', $requester);
+
+        $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference, 'extra_hours' => 0.5]))
+            ->assertOk()->assertJsonPath('discount', 6250)->assertJsonPath('tax_fee', 0)->assertJsonPath('total', 0);
+    }
+
+    public function test_missing_and_expired_rates_return_zero_values_and_rate_warning_state(): void
     {
         $user = User::factory()->role('admin')->create();
-        $reservation = $this->reservationWithRate(['hourly_rate_minor' => 10000]);
+        $withoutRate = $this->reservationWithRate(null);
+        $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $withoutRate->reference]))
+            ->assertOk()->assertJsonPath('has_rate', false)->assertJsonPath('total', 0)
+            ->assertJsonPath('rate_note', 'Rate details are not available for this resource and reservation date.');
 
-        $this->actingAs($user)
-            ->postJson(route('payments.resources.usage.confirm'), ['reference' => $reservation->reference, 'extra_hours' => 0.3])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('extra_hours');
+        $expired = $this->reservationWithRate(['base_fee' => 1000, 'base_duration_hours' => 1, 'extra_hour_rate' => 100], '09:00:00', '10:00:00');
+        $expiredRate = ResourceRate::query()->where('resource_type_id', $expired->items->first()->resource->resource_type_id)->first();
+        $expiredRate->update(['effective_from' => $expired->reservation_date->copy()->subDays(10), 'effective_to' => $expired->reservation_date->copy()->subDay()]);
+        $this->getJson(route('payments.resources.lookup', ['reference' => $expired->reference]))
+            ->assertOk()->assertJsonPath('has_rate', false)->assertJsonPath('total', 0);
+    }
 
-        $this->actingAs($user)
-            ->postJson(route('payments.resources.usage.confirm'), ['reference' => $reservation->reference, 'extra_hours' => 24.5])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('extra_hours');
+    public function test_lookup_validates_reference_and_reports_not_found(): void
+    {
+        $user = User::factory()->role('admin')->create();
+        $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => 'invalid']))
+            ->assertUnprocessable()->assertJsonValidationErrors('reference');
+        $this->getJson(route('payments.resources.lookup', ['reference' => 'RRS-2026-999999']))
+            ->assertNotFound()->assertJsonPath('message', 'No payable reservation was found for that reference.');
+    }
 
+    public function test_client_totals_are_ignored_and_confirmed_breakdown_is_audited(): void
+    {
+        $user = User::factory()->role('admin')->create();
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
+
+        $this->actingAs($user)->postJson(route('payments.resources.usage.confirm'), ['reference' => $reservation->reference, 'extra_hours' => 0.5, 'total' => 0.01])
+            ->assertOk()->assertJsonPath('extra_hour_fee', 1250)->assertJsonPath('total', 6250)->assertJsonPath('payment_status', 'pending');
+        $this->assertDatabaseHas('resource_payment_usage_audits', ['reservation_id' => $reservation->id, 'actor_id' => $user->id, 'extra_hours' => 0.5]);
+    }
+
+    public function test_usage_cannot_be_confirmed_without_an_applicable_rate(): void
+    {
+        $user = User::factory()->role('admin')->create();
+        $reservation = $this->reservationWithRate(null);
+        $this->actingAs($user)->postJson(route('payments.resources.usage.confirm'), ['reference' => $reservation->reference, 'extra_hours' => 0])
+            ->assertUnprocessable()->assertJsonPath('message', 'Rate details are not available for this resource and reservation date.');
         $this->assertDatabaseCount('resource_payment_usage_audits', 0);
     }
 
-    public function test_usage_confirmation_requires_payment_permission(): void
+    public function test_finance_can_manage_rates_and_changes_are_audited(): void
     {
-        $user = User::factory()->role('nebula_sms_user')->create();
-        $reservation = $this->reservationWithRate(['hourly_rate_minor' => 10000]);
-
-        $this->actingAs($user)
-            ->postJson(route('payments.resources.usage.confirm'), ['reference' => $reservation->reference, 'extra_hours' => 0])
-            ->assertForbidden();
+        $this->seed(ResourceRateSeeder::class);
+        $finance = User::factory()->role('finance')->create();
+        $this->actingAs($finance)->get(route('payments.rates.index'))->assertOk()->assertSee('Rate catalog');
+        $category = ResourceCategory::query()->firstOrCreate(['name' => 'Finance Test Category']);
+        $type = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Finance Test Type']);
+        $this->post(route('payments.rates.store'), [
+            'resource_type_id' => $type->id, 'base_fee' => 16000, 'base_duration_hours' => 3,
+            'extra_hour_rate' => 6500, 'tax_percent' => 0, 'effective_from' => '2028-01-01',
+        ])->assertSessionHasNoErrors();
+        $rate = ResourceRate::query()->where('resource_type_id', $type->id)->whereDate('effective_from', '2028-01-01')->firstOrFail();
+        $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'actor_id' => $finance->id, 'action' => 'created']);
+        $this->put(route('payments.rates.update', $rate), [
+            'resource_type_id' => $type->id, 'base_fee' => 16500, 'base_duration_hours' => 3,
+            'extra_hour_rate' => 6600, 'tax_percent' => 5, 'effective_from' => '2028-01-01',
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'actor_id' => $finance->id, 'action' => 'updated']);
+        $this->patch(route('payments.rates.deactivate', $rate))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'action' => 'deactivated']);
     }
 
-    public function test_print_invoice_uses_same_zero_extra_fee_fallback(): void
+    public function test_finance_can_configure_category_discounts_used_by_invoice_calculation(): void
+    {
+        $this->seed(ResourceRateSeeder::class);
+        $finance = User::factory()->role('finance')->create();
+        $requester = User::factory()->create(['user_type' => 'student']);
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00', $requester);
+
+        $this->actingAs($finance)->post(route('payments.discounts.store'), ['customer_category' => 'student', 'discount_percent' => 20])->assertSessionHasNoErrors();
+        $this->actingAs($finance)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
+            ->assertOk()->assertJsonPath('discount_percent', 20)->assertJsonPath('discount', 1000)->assertJsonPath('total', 4000);
+
+        $rule = \App\Models\ResourcePaymentDiscountRule::query()->where('customer_category', 'student')->firstOrFail();
+        $this->put(route('payments.discounts.update', $rule), ['customer_category' => 'student', 'discount_percent' => 25])->assertSessionHasNoErrors();
+        $this->patch(route('payments.discounts.deactivate', $rule))->assertSessionHasNoErrors();
+        $this->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
+            ->assertOk()->assertJsonPath('discount_percent', 0)->assertJsonPath('total', 5000);
+        $this->assertDatabaseHas('resource_payment_discount_audits', ['discount_rule_id' => $rule->id, 'actor_id' => $finance->id, 'action' => 'created']);
+        $this->assertDatabaseHas('resource_payment_discount_audits', ['discount_rule_id' => $rule->id, 'action' => 'updated']);
+        $this->assertDatabaseHas('resource_payment_discount_audits', ['discount_rule_id' => $rule->id, 'action' => 'deactivated']);
+    }
+
+    public function test_rate_admin_rejects_overlapping_dates_negative_amounts_and_non_finance_users(): void
+    {
+        $this->seed(ResourceRateSeeder::class);
+        $finance = User::factory()->role('finance')->create();
+        $type = ResourceType::query()->where('name', 'Auditorium')->firstOrFail();
+        $overlap = ['resource_type_id' => $type->id, 'base_fee' => 1, 'base_duration_hours' => 2, 'extra_hour_rate' => 1, 'tax_percent' => 0, 'effective_from' => '2026-06-01'];
+        $this->actingAs($finance)->postJson(route('payments.rates.store'), $overlap)->assertUnprocessable()->assertJsonValidationErrors('effective_from');
+        $this->postJson(route('payments.rates.store'), array_replace($overlap, ['effective_from' => '2028-01-01', 'base_fee' => -1]))->assertUnprocessable()->assertJsonValidationErrors('base_fee');
+
+        $admin = User::factory()->role('admin')->create();
+        $this->actingAs($admin)->get(route('payments.rates.index'))->assertForbidden();
+    }
+
+    public function test_print_invoice_uses_server_rate_breakdown(): void
     {
         $user = User::factory()->role('admin')->create();
-        $reservation = $this->reservationWithRate(['amount_minor' => 25000]);
-
-        $this->actingAs($user)
-            ->get(route('payments.resources.print', ['reference' => $reservation->reference]))
-            ->assertOk()
-            ->assertSee('LKR 250.00')
-            ->assertSee('LKR 0.00')
-            ->assertSee('Pending');
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
+        $this->actingAs($user)->get(route('payments.resources.print', ['reference' => $reservation->reference, 'extra_hours' => 0.5]))
+            ->assertOk()->assertSee('includes first 2.00 hrs', false)->assertSee('LKR 1,250.00')->assertSee('LKR 6,250.00')->assertSee('Pending');
     }
 
-    private function reservationWithRate(array $snapshot, string $start = '09:00:00', string $end = '12:00:00'): Reservation
+    private function reservationWithRate(?array $rate, string $start = '09:00:00', string $end = '11:00:00', ?User $requester = null): Reservation
     {
         $reservation = Reservation::factory()->create([
-            'reference' => 'RRS-2026-'.fake()->unique()->numerify('######'),
-            'status' => 'confirmed',
-            'start_time' => $start,
-            'end_time' => $end,
+            'requester_id' => ($requester ?? User::factory()->create())->id,
+            'reference' => 'RRS-'.now()->format('Y').'-'.fake()->unique()->numerify('######'),
+            'reservation_date' => now()->addDay()->toDateString(), 'status' => 'confirmed', 'start_time' => $start, 'end_time' => $end,
         ]);
+        $resource = Resource::factory()->create();
         ReservationItem::factory()->create([
-            'reservation_id' => $reservation->id,
-            'resource_id' => Resource::factory()->create()->id,
+            'reservation_id' => $reservation->id, 'resource_id' => $resource->id,
             'starts_at' => $reservation->reservation_date->copy()->setTimeFromTimeString($start),
             'ends_at' => $reservation->reservation_date->copy()->setTimeFromTimeString($end),
-            'rate_snapshot' => $snapshot,
         ]);
+        if ($rate) {
+            $type = $resource->type;
+            $this->makeRate($type, $rate);
+        }
 
-        return $reservation;
+        return $reservation->load('items.resource');
+    }
+
+    private function makeRate(ResourceType $type, array $data): ResourceRate
+    {
+        return ResourceRate::query()->create($data + [
+            'resource_type_id' => $type->id, 'resource_id' => null, 'base_fee' => 5000,
+            'base_duration_hours' => 2, 'extra_hour_rate' => 2500, 'tax_percent' => 0,
+            'effective_from' => now()->subYear()->toDateString(), 'effective_to' => null, 'is_active' => true,
+        ]);
     }
 }
