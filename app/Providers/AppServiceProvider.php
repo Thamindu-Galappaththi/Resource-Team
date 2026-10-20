@@ -3,10 +3,11 @@
 namespace App\Providers;
 
 use App\Models\CanteenReservation;
+use App\Models\DatabaseNotification;
 use App\Models\Reservation;
 use App\Policies\CanteenReservationPolicy;
 use App\Policies\ReservationPolicy;
-use Illuminate\Notifications\DatabaseNotification;
+use App\Services\NotificationPresenter;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
@@ -15,16 +16,6 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    private const NOTIFICATION_ICONS = [
-        'NewUserCreated' => 'ti-user-plus',
-        'ReservationCreated' => 'ti-calendar-plus',
-        'NewReservationPending' => 'ti-calendar-time',
-        'ReservationCancelled' => 'ti-calendar-off',
-        'CanteenReservationCreated' => 'ti-tools-kitchen-2',
-        'NewCanteenReservationPending' => 'ti-tools-kitchen-2',
-        'CanteenReservationStatusUpdated' => 'ti-tools-kitchen-2',
-    ];
-
     /**
      * Register any application services.
      */
@@ -53,14 +44,9 @@ class AppServiceProvider extends ServiceProvider
             $user = auth()->user();
 
             $notifications = $user
-                ? $user->notifications()->latest()->get()->map(fn (DatabaseNotification $notification) => [
-                    'id' => $notification->id,
-                    'message' => $notification->data['message'] ?? 'You have a new notification.',
-                    'icon' => $notification->data['icon'] ?? self::NOTIFICATION_ICONS[class_basename($notification->type)] ?? 'ti-bell',
-                    'url' => $notification->data['url'] ?? null,
-                    'time' => $notification->created_at?->diffForHumans(),
-                    'unread' => $notification->read_at === null,
-                ])
+                ? $user->notifications()->latest()->limit(40)->get()->map(
+                    fn (DatabaseNotification $notification) => NotificationPresenter::toArray($notification)
+                )
                 : collect();
 
             $view->with([

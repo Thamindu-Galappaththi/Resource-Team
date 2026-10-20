@@ -33,6 +33,9 @@ class CanteenReservationStatusUpdated extends Notification
             'reservation_id' => $this->reservation->id,
             'reservation_ref' => $this->reservation->reservation_ref,
             'status' => $this->reservation->status,
+            'icon' => 'ti-tools-kitchen-2',
+            'title' => 'Canteen reservation update',
+            'url' => route('canteen.show', $this->reservation),
             'message' => $message,
         ];
     }

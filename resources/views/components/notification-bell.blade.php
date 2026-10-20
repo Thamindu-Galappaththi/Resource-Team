@@ -1,6 +1,10 @@
-<li class="nav-item dropdown nb-bell" data-clear-all-url="{{ route('notifications.clear-all') }}">
+<li class="nav-item dropdown nb-bell"
+    data-feed-url="{{ route('notifications.feed') }}"
+    data-clear-all-url="{{ route('notifications.clear-all') }}"
+    data-app-name="NEBULA"
+    data-app-icon="{{ asset('images/logos/favicon.jpg') }}">
     <a class="nav-link nav-icon-hover nb-toggle" href="javascript:void(0)" id="notificationsDropdown" role="button"
-        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+        data-bs-toggle="dropdown" data-bs-auto-close="outside" data-bs-display="static" aria-expanded="false"
         aria-label="Notifications{{ $unreadNotificationCount > 0 ? ' ('.$unreadNotificationCount.' unread)' : '' }}">
         <span class="nb-icon-wrap">
             <i class="ti ti-bell"></i>
@@ -23,10 +27,12 @@
         </div>
         <div class="nb-list">
             @forelse ($headerNotifications as $notification)
-                <div class="nb-item {{ $notification['unread'] ? 'is-unread' : '' }}" data-notification-id="{{ $notification['id'] }}"
-                    data-read-url="{{ route('notifications.read', $notification['id']) }}"
-                    data-unread-url="{{ route('notifications.unread', $notification['id']) }}"
-                    data-delete-url="{{ route('notifications.destroy', $notification['id']) }}">
+                <div class="nb-item {{ $notification['unread'] ? 'is-unread' : '' }}"
+                    data-notification-id="{{ $notification['id'] }}"
+                    data-url="{{ $notification['url'] }}"
+                    data-read-url="{{ $notification['read_url'] }}"
+                    data-unread-url="{{ $notification['unread_url'] }}"
+                    data-delete-url="{{ $notification['delete_url'] }}">
                     @if ($notification['url'])
                         <a class="nb-content" href="{{ $notification['url'] }}">
                     @else
@@ -34,17 +40,20 @@
                     @endif
                     <span class="nb-icon"><i class="ti {{ $notification['icon'] }}"></i></span>
                     <span class="nb-copy">
+                        <span class="nb-title">{{ $notification['title'] }}</span>
                         <span class="nb-message">{{ $notification['message'] }}</span>
                         <small class="nb-time">{{ $notification['time'] }}</small>
                     </span>
                     @if ($notification['url'])</a>@else</span>@endif
-                    <button type="button" class="nb-status" aria-label="{{ $notification['unread'] ? 'Mark as read' : 'Mark as unread' }}"
-                        title="{{ $notification['unread'] ? 'Mark as read' : 'Mark as unread' }}">
-                        <i class="ti {{ $notification['unread'] ? 'ti-mail' : 'ti-mail-opened' }}"></i>
-                    </button>
-                    <button type="button" class="nb-delete" aria-label="Delete notification" title="Delete notification">
-                        <i class="ti ti-trash"></i>
-                    </button>
+                    <div class="nb-actions">
+                        <button type="button" class="nb-status" aria-label="{{ $notification['unread'] ? 'Mark as read' : 'Mark as unread' }}"
+                            title="{{ $notification['unread'] ? 'Mark as read' : 'Mark as unread' }}">
+                            <i class="ti {{ $notification['unread'] ? 'ti-mail' : 'ti-mail-opened' }}"></i>
+                        </button>
+                        <button type="button" class="nb-delete" aria-label="Delete notification" title="Delete notification">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </div>
                 </div>
             @empty
                 <div class="nb-empty">

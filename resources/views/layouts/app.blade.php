@@ -17,7 +17,7 @@
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/sidebar-responsive.css') }}?v=11" rel="stylesheet">
-    <link href="{{ asset('css/notifications.css') }}?v=3" rel="stylesheet">
+    <link href="{{ asset('css/notifications.css') }}?v=8" rel="stylesheet">
     <link href="{{ asset('css/action-lock.css') }}?v=1" rel="stylesheet">
     @stack('styles')
 
@@ -31,7 +31,7 @@
     <!-- Global utilities -->
     <script src="{{ asset('js/global-utilities.js') }}"></script>
     <script src="{{ asset('js/action-lock.js') }}?v=2"></script>
-    <script src="{{ asset('js/notifications.js') }}?v=2"></script>
+    <script src="{{ asset('js/notifications.js') }}?v=7"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         body {

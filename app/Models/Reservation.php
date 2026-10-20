@@ -136,6 +136,19 @@ class Reservation extends Model
         return in_array($this->status, ReservationStatus::cancellable(), true);
     }
 
+    public function destinationUrl(bool $forApprover = false): string
+    {
+        if ($this->type === ReservationType::HOSTEL->value) {
+            return route('hostel.show', $this);
+        }
+
+        if ($forApprover) {
+            return route('approvals.index', ['search' => $this->reference]);
+        }
+
+        return route('reservations.show', $this);
+    }
+
     public function resourceNames(): string
     {
         return $this->items

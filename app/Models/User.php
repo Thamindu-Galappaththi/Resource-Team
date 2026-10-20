@@ -7,6 +7,7 @@ use App\Notifications\SetupPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -100,6 +101,11 @@ class User extends Authenticatable
     public function extraPermissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class);
+    }
+
+    public function notifications(): MorphMany
+    {
+        return $this->morphMany(DatabaseNotification::class, 'notifiable')->latest();
     }
 
     public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void

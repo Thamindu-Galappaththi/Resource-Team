@@ -197,6 +197,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
+        Route::get('/feed', 'feed')->name('feed');
         Route::post('/clear-all', 'clearAll')->name('clear-all');
         Route::post('/mark-read', 'markAllRead')->name('mark-read');
         Route::post('/{notification}/read', 'markRead')->name('read');

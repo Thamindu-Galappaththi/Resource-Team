@@ -25,6 +25,9 @@ class NewCanteenReservationPending extends Notification
         return [
             'reservation_id' => $this->reservation->id,
             'reservation_ref' => $this->reservation->reservation_ref,
+            'icon' => 'ti-tools-kitchen-2',
+            'title' => 'Canteen approval needed',
+            'url' => route('canteen.show', $this->reservation),
             'message' => 'A new pending canteen reservation requires review: '.$this->reservation->reservation_ref,
         ];
     }

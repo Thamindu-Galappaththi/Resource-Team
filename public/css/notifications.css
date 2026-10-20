@@ -3,6 +3,11 @@
     font-size: 1.75rem;
 }
 
+.app-header .navbar .navbar-nav .nb-bell .nb-toggle {
+    height: 70px;
+    line-height: 1;
+}
+
 .nb-icon-wrap {
     position: relative;
     display: inline-flex;
@@ -41,6 +46,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     padding: 14px 16px;
     border-bottom: 1px solid #eef0f3;
     color: #1f2937;
@@ -51,6 +57,8 @@
 .nb-heading-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 8px;
 }
 
@@ -86,21 +94,21 @@
 }
 
 .nb-list {
-    max-height: 360px;
+    max-height: min(360px, calc(100dvh - 180px));
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .nb-item {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 8px;
     padding: 12px 16px;
     border-bottom: 1px solid #f1f3f5;
     color: inherit;
     text-decoration: none;
     transition: background-color 0.15s ease;
     touch-action: pan-y;
-    will-change: transform, opacity;
 }
 
 .nb-item.is-dismissing {
@@ -127,7 +135,15 @@
     color: inherit;
 }
 
-.nb-status {
+.nb-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 2px;
+}
+
+.nb-status,
+.nb-delete {
     display: grid;
     flex: 0 0 30px;
     width: 30px;
@@ -136,9 +152,12 @@
     border: 0;
     border-radius: 6px;
     background: transparent;
-    color: #8a949f;
-    font-size: 18px;
+    font-size: 17px;
     cursor: pointer;
+}
+
+.nb-status {
+    color: #8a949f;
 }
 
 .nb-status:hover,
@@ -153,17 +172,7 @@
 }
 
 .nb-delete {
-    display: grid;
-    flex: 0 0 30px;
-    width: 30px;
-    height: 30px;
-    place-items: center;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
     color: #9aa3ae;
-    font-size: 17px;
-    cursor: pointer;
 }
 
 .nb-delete:hover,
@@ -201,7 +210,14 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-    gap: 3px;
+    gap: 2px;
+}
+
+.nb-title {
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
 }
 
 .nb-message {
@@ -233,4 +249,66 @@
 .nb-empty .ti {
     color: #b6bec8;
     font-size: 28px;
+}
+
+@media (max-width: 767.98px) {
+    .nb-bell.dropdown {
+        position: static;
+    }
+
+    .nb-menu.dropdown-menu {
+        position: fixed !important;
+        top: 72px;
+        right: 8px;
+        left: 8px;
+        width: auto !important;
+        max-width: none;
+        transform: none !important;
+        z-index: 1080;
+    }
+
+    .nb-list {
+        max-height: min(420px, calc(100dvh - 160px));
+    }
+
+    .nb-item {
+        padding: 12px;
+    }
+
+    .nb-icon {
+        flex-basis: 32px;
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .nb-status,
+    .nb-delete {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+    }
+
+    .app-header .user-name {
+        max-width: min(46vw, 180px);
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+}
+
+@media (max-width: 419.98px) {
+    .app-header .user-name {
+        display: none;
+    }
+
+    .nb-heading {
+        padding: 12px;
+        font-size: 14px;
+    }
+
+    .nb-title,
+    .nb-message {
+        font-size: 13px;
+    }
 }
