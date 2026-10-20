@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Invoice {{ $reservation->reference }}</title>
-    <link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=9">
     <style>
         html, body { height: auto; overflow: visible; }
         body { min-height: 100vh; margin: 0; padding: 32px 16px; background: #f3f6fb; }

@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=9">
 @endpush
 
 @section('content')
@@ -35,12 +35,16 @@
         <div class="rp-main-column">
             <section class="rp-card">
                 <div class="rp-card-title"><span class="rp-title-icon"><i class="ti ti-search"></i></span><div><h2>Search Reservation</h2><p>Find reservation details by reference number.</p></div></div>
-                <form id="rp-search-form" class="rp-search-form" action="{{ route('payments.resources.lookup') }}" data-print-template="{{ route('payments.resources.print', ['reference' => '__REFERENCE__']) }}">
+                <form id="rp-search-form" class="rp-search-form" action="{{ route('payments.resources.lookup') }}" data-print-template="{{ route('payments.resources.print', ['reference' => '__REFERENCE__']) }}" novalidate>
                     <label for="rp-search">Reservation Reference</label>
                     <div class="rp-search-row">
-                        <input id="rp-search" name="reference" type="search" placeholder="e.g. RRS-2026-000123" autocomplete="off" spellcheck="false" inputmode="text" pattern="([Rr][Rr][Ss]|[Hh][Ss][Tt])-[0-9]{4}-[0-9]{6}" title="Use the format RRS-YYYY-000000 or HST-YYYY-000000" aria-label="Reservation reference, for example RRS-2026-000123" required>
-                        <button type="submit"><i class="ti ti-search"></i> Find</button>
+                        <div class="input-group rsv-search-group rp-search-group">
+                            <span class="input-group-text"><i class="ti ti-search"></i></span>
+                            <input id="rp-search" name="reference" type="text" class="form-control" placeholder="e.g. RRS-2026-000123" autocomplete="off" spellcheck="false" inputmode="text" aria-label="Reservation reference, for example RRS-2026-000123" aria-describedby="rp-search-message">
+                        </div>
+                        <button type="submit" class="btn btn-primary rp-search-btn"><i class="ti ti-search me-1"></i> Find</button>
                     </div>
+                    <small class="rp-search-hint">Use RRS-YYYY-000000 or HST-YYYY-000000</small>
                     <div id="rp-search-message" class="rp-message" aria-live="polite"></div>
                 </form>
                 <div id="rp-reservation" class="rp-reservation rp-empty-reservation"><div class="rp-reservation-summary"><span class="rp-resource-icon"><i class="ti ti-building-community"></i></span><div class="rp-resource-copy"><strong>Search to load a reservation</strong><span>Reservation details and usage will appear here.</span></div><span class="rp-date"><small>STATUS</small><b>Awaiting lookup</b></span></div></div>
@@ -82,5 +86,5 @@ window.RPIndex = {
     confirmUrl: @json(route('payments.resources.usage.confirm'))
 };
 </script>
-<script src="{{ asset('js/resource-payments.js') }}?v=2"></script>
+<script src="{{ asset('js/resource-payments.js') }}?v=4"></script>
 @endpush

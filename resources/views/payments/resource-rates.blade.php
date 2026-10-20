@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=9">
 @endpush
 
 @section('content')

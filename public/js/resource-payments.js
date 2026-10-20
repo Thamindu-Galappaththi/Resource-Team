@@ -37,6 +37,25 @@
         return searchInput.value;
     }
 
+    function clearSearchRequired() {
+        if (!searchInput) {
+            return;
+        }
+        searchInput.required = false;
+        searchInput.removeAttribute('pattern');
+        searchInput.setCustomValidity('');
+    }
+
+    function showSearchRequired() {
+        if (!searchInput) {
+            return false;
+        }
+        searchInput.required = true;
+        searchInput.pattern = '(RRS|HST)-[0-9]{4}-[0-9]{6}';
+        searchInput.title = 'Use the format RRS-YYYY-000000 or HST-YYYY-000000';
+        return searchInput.reportValidity();
+    }
+
     function renderInvoice() {
         const base = reservation?.base_fee || 0;
         document.getElementById('rp-base-fee').textContent = money(base);
@@ -99,14 +118,20 @@
         renderInvoice();
     }
 
+    document.addEventListener('pointerdown', event => {
+        if (event.target.closest('#rp-search-form button[type="submit"]')) {
+            return;
+        }
+        clearSearchRequired();
+    }, true);
+
     form.addEventListener('submit', async event => {
         event.preventDefault();
         const reference = normalizeReference();
-        if (!reference) {
-            message.textContent = 'Enter a reservation or hostel reference.';
-            message.className = 'rp-message is-error';
+        if (!showSearchRequired()) {
             return;
         }
+        clearSearchRequired();
         const button = form.querySelector('button[type="submit"]');
         feeRequestSequence++;
         usageConfirmed = false;
@@ -244,8 +269,5 @@
         const url = form.dataset.printTemplate.replace('__REFERENCE__', encodeURIComponent(reservation.reference)) + '?extra_hours=' + encodeURIComponent(hoursInput.value || '0');
         window.open(url, '_blank', 'noopener');
     });
-    if (searchInput) {
-        searchInput.addEventListener('blur', normalizeReference);
-    }
     renderInvoice();
 })();
