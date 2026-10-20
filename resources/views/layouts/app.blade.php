@@ -94,7 +94,11 @@
                     <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
                         <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
                             <div class="user-name">
-                                <li class="nav-item mr-10" id="greeting"></li>
+                                <li class="nav-item mr-10" id="greeting">
+                                    @auth
+                                        {{ \App\Support\TimeGreeting::phrase() }}, <b>{{ auth()->user()->name }}</b>
+                                    @endauth
+                                </li>
                             </div>
                             @auth
                                 @include('components.notification-bell')
@@ -149,32 +153,6 @@
             </div>
         </div>
     </div>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // Get the current time
-            var currentTime = new Date();
-            var currentHour = currentTime.getHours();
-            var greeting;
-
-            // Define the greeting based on the current time
-            if (currentHour >= 5 && currentHour < 12) {
-                greeting = 'Good morning';
-            } else if (currentHour >= 12 && currentHour < 18) {
-                greeting = 'Good afternoon';
-            } else {
-                greeting = 'Good evening ';
-            }
-
-            // Get the user's name
-            var userName = "{{ auth()->check() ? auth()->user()->name : '' }}";
-
-            // Display the greeting and user's name
-            if (userName) {
-                document.getElementById("greeting").innerHTML = greeting + ", <b>" + userName + "</b>";
-            }
-        });
-    </script>
 
     @yield('scripts')
     @stack('scripts')
