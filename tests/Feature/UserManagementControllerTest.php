@@ -360,7 +360,7 @@ class UserManagementControllerTest extends TestCase
         User::factory()->create(['name' => 'Other Person']);
 
         $this->actingAs($administrator)
-            ->get(route('user.management', ['search' => 'Access Admin']), [
+            ->get(route('user.management', ['search' => 'Access Admin', 'partial' => 1]), [
                 'X-Requested-With' => 'XMLHttpRequest',
             ])
             ->assertOk()

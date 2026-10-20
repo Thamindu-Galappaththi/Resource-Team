@@ -451,27 +451,26 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const button = document.getElementById('editResourceSaveButton');
-        button.disabled = true;
-        try {
-            await requestJSON(config.updateUrl.replace('__ID__', form.dataset.resourceId), 'PUT', payload);
-            bootstrap.Modal.getInstance(document.getElementById('editResourceModal'))?.hide();
-            await loadResources();
-            await swalFire({ icon: 'success', title: 'Resource updated', text: 'Changes were saved.', timer: 2500, showConfirmButton: false });
-        } catch (error) {
-            showRequestErrors(error, {
-                category_id: 'resourceCategorySelect',
-                resource_type_id: 'resourceTypeSelect',
-                location_id: 'resourceLocationSelect',
-                name_model: 'resourceNameModel',
-                serial_number: 'serialNumber',
-                resource_owner: 'resourceOwner',
-                status: 'resourceStatusSelect',
-            });
-            await swalFire({ icon: 'error', title: 'Update failed', text: error.message });
-        } finally {
-            button.disabled = false;
-        }
+        const save = async () => {
+            try {
+                await requestJSON(config.updateUrl.replace('__ID__', form.dataset.resourceId), 'PUT', payload);
+                bootstrap.Modal.getInstance(document.getElementById('editResourceModal'))?.hide();
+                await loadResources();
+                await swalFire({ icon: 'success', title: 'Resource updated', text: 'Changes were saved.', timer: 2500, showConfirmButton: false });
+            } catch (error) {
+                showRequestErrors(error, {
+                    category_id: 'resourceCategorySelect',
+                    resource_type_id: 'resourceTypeSelect',
+                    location_id: 'resourceLocationSelect',
+                    name_model: 'resourceNameModel',
+                    serial_number: 'serialNumber',
+                    resource_owner: 'resourceOwner',
+                    status: 'resourceStatusSelect',
+                });
+                await swalFire({ icon: 'error', title: 'Update failed', text: error.message });
+            }
+        };
+        window.RMAction ? await window.RMAction.around(form, save) : await save();
     }
 
     async function confirmDelete(id) {

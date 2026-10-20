@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ url('css/login.css') }}?v={{ @filemtime(public_path('css/login.css')) ?: time() }}">
     <link rel="stylesheet" href="{{ url('css/setup-password.css') }}?v={{ @filemtime(public_path('css/setup-password.css')) ?: time() }}">
+    <link rel="stylesheet" href="{{ url('css/action-lock.css') }}?v=1">
 </head>
 <body class="setup-page">
     <canvas id="starfield" aria-hidden="true"></canvas>
@@ -96,6 +97,7 @@
     <script>
         window.NEBULA_STARS = @json($nebulaStars);
     </script>
+    <script src="{{ url('js/action-lock.js') }}?v=2"></script>
     <script src="{{ url('js/login.js') }}?v={{ @filemtime(public_path('js/login.js')) ?: time() }}"></script>
 </body>
 </html>

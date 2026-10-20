@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (value && key !== 'year' && key !== 'month') params.set(key, value);
                     });
                 }
-                fetch(`${window.RSVCal?.calendarUrl || '/reservations/calendar'}?${params}`, {
+                fetch(`${window.RSVCal?.statsUrl || '/reservations/calendar/stats'}?${params}`, {
                     headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 }).then((response) => (response.ok ? response.json() : null)).then((payload) => {
                     if (!payload?.stats) return;

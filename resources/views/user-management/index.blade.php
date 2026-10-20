@@ -438,6 +438,6 @@ window.UM = {
     errors: @json(session('edit_user_id') ? $errors->toArray() : []),
 };
 </script>
-<script src="{{ asset('js/user-management.js') }}?v=14"></script>
+<script src="{{ asset('js/user-management.js') }}?v=16"></script>
 @endpush
 @endsection

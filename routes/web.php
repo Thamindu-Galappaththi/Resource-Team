@@ -52,8 +52,10 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
         Route::get('/', 'index')->middleware('permission:reservations.index')->name('index');
+        Route::get('/feed', 'feed')->middleware('permission:reservations.index')->name('feed');
         Route::get('/create', 'create')->middleware('permission:reservations.create')->name('create');
         Route::get('/calendar', 'calendar')->middleware('permission:reservations.calendar')->name('calendar');
+        Route::get('/calendar/stats', 'calendarStats')->middleware('permission:reservations.calendar')->name('calendar.stats');
         Route::get('/calendar/events', 'calendarEvents')->middleware('permission:reservations.calendar')->name('calendar.events');
         Route::get('/lookups', 'lookups')->middleware('permission:reservations.create')->name('lookups');
         Route::get('/availability', 'availability')->middleware('permission:reservations.create')->name('availability');
@@ -71,9 +73,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('approvals')->name('approvals.')->group(function () {
         Route::get('/', [ApprovalController::class, 'index'])->middleware('permission:approvals.index')->name('index');
+        Route::get('/feed', [ApprovalController::class, 'feed'])->middleware('permission:approvals.index')->name('feed');
         Route::post('/{reservation}/decision', [ApprovalController::class, 'decide'])->middleware('permission:approvals.index')->name('decision');
         Route::delete('/{reservation}', [ApprovalController::class, 'archive'])->middleware('permission:approvals.index')->name('archive');
         Route::get('/special', [ApprovalController::class, 'special'])->middleware('permission:approvals.special')->name('special');
+        Route::get('/special/feed', [ApprovalController::class, 'specialFeed'])->middleware('permission:approvals.special')->name('special.feed');
         Route::post('/{reservation}/special-decision', [ApprovalController::class, 'specialDecision'])->middleware('permission:approvals.special')->name('special-decision');
     });
 

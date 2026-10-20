@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ url('css/login.css') }}?v={{ @filemtime(public_path('css/login.css')) ?: time() }}">
+    <link rel="stylesheet" href="{{ url('css/action-lock.css') }}?v=1">
     <style>
         html, body {
             margin: 0;
@@ -270,6 +271,7 @@
     <script>
         window.NEBULA_STARS = @json($nebulaStars);
     </script>
+    <script src="{{ url('js/action-lock.js') }}?v=2"></script>
     <script src="{{ url('js/login.js') }}?v={{ @filemtime(public_path('js/login.js')) ?: time() }}"></script>
 </body>
 </html>
