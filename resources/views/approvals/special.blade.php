@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=9">
+<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=11">
 @endpush
 
 @section('content')
@@ -40,7 +40,7 @@
 
     <div class="ap-stats">
         <div class="rsv-stat p-3" style="--stat-color:#d97706;--stat-icon-bg:#fff4e5">
-            <span class="rsv-stat-icon"><i class="ti ti-shield-star"></i></span>
+            <span class="rsv-stat-icon"><i class="ti ti-shield-lock"></i></span>
             <div class="rsv-stat-label mt-3">Waiting for override</div>
             <div class="rsv-stat-number" id="ap-stat-pending">{{ number_format($payload['summary']['pending']) }}</div>
         </div>
@@ -134,12 +134,12 @@
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <span class="rsv-modal-icon" aria-hidden="true"><i class="ti ti-shield-star"></i></span>
+                <span class="rsv-modal-icon" aria-hidden="true"><i class="ti ti-shield-lock"></i></span>
                 <div class="rsv-modal-heading">
                     <h2 class="modal-title fs-5" id="ap-view-title">Reservation</h2>
                     <p class="rsv-modal-sub mb-0" id="ap-view-sub">Booking information</p>
-                    <span class="badge" id="ap-view-badge"></span>
                 </div>
+                <span class="badge" id="ap-view-badge"></span>
                 <button type="button" class="rsv-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
             </div>
             <div class="modal-body">

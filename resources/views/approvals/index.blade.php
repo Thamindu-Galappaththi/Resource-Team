@@ -28,7 +28,7 @@
         </div>
         @if(auth()->user()->hasPermission('approvals.special'))
             <div class="rsv-header-actions">
-                <a href="{{ route('approvals.special') }}" class="btn rsv-header-btn rsv-create-btn"><i class="ti ti-shield-star me-1"></i>Special approvals</a>
+                <a href="{{ route('approvals.special') }}" class="btn rsv-header-btn rsv-create-btn"><i class="ti ti-shield-lock me-1"></i>Special approvals</a>
             </div>
         @endif
     </div>
