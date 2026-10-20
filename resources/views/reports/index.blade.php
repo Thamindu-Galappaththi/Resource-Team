@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/reports.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/reports.css') }}?v=4">
 @endpush
 
 @section('content')
@@ -152,5 +152,5 @@ window.RPTIndex = {
     filters: @json($payload['filters']),
 };
 </script>
-<script src="{{ asset('js/reports.js') }}?v=2"></script>
+<script src="{{ asset('js/reports.js') }}?v=3"></script>
 @endpush

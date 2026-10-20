@@ -299,12 +299,16 @@
     });
 
     document.getElementById('rpt-print')?.addEventListener('click', () => {
+        document.documentElement.classList.add('rpt-printing');
         document.querySelectorAll('.rpt-tab-pane').forEach((pane) => pane.classList.add('active'));
         trendChart?.resize();
         catChart?.resize();
-        window.print();
+        window.setTimeout(() => window.print(), 150);
     });
-    window.addEventListener('afterprint', () => bindTabs());
+    window.addEventListener('afterprint', () => {
+        document.documentElement.classList.remove('rpt-printing');
+        bindTabs();
+    });
 
     bindTabs();
     renderCharts(config.charts);

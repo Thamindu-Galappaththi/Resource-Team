@@ -445,6 +445,19 @@
 }
 
 @media print {
+    @page {
+        size: auto;
+        margin: 12mm;
+    }
+    html,
+    body {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        display: block !important;
+        background: #fff !important;
+    }
     .left-sidebar,
     .sidebar-backdrop,
     .app-header,
@@ -459,14 +472,25 @@
     #rpt-loading {
         display: none !important;
     }
+    #main-wrapper,
     .page-wrapper,
-    .body-wrapper {
+    .body-wrapper,
+    .body-wrapper > .container-fluid,
+    .rpt-page,
+    #rpt-results,
+    .position-relative {
+        position: static !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        display: block !important;
         margin: 0 !important;
         padding: 0 !important;
-        display: block !important;
-        min-height: 0 !important;
+        width: 100% !important;
+        box-shadow: none !important;
     }
-    .rpt-page { padding: 0 !important; }
+    .rpt-page { padding: 0 4px 12px !important; }
     .rpt-page .rpt-header {
         background: #fff !important;
         color: #000 !important;
@@ -480,14 +504,29 @@
     .rpt-print-range { display: block; color: #444; }
     .rpt-tab-pane {
         display: block !important;
-        page-break-inside: avoid;
-        margin-bottom: 1.5rem;
+        overflow: visible !important;
+        height: auto !important;
+        margin-bottom: 1.25rem;
+        page-break-inside: auto;
+        break-inside: auto;
     }
-    .rpt-card { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; }
+    .rpt-tab-pane + .rpt-tab-pane {
+        page-break-before: always;
+        break-before: page;
+    }
+    .rpt-card {
+        border: 1px solid #ccc;
+        box-shadow: none;
+        overflow: visible !important;
+        page-break-inside: auto;
+        break-inside: auto;
+    }
+    .rpt-kpi,
+    .rpt-campus-card { page-break-inside: avoid; break-inside: avoid; }
     .rpt-tbl { display: table; width: 100%; }
     .rpt-tbl thead { display: table-header-group; }
     .rpt-tbl tbody { display: table-row-group; }
-    .rpt-tbl tr { display: table-row; border: none; margin: 0; }
+    .rpt-tbl tr { display: table-row; border: none; margin: 0; page-break-inside: avoid; }
     .rpt-tbl th,
     .rpt-tbl td { display: table-cell; }
     .rpt-tbl td::before { content: none; }
