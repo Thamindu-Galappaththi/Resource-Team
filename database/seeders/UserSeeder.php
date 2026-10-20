@@ -24,6 +24,7 @@ class UserSeeder extends Seeder
             ['slug' => 'slt_employee', 'name' => 'SLT Employee', 'nic' => '199001010005', 'email' => 'slt@nebula.local'],
             ['slug' => 'nebula_sms_user', 'name' => 'Nebula SMS User', 'nic' => '199001010006', 'email' => 'sms@nebula.local'],
             ['slug' => 'management', 'name' => 'Management User', 'nic' => '199001010007', 'email' => 'management@nebula.local'],
+            ['slug' => 'finance', 'name' => 'Finance User', 'nic' => '199001010010', 'email' => 'finance@nebula.local'],
             ['slug' => 'canteen', 'name' => 'Canteen User', 'nic' => '199001010008', 'email' => 'canteen@nebula.local'],
             ['slug' => 'hostel_manager', 'name' => 'Hostel Manager', 'nic' => '199001010009', 'email' => 'hostel@nebula.local'],
         ];

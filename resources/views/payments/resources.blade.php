@@ -10,7 +10,10 @@
 <main class="rp-page">
     <div class="rp-heading">
         <div><span class="rp-eyebrow">PAYMENTS &amp; INVOICING</span><h1>Resource Payment &amp; Invoicing</h1><p>Calculate usage charges, review invoices, and track reservation payment status.</p></div>
-        <a href="{{ route('reservations.index') }}" class="rp-history"><i class="ti ti-history"></i> Reservation history</a>
+        <div class="rp-header-actions">
+            @if(auth()->user()?->hasPermission('payments.rates.manage'))<a href="{{ route('payments.rates.index') }}" class="rp-history">Manage resource rates</a>@endif
+            <a href="{{ route('reservations.index') }}" class="rp-history"><i class="ti ti-history"></i> Reservation history</a>
+        </div>
     </div>
 
     <ol class="rp-steps" aria-label="Payment steps">
@@ -49,7 +52,7 @@
             <div class="rp-invoice-body">
                 <div class="rp-invoice-meta"><div><span>Invoice number</span><strong id="rp-invoice-id">DRAFT</strong></div><div><span>Issue date</span><strong id="rp-issue-date">{{ now()->format('d M Y') }}</strong></div></div>
                 <div class="rp-invoice-recipient"><span>Bill to</span><strong id="rp-requester">Reservation user</strong><small id="rp-requester-email"></small><small id="rp-invoice-ref">Search a reservation to begin</small><small id="rp-invoice-resource"></small></div>
-                <div class="rp-line-items"><div class="rp-line"><span>Base Reservation Fee <small id="rp-base-detail">Reservation duration</small></span><strong id="rp-base-fee">LKR 0.00</strong></div><div class="rp-line"><span>Extra Hours Charge <small><span id="rp-extra-detail">0.0 hrs × applicable rate</span></small></span><strong id="rp-extra-fee">LKR 0.00</strong></div><div class="rp-line"><span>Tax</span><strong id="rp-tax-fee">LKR 0.00</strong></div><div class="rp-line"><span>Service fee</span><strong id="rp-service-fee">LKR 0.00</strong></div><div class="rp-line"><span>Discount</span><strong id="rp-discount">− LKR 0.00</strong></div></div>
+                <div class="rp-line-items"><div class="rp-line"><span>Base Reservation Fee <small id="rp-base-detail">Reservation duration</small></span><strong id="rp-base-fee">LKR 0.00</strong></div><div class="rp-line"><span>Extra Hours Charge <small><span id="rp-extra-detail">0.0 hrs × applicable rate</span></small></span><strong id="rp-extra-fee">LKR 0.00</strong></div><div class="rp-line"><span>Discount <small id="rp-discount-detail">Customer category</small></span><strong id="rp-discount">− LKR 0.00</strong></div><div class="rp-line"><span>Tax <small id="rp-tax-detail">Applicable rate</small></span><strong id="rp-tax-fee">LKR 0.00</strong></div></div>
                 <div class="rp-total"><div><span>TOTAL AMOUNT DUE</span><small>Draft total in Sri Lankan rupees</small></div><strong id="rp-total" aria-live="polite" aria-atomic="true">LKR 0.00</strong></div>
                 <div id="rp-rate-warning" class="rp-rate-warning is-hidden" role="status"><i class="ti ti-alert-circle"></i><span>Rate details are not available. Configure an applicable rate before collecting payment.</span></div>
                 <div class="rp-secure-note"><i class="ti ti-clock-hour-4"></i><span>Online payment status: <strong>Pending</strong>.</span></div>
@@ -76,25 +79,30 @@
     let usageConfirmed = false;
 
     function renderInvoice() {
-        const extra = reservation?.extra_hours || 0;
-        const rate = reservation?.extra_hourly_rate || 0;
         const base = reservation?.base_fee || 0;
         document.getElementById('rp-base-fee').textContent = money(base);
         document.getElementById('rp-extra-fee').textContent = money(reservation?.extra_hour_fee || 0);
         document.getElementById('rp-tax-fee').textContent = money(reservation?.tax_fee || 0);
-        document.getElementById('rp-service-fee').textContent = money(reservation?.service_fee || 0);
         document.getElementById('rp-discount').textContent = '− ' + money(reservation?.discount || 0);
         document.getElementById('rp-total').textContent = money(reservation?.total || 0);
-        document.getElementById('rp-extra-detail').textContent = extra.toFixed(1) + ' hrs × ' + money(rate) + '/hr';
+        const lines = reservation?.lines || [];
+        document.getElementById('rp-extra-detail').textContent = lines.length
+            ? lines.map(line => line.resource + ': ' + Number(line.extra_hours).toFixed(2) + ' hrs × ' + money(line.extra_hourly_rate) + '/hr').join(' · ')
+            : 'Rate not available';
+        document.getElementById('rp-base-detail').textContent = lines.length
+            ? lines.map(line => line.resource + ': includes first ' + Number(line.base_duration_hours).toFixed(2).replace(/\.00$/, '') + ' hrs').join(' · ')
+            : 'Rate not available';
+        document.getElementById('rp-tax-detail').textContent = reservation?.tax_percent === null ? 'Per resource rate after discount' : Number(reservation?.tax_percent || 0).toFixed(3).replace(/0+$/, '').replace(/\.$/, '') + '% after discount';
+        document.getElementById('rp-discount-detail').textContent = Number(reservation?.discount_percent || 0).toFixed(2).replace(/\.00$/, '') + '% customer category discount';
         document.getElementById('rp-status').textContent = 'PENDING';
-        const rateWarningCanBeHidden = Boolean(reservation && reservation.has_rate && (extra === 0 || reservation.has_extra_hourly_rate));
+        const rateWarningCanBeHidden = Boolean(reservation && reservation.has_rate);
         document.getElementById('rp-rate-warning').classList.toggle('is-hidden', !reservation || rateWarningCanBeHidden);
         document.getElementById('rp-pay').disabled = true;
         printButton.disabled = !reservation;
         hoursInput.disabled = !reservation;
         document.getElementById('rp-hours-up').disabled = !reservation;
         document.getElementById('rp-hours-down').disabled = !reservation;
-        confirmUsageButton.disabled = !reservation;
+        confirmUsageButton.disabled = !reservation || !reservation.has_rate;
         updateStepState();
     }
 
@@ -121,7 +129,7 @@
             if (requestSequence !== feeRequestSequence) return;
             reservation = payload;
             usageConfirmed = false;
-            document.getElementById('rp-rate-warning').classList.toggle('is-hidden', Boolean(payload.has_rate && (payload.extra_hours === 0 || payload.has_extra_hourly_rate)));
+            document.getElementById('rp-rate-warning').classList.toggle('is-hidden', Boolean(payload.has_rate));
             message.textContent = payload.rate_note || 'Fee breakdown updated.';
             message.className = 'rp-message ' + (payload.has_rate ? 'is-success' : 'is-warning');
         } catch (error) {
@@ -182,7 +190,7 @@
             document.getElementById('rp-invoice-resource').textContent = 'Resource: ' + payload.resource;
             document.getElementById('rp-invoice-id').textContent = 'DRAFT-' + payload.reference;
             document.getElementById('rp-issue-date').textContent = payload.issue_date;
-            document.getElementById('rp-base-detail').textContent = payload.hours.toFixed(1) + ' reserved hours';
+            document.getElementById('rp-base-detail').textContent = payload.base_duration_hours ? 'Includes first ' + Number(payload.base_duration_hours).toFixed(2).replace(/\.00$/, '') + ' hrs' : 'Rate not available';
             document.getElementById('rp-extra-hours').value = '0';
             document.getElementById('rp-reserved-duration').textContent = payload.hours.toFixed(1) + ' hours';
             document.getElementById('rp-actual-duration').textContent = payload.hours.toFixed(1) + ' hours';
@@ -232,10 +240,7 @@
         document.getElementById('rp-usage-message').textContent = '';
         document.getElementById('rp-usage-message').classList.remove('is-error');
         document.getElementById('rp-actual-duration').textContent = ((reservation?.hours || 0) + extraHours).toFixed(1) + ' hours';
-        if (extraHours > 0 && !reservation?.has_extra_hourly_rate) {
-            message.textContent = 'An hourly rate for extra usage is not stored for this reservation.';
-            message.className = 'rp-message is-warning';
-        } else if (reservation) {
+        if (reservation) {
             message.textContent = reservation.rate_note || 'Fee breakdown updated.';
             message.className = 'rp-message ' + (reservation.has_rate ? 'is-success' : 'is-warning');
         }
@@ -265,7 +270,7 @@
             document.getElementById('rp-usage-message').classList.add('is-error');
         } finally {
             confirmUsageButton.textContent = 'Confirm usage';
-            confirmUsageButton.disabled = !reservation;
+            confirmUsageButton.disabled = !reservation || !reservation.has_rate;
         }
     });
     printButton.addEventListener('click', () => {

@@ -14,6 +14,7 @@ use App\Http\Controllers\ResourceCalendarController;
 use App\Http\Controllers\ResourceCategoryController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ResourcePaymentController;
+use App\Http\Controllers\ResourceRateController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\LectureFeeController;
@@ -102,6 +103,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/resources/lookup', [ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
         Route::get('/resources/invoices/{reference}/print', [ResourcePaymentController::class, 'print'])->middleware('permission:payments.view')->name('resources.print');
         Route::post('/resources/usage/confirm', [ResourcePaymentController::class, 'confirmUsage'])->middleware('permission:payments.view')->name('resources.usage.confirm');
+        Route::get('/resource-rates', [ResourceRateController::class, 'index'])->middleware('permission:payments.rates.manage')->name('rates.index');
+        Route::post('/resource-rates', [ResourceRateController::class, 'store'])->middleware('permission:payments.rates.manage')->name('rates.store');
+        Route::put('/resource-rates/{rate}', [ResourceRateController::class, 'update'])->middleware('permission:payments.rates.manage')->name('rates.update');
+        Route::patch('/resource-rates/{rate}/deactivate', [ResourceRateController::class, 'deactivate'])->middleware('permission:payments.rates.manage')->name('rates.deactivate');
+        Route::post('/resource-payment-discounts', [ResourceRateController::class, 'storeDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.store');
+        Route::put('/resource-payment-discounts/{rule}', [ResourceRateController::class, 'updateDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.update');
+        Route::patch('/resource-payment-discounts/{rule}/deactivate', [ResourceRateController::class, 'deactivateDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.deactivate');
     });
 
     Route::prefix('reports')->name('reports.')->middleware('permission:reports.view')->controller(ReportController::class)->group(function () {
