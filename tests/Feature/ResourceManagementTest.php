@@ -207,6 +207,8 @@ class ResourceManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Resource calendar')
             ->assertSee('id="resourceCalendar"', false)
+            ->assertSee('id="refreshCalendarButton"', false)
+            ->assertSee('id="resource-calendar-filters"', false)
             ->assertSee('id="upcomingPagination"', false)
             ->assertSee('id="upcomingResultCount"', false)
             ->assertSee('Active resources')
@@ -241,7 +243,11 @@ class ResourceManagementTest extends TestCase
             'resource_name_snapshot' => 'Hall A',
         ]);
 
-        $this->actingAs($user)->get(route('resources.calendar'))
+        $this->actingAs($user)
+            ->getJson(route('resources.calendar.events', [
+                'start' => $start->copy()->subDay()->toIso8601String(),
+                'end' => $start->copy()->addDays(2)->toIso8601String(),
+            ]))
             ->assertOk()
             ->assertSee('Hall A', false)
             ->assertSee($start->copy()->timezone('Asia/Colombo')->format('Y-m-d\TH:i:s'), false)
@@ -269,7 +275,11 @@ class ResourceManagementTest extends TestCase
             'resource_name_snapshot' => 'Moratuwa Single 101',
         ]);
 
-        $this->actingAs($user)->get(route('resources.calendar'))
+        $this->actingAs($user)
+            ->getJson(route('resources.calendar.events', [
+                'start' => $start->copy()->subDay()->toIso8601String(),
+                'end' => $end->copy()->addDay()->toIso8601String(),
+            ]))
             ->assertOk()
             ->assertSee('Moratuwa Single 101', false)
             ->assertSee('2 nights', false)
@@ -294,9 +304,49 @@ class ResourceManagementTest extends TestCase
             'resource_name_snapshot' => 'Hall A',
         ]);
 
-        $this->actingAs($developer)->get(route('resources.calendar'))
+        $this->actingAs($developer)
+            ->getJson(route('resources.calendar.events', [
+                'start' => now()->subDay()->toIso8601String(),
+                'end' => now()->addMonths(2)->toIso8601String(),
+            ]))
             ->assertOk()
-            ->assertSee('Hall A', false);
+            ->assertSee('Hall A', false)
+            ->assertSee('Shared lab booking', false);
+    }
+
+    public function test_resource_calendar_events_honor_resource_filter(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        $keep = Resource::factory()->create(['name_model' => 'Keep Hall', 'status' => 'active']);
+        $hide = Resource::factory()->create(['name_model' => 'Hide Hall', 'status' => 'active']);
+        $start = now('UTC')->addDay()->setTime(3, 30, 0);
+        foreach ([$keep, $hide] as $resource) {
+            $reservation = Reservation::factory()->create([
+                'requester_id' => $user->id,
+                'created_by_user_id' => $user->id,
+                'location_id' => $resource->location_id,
+                'title' => $resource->name_model.' booking',
+            ]);
+            ReservationItem::factory()->create([
+                'reservation_id' => $reservation->id,
+                'resource_id' => $resource->id,
+                'starts_at' => $start,
+                'ends_at' => $start->copy()->addHours(2),
+                'resource_name_snapshot' => $resource->name_model,
+            ]);
+        }
+
+        $range = [
+            'start' => $start->copy()->subDay()->toIso8601String(),
+            'end' => $start->copy()->addDays(2)->toIso8601String(),
+        ];
+
+        $this->actingAs($user)
+            ->getJson(route('resources.calendar.events', $range + ['resource_id' => $keep->id]))
+            ->assertOk()
+            ->assertSee('Keep Hall', false)
+            ->assertDontSee('Hide Hall', false);
     }
 
     public function test_empty_category_features_are_not_stored(): void

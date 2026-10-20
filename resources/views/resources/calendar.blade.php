@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=37">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
 @endpush
 
 @section('content')
@@ -37,7 +37,7 @@
         </div>
     </div>
 
-    <div class="rc-filters">
+    <div class="rc-filters" id="resource-calendar-filters">
         <div class="rc-filter">
             <label>Resource</label>
             <x-rm-select id="resourceFilter" value="all" selected-label="All resources" placeholder="All resources"
@@ -64,6 +64,9 @@
                 :options="collect([['value' => 'all', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
         </div>
         <div class="rc-filter-actions">
+            <button type="button" id="refreshCalendarButton" class="rc-filter-button rc-filter-refresh">
+                <i class="ti ti-refresh" aria-hidden="true"></i>Refresh
+            </button>
             <button type="button" id="clearFiltersButton" class="rc-filter-button rc-filter-clear" disabled>Clear</button>
         </div>
     </div>
@@ -74,7 +77,7 @@
     </div>
 
     <div class="rc-calendar-card">
-        <div id="calendarLoading" class="rc-loading" role="status">Loading reservations…</div>
+        <div id="calendarLoading" class="rc-loading" role="status"><i class="ti ti-loader-2" aria-hidden="true"></i>Loading reservations…</div>
         <div id="calendarEmpty" class="rc-empty" hidden>No reservations match your filters.</div>
         <div class="rc-calendar-legend" aria-label="Holiday types">
             <span><i class="rc-holiday-swatch poya"></i>Poya</span>
@@ -163,7 +166,7 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
 <script>
     window.RC = {
-        events: @json($calendarEvents),
+        eventsUrl: @json(route('resources.calendar.events')),
         holidays: @json($holidayEvents),
         holidayImageBase: @json(asset('images/holidays')),
         schedulerResources: @json($schedulerResources),
@@ -172,5 +175,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=34"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=36"></script>
 @endpush

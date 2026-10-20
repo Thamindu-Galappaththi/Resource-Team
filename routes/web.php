@@ -69,6 +69,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('resource-calendar')->name('resources.')->controller(ResourceCalendarController::class)->group(function () {
         Route::get('/', 'index')->middleware('permission:resources.calendar')->name('calendar');
+        Route::get('/events', 'events')->middleware('permission:resources.calendar')->name('calendar.events');
     });
 
     Route::prefix('approvals')->name('approvals.')->group(function () {

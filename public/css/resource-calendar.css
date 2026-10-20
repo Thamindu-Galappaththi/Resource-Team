@@ -156,6 +156,32 @@
     background: var(--rc-blue);
     border-color: var(--rc-blue);
 }
+.rc-filter-refresh {
+    gap: 6px;
+    color: #fff;
+    background: var(--rc-blue);
+    border: 1.5px solid var(--rc-blue);
+}
+.rc-filter-refresh:hover,
+.rc-filter-refresh:focus {
+    color: #fff;
+    background: #1258a3;
+    border-color: #1258a3;
+}
+.rc-filter-refresh:disabled,
+.rc-filter-refresh.is-loading {
+    opacity: .75;
+    cursor: wait;
+}
+.rc-filter-refresh .ti-refresh {
+    font-size: 16px;
+}
+.rc-filter-refresh.is-loading .ti-refresh {
+    animation: rc-spin .8s linear infinite;
+}
+@keyframes rc-spin {
+    to { transform: rotate(360deg); }
+}
 .rc-filter-clear:disabled {
     color: var(--rc-blue);
     background: #fff;
@@ -197,8 +223,25 @@
     box-shadow: 0 4px 12px rgba(23, 105, 194, .28);
 }
 
-.rc-calendar-card { padding: 16px; margin-bottom: 18px; overflow: visible; }
+.rc-calendar-card { position: relative; padding: 16px; margin-bottom: 18px; overflow: visible; }
 .rc-loading, .rc-empty { padding: 24px; text-align: center; color: var(--rc-muted); }
+.rc-calendar-card > .rc-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0;
+    border-radius: inherit;
+    background: rgba(255, 255, 255, .72);
+    font-weight: 700;
+}
+.rc-calendar-card > .rc-loading .ti-loader-2 {
+    font-size: 18px;
+    animation: rc-spin .8s linear infinite;
+}
 #calendarLoading[hidden],
 .rc-loading[hidden] { display: none !important; }
 .rc-empty { border: 1px dashed #cbd5e1; border-radius: 8px; margin-bottom: 12px; }

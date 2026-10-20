@@ -269,6 +269,7 @@ class ReservationManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Reservation Calendar')
             ->assertSee('reservationCalendar')
+            ->assertSee('id="refreshCalendarButton"', false)
             ->assertSee('fullcalendar@6.1.19', false)
             ->assertSee('js/reservation-calendar.js', false);
         $this->actingAs($user)->get(route('reservations.create'))->assertOk()->assertSee('Purpose of Reservation');

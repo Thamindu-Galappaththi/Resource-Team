@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=37">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
 <link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=6">
 @endpush
 
@@ -67,12 +67,15 @@
                 :options="collect([['value' => '', 'label' => 'All statuses']])->concat($statuses->map(fn ($status) => ['value' => $status->value, 'label' => $status->label()]))->all()" />
         </div>
         <div class="rc-filter-actions">
+            <button type="button" id="refreshCalendarButton" class="rc-filter-button rc-filter-refresh">
+                <i class="ti ti-refresh" aria-hidden="true"></i>Refresh
+            </button>
             <button type="button" id="clearFiltersButton" class="rc-filter-button rc-filter-clear" disabled>Clear</button>
         </div>
     </form>
 
     <div class="rc-calendar-card">
-        <div id="calendarLoading" class="rc-loading" role="status">Loading reservations…</div>
+        <div id="calendarLoading" class="rc-loading" role="status"><i class="ti ti-loader-2" aria-hidden="true"></i>Loading reservations…</div>
         <div id="calendarEmpty" class="rc-empty" hidden>No reservations match your filters.</div>
         <div class="rc-calendar-legend" aria-label="Holiday types">
             <span><i class="rc-holiday-swatch poya"></i>Poya</span>
@@ -121,5 +124,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=14"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=15"></script>
 @endpush
