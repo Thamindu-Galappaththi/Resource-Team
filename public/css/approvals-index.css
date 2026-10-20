@@ -55,19 +55,19 @@
 }
 .ap-page .ap-decision-actions .btn,
 .rsv-modal .ap-decision-actions .btn { min-height: 42px; }
-.rsv-modal .modal-header {
+#ap-view-modal .modal-header {
     flex-wrap: nowrap;
     align-items: center;
 }
-.rsv-modal .rsv-modal-heading {
+#ap-view-modal .rsv-modal-heading {
     min-width: 0;
     flex: 1;
 }
-.rsv-modal .rsv-modal-heading .modal-title {
+#ap-view-modal .rsv-modal-heading .modal-title {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
-.rsv-modal .modal-header .badge {
+#ap-view-modal .modal-header .badge {
     margin-left: auto;
     margin-right: 2.75rem;
     flex: 0 0 auto;
@@ -128,24 +128,35 @@
     .rsv-modal .modal-content {
         max-height: calc(100vh - 1rem);
     }
-    .rsv-modal .modal-header {
-        align-items: center;
-        flex-wrap: nowrap;
-        gap: 10px;
+    #ap-view-modal .modal-header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-areas:
+            "icon heading"
+            ". badge";
+        align-items: start;
+        column-gap: 10px;
+        row-gap: .5rem;
         padding: 1rem 3.15rem 1rem 1rem;
     }
-    .rsv-modal .rsv-modal-heading {
+    #ap-view-modal .rsv-modal-icon {
+        grid-area: icon;
+    }
+    #ap-view-modal .rsv-modal-heading {
+        grid-area: heading;
         min-width: 0;
     }
-    .rsv-modal .modal-title {
+    #ap-view-modal .modal-title {
         font-size: 1.05rem;
-        line-height: 1.25;
-        overflow-wrap: anywhere;
+        line-height: 1.3;
+        overflow-wrap: break-word;
+        word-break: normal;
     }
-    .rsv-modal .modal-header .badge {
-        margin-left: auto;
-        margin-right: 2.75rem;
-        align-self: center;
+    #ap-view-modal .modal-header .badge {
+        grid-area: badge;
+        justify-self: end;
+        margin: 0;
+        white-space: nowrap;
     }
     .rsv-modal .modal-body { padding: .9rem 1rem 1rem; }
     .rsv-modal .ap-decision-actions {
