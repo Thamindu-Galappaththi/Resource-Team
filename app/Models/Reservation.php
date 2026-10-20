@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\ReservationItemStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use Illuminate\Database\Eloquent\Builder;
@@ -134,6 +133,11 @@ class Reservation extends Model
     public function canBeCancelled(): bool
     {
         return in_array($this->status, ReservationStatus::cancellable(), true);
+    }
+
+    public function bookedItemStatusLabel($item = null): string
+    {
+        return $this->statusEnum()->label();
     }
 
     public function destinationUrl(bool $forApprover = false): string

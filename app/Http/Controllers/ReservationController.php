@@ -482,7 +482,8 @@ class ReservationController extends Controller
             'items' => $reservation->items->map(fn ($item) => [
                 'name' => $item->resource_name_snapshot,
                 'category' => $item->resource?->type?->category?->name ?? '—',
-                'status' => ucfirst((string) $item->status),
+                'status' => $reservation->bookedItemStatusLabel($item),
+                'status_badge' => $reservation->statusEnum()->badgeClass(),
             ])->values(),
             'history' => $reservation->statusHistory->map(fn ($history) => [
                 'from' => $this->statusLabel($history->from_status),

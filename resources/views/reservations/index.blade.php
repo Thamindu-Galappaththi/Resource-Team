@@ -173,5 +173,5 @@ window.RSVIndex = {
     payload: @json($payload),
 };
 </script>
-<script src="{{ asset('js/reservation-index.js') }}?v=10"></script>
+<script src="{{ asset('js/reservation-index.js') }}?v=11"></script>
 @endpush

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ReservationStatus;
 use App\Models\Reservation;
+use App\Models\ReservationItem;
 use App\Models\Resource;
 use App\Models\User;
 use App\Notifications\ReservationCreated;
@@ -222,6 +223,49 @@ class ReservationManagementTest extends TestCase
         $this->post(route('reservations.cancel', $rejected), [
             'cancellation_reason' => 'again',
         ])->assertForbidden();
+    }
+
+    public function test_existing_reservations_modal_item_status_matches_reservation_status(): void
+    {
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $resource = Resource::factory()->create(['status' => 'active', 'name_model' => 'Welisara Single 101']);
+
+        $pending = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'purpose' => 'Pending hostel stay',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $pending->id,
+            'resource_id' => $resource->id,
+            'resource_name_snapshot' => 'Welisara Single 101',
+            'status' => 'cancelled',
+        ]);
+
+        $rejected = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::REJECTED->value,
+            'purpose' => 'Rejected hostel stay',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $rejected->id,
+            'resource_id' => $resource->id,
+            'resource_name_snapshot' => 'Welisara Single 101',
+            'status' => 'cancelled',
+        ]);
+
+        $payload = $this->actingAs($admin)
+            ->getJson(route('reservations.feed'))
+            ->assertOk()
+            ->json('reservations');
+        $pendingRow = collect($payload)->firstWhere('purpose', 'Pending hostel stay');
+        $rejectedRow = collect($payload)->firstWhere('purpose', 'Rejected hostel stay');
+        $this->assertSame('Pending approval', $pendingRow['items'][0]['status']);
+        $this->assertSame('Rejected', $rejectedRow['items'][0]['status']);
+        $this->assertNotSame('Cancelled', $pendingRow['items'][0]['status']);
     }
 
     public function test_existing_reservations_filter_by_status(): void
