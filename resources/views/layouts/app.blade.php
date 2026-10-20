@@ -16,7 +16,7 @@
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/sidebar-responsive.css') }}?v=11" rel="stylesheet">
+    <link href="{{ asset('css/sidebar-responsive.css') }}?v=12" rel="stylesheet">
     <link href="{{ asset('css/notifications.css') }}?v=9" rel="stylesheet">
     <link href="{{ asset('css/action-lock.css') }}?v=1" rel="stylesheet">
     @stack('styles')
@@ -129,7 +129,7 @@
                                         <a href="{{ route('user.profile') }}"
                                             class="d-flex align-items-center gap-2 dropdown-item">
                                             <i class="ti ti-user fs-6"></i>
-                                            <p class="mb-0 fs-3">My Profile</p>
+                                            <span>My Profile</span>
                                         </a>
                                         <a href="{{ route('logout') }}"
                                             class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
