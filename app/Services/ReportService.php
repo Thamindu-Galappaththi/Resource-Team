@@ -173,10 +173,10 @@ class ReportService
             [$decision, $badge] = match (true) {
                 $r->status === 'under_maintenance' => ['Under Maintenance – Track completion date', 'bg-secondary'],
                 $pct >= 80 => ['Critical Demand – Procure additional units', 'bg-danger'],
-                $pct >= 55 => ['High Demand – Monitor & restrict ad-hoc slots', 'bg-warning text-dark'],
+                $pct >= 55 => ['High Demand – Monitor & restrict ad-hoc slots', 'bg-warning'],
                 $pct >= 30 => ['Healthy Utilization – No action needed', 'bg-success'],
                 $items->count() === 0 => ['Idle – Review need or reallocate space', 'bg-dark'],
-                default => ['Underused – Open to more intake sessions', 'bg-info text-dark'],
+                default => ['Underused – Open to more intake sessions', 'bg-info'],
             };
 
             return [

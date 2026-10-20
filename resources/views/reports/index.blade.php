@@ -67,11 +67,48 @@
 .rpt-campus-card { border:1px solid #e2e8f0; border-radius:.75rem; padding:1.1rem; background:#fff; display:flex; flex-direction:column; }
 .rpt-campus-name { font-weight:700; font-size:.95rem; margin-bottom:.5rem; }
 .rpt-campus-rec  { display:inline-block; white-space:normal !important; word-break:break-word; text-align:left; font-size:.76rem; line-height:1.35; padding:.3rem .6rem; border-radius:.4rem; }
-.rpt-dec-badge   { display:inline-block; white-space:normal !important; word-break:break-word; font-size:.76rem; font-weight:600; line-height:1.35; padding:.3rem .65rem; border-radius:.4rem; }
+.rpt-dec-badge   { display:inline-block; white-space:normal !important; word-break:break-word; font-size:.76rem; font-weight:600; line-height:1.35; padding:.3rem .65rem; border-radius:.4rem; color: #ffffff !important; }
+.rpt-dec-badge.text-dark { color: #152238 !important; }
+.rpt-dec-badge.bg-dark   { background-color: #334155 !important; color: #f8fafc !important; }
+.rpt-dec-badge.bg-secondary { background-color: #64748b !important; color: #ffffff !important; }
+.rpt-dec-badge.bg-info   { background-color: #0284c7 !important; color: #ffffff !important; }
+.rpt-dec-badge.bg-warning { background-color: #f59e0b !important; color: #1e293b !important; }
+.rpt-dec-badge.bg-danger  { background-color: #e11d48 !important; color: #ffffff !important; }
+.rpt-dec-badge.bg-success { background-color: #10b981 !important; color: #ffffff !important; }
 .rpt-slot-label  { display:inline-block; white-space:normal !important; word-break:break-word; font-size:.76rem; font-weight:600; line-height:1.3; padding:.25rem .6rem; border-radius:.4rem; }
 
 /* Lecturer table stat pill */
 .rpt-pill { display:inline-block; padding:.2rem .6rem; border-radius:.4rem; font-size:.78rem; font-weight:600; }
+
+/* Calculation Explanations Drawer / Note */
+.rpt-calc-wrapper { margin-bottom: 1.25rem; }
+.rpt-note-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #eef5ff;
+    color: #1769c2;
+    border: 1px solid #c7ddfb;
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.rpt-note-pill-btn:hover, .rpt-note-pill-btn[aria-expanded="true"] {
+    background: #1769c2;
+    color: #fff;
+    border-color: #1769c2;
+    box-shadow: 0 2px 8px rgba(23, 105, 194, 0.25);
+}
+.rpt-calc-note { background:#f8fafc; border:1px solid #e2e8f0; border-radius:.85rem; padding:1.15rem 1.35rem; margin-top:0.75rem; box-shadow: 0 4px 14px rgba(0,0,0,0.04); }
+.rpt-calc-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem; }
+.rpt-calc-box { background:#fff; border:1px solid #e2e8f0; border-radius:.65rem; padding:.85rem 1rem; }
+.rpt-calc-title { font-weight:700; font-size:.82rem; color:#152238; margin-bottom:.35rem; display:flex; align-items:center; gap:.4rem; }
+.rpt-calc-formula { font-family:monospace; background:#f1f5f9; padding:.2rem .45rem; border-radius:.35rem; font-size:.78rem; color:#0f172a; display:block; margin-bottom:.35rem; }
+.rpt-calc-desc { font-size:.78rem; color:#64748b; margin:0; line-height:1.4; }
 </style>
 @endpush
 
@@ -81,8 +118,8 @@
     {{-- ── HEADER ─────────────────────────────────────────────────────────── --}}
     <div class="rpt-header mb-4">
         <div>
-            <div class="rpt-kicker"><i class="ti ti-chart-dots me-1"></i> Reports & Decision Analytics</div>
-            <h1 class="rpt-title">Operations Dashboard</h1>
+            <div class="rpt-kicker"><i class="ti ti-chart-dots me-1"></i> Management Reports & Analytics</div>
+            <h1 class="rpt-title">Resource Utilization & Reservations</h1>
         </div>
         <div class="rpt-header-actions">
             <button onclick="window.print()" class="rpt-btn rpt-btn-outline"><i class="ti ti-printer"></i> Print</button>
@@ -140,11 +177,25 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="rpt-filter-item">
+                    <label><i class="ti ti-list-check me-1"></i>Reservation status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All statuses</option>
+                        @foreach($statuses as $status)
+                            <option value="{{ $status->value }}" @selected($currentFilters['status'] === $status->value)>{{ $status->label() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="rpt-filter-item">
+                    <label><i class="ti ti-search me-1"></i>Search reservations</label>
+                    <input type="search" name="search" class="form-control" value="{{ $currentFilters['search'] }}" placeholder="Title, reference, purpose, requester">
+                </div>
                 <div class="rpt-filter-actions">
                     <button type="submit" class="btn btn-primary px-3"><i class="ti ti-filter me-1"></i>Apply</button>
                     <a href="{{ route('reports.index') }}" class="btn btn-light border px-3"><i class="ti ti-rotate-clockwise"></i></a>
                 </div>
             </div>
+            <div class="small text-muted mt-2">Status and search filter reservation reports. Finance, hostel, and canteen summaries use the selected date range and campus.</div>
         </form>
     </div>
 
@@ -173,21 +224,6 @@
             <div class="rpt-kpi-sub">across {{ $data['summary']['active_resources_count'] }} active facilities</div>
         </div>
         <div class="rpt-kpi">
-            <div class="rpt-kpi-label">Canteen Orders</div>
-            <div class="rpt-kpi-value" style="color:#d97706">{{ number_format($data['canteen']['total_orders']) }}</div>
-            <div class="rpt-kpi-sub">{{ number_format($data['canteen']['total_meals']) }} meals &bull; avg {{ $data['canteen']['daily_avg'] }}/day</div>
-        </div>
-        <div class="rpt-kpi">
-            <div class="rpt-kpi-label">Hostel Guests</div>
-            <div class="rpt-kpi-value" style="color:#7c3aed">{{ $data['hostel']['total_guests'] }}</div>
-            <div class="rpt-kpi-sub">{{ $data['hostel']['checked_in'] }} in · {{ $data['hostel']['upcoming'] }} upcoming</div>
-        </div>
-        <div class="rpt-kpi">
-            <div class="rpt-kpi-label">Lecturer Fees Payable</div>
-            <div class="rpt-kpi-value" style="color:#dc3545">LKR {{ number_format($data['financial']['total_unpaid_lkr'], 0) }}</div>
-            <div class="rpt-kpi-sub">{{ $data['financial']['unpaid_count'] }} unpaid records</div>
-        </div>
-        <div class="rpt-kpi">
             <div class="rpt-kpi-label">Pending Approvals</div>
             <div class="rpt-kpi-value" style="color:{{ $data['approval_health']['stale_pending'] > 3 ? '#dc3545' : '#f59e0b' }}">
                 {{ $data['approval_health']['pending_count'] }}
@@ -196,13 +232,64 @@
         </div>
     </div>
 
+    {{-- ── CALCULATION METHODOLOGY / NOTE FOR USER ───────────────────────────── --}}
+    <div class="rpt-calc-wrapper">
+        <button class="rpt-note-pill-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#calcMethodologyCollapse" aria-expanded="false" aria-controls="calcMethodologyCollapse">
+            <i class="ti ti-info-circle"></i>
+            <span>Note</span>
+        </button>
+
+        <div class="collapse mt-2" id="calcMethodologyCollapse">
+            <div class="rpt-calc-note">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <span class="fw-bold text-dark fs-6"><i class="ti ti-calculator me-1 text-primary"></i> Calculation Methodology & Decision Logic</span>
+                    <button type="button" class="btn-close btn-sm" data-bs-toggle="collapse" data-bs-target="#calcMethodologyCollapse" aria-label="Close"></button>
+                </div>
+                <div class="rpt-calc-grid">
+                    <div class="rpt-calc-box">
+                        <div class="rpt-calc-title"><i class="ti ti-chart-donut text-primary"></i> Facility Utilization Rate</div>
+                        <code class="rpt-calc-formula">(Booked Hours / Total Capacity Hours) × 100</code>
+                        <p class="rpt-calc-desc">
+                            <strong>Booked Hours:</strong> Total minutes from active reservation slots divided by 60.<br>
+                            <strong>Total Capacity:</strong> Active Facilities × Days in Period × 8 standard operational hours/day.
+                        </p>
+                    </div>
+
+                    <div class="rpt-calc-box">
+                        <div class="rpt-calc-title"><i class="ti ti-check text-success"></i> Approval Rate</div>
+                        <code class="rpt-calc-formula">(Approved Bookings / Total Reservations) × 100</code>
+                        <p class="rpt-calc-desc">
+                            Includes approved, confirmed, and completed bookings against total submissions. Cancelled, rejected, and drafts lower this rate.
+                        </p>
+                    </div>
+
+                    <div class="rpt-calc-box">
+                        <div class="rpt-calc-title"><i class="ti ti-hourglass-low text-warning"></i> Approval Turnaround & Overdue</div>
+                        <code class="rpt-calc-formula">Average (Approved At − Submitted At) in Hours</code>
+                        <p class="rpt-calc-desc">
+                            Measures processing speed. Overdue indicates pending submissions waiting longer than <strong>24 hours</strong> without a decision.
+                        </p>
+                    </div>
+
+                    <div class="rpt-calc-box">
+                        <div class="rpt-calc-title"><i class="ti ti-building-community text-info"></i> Campus & Resource Decision Rules</div>
+                        <code class="rpt-calc-formula">Critical ≥80% | High ≥55% | Balanced ≥30% | Idle = 0</code>
+                        <p class="rpt-calc-desc">
+                            Facilities exceeding 80% load recommend procurement/expansion; below 30% or 0 bookings recommend timetable shifting or space reallocation.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- ── TABS ────────────────────────────────────────────────────────────── --}}
     <div class="rpt-tabbar" id="rptTabBar">
         <button class="rpt-tab active" data-tab="facility"><i class="ti ti-building-community me-1"></i> Facility Utilization</button>
         <button class="rpt-tab" data-tab="bookings"><i class="ti ti-calendar-check me-1"></i> Bookings & Approval Health</button>
-        <button class="rpt-tab" data-tab="financial"><i class="ti ti-currency-dollar me-1"></i> Financial & Lecturer Fees</button>
-        <button class="rpt-tab" data-tab="hostel"><i class="ti ti-home me-1"></i> Hostel</button>
-        <button class="rpt-tab" data-tab="canteen"><i class="ti ti-chef-hat me-1"></i> Canteen</button>
+        <button class="rpt-tab" data-tab="financial"><i class="ti ti-currency-dollar me-1"></i> Finance Summary</button>
+        <button class="rpt-tab" data-tab="hostel"><i class="ti ti-home me-1"></i> Hostel Summary</button>
+        <button class="rpt-tab" data-tab="canteen"><i class="ti ti-chef-hat me-1"></i> Canteen Summary</button>
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════════════════
