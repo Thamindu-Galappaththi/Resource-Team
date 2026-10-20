@@ -55,25 +55,24 @@
 }
 .ap-page .ap-decision-actions .btn,
 .rsv-modal .ap-decision-actions .btn { min-height: 42px; }
+.rsv-modal .modal-header {
+    flex-wrap: nowrap;
+    align-items: center;
+}
 .rsv-modal .rsv-modal-heading {
     min-width: 0;
     flex: 1;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: .4rem .75rem;
 }
 .rsv-modal .rsv-modal-heading .modal-title {
-    flex: 1 1 auto;
     min-width: 0;
     overflow-wrap: anywhere;
 }
-.rsv-modal .rsv-modal-heading .rsv-modal-sub {
-    flex: 1 1 100%;
-}
-.rsv-modal .rsv-modal-heading .badge {
-    margin: 0;
+.rsv-modal .modal-header .badge {
+    margin-left: auto;
+    margin-right: 2.75rem;
     flex: 0 0 auto;
+    align-self: center;
+    white-space: nowrap;
 }
 
 .ap-page .rsv-search-group .form-control::placeholder {
@@ -130,15 +129,13 @@
         max-height: calc(100vh - 1rem);
     }
     .rsv-modal .modal-header {
-        align-items: flex-start;
+        align-items: center;
+        flex-wrap: nowrap;
         gap: 10px;
         padding: 1rem 3.15rem 1rem 1rem;
     }
     .rsv-modal .rsv-modal-heading {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: .35rem;
+        min-width: 0;
     }
     .rsv-modal .modal-title {
         font-size: 1.05rem;
@@ -146,7 +143,9 @@
         overflow-wrap: anywhere;
     }
     .rsv-modal .modal-header .badge {
-        margin: 0;
+        margin-left: auto;
+        margin-right: 2.75rem;
+        align-self: center;
     }
     .rsv-modal .modal-body { padding: .9rem 1rem 1rem; }
     .rsv-modal .ap-decision-actions {
