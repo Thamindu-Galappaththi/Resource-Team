@@ -123,7 +123,11 @@ class ReservationBookingService
             $this->recordHistory($reservation, ReservationStatus::DRAFT->value, ReservationStatus::PENDING_APPROVAL->value, $actor, 'submitted');
 
             $reservation->load(['requester', 'items', 'location']);
-            $reservation->requester?->notify(new ReservationCreated($reservation));
+            NotificationRecipients::notifyOther(
+                $reservation->requester,
+                new ReservationCreated($reservation),
+                $actor
+            );
 
             $approverPermission = $reservation->type === ReservationType::HOSTEL->value
                 ? 'hostel.manage'
@@ -132,7 +136,7 @@ class ReservationBookingService
             NotificationRecipients::notify(
                 $approverPermission,
                 new NewReservationPending($reservation),
-                except: [$reservation->requester_id]
+                except: [$actor->id, $reservation->requester_id]
             );
 
             return $reservation;
@@ -167,7 +171,11 @@ class ReservationBookingService
             $this->recordHistory($reservation, $from, ReservationStatus::CANCELLED->value, $actor, $reason);
 
             $reservation->load(['requester', 'items', 'location']);
-            $reservation->requester?->notify(new ReservationCancelled($reservation));
+            NotificationRecipients::notifyOther(
+                $reservation->requester,
+                new ReservationCancelled($reservation),
+                $actor
+            );
 
             return $reservation;
         });

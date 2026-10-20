@@ -146,6 +146,7 @@ class CanteenReservationTest extends TestCase
         $reservation->refresh();
         $this->assertSame('confirmed', $reservation->status);
         Notification::assertSentTo($requester, \App\Notifications\CanteenReservationStatusUpdated::class);
+        Notification::assertNotSentTo($approver, \App\Notifications\CanteenReservationStatusUpdated::class);
     }
 
     public function test_reject_without_comment_is_rejected_by_validation(): void

@@ -10,6 +10,7 @@ use App\Models\ReservationStatusHistory;
 use App\Models\ResourceCategory;
 use App\Models\User;
 use App\Notifications\ReservationDecision;
+use App\Services\NotificationRecipients;
 use App\Services\ReservationBookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -102,7 +103,11 @@ class ApprovalController extends Controller
             ]);
             if ($fromStatus === ReservationStatus::PENDING_APPROVAL->value) {
                 $locked->load('requester');
-                $locked->requester?->notify(new ReservationDecision($locked, $request->user(), $request->input('archive_reason')));
+                NotificationRecipients::notifyOther(
+                    $locked->requester,
+                    new ReservationDecision($locked, $request->user(), $request->input('archive_reason')),
+                    $request->user()
+                );
             }
         });
 
@@ -153,7 +158,11 @@ class ApprovalController extends Controller
                 'created_at' => now(),
             ]);
             $locked->load('requester');
-            $locked->requester?->notify(new ReservationDecision($locked, $request->user(), $data['comment']));
+            NotificationRecipients::notifyOther(
+                $locked->requester,
+                new ReservationDecision($locked, $request->user(), $data['comment']),
+                $request->user()
+            );
         });
 
         return redirect()->route($specialOverride ? 'approvals.special' : 'approvals.index')->with('success', 'Reservation '.$reservation->reference.' '.$status->label().'.');

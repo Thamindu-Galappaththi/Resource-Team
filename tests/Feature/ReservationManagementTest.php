@@ -47,7 +47,7 @@ class ReservationManagementTest extends TestCase
             'to_status' => ReservationStatus::PENDING_APPROVAL->value,
         ]);
 
-        Notification::assertSentTo($user, ReservationCreated::class);
+        Notification::assertNotSentTo($user, ReservationCreated::class);
     }
 
     public function test_overlapping_booking_is_rejected(): void

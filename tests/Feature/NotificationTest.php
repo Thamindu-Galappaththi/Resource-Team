@@ -10,9 +10,12 @@ use App\Models\ReservationItem;
 use App\Models\Resource;
 use App\Models\User;
 use App\Notifications\CanteenReservationCreated;
+use App\Notifications\NewCanteenReservationPending;
 use App\Notifications\NewReservationPending;
 use App\Notifications\NewUserCreated;
+use App\Notifications\ReservationCancelled;
 use App\Notifications\ReservationCreated;
+use App\Notifications\ReservationDecision;
 use App\Services\NotificationPresenter;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -140,9 +143,136 @@ class NotificationTest extends TestCase
             'attendee_count' => 10,
         ])->assertRedirect();
 
-        Notification::assertSentTo($requester, ReservationCreated::class);
+        Notification::assertNotSentTo($requester, ReservationCreated::class);
         Notification::assertSentTo([$approver, $admin], NewReservationPending::class);
         Notification::assertNotSentTo([$requester, $finance], NewReservationPending::class);
+    }
+
+    public function test_booking_for_another_user_notifies_that_requester_not_the_creator(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $resource = Resource::factory()->create();
+
+        $this->actingAs($admin)->post(route('reservations.store'), [
+            'resource_id' => $resource->id,
+            'resource_ids' => [$resource->id],
+            'requester_id' => $requester->id,
+            'location_id' => $resource->location_id,
+            'category_id' => $resource->type->resource_category_id,
+            'reservation_date' => now()->addDay()->toDateString(),
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'purpose' => 'Booked for colleague',
+            'attendee_count' => 8,
+        ])->assertRedirect();
+
+        Notification::assertSentTo($requester, ReservationCreated::class);
+        Notification::assertNotSentTo($admin, ReservationCreated::class);
+        Notification::assertNotSentTo($admin, NewReservationPending::class);
+    }
+
+    public function test_self_cancel_does_not_notify_the_actor_but_admin_cancel_notifies_requester(): void
+    {
+        Notification::fake();
+
+        $requester = User::factory()->role('slt_employee')->create();
+        $admin = User::factory()->role('admin')->create();
+        $resource = Resource::factory()->create(['status' => 'active']);
+
+        $own = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'location_id' => $resource->location_id,
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $own->id,
+            'resource_id' => $resource->id,
+        ]);
+
+        $this->actingAs($requester)->post(route('reservations.cancel', $own), [
+            'cancellation_reason' => 'Changed my mind',
+        ])->assertRedirect();
+        Notification::assertNotSentTo($requester, ReservationCancelled::class);
+
+        $theirs = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'location_id' => $resource->location_id,
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $theirs->id,
+            'resource_id' => $resource->id,
+        ]);
+
+        $this->actingAs($admin)->post(route('reservations.cancel', $theirs), [
+            'cancellation_reason' => 'Room needed elsewhere',
+        ])->assertRedirect();
+        Notification::assertSentTo($requester, ReservationCancelled::class);
+        Notification::assertNotSentTo($admin, ReservationCancelled::class);
+    }
+
+    public function test_approval_decision_notifies_the_requester_not_the_approver(): void
+    {
+        Notification::fake();
+
+        $requester = User::factory()->role('slt_employee')->create();
+        $approver = User::factory()->role('admin')->create();
+        $resource = Resource::factory()->create(['status' => 'active']);
+        $reservation = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'location_id' => $resource->location_id,
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'resource_id' => $resource->id,
+        ]);
+
+        $this->actingAs($approver)->post(route('approvals.decision', $reservation), [
+            'decision' => 'approve',
+            'comment' => 'Looks good',
+        ])->assertRedirect();
+
+        Notification::assertSentTo($requester, ReservationDecision::class);
+        Notification::assertNotSentTo($approver, ReservationDecision::class);
+    }
+
+    public function test_canteen_create_notifies_kitchen_not_the_requester(): void
+    {
+        Notification::fake();
+
+        $requester = User::factory()->role('slt_employee')->create();
+        $kitchen = User::factory()->role('canteen')->create();
+
+        $this->actingAs($requester)->post(route('canteen.store'), [
+            'reservation_name' => 'Team lunch',
+            'meal_type' => 'lunch',
+            'reservation_date' => now()->addDay()->toDateString(),
+            'reservation_time' => '12:30',
+            'number_of_orders' => 12,
+            'order_details' => 'Rice and curry',
+        ])->assertRedirect();
+
+        Notification::assertNotSentTo($requester, CanteenReservationCreated::class);
+        Notification::assertSentTo($kitchen, CanteenReservationCreated::class);
+        Notification::assertNotSentTo($requester, NewCanteenReservationPending::class);
+
+        $this->actingAs($requester)->post(route('canteen.store'), [
+            'reservation_name' => 'Large event lunch',
+            'meal_type' => 'event_catering',
+            'reservation_date' => now()->addDay()->toDateString(),
+            'reservation_time' => '12:00',
+            'number_of_orders' => (int) config('canteen.large_group_threshold') + 5,
+        ])->assertRedirect();
+
+        Notification::assertSentTo($kitchen, NewCanteenReservationPending::class);
+        Notification::assertNotSentTo($requester, NewCanteenReservationPending::class);
     }
 
     public function test_notification_messages_are_limited_in_the_bell(): void

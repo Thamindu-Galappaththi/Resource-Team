@@ -150,12 +150,16 @@ class CanteenReservationController extends Controller
         $reservation = DB::transaction(function () use ($data) {
             $reservation = CanteenReservation::query()->create($data);
 
-            $reservation->requestedBy()->first()?->notify(new CanteenReservationCreated($reservation));
-
             if ($reservation->status === CanteenReservationStatus::PENDING->value) {
                 NotificationRecipients::notify(
                     'canteen.manage',
                     new NewCanteenReservationPending($reservation),
+                    except: [auth()->id()]
+                );
+            } else {
+                NotificationRecipients::notify(
+                    'canteen.manage',
+                    new CanteenReservationCreated($reservation),
                     except: [auth()->id()]
                 );
             }
@@ -219,7 +223,11 @@ class CanteenReservationController extends Controller
                 'approval_comments' => $request->input('approval_comments'),
             ])->save();
 
-            $reservation->requestedBy()->first()?->notify(new CanteenReservationStatusUpdated($reservation, auth()->user()));
+            NotificationRecipients::notifyOther(
+                $reservation->requestedBy()->first(),
+                new CanteenReservationStatusUpdated($reservation, auth()->user()),
+                auth()->user()
+            );
         });
 
         return redirect()

@@ -38,4 +38,18 @@ class NotificationRecipients
 
         NotificationFacade::send($recipients, $notification);
     }
+
+    public static function notifyOther(?User $recipient, Notification $notification, User|int|null $actor): void
+    {
+        if (! $recipient) {
+            return;
+        }
+
+        $actorId = $actor instanceof User ? $actor->id : $actor;
+        if ($actorId !== null && (int) $recipient->id === (int) $actorId) {
+            return;
+        }
+
+        $recipient->notify($notification);
+    }
 }

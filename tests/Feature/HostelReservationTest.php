@@ -76,7 +76,7 @@ class HostelReservationTest extends TestCase
             'status' => 'held',
         ]);
 
-        Notification::assertSentTo($actor, ReservationCreated::class);
+        Notification::assertNotSentTo($actor, ReservationCreated::class);
         Notification::assertSentTo($manager, NewReservationPending::class);
     }
 
