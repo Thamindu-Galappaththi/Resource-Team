@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
+use App\Models\Permission;
 use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
@@ -135,7 +136,7 @@ class RoleFunctionAccessTest extends TestCase
         ]);
     }
 
-    public function test_resource_owner_can_decide_only_owned_resources(): void
+    public function test_resource_owner_can_see_and_decide_every_pending_approval(): void
     {
         $owner = User::factory()->role('resource_owner')->create(['name' => 'Owned Lab Manager']);
         $requester = User::factory()->role('slt_employee')->create();
@@ -153,10 +154,25 @@ class RoleFunctionAccessTest extends TestCase
         $ownedBooking = $this->pendingReservation($requester, $owned);
         $otherBooking = $this->pendingReservation($requester, $other);
 
-        $this->actingAs($owner)->get(route('approvals.index'))
+        $this->actingAs($owner)
+            ->get(route('approvals.index'))
             ->assertOk()
             ->assertSee('Owned Hall')
-            ->assertDontSee('Other Hall');
+            ->assertSee('Other Hall');
+
+        $this->actingAs($owner)
+            ->get(route('reservations.index'))
+            ->assertOk()
+            ->assertSee('Other Hall');
+        $this->actingAs($owner)
+            ->get(route('reservations.show', $otherBooking))
+            ->assertOk();
+
+        $this->actingAs($owner)
+            ->get(route('approvals.index', ['search' => $otherBooking->reference]))
+            ->assertOk()
+            ->assertSee('Other Hall')
+            ->assertSee($otherBooking->reference, false);
 
         $this->actingAs($owner)->post(route('approvals.decision', $ownedBooking), [
             'decision' => 'approve',
@@ -165,8 +181,41 @@ class RoleFunctionAccessTest extends TestCase
 
         $this->actingAs($owner)->post(route('approvals.decision', $otherBooking), [
             'decision' => 'approve',
-            'comment' => 'Not my resource',
-        ])->assertForbidden();
+            'comment' => 'Approved from notification',
+        ])->assertRedirect(route('approvals.index'));
+        $this->assertDatabaseHas('reservations', [
+            'id' => $otherBooking->id,
+            'status' => ReservationStatus::APPROVED->value,
+        ]);
+    }
+
+    public function test_extra_approval_permission_lets_an_employee_see_and_decide_every_pending_booking(): void
+    {
+        $employee = User::factory()->role('slt_employee')->create();
+        $employee->extraPermissions()->attach(
+            Permission::query()->where('slug', 'approvals.index')->firstOrFail()
+        );
+        $requester = User::factory()->role('slt_employee')->create();
+        $resource = Resource::factory()->create([
+            'status' => 'active',
+            'name_model' => 'Shared Lab',
+        ]);
+        $booking = $this->pendingReservation($requester, $resource);
+
+        $this->actingAs($employee)
+            ->get(route('approvals.index', ['search' => $booking->reference]))
+            ->assertOk()
+            ->assertSee('Shared Lab')
+            ->assertSee($booking->reference, false);
+
+        $this->actingAs($employee)->post(route('approvals.decision', $booking), [
+            'decision' => 'approve',
+            'comment' => 'Granted by extra permission',
+        ])->assertRedirect(route('approvals.index'));
+        $this->assertDatabaseHas('reservations', [
+            'id' => $booking->id,
+            'status' => ReservationStatus::APPROVED->value,
+        ]);
     }
 
     public function test_employees_cancel_own_bookings_but_not_other_people(): void
@@ -257,7 +306,7 @@ class RoleFunctionAccessTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_resource_owner_calendars_only_include_owned_resources(): void
+    public function test_resource_owner_calendars_include_every_visible_booking(): void
     {
         $owner = User::factory()->role('resource_owner')->create(['name' => 'Owned Lab Manager']);
         $requester = User::factory()->role('slt_employee')->create();
@@ -283,13 +332,12 @@ class RoleFunctionAccessTest extends TestCase
             ->assertOk()
             ->json());
         $this->assertTrue($events->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $ownedBooking->id));
-        $this->assertFalse($events->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $otherBooking->id));
+        $this->assertTrue($events->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $otherBooking->id));
 
-        $html = $this->actingAs($owner)->get(route('resources.calendar'))
+        $this->actingAs($owner)->get(route('resources.calendar'))
             ->assertOk()
             ->assertSee('Owned Hall', false)
-            ->getContent();
-        $this->assertStringNotContainsString('"title":"Other Hall"', $html);
+            ->assertSee('Other Hall', false);
     }
 
     public function test_hostel_manager_sees_hostel_bookings_on_the_reservation_calendar(): void

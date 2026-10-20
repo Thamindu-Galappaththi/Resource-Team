@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Models\CanteenReservation;
 use App\Models\Reservation;
+use App\Models\ReservationItem;
 use App\Models\Resource;
 use App\Models\User;
 use App\Notifications\CanteenReservationCreated;
@@ -184,6 +186,39 @@ class NotificationTest extends TestCase
             ->assertSee('href="'.route('approvals.index', ['search' => $reservation->reference]).'"', false)
             ->assertSee('href="'.route('hostel.show', $hostel).'"', false)
             ->assertSee('href="'.route('canteen.show', $canteen).'"', false);
+    }
+
+    public function test_resource_owner_can_open_a_pending_notification_for_any_resource(): void
+    {
+        $owner = User::factory()->role('resource_owner')->create();
+        $admin = User::factory()->role('admin')->create();
+        $resource = Resource::factory()->create([
+            'status' => 'active',
+            'resource_owner' => 'Someone Else',
+            'name_model' => 'Unowned Hall',
+        ]);
+        $reservation = Reservation::factory()->create([
+            'requester_id' => $admin->id,
+            'created_by_user_id' => $admin->id,
+            'location_id' => $resource->location_id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'purpose' => 'Admin created booking',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'resource_id' => $resource->id,
+            'resource_name_snapshot' => $resource->name_model,
+        ]);
+
+        $owner->notify(new NewReservationPending($reservation));
+        $url = NotificationPresenter::toArray($owner->notifications()->firstOrFail())['url'];
+
+        $this->actingAs($owner)
+            ->get($url)
+            ->assertOk()
+            ->assertSee($reservation->reference, false)
+            ->assertSee('Unowned Hall')
+            ->assertSee('Admin created booking');
     }
 
     public function test_deleting_a_notification_sets_deleted_at_and_hides_it(): void

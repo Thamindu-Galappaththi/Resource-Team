@@ -257,6 +257,29 @@ class CanteenReservationTest extends TestCase
             ->assertSee('Owner Employee');
     }
 
+    public function test_canteen_manage_permission_sees_every_canteen_reservation(): void
+    {
+        $employee = User::factory()->role('slt_employee')->create();
+        $employee->extraPermissions()->attach(
+            \App\Models\Permission::query()->where('slug', 'canteen.manage')->firstOrFail()
+        );
+        $owner = User::factory()->role('slt_employee')->create(['name' => 'Kitchen Requester']);
+        $order = CanteenReservation::factory()->create([
+            'requested_by_user_id' => $owner->id,
+            'reservation_name' => 'Large group lunch',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($employee)
+            ->get(route('canteen.index'))
+            ->assertOk()
+            ->assertSee('Large group lunch')
+            ->assertSee('Kitchen Requester');
+        $this->actingAs($employee)
+            ->get(route('canteen.show', $order))
+            ->assertOk();
+    }
+
     public function test_create_page_lists_locations_in_campus_order(): void
     {
         $user = User::factory()->role('slt_employee')->create();

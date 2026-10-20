@@ -300,7 +300,7 @@ class ApprovalController extends Controller
             'meta' => [
                 'has_filters' => collect($filters)->contains(fn ($value) => filled($value)),
             ],
-            'can_decide' => $user->hasRole('developer', 'super_admin', 'admin', 'resource_owner'),
+            'can_decide' => $user->hasPermission('approvals.index'),
         ];
     }
 
@@ -377,15 +377,13 @@ class ApprovalController extends Controller
 
     private function visibleQuery(User $user)
     {
-        $query = Reservation::query()->whereNull('approval_archived_at');
-        if ($user->hasRole('resource_owner') && ! $user->hasRole('developer', 'super_admin', 'admin')) {
-            $query->whereHas('items.resource', fn ($resource) => $resource->whereIn('resource_owner', array_filter([$user->name, $user->email, $user->service_id])));
-        }
-        return $query;
+        abort_unless($user->hasPermission('approvals.index'), 403);
+
+        return Reservation::query()->whereNull('approval_archived_at');
     }
 
     private function authorizeApprover(User $user): void
     {
-        abort_unless($user->hasRole('developer', 'super_admin', 'admin', 'resource_owner'), 403);
+        abort_unless($user->hasPermission('approvals.index'), 403);
     }
 }

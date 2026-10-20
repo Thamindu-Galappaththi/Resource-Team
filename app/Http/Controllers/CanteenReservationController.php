@@ -267,7 +267,7 @@ class CanteenReservationController extends Controller
 
     private function seesAllCanteenReservations(): bool
     {
-        return (bool) auth()->user()?->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'canteen');
+        return (bool) auth()->user()?->hasPermission('canteen.manage');
     }
 
     private function statusForOrderCount(int $orders): string
