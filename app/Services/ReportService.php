@@ -28,13 +28,17 @@ class ReportService
         $timezone = config('reservations.display_timezone', 'Asia/Colombo');
         $now      = now($timezone);
 
-        $fromDate = !empty($filters['from_date'])
+        $fromDate = ! empty($filters['from_date'])
             ? Carbon::parse($filters['from_date'], $timezone)->startOfDay()
             : $now->copy()->subDays(29)->startOfDay();
 
-        $toDate = !empty($filters['to_date'])
+        $toDate = ! empty($filters['to_date'])
             ? Carbon::parse($filters['to_date'], $timezone)->endOfDay()
             : $now->copy()->endOfDay();
+
+        if ($fromDate->gt($toDate)) {
+            [$fromDate, $toDate] = [$toDate->copy()->startOfDay(), $fromDate->copy()->endOfDay()];
+        }
 
         $locationId = !empty($filters['location_id']) ? (int) $filters['location_id'] : null;
         $categoryId = !empty($filters['resource_category_id']) ? (int) $filters['resource_category_id'] : null;
@@ -79,11 +83,19 @@ class ReportService
         $approvalRate = $total > 0 ? round(($approved / $total) * 100, 1) : 0.0;
 
         $items = ReservationItem::query()
-            ->whereHas('reservation', function (Builder $q) use ($fromDate, $toDate, $locationId, $status) {
+            ->whereHas('reservation', function (Builder $q) use ($fromDate, $toDate, $locationId, $status, $search) {
                 $q->whereDate('reservation_date', '>=', $fromDate->toDateString())
                     ->whereDate('reservation_date', '<=', $toDate->toDateString())
                     ->when($locationId, fn ($lq) => $lq->where('location_id', $locationId))
-                    ->when($status, fn ($sq) => $sq->where('status', $status));
+                    ->when($status, fn ($sq) => $sq->where('status', $status))
+                    ->when($search, function (Builder $sq) use ($search) {
+                        $sq->where(function (Builder $inner) use ($search) {
+                            $inner->where('title', 'like', "%{$search}%")
+                                ->orWhere('purpose', 'like', "%{$search}%")
+                                ->orWhere('reference', 'like', "%{$search}%")
+                                ->orWhereHas('requester', fn ($uq) => $uq->where('name', 'like', "%{$search}%"));
+                        });
+                    });
             })
             ->when($categoryId, function (Builder $q) use ($categoryId) {
                 $q->whereHas('resource.type', fn ($tq) => $tq->where('resource_category_id', $categoryId));
@@ -124,6 +136,11 @@ class ReportService
             'resource_utilization' => $this->buildResourceUtilization($fromDate, $toDate, $locationId, $categoryId, $daysInPeriod),
             'campus_comparison'    => $this->buildCampusComparison($fromDate, $toDate, $categoryId, $daysInPeriod),
             'peak_hours'           => $this->buildPeakHours($rq),
+            'reservations'         => (clone $rq)
+                ->with(['requester', 'location'])
+                ->orderByDesc('reservation_date')
+                ->orderByDesc('start_time')
+                ->get(),
             // Tab 2 – Approval & Booking Health
             'approval_health'      => $this->buildApprovalHealth($rq),
             'booking_trend'        => $this->buildBookingTrend($rq, $fromDate, $toDate),
@@ -151,10 +168,10 @@ class ReportService
             ->get();
 
         $capHours = max(1, $days * 8);
-
-        return $resources->map(function (Resource $r) use ($from, $to, $capHours) {
-            $items = ReservationItem::query()
-                ->where('resource_id', $r->id)
+        $itemsByResource = $resources->isEmpty()
+            ? collect()
+            : ReservationItem::query()
+                ->whereIn('resource_id', $resources->pluck('id'))
                 ->whereHas('reservation', function (Builder $q) use ($from, $to) {
                     $q->whereDate('reservation_date', '>=', $from->toDateString())
                         ->whereDate('reservation_date', '<=', $to->toDateString())
@@ -164,7 +181,12 @@ class ReportService
                             ReservationStatus::COMPLETED->value,
                             ReservationStatus::IN_PROGRESS->value,
                         ]);
-                })->get();
+                })
+                ->get()
+                ->groupBy('resource_id');
+
+        return $resources->map(function (Resource $r) use ($itemsByResource, $capHours) {
+            $items = $itemsByResource->get($r->id, collect());
 
             $mins    = $items->sum(fn ($i) => $i->starts_at && $i->ends_at ? max(0, $i->starts_at->diffInMinutes($i->ends_at)) : 0);
             $hours   = round($mins / 60, 1);
@@ -306,7 +328,7 @@ class ReportService
             'stale_pending'       => $stale,
             'avg_turnaround_hrs'  => $avgTurnaround,
             'cancellation_causes' => [
-                ['label' => 'Scheduling Conflict / Overlap', 'count' => $conflict, 'icon' => 'ti-calendar-x', 'tone' => 'danger'],
+                ['label' => 'Scheduling Conflict / Overlap', 'count' => $conflict, 'icon' => 'ti-calendar-off', 'tone' => 'danger'],
                 ['label' => 'Requester Withdrawn',           'count' => $withdrawn, 'icon' => 'ti-user-minus', 'tone' => 'warning'],
                 ['label' => 'Policy / Permission Issue',     'count' => $policy,    'icon' => 'ti-shield-x',   'tone' => 'secondary'],
                 ['label' => 'Other / Operational',           'count' => $other,     'icon' => 'ti-dots',       'tone' => 'info'],
@@ -424,13 +446,14 @@ class ReportService
             ->sum('hours');
 
         $alerts = [];
-        if ($totalUnpaid > 0) {
-            $alerts[] = ['type' => 'danger', 'icon' => 'ti-coin-off', 'msg' => number_format($totalUnpaid, 2) . ' LKR in lecturer fees remain unpaid. Process payments before next cycle.'];
-        }
-        if ($unpaidPayables->count() > 5) {
-            $alerts[] = ['type' => 'warning', 'icon' => 'ti-alert-triangle', 'msg' => $unpaidPayables->count() . ' payable records are unpaid. Risk of delayed disbursement.'];
-        }
-        if (empty($alerts)) {
+        if ($payables->isEmpty()) {
+            $alerts[] = ['type' => 'info', 'icon' => 'ti-info-circle', 'msg' => 'No lecturer payable records for this period.'];
+        } elseif ($totalUnpaid > 0) {
+            $alerts[] = ['type' => 'danger', 'icon' => 'ti-coin-off', 'msg' => number_format($totalUnpaid, 2).' LKR in lecturer fees remain unpaid. Process payments before next cycle.'];
+            if ($unpaidPayables->count() > 5) {
+                $alerts[] = ['type' => 'warning', 'icon' => 'ti-alert-triangle', 'msg' => $unpaidPayables->count().' payable records are unpaid. Risk of delayed disbursement.'];
+            }
+        } else {
             $alerts[] = ['type' => 'success', 'icon' => 'ti-circle-check', 'msg' => 'All lecturer payables for this period are settled.'];
         }
 
@@ -538,7 +561,7 @@ class ReportService
 
         $alerts = [];
         if ($pending > 0) {
-            $alerts[] = ['type' => 'warning', 'icon' => 'ti-chef-hat', 'msg' => "{$pending} large-group canteen orders are awaiting confirmation. Notify kitchen team."];
+            $alerts[] = ['type' => 'warning', 'icon' => 'ti-chef-hat', 'msg' => "{$pending} canteen orders are awaiting confirmation. Notify the kitchen team."];
         }
         if ($largeGroups > 3) {
             $alerts[] = ['type' => 'info', 'icon' => 'ti-users', 'msg' => "{$largeGroups} large group orders (≥{$threshold} pax) detected. Ensure stock and staffing is prepared."];

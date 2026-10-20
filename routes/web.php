@@ -115,6 +115,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('reports')->name('reports.')->middleware('permission:reports.view')->controller(ReportController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/feed', 'feed')->name('feed');
         Route::get('/export', 'exportCsv')->name('export');
     });
 
