@@ -10,6 +10,7 @@ use App\Models\Reservation;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class RoleDashboardTest extends TestCase
@@ -160,5 +161,20 @@ class RoleDashboardTest extends TestCase
             ->assertSee('Pending approvals')
             ->assertSee('Create reservation')
             ->assertSee('Available resources');
+    }
+
+    public function test_header_greeting_uses_sri_lanka_time_of_day(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-20 16:14:00', 'Asia/Colombo'));
+        $admin = User::factory()->role('admin')->create(['name' => 'Admin User']);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Good evening', false)
+            ->assertSee('Admin User')
+            ->assertDontSee('Good afternoon', false);
+
+        Carbon::setTestNow();
     }
 }

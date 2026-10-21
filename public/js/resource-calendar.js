@@ -1,11 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     const calendarElement = document.getElementById('resourceCalendar');
     const loading = document.getElementById('calendarLoading');
-    const hideLoading = () => { if (loading) loading.hidden = true; };
+    const refreshButton = document.getElementById('refreshCalendarButton');
 
     const config = window.RC || {};
-    const events = (config.events || []).filter((event) => /^\d{4}-\d{2}-\d{2}/.test(String(event?.start || '')));
-    let filteredEvents = events;
+    let events = [];
+    let filteredEvents = [];
+    let loadedRangeStart = null;
+    let loadedRangeEnd = null;
+    let eventsRequest = 0;
+    let eventsAbort = null;
     const holidays = config.holidays || [];
     const holidayImageBase = (config.holidayImageBase || '/images/holidays').replace(/\/$/, '');
     const schedulerResources = config.schedulerResources || [];
@@ -23,13 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         renderUpcoming(events);
         const empty = document.getElementById('calendarEmpty');
-        if (empty) empty.hidden = events.length > 0;
+        if (empty) empty.hidden = true;
     } catch (error) {
         console.error('Resource calendar upcoming list failed', error);
     }
 
     if (!calendarElement || typeof FullCalendar === 'undefined') {
-        hideLoading();
+        setCalendarLoading(false);
         return;
     }
 
@@ -129,8 +133,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
             return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(info.event.title)}</span></div>` };
         },
-        events(fetchInfo, success) {
-            success(forCalendarView(filteredEvents, fetchInfo.view?.type || lastCalendarView));
+        events(fetchInfo, success, failure) {
+            const viewType = fetchInfo.view?.type || lastCalendarView;
+            const start = Date.parse(fetchInfo.startStr);
+            const end = Date.parse(fetchInfo.endStr);
+            const covered = loadedRangeStart != null && loadedRangeStart <= start && loadedRangeEnd >= end;
+            if (covered) {
+                success(forCalendarView(filteredEvents, viewType));
+                return;
+            }
+            loadResourceEvents(fetchInfo, success, failure);
         },
         eventClick(info) {
             if (info.event.extendedProps?.isHoliday) {
@@ -147,8 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         paintMonthCells();
     } catch (error) {
         console.error('Resource calendar failed to render', error);
-    } finally {
-        hideLoading();
+        setCalendarLoading(false);
     }
 
     const resourceFilter = document.getElementById('resourceFilter');
@@ -171,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let suppressSlotClick = false;
 
     const calendarEmpty = document.getElementById('calendarEmpty');
-    if (calendarEmpty) calendarEmpty.hidden = events.length > 0;
+    if (calendarEmpty) calendarEmpty.hidden = true;
 
     function isTimeGrid(viewType) {
         return ['timeGridWeek', 'timeGridDay'].includes(viewType);
@@ -201,19 +212,26 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
     }
 
-    function applyFilters() {
-        const selRes = String(resourceFilter.value);
-        const selLoc = String(locationFilter.value);
-        const selStat = String(statusFilter.value);
-        const selCat = String(categoryFilter.value);
+    function currentFilters() {
+        const value = (id) => window.RMSelect?.getValue(id) || document.getElementById(id)?.value || 'all';
+        return {
+            resource: String(value('resourceFilter') || 'all'),
+            location: String(value('locationFilter') || 'all'),
+            status: String(value('statusFilter') || 'all'),
+            category: String(value('categoryFilter') || 'all'),
+        };
+    }
+
+    function applyFilters(options = {}) {
+        const { resource: selRes, location: selLoc, status: selStat, category: selCat } = currentFilters();
         appliedFilters = { resource: selRes, location: selLoc, status: selStat, category: selCat };
 
         const filtered = events.filter((event) => {
             const props = event.extendedProps || {};
-            const resOk = selRes === 'all' || String(props.resourceId) === selRes;
-            const locOk = selLoc === 'all' || String(props.locationId) === selLoc;
-            const categoryOk = selCat === 'all' || String(props.categoryId) === selCat;
-            const statOk = selStat === 'all'
+            const resOk = selRes === 'all' || selRes === '' || String(props.resourceId) === selRes;
+            const locOk = selLoc === 'all' || selLoc === '' || String(props.locationId) === selLoc;
+            const categoryOk = selCat === 'all' || selCat === '' || String(props.categoryId) === selCat;
+            const statOk = selStat === 'all' || selStat === ''
                 || (selStat === 'approved' && ['approved', 'confirmed', 'in_progress', 'completed'].includes(props.statusValue))
                 || (selStat === 'pending' && ['pending_approval', 'changes_requested'].includes(props.statusValue))
                 || String(props.statusValue) === selStat;
@@ -221,8 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         filteredEvents = filtered;
-        calendar.refetchEvents();
-        document.getElementById('calendarEmpty').hidden = filtered.length > 0;
+        if (!options.skipRefetch) refreshCalendar();
+        const emptyState = document.getElementById('calendarEmpty');
+        if (emptyState) emptyState.hidden = filtered.length > 0;
         toggleClear();
         renderUpcoming(filtered);
         queueMicrotask(paintMonthCells);
@@ -230,32 +249,97 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function hasFilters() {
-        return [resourceFilter, locationFilter, statusFilter, categoryFilter]
-            .some((el) => String(el.value) !== 'all');
+        return Object.values(currentFilters()).some((value) => value !== 'all' && value !== '');
     }
 
     function toggleClear() {
         if (clearFiltersButton) clearFiltersButton.disabled = !hasFilters();
     }
 
-    [resourceFilter, locationFilter, statusFilter, categoryFilter].forEach((el) => {
-        el?.addEventListener('change', () => {
-            selectedSchedulerResources.clear();
-            updateSchedulerSelectionCount();
-            applyFilters();
-        });
+    let suppressFilterChange = false;
+    document.getElementById('resource-calendar-filters')?.addEventListener('change', () => {
+        if (suppressFilterChange) return;
+        selectedSchedulerResources.clear();
+        updateSchedulerSelectionCount();
+        toggleClear();
+        refreshCalendar();
     });
     clearFiltersButton?.addEventListener('click', () => {
         if (clearFiltersButton.disabled) return;
+        suppressFilterChange = true;
         window.RMSelect.setValue('resourceFilter', 'all', 'All resources');
         window.RMSelect.setValue('locationFilter', 'all', 'All locations');
         window.RMSelect.setValue('statusFilter', 'all', 'All statuses');
         window.RMSelect.setValue('categoryFilter', 'all', 'All categories');
+        suppressFilterChange = false;
         selectedSchedulerResources.clear();
         updateSchedulerSelectionCount();
-        applyFilters();
+        toggleClear();
+        refreshCalendar();
     });
     toggleClear();
+    refreshButton?.addEventListener('click', () => refreshCalendar());
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshCalendar();
+    });
+
+    function setCalendarLoading(isLoading) {
+        if (loading) loading.hidden = !isLoading;
+        if (refreshButton) {
+            refreshButton.disabled = isLoading;
+            refreshButton.classList.toggle('is-loading', isLoading);
+            refreshButton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        }
+    }
+
+    function refreshCalendar() {
+        loadedRangeStart = null;
+        loadedRangeEnd = null;
+        calendar.refetchEvents();
+    }
+
+    function loadResourceEvents(fetchInfo, success, failure) {
+        const requestId = ++eventsRequest;
+        eventsAbort?.abort();
+        eventsAbort = new AbortController();
+        setCalendarLoading(true);
+        const params = new URLSearchParams({
+            start: fetchInfo.startStr,
+            end: fetchInfo.endStr,
+            _: String(Date.now()),
+        });
+        const filters = currentFilters();
+        if (filters.resource && filters.resource !== 'all') params.set('resource_id', filters.resource);
+        if (filters.location && filters.location !== 'all') params.set('location_id', filters.location);
+        if (filters.category && filters.category !== 'all') params.set('resource_category_id', filters.category);
+        if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+        const eventsUrl = config.eventsUrl || calendarElement.dataset.eventsUrl;
+        fetch(`${eventsUrl}?${params}`, {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            signal: eventsAbort.signal,
+        }).then((response) => {
+            if (!response.ok) throw new Error('Reservations could not be loaded.');
+            return response.json();
+        }).then((payload) => {
+            if (requestId !== eventsRequest) return;
+            events = (Array.isArray(payload) ? payload : []).filter((event) => /^\d{4}-\d{2}-\d{2}/.test(String(event?.start || '')));
+            loadedRangeStart = Date.parse(fetchInfo.startStr);
+            loadedRangeEnd = Date.parse(fetchInfo.endStr);
+            applyFilters({ skipRefetch: true });
+            setCalendarLoading(false);
+            success(forCalendarView(filteredEvents, fetchInfo.view?.type || lastCalendarView));
+            queueMicrotask(paintMonthCells);
+        }).catch((error) => {
+            if (error?.name === 'AbortError' || requestId !== eventsRequest) return;
+            setCalendarLoading(false);
+            if (events.length) {
+                applyFilters({ skipRefetch: true });
+                success(forCalendarView(filteredEvents, fetchInfo.view?.type || lastCalendarView));
+                return;
+            }
+            failure?.(error);
+        });
+    }
 
     function renderUpcoming(list) {
         const now = Date.now();

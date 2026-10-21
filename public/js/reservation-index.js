@@ -228,7 +228,7 @@
         badge.className = `badge ${row.status_badge}`;
         badge.textContent = row.status_label;
         const items = (row.items || []).length
-            ? row.items.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.status)}</td></tr>`).join('')
+            ? row.items.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.category)}</td><td><span class="badge ${escapeHtml(item.status_badge || row.status_badge || 'bg-secondary')}">${escapeHtml(item.status)}</span></td></tr>`).join('')
             : '<tr><td colspan="3" class="text-muted">No resources recorded.</td></tr>';
         const history = (row.history || []).length
             ? row.history.map((item) => `<div class="rsv-history">

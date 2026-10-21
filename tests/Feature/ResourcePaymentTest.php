@@ -6,12 +6,16 @@ use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
+use App\Models\ResourcePaymentDiscountAudit;
+use App\Models\ResourcePaymentDiscountRule;
 use App\Models\ResourceRate;
+use App\Models\ResourceRateAudit;
 use App\Models\ResourceType;
 use App\Models\User;
 use Database\Seeders\ResourceRateSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ResourcePaymentTest extends TestCase
@@ -32,7 +36,31 @@ class ResourcePaymentTest extends TestCase
             ->assertSee('id="rp-extra-hours" type="number" min="0" max="24" step="0.5"', false)
             ->assertSee('id="rp-rate-warning" class="rp-rate-warning is-hidden"', false)
             ->assertSee('Includes first', false)
-            ->assertSee('aria-live="polite"', false);
+            ->assertSee('aria-live="polite"', false)
+            ->assertSee('Reservation history', false)
+            ->assertSee('Manage resource rates', false)
+            ->assertDontSee('>Lecture fees<', false);
+    }
+
+    public function test_header_and_sidebar_actions_follow_payment_permissions(): void
+    {
+        $finance = User::factory()->role('finance')->create();
+        $this->actingAs($finance)->get(route('payments.resources'))
+            ->assertOk()
+            ->assertSee('Manage resource rates', false)
+            ->assertSee('hide-menu">Resource Rates', false)
+            ->assertSee('hide-menu">Lecture Fees', false)
+            ->assertSee('hide-menu">Resource Payments', false)
+            ->assertDontSee('Reservation history', false)
+            ->assertDontSee('>Lecture fees<', false);
+
+        $management = User::factory()->role('management')->create();
+        $this->actingAs($management)->get(route('payments.resources'))
+            ->assertOk()
+            ->assertSee('Manage resource rates', false)
+            ->assertSee('hide-menu">Resource Rates', false)
+            ->assertDontSee('Reservation history', false)
+            ->assertDontSee('>Lecture fees<', false);
     }
 
     public function test_seeded_catalog_has_every_requested_resource_type_and_lkr_amount(): void
@@ -165,6 +193,19 @@ class ResourcePaymentTest extends TestCase
             ->assertNotFound()->assertJsonPath('message', 'No payable reservation was found for that reference.');
     }
 
+    public function test_lookup_print_and_usage_work_for_finance_with_lowercase_reference(): void
+    {
+        $finance = User::factory()->role('finance')->create();
+        $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
+
+        $this->actingAs($finance)->getJson(route('payments.resources.lookup', ['reference' => strtolower($reservation->reference)]))
+            ->assertOk()->assertJsonPath('has_rate', true)->assertJsonPath('base_fee', 5000);
+        $this->get(route('payments.resources.print', ['reference' => strtolower($reservation->reference), 'extra_hours' => 0.5]))
+            ->assertOk()->assertSee('LKR 6,250.00');
+        $this->postJson(route('payments.resources.usage.confirm'), ['reference' => strtolower($reservation->reference), 'extra_hours' => 0.5])
+            ->assertOk()->assertJsonPath('total', 6250);
+    }
+
     public function test_client_totals_are_ignored_and_confirmed_breakdown_is_audited(): void
     {
         $user = User::factory()->role('admin')->create();
@@ -204,6 +245,22 @@ class ResourcePaymentTest extends TestCase
         $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'actor_id' => $finance->id, 'action' => 'updated']);
         $this->patch(route('payments.rates.deactivate', $rate))->assertSessionHasNoErrors();
         $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'action' => 'deactivated']);
+        $this->assertFalse($rate->fresh()->is_active);
+        $this->put(route('payments.rates.update', $rate), [
+            'resource_type_id' => $type->id, 'base_fee' => 17000, 'base_duration_hours' => 3,
+            'extra_hour_rate' => 6700, 'tax_percent' => 5, 'effective_from' => '2028-01-01',
+        ])->assertSessionHasNoErrors();
+        $this->assertFalse($rate->fresh()->is_active);
+        $this->get(route('payments.rates.index'))
+            ->assertOk()
+            ->assertSee('title="Activate"', false)
+            ->assertSee('ti-circle-check', false)
+            ->assertSee('ti-edit', false)
+            ->assertDontSee('>Edit</button>', false)
+            ->assertDontSee('>Deactivate</button>', false);
+        $this->patch(route('payments.rates.activate', $rate))->assertSessionHasNoErrors();
+        $this->assertTrue($rate->fresh()->is_active);
+        $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'action' => 'activated']);
     }
 
     public function test_finance_can_configure_category_discounts_used_by_invoice_calculation(): void
@@ -225,6 +282,15 @@ class ResourcePaymentTest extends TestCase
         $this->assertDatabaseHas('resource_payment_discount_audits', ['discount_rule_id' => $rule->id, 'actor_id' => $finance->id, 'action' => 'created']);
         $this->assertDatabaseHas('resource_payment_discount_audits', ['discount_rule_id' => $rule->id, 'action' => 'updated']);
         $this->assertDatabaseHas('resource_payment_discount_audits', ['discount_rule_id' => $rule->id, 'action' => 'deactivated']);
+        $this->get(route('payments.rates.index'))
+            ->assertOk()
+            ->assertSee('title="Activate"', false)
+            ->assertSee('ti-circle-check', false);
+        $this->patch(route('payments.discounts.activate', $rule))->assertSessionHasNoErrors();
+        $this->assertTrue($rule->fresh()->is_active);
+        $this->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
+            ->assertOk()->assertJsonPath('discount_percent', 25)->assertJsonPath('total', 3750);
+        $this->assertDatabaseHas('resource_payment_discount_audits', ['discount_rule_id' => $rule->id, 'action' => 'activated']);
     }
 
     public function test_rate_admin_rejects_overlapping_dates_negative_amounts_and_non_finance_users(): void
@@ -236,8 +302,123 @@ class ResourcePaymentTest extends TestCase
         $this->actingAs($finance)->postJson(route('payments.rates.store'), $overlap)->assertUnprocessable()->assertJsonValidationErrors('effective_from');
         $this->postJson(route('payments.rates.store'), array_replace($overlap, ['effective_from' => '2028-01-01', 'base_fee' => -1]))->assertUnprocessable()->assertJsonValidationErrors('base_fee');
 
-        $admin = User::factory()->role('admin')->create();
-        $this->actingAs($admin)->get(route('payments.rates.index'))->assertForbidden();
+        $this->actingAs(User::factory()->role('admin')->create())->get(route('payments.rates.index'))->assertOk()->assertSee('Rate catalog');
+        $this->actingAs(User::factory()->role('coordinator')->create())->get(route('payments.rates.index'))->assertForbidden();
+    }
+
+    public function test_rate_and_discount_history_paginates(): void
+    {
+        $this->seed(ResourceRateSeeder::class);
+        $finance = User::factory()->role('finance')->create();
+        $rate = ResourceRate::query()->firstOrFail();
+        $rule = ResourcePaymentDiscountRule::query()->create([
+            'customer_category' => 'history',
+            'discount_percent' => 5,
+            'is_active' => true,
+            'created_by' => $finance->id,
+            'updated_by' => $finance->id,
+        ]);
+        foreach (range(1, 11) as $i) {
+            ResourceRateAudit::query()->create([
+                'resource_rate_id' => $rate->id,
+                'actor_id' => $finance->id,
+                'action' => 'updated',
+                'new_values' => ['base_fee' => 91000 + $i],
+            ]);
+            ResourcePaymentDiscountAudit::query()->create([
+                'discount_rule_id' => $rule->id,
+                'actor_id' => $finance->id,
+                'action' => 'updated',
+                'new_values' => ['discount_percent' => 70 + $i],
+            ]);
+        }
+
+        $this->actingAs($finance)->get(route('payments.rates.index'))
+            ->assertOk()
+            ->assertSee('Showing 1–10 of 11')
+            ->assertSee('rate_page=2', false)
+            ->assertSee('discount_page=2', false)
+            ->assertSee('View info')
+            ->assertSee('LKR 91,011.00')
+            ->assertDontSee('LKR 91,001.00')
+            ->assertSee('81%')
+            ->assertDontSee('71%');
+
+        $this->get(route('payments.rates.index', ['rate_page' => 2]))
+            ->assertOk()
+            ->assertSee('LKR 91,001.00')
+            ->assertSee('Showing 11–11 of 11');
+
+        $this->get(route('payments.rates.index', ['section' => 'rate_history', 'rate_page' => 2]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])->assertOk()->assertSee('LKR 91,001.00')->assertDontSee('Rate catalog');
+
+        $this->get(route('payments.rates.index', ['discount_page' => 2]))
+            ->assertOk()
+            ->assertSee('71%');
+    }
+
+    public function test_rate_catalog_paginates(): void
+    {
+        $this->seed(ResourceRateSeeder::class);
+        $finance = User::factory()->role('finance')->create();
+        $type = ResourceType::query()->firstOrFail();
+        foreach (range(1, 5) as $i) {
+            ResourceRate::query()->create([
+                'resource_type_id' => $type->id,
+                'resource_id' => null,
+                'base_fee' => 100 + $i,
+                'base_duration_hours' => 1,
+                'extra_hour_rate' => 50,
+                'tax_percent' => 0,
+                'effective_from' => sprintf('2029-01-%02d', $i),
+                'effective_to' => null,
+                'is_active' => false,
+            ]);
+        }
+
+        $this->actingAs($finance)->get(route('payments.rates.index'))
+            ->assertOk()
+            ->assertSee('catalog_page=2', false)
+            ->assertSee('Showing 1–10 of 13')
+            ->assertDontSee('>Edit</button>', false)
+            ->assertDontSee('>Deactivate</button>', false)
+            ->assertSee('title="Edit"', false)
+            ->assertSee('title="Activate"', false);
+
+        $this->get(route('payments.rates.index', ['catalog_page' => 2]))
+            ->assertOk()
+            ->assertSee('Showing 11–13 of 13');
+
+        $this->get(route('payments.rates.index', ['section' => 'rate_catalog', 'catalog_page' => 2]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])->assertOk()->assertSee('Showing 11–13 of 13')->assertDontSee('Customer category discounts');
+    }
+
+    public function test_history_when_uses_sri_lanka_time(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-21 03:31:00', 'UTC'));
+        try {
+            $this->seed(ResourceRateSeeder::class);
+            $finance = User::factory()->role('finance')->create();
+            $category = ResourceCategory::query()->firstOrCreate(['name' => 'Timezone Test Category']);
+            $type = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Timezone Test Type']);
+            $this->actingAs($finance)->post(route('payments.rates.store'), [
+                'resource_type_id' => $type->id,
+                'base_fee' => 1000,
+                'base_duration_hours' => 1,
+                'extra_hour_rate' => 500,
+                'tax_percent' => 0,
+                'effective_from' => '2028-01-01',
+            ])->assertSessionHasNoErrors();
+        } finally {
+            Carbon::setTestNow();
+        }
+
+        $this->get(route('payments.rates.index'))
+            ->assertOk()
+            ->assertSee('21 Oct 2026 09:01')
+            ->assertDontSee('21 Oct 2026 03:31');
     }
 
     public function test_print_invoice_uses_server_rate_breakdown(): void

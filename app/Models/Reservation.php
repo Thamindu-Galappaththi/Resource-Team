@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\ReservationItemStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use Illuminate\Database\Eloquent\Builder;
@@ -136,6 +135,24 @@ class Reservation extends Model
         return in_array($this->status, ReservationStatus::cancellable(), true);
     }
 
+    public function bookedItemStatusLabel($item = null): string
+    {
+        return $this->statusEnum()->label();
+    }
+
+    public function destinationUrl(bool $forApprover = false): string
+    {
+        if ($this->type === ReservationType::HOSTEL->value) {
+            return route('hostel.show', $this);
+        }
+
+        if ($forApprover) {
+            return route('approvals.index', ['search' => $this->reference]);
+        }
+
+        return route('reservations.show', $this);
+    }
+
     public function resourceNames(): string
     {
         return $this->items
@@ -151,23 +168,12 @@ class Reservation extends Model
             return $query->whereRaw('1 = 0');
         }
 
-        if ($user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'management')) {
+        if ($user->hasPermission('approvals.index')
+            || $user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'management')) {
             return $query;
         }
 
-        if ($user->hasRole('resource_owner')) {
-            $owners = array_values(array_filter([$user->name, $user->email, $user->service_id]));
-
-            return $query->where(function (Builder $inner) use ($user, $owners) {
-                if ($owners !== []) {
-                    $inner->whereHas('items.resource', fn (Builder $resources) => $resources->whereIn('resource_owner', $owners));
-                }
-                $inner->orWhere('requester_id', $user->id)
-                    ->orWhere('created_by_user_id', $user->id);
-            });
-        }
-
-        if ($user->hasRole('hostel_manager')) {
+        if ($user->hasRole('hostel_manager') || $user->hasPermission('hostel.manage')) {
             return $query->where(function (Builder $inner) use ($user) {
                 $inner->where('type', ReservationType::HOSTEL->value)
                     ->orWhere('requester_id', $user->id)

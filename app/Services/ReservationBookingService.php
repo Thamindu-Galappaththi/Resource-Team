@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Notifications\NewReservationPending;
 use App\Notifications\ReservationCancelled;
 use App\Notifications\ReservationCreated;
+use App\Services\NotificationRecipients;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -122,18 +123,21 @@ class ReservationBookingService
             $this->recordHistory($reservation, ReservationStatus::DRAFT->value, ReservationStatus::PENDING_APPROVAL->value, $actor, 'submitted');
 
             $reservation->load(['requester', 'items', 'location']);
-            $reservation->requester?->notify(new ReservationCreated($reservation));
+            NotificationRecipients::notifyOther(
+                $reservation->requester,
+                new ReservationCreated($reservation),
+                $actor
+            );
 
-            $approverRoles = ['super_admin', 'admin', 'coordinator'];
-            if (($payload['type'] ?? ReservationType::STANDARD->value) === ReservationType::HOSTEL->value) {
-                $approverRoles[] = 'hostel_manager';
-            }
+            $approverPermission = $reservation->type === ReservationType::HOSTEL->value
+                ? 'hostel.manage'
+                : 'approvals.index';
 
-            User::query()
-                ->whereHas('role', fn ($query) => $query->whereIn('slug', $approverRoles))
-                ->whereKeyNot($reservation->requester_id)
-                ->get()
-                ->each(fn (User $approver) => $approver->notify(new NewReservationPending($reservation)));
+            NotificationRecipients::notify(
+                $approverPermission,
+                new NewReservationPending($reservation),
+                except: [$actor->id, $reservation->requester_id]
+            );
 
             return $reservation;
         });
@@ -167,7 +171,11 @@ class ReservationBookingService
             $this->recordHistory($reservation, $from, ReservationStatus::CANCELLED->value, $actor, $reason);
 
             $reservation->load(['requester', 'items', 'location']);
-            $reservation->requester?->notify(new ReservationCancelled($reservation));
+            NotificationRecipients::notifyOther(
+                $reservation->requester,
+                new ReservationCancelled($reservation),
+                $actor
+            );
 
             return $reservation;
         });

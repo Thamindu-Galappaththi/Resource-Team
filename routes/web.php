@@ -18,6 +18,7 @@ use App\Http\Controllers\ResourceRateController;
 use App\Http\Controllers\ResourceTypeController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\LectureFeeController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -69,6 +70,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('resource-calendar')->name('resources.')->controller(ResourceCalendarController::class)->group(function () {
         Route::get('/', 'index')->middleware('permission:resources.calendar')->name('calendar');
+        Route::get('/events', 'events')->middleware('permission:resources.calendar')->name('calendar.events');
     });
 
     Route::prefix('approvals')->name('approvals.')->group(function () {
@@ -106,12 +108,18 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/resource-rates', [ResourceRateController::class, 'store'])->middleware('permission:payments.rates.manage')->name('rates.store');
         Route::put('/resource-rates/{rate}', [ResourceRateController::class, 'update'])->middleware('permission:payments.rates.manage')->name('rates.update');
         Route::patch('/resource-rates/{rate}/deactivate', [ResourceRateController::class, 'deactivate'])->middleware('permission:payments.rates.manage')->name('rates.deactivate');
+        Route::patch('/resource-rates/{rate}/activate', [ResourceRateController::class, 'activate'])->middleware('permission:payments.rates.manage')->name('rates.activate');
         Route::post('/resource-payment-discounts', [ResourceRateController::class, 'storeDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.store');
         Route::put('/resource-payment-discounts/{rule}', [ResourceRateController::class, 'updateDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.update');
         Route::patch('/resource-payment-discounts/{rule}/deactivate', [ResourceRateController::class, 'deactivateDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.deactivate');
+        Route::patch('/resource-payment-discounts/{rule}/activate', [ResourceRateController::class, 'activateDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.activate');
     });
 
-    Route::get('/reports', fn () => view('reports.index'))->middleware('permission:reports.view')->name('reports.index');
+    Route::prefix('reports')->name('reports.')->middleware('permission:reports.view')->controller(ReportController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/feed', 'feed')->name('feed');
+        Route::get('/export', 'exportCsv')->name('export');
+    });
 
     Route::get('/profile', [ProfileController::class, 'show'])->name('user.profile');
     Route::put('/profile', [ProfileController::class, 'update'])->name('user.profile.update');
@@ -197,6 +205,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
+        Route::get('/feed', 'feed')->name('feed');
         Route::post('/clear-all', 'clearAll')->name('clear-all');
         Route::post('/mark-read', 'markAllRead')->name('mark-read');
         Route::post('/{notification}/read', 'markRead')->name('read');

@@ -340,7 +340,7 @@
                                 <span class="fw-semibold">{{ $meta['title'] }}</span>
                             </div>
                             <div class="d-flex align-items-center gap-3">
-                                <span class="text-secondary">Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 18 ? 'afternoon' : 'evening') }}, <strong>{{ $user->name ?? 'Developer' }}</strong></span>
+                                <span class="text-secondary">{{ \App\Support\TimeGreeting::phrase() }}, <strong>{{ $user->name ?? 'Developer' }}</strong></span>
                                 <button class="btn btn-primary btn-sm" type="button" onclick="toggleNebulaFullscreen(this)">
                                     <i class="bi bi-fullscreen me-1"></i>Fullscreen
                                 </button>

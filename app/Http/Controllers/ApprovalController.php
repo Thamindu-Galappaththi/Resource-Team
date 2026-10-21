@@ -10,6 +10,7 @@ use App\Models\ReservationStatusHistory;
 use App\Models\ResourceCategory;
 use App\Models\User;
 use App\Notifications\ReservationDecision;
+use App\Services\NotificationRecipients;
 use App\Services\ReservationBookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -102,7 +103,11 @@ class ApprovalController extends Controller
             ]);
             if ($fromStatus === ReservationStatus::PENDING_APPROVAL->value) {
                 $locked->load('requester');
-                $locked->requester?->notify(new ReservationDecision($locked, $request->user(), $request->input('archive_reason')));
+                NotificationRecipients::notifyOther(
+                    $locked->requester,
+                    new ReservationDecision($locked, $request->user(), $request->input('archive_reason')),
+                    $request->user()
+                );
             }
         });
 
@@ -153,7 +158,11 @@ class ApprovalController extends Controller
                 'created_at' => now(),
             ]);
             $locked->load('requester');
-            $locked->requester?->notify(new ReservationDecision($locked, $request->user(), $data['comment']));
+            NotificationRecipients::notifyOther(
+                $locked->requester,
+                new ReservationDecision($locked, $request->user(), $data['comment']),
+                $request->user()
+            );
         });
 
         return redirect()->route($specialOverride ? 'approvals.special' : 'approvals.index')->with('success', 'Reservation '.$reservation->reference.' '.$status->label().'.');
@@ -300,7 +309,7 @@ class ApprovalController extends Controller
             'meta' => [
                 'has_filters' => collect($filters)->contains(fn ($value) => filled($value)),
             ],
-            'can_decide' => $user->hasRole('developer', 'super_admin', 'admin', 'resource_owner'),
+            'can_decide' => $user->hasPermission('approvals.index'),
         ];
     }
 
@@ -377,15 +386,13 @@ class ApprovalController extends Controller
 
     private function visibleQuery(User $user)
     {
-        $query = Reservation::query()->whereNull('approval_archived_at');
-        if ($user->hasRole('resource_owner') && ! $user->hasRole('developer', 'super_admin', 'admin')) {
-            $query->whereHas('items.resource', fn ($resource) => $resource->whereIn('resource_owner', array_filter([$user->name, $user->email, $user->service_id])));
-        }
-        return $query;
+        abort_unless($user->hasPermission('approvals.index'), 403);
+
+        return Reservation::query()->whereNull('approval_archived_at');
     }
 
     private function authorizeApprover(User $user): void
     {
-        abort_unless($user->hasRole('developer', 'super_admin', 'admin', 'resource_owner'), 403);
+        abort_unless($user->hasPermission('approvals.index'), 403);
     }
 }

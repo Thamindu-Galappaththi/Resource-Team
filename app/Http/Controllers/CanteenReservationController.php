@@ -9,10 +9,10 @@ use App\Http\Requests\UpdateCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationStatusRequest;
 use App\Models\CanteenReservation;
 use App\Models\Location;
-use App\Models\User;
 use App\Notifications\CanteenReservationCreated;
 use App\Notifications\CanteenReservationStatusUpdated;
 use App\Notifications\NewCanteenReservationPending;
+use App\Services\NotificationRecipients;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -150,16 +150,18 @@ class CanteenReservationController extends Controller
         $reservation = DB::transaction(function () use ($data) {
             $reservation = CanteenReservation::query()->create($data);
 
-            $reservation->requestedBy()->first()?->notify(new CanteenReservationCreated($reservation));
-
             if ($reservation->status === CanteenReservationStatus::PENDING->value) {
-                $approvers = User::query()->whereHas('role', function ($query) {
-                    $query->whereIn('slug', ['developer', 'super_admin', 'admin', 'coordinator', 'canteen']);
-                })->whereKeyNot(auth()->id())->get();
-
-                foreach ($approvers as $approver) {
-                    $approver->notify(new NewCanteenReservationPending($reservation));
-                }
+                NotificationRecipients::notify(
+                    'canteen.manage',
+                    new NewCanteenReservationPending($reservation),
+                    except: [auth()->id()]
+                );
+            } else {
+                NotificationRecipients::notify(
+                    'canteen.manage',
+                    new CanteenReservationCreated($reservation),
+                    except: [auth()->id()]
+                );
             }
 
             return $reservation;
@@ -221,7 +223,11 @@ class CanteenReservationController extends Controller
                 'approval_comments' => $request->input('approval_comments'),
             ])->save();
 
-            $reservation->requestedBy()->first()?->notify(new CanteenReservationStatusUpdated($reservation, auth()->user()));
+            NotificationRecipients::notifyOther(
+                $reservation->requestedBy()->first(),
+                new CanteenReservationStatusUpdated($reservation, auth()->user()),
+                auth()->user()
+            );
         });
 
         return redirect()
@@ -269,7 +275,7 @@ class CanteenReservationController extends Controller
 
     private function seesAllCanteenReservations(): bool
     {
-        return (bool) auth()->user()?->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'canteen');
+        return (bool) auth()->user()?->hasPermission('canteen.manage');
     }
 
     private function statusForOrderCount(int $orders): string

@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=9">
+<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=11">
 @endpush
 
 @section('content')
@@ -28,7 +28,7 @@
         </div>
         @if(auth()->user()->hasPermission('approvals.special'))
             <div class="rsv-header-actions">
-                <a href="{{ route('approvals.special') }}" class="btn rsv-header-btn rsv-create-btn"><i class="ti ti-shield-star me-1"></i>Special approvals</a>
+                <a href="{{ route('approvals.special') }}" class="btn rsv-header-btn rsv-create-btn"><i class="ti ti-shield-lock me-1"></i>Special approvals</a>
             </div>
         @endif
     </div>
@@ -139,8 +139,8 @@
                 <div class="rsv-modal-heading">
                     <h2 class="modal-title fs-5" id="ap-view-title">Reservation</h2>
                     <p class="rsv-modal-sub mb-0" id="ap-view-sub">Booking information</p>
-                    <span class="badge" id="ap-view-badge"></span>
                 </div>
+                <span class="badge" id="ap-view-badge"></span>
                 <button type="button" class="rsv-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
             </div>
             <div class="modal-body">

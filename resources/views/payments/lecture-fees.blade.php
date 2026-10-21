@@ -189,7 +189,7 @@
                                 {{-- Status --}}
                                 <td>
                                     @if($payable->status === 'pending')
-                                        <span class="badge badge-warning">
+                                        <span class="badge badge-warning text-dark">
                                             Pending
                                         </span>
                                     @elseif($payable->status === 'paid')

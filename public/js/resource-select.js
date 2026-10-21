@@ -44,6 +44,7 @@ window.RMSelect = {
             labelEl.textContent = label || this.placeholder(wrap);
             labelEl.classList.toggle('text-muted', !next);
         }
+        wrap.classList.remove('is-invalid');
         wrap.querySelector('.cu-dropdown-toggle')?.classList.remove('is-invalid');
         wrap.parentElement?.querySelector('.invalid-feedback')?.classList.remove('d-block');
         if (previous !== input.value) {

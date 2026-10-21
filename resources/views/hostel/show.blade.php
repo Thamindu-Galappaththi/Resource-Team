@@ -71,7 +71,7 @@
                                         <tr>
                                             <td data-label="Resource">{{ $item->resource_name_snapshot ?: '—' }}</td>
                                             <td data-label="Category">{{ $item->resource?->type?->category?->name ?? $reservation->hostelStay?->roomType?->name ?? '—' }}</td>
-                                            <td data-label="Item status">{{ ucfirst((string) $item->status) }}</td>
+                                            <td data-label="Item status"><span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->bookedItemStatusLabel($item) }}</span></td>
                                         </tr>
                                     @endforeach
                                 </tbody>

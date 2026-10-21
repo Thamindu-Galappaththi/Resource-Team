@@ -25,6 +25,10 @@ class ReservationCancelled extends Notification
             'reservation_id' => $this->reservation->id,
             'reference' => $this->reservation->reference,
             'status' => $this->reservation->status,
+            'reservation_type' => $this->reservation->type,
+            'icon' => 'ti-calendar-off',
+            'title' => 'Reservation cancelled',
+            'url' => $this->reservation->destinationUrl(),
             'message' => 'Reservation '.$this->reservation->reference.' was cancelled.',
         ];
     }

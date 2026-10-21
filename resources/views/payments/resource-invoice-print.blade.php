@@ -4,8 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Invoice {{ $reservation->reference }}</title>
-    <link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v={{ @filemtime(public_path('css/resource-payments.css')) ?: time() }}">
+    <link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=9">
     <style>
+        html, body { height: auto; overflow: visible; }
         body { min-height: 100vh; margin: 0; padding: 32px 16px; background: #f3f6fb; }
         .rp-print-sheet { position: relative; max-width: 760px; margin: 0 auto; overflow: hidden; border: 1px solid #d5def0; border-radius: 18px; background: #fff; box-shadow: 0 12px 32px rgba(28,55,110,.1); }
         .rp-print-watermark { position: absolute; top: 44%; left: 50%; z-index: 0; transform: translate(-50%,-50%) rotate(-24deg); color: rgba(23,105,194,.08); font-size: clamp(64px,14vw,128px); font-weight: 900; letter-spacing: .08em; pointer-events: none; }
@@ -26,8 +27,23 @@
         .rp-print-actions { display: flex; justify-content: flex-end; gap: 10px; max-width: 760px; margin: 0 auto 14px; }
         .rp-print-actions button { padding: 10px 16px; border: 1px solid #1769c2; border-radius: 9px; background: #1769c2; color: white; font-weight: 700; cursor: pointer; }
         .rp-print-actions a { padding: 10px 16px; border: 1px solid #cad7e6; border-radius: 9px; background: white; color: #1769c2; font-weight: 700; text-decoration: none; }
-        @media print { body { padding: 0; background: #fff; } .rp-print-actions { display: none !important; } .rp-print-sheet { border: 0; border-radius: 0; box-shadow: none; } .rp-print-brand { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
-        @media(max-width:540px) { .rp-print-content,.rp-print-brand { padding: 20px; } }
+        @media print {
+            @page { size: auto; margin: 12mm; }
+            html, body { height: auto !important; overflow: visible !important; padding: 0; background: #fff; }
+            .rp-print-actions { display: none !important; }
+            .rp-print-sheet { overflow: visible; border: 0; border-radius: 0; box-shadow: none; }
+            .rp-print-brand { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        }
+        @media(max-width:540px) {
+            body { padding: 16px 10px; }
+            .rp-print-content,.rp-print-brand { padding: 20px; }
+            .rp-print-actions { flex-wrap: wrap; }
+            .rp-print-actions a, .rp-print-actions button { flex: 1 1 140px; text-align: center; }
+            .rp-print-meta { grid-template-columns: minmax(0, 1fr); }
+            .rp-print-line { flex-wrap: wrap; }
+            .rp-print-total { flex-wrap: wrap; gap: 8px; }
+            .rp-print-total strong { font-size: 22px; }
+        }
     </style>
 </head>
 <body>

@@ -10,7 +10,11 @@
           <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
             <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
               <div class="user-name">
-                <li class="nav-item mr-10" id="greeting"></li>
+                <li class="nav-item mr-10" id="greeting">
+                  @auth
+                    {{ \App\Support\TimeGreeting::phrase() }}, <b>{{ auth()->user()->name }}</b>
+                  @endauth
+                </li>
               </div>
               <li class="nav-item">
                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop1">
@@ -31,7 +35,7 @@
                   <div class="message-body">
                     <a href="{{ route('user.profile') }}" class="d-flex align-items-center gap-2 dropdown-item">
                       <i class="ti ti-user fs-6"></i>
-                      <p class="mb-0 fs-3">My Profile</p>
+                      <span>My Profile</span>
                     </a>
                     <a href="{{ route('logout') }}" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
                   </div>
