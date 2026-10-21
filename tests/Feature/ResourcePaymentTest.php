@@ -44,16 +44,6 @@ class ResourcePaymentTest extends TestCase
 
     public function test_header_and_sidebar_actions_follow_payment_permissions(): void
     {
-        $finance = User::factory()->role('finance')->create();
-        $this->actingAs($finance)->get(route('payments.resources'))
-            ->assertOk()
-            ->assertSee('Manage resource rates', false)
-            ->assertSee('hide-menu">Resource Rates', false)
-            ->assertSee('hide-menu">Lecture Fees', false)
-            ->assertSee('hide-menu">Resource Payments', false)
-            ->assertDontSee('Reservation history', false)
-            ->assertDontSee('>Lecture fees<', false);
-
         $management = User::factory()->role('management')->create();
         $this->actingAs($management)->get(route('payments.resources'))
             ->assertOk()
@@ -193,9 +183,9 @@ class ResourcePaymentTest extends TestCase
             ->assertNotFound()->assertJsonPath('message', 'No payable reservation was found for that reference.');
     }
 
-    public function test_lookup_print_and_usage_work_for_finance_with_lowercase_reference(): void
+    public function test_lookup_print_and_usage_work_with_lowercase_reference(): void
     {
-        $finance = User::factory()->role('finance')->create();
+        $finance = User::factory()->role('admin')->create();
         $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
 
         $this->actingAs($finance)->getJson(route('payments.resources.lookup', ['reference' => strtolower($reservation->reference)]))
@@ -225,10 +215,10 @@ class ResourcePaymentTest extends TestCase
         $this->assertDatabaseCount('resource_payment_usage_audits', 0);
     }
 
-    public function test_finance_can_manage_rates_and_changes_are_audited(): void
+    public function test_admin_can_manage_rates_and_changes_are_audited(): void
     {
         $this->seed(ResourceRateSeeder::class);
-        $finance = User::factory()->role('finance')->create();
+        $finance = User::factory()->role('admin')->create();
         $this->actingAs($finance)->get(route('payments.rates.index'))->assertOk()->assertSee('Rate catalog');
         $category = ResourceCategory::query()->firstOrCreate(['name' => 'Finance Test Category']);
         $type = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Finance Test Type']);
@@ -263,10 +253,10 @@ class ResourcePaymentTest extends TestCase
         $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'action' => 'activated']);
     }
 
-    public function test_finance_can_configure_category_discounts_used_by_invoice_calculation(): void
+    public function test_admin_can_configure_category_discounts_used_by_invoice_calculation(): void
     {
         $this->seed(ResourceRateSeeder::class);
-        $finance = User::factory()->role('finance')->create();
+        $finance = User::factory()->role('admin')->create();
         $requester = User::factory()->create(['user_type' => 'student']);
         $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00', $requester);
 
@@ -293,10 +283,10 @@ class ResourcePaymentTest extends TestCase
         $this->assertDatabaseHas('resource_payment_discount_audits', ['discount_rule_id' => $rule->id, 'action' => 'activated']);
     }
 
-    public function test_rate_admin_rejects_overlapping_dates_negative_amounts_and_non_finance_users(): void
+    public function test_rate_admin_rejects_overlapping_dates_negative_amounts_and_non_payment_users(): void
     {
         $this->seed(ResourceRateSeeder::class);
-        $finance = User::factory()->role('finance')->create();
+        $finance = User::factory()->role('admin')->create();
         $type = ResourceType::query()->where('name', 'Auditorium')->firstOrFail();
         $overlap = ['resource_type_id' => $type->id, 'base_fee' => 1, 'base_duration_hours' => 2, 'extra_hour_rate' => 1, 'tax_percent' => 0, 'effective_from' => '2026-06-01'];
         $this->actingAs($finance)->postJson(route('payments.rates.store'), $overlap)->assertUnprocessable()->assertJsonValidationErrors('effective_from');
@@ -309,7 +299,7 @@ class ResourcePaymentTest extends TestCase
     public function test_rate_and_discount_history_paginates(): void
     {
         $this->seed(ResourceRateSeeder::class);
-        $finance = User::factory()->role('finance')->create();
+        $finance = User::factory()->role('admin')->create();
         $rate = ResourceRate::query()->firstOrFail();
         $rule = ResourcePaymentDiscountRule::query()->create([
             'customer_category' => 'history',
@@ -361,7 +351,7 @@ class ResourcePaymentTest extends TestCase
     public function test_rate_catalog_paginates(): void
     {
         $this->seed(ResourceRateSeeder::class);
-        $finance = User::factory()->role('finance')->create();
+        $finance = User::factory()->role('admin')->create();
         $type = ResourceType::query()->firstOrFail();
         foreach (range(1, 5) as $i) {
             ResourceRate::query()->create([
@@ -400,7 +390,7 @@ class ResourcePaymentTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-10-21 03:31:00', 'UTC'));
         try {
             $this->seed(ResourceRateSeeder::class);
-            $finance = User::factory()->role('finance')->create();
+            $finance = User::factory()->role('admin')->create();
             $category = ResourceCategory::query()->firstOrCreate(['name' => 'Timezone Test Category']);
             $type = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Timezone Test Type']);
             $this->actingAs($finance)->post(route('payments.rates.store'), [
