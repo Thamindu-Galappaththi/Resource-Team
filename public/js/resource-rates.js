@@ -149,18 +149,24 @@
         });
     }
 
+    function fieldMessage(field) {
+        if (field.validity.valueMissing) {
+            return 'Please fill out this field.';
+        }
+        if (field.validity.patternMismatch) {
+            return 'Use letters, numbers, hyphens, or underscores.';
+        }
+        return field.validationMessage || 'Please check this field.';
+    }
+
     function showFieldErrors(form) {
         let valid = true;
         constraintFields(form).forEach((field) => {
             const ok = field.checkValidity();
             field.classList.toggle('is-invalid', !ok);
-            const error = field.nextElementSibling;
-            if (error?.classList.contains('rr-field-error')) {
-                if (field.validity.valueMissing) {
-                    error.textContent = 'Please fill out this field.';
-                } else if (field.validity.patternMismatch) {
-                    error.textContent = 'Use letters, numbers, hyphens, or underscores.';
-                }
+            const error = field.parentElement?.querySelector(':scope > .rr-field-error');
+            if (error) {
+                error.textContent = ok ? '' : fieldMessage(field);
             }
             if (!ok) {
                 valid = false;
@@ -180,6 +186,9 @@
             const selectsValid = validateSelects(form);
             if (!fieldsValid || !selectsValid) {
                 event.preventDefault();
+                if (window.RMAction) {
+                    window.RMAction.unlock(form);
+                }
                 return;
             }
             disarm(form);

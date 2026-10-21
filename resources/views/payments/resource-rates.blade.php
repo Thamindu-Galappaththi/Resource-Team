@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=27">
+<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=29">
 @endpush
 
 @section('content')
@@ -99,22 +99,27 @@
                 <div class="rr-field">
                     <label class="form-label" for="rr-base">Base fee (LKR)</label>
                     <input id="rr-base" type="number" name="base_fee" class="form-control" min="0" step="0.01" value="{{ old('base_fee') }}" data-rr-required>
+                    <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
                     <label class="form-label" for="rr-hours">Included hours</label>
                     <input id="rr-hours" type="number" name="base_duration_hours" class="form-control" min="0.01" step="0.01" value="{{ old('base_duration_hours') }}" data-rr-required>
+                    <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
                     <label class="form-label" for="rr-extra">Extra hour rate (LKR)</label>
                     <input id="rr-extra" type="number" name="extra_hour_rate" class="form-control" min="0" step="0.01" value="{{ old('extra_hour_rate') }}" data-rr-required>
+                    <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
                     <label class="form-label" for="rr-tax">Tax (%)</label>
                     <input id="rr-tax" type="number" name="tax_percent" class="form-control" min="0" max="100" step="0.001" value="{{ old('tax_percent', 0) }}" data-rr-required>
+                    <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
                     <label class="form-label" for="rr-from">Effective from</label>
                     <input id="rr-from" type="date" name="effective_from" class="form-control" value="{{ old('effective_from', now()->toDateString()) }}" data-rr-required>
+                    <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
                     <label class="form-label" for="rr-to">Effective to</label>
@@ -162,6 +167,7 @@
                 <div class="rr-field">
                     <label class="form-label" for="rr-percent">Discount percent</label>
                     <input id="rr-percent" type="number" name="discount_percent" class="form-control" min="0" max="100" step="0.01" value="{{ old('discount_percent', 0) }}" data-rr-required>
+                    <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field rr-field-inline-action">
                     <label class="form-label rr-field-spacer" for="rr-discount-submit">&nbsp;</label>
@@ -260,11 +266,11 @@
                     <x-rm-select id="rr-edit-resource" name="resource_id" placeholder="All resources of type"
                         :options="collect([['value' => '', 'label' => 'All resources of type']])->concat($resourceOptions)->all()" />
                 </div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-base">Base fee (LKR)</label><input id="rr-edit-base" type="number" name="base_fee" class="form-control" min="0" step="0.01" data-rr-required></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-hours">Included hours</label><input id="rr-edit-hours" type="number" name="base_duration_hours" class="form-control" min="0.01" step="0.01" data-rr-required></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-extra">Extra hour rate (LKR)</label><input id="rr-edit-extra" type="number" name="extra_hour_rate" class="form-control" min="0" step="0.01" data-rr-required></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-tax">Tax (%)</label><input id="rr-edit-tax" type="number" name="tax_percent" class="form-control" min="0" max="100" step="0.001" data-rr-required></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-from">Effective from</label><input id="rr-edit-from" type="date" name="effective_from" class="form-control" data-rr-required></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-base">Base fee (LKR)</label><input id="rr-edit-base" type="number" name="base_fee" class="form-control" min="0" step="0.01" data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-hours">Included hours</label><input id="rr-edit-hours" type="number" name="base_duration_hours" class="form-control" min="0.01" step="0.01" data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-extra">Extra hour rate (LKR)</label><input id="rr-edit-extra" type="number" name="extra_hour_rate" class="form-control" min="0" step="0.01" data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-tax">Tax (%)</label><input id="rr-edit-tax" type="number" name="tax_percent" class="form-control" min="0" max="100" step="0.001" data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-from">Effective from</label><input id="rr-edit-from" type="date" name="effective_from" class="form-control" data-rr-required><p class="rr-field-error"></p></div>
                 <div class="rr-field"><label class="form-label" for="rr-edit-to">Effective to</label><input id="rr-edit-to" type="date" name="effective_to" class="form-control"></div>
                 </div>
             </div>
@@ -329,8 +335,8 @@
             </div>
             <div class="modal-body">
                 <div class="row g-3">
-                <div class="col-12"><label class="form-label" for="rr-edit-category">Customer category</label><input id="rr-edit-category" type="text" name="customer_category" class="form-control" maxlength="80" data-rr-pattern="[A-Za-z0-9_-]+" data-rr-required></div>
-                <div class="col-12"><label class="form-label" for="rr-edit-percent">Discount percent</label><input id="rr-edit-percent" type="number" name="discount_percent" class="form-control" min="0" max="100" step="0.01" data-rr-required></div>
+                <div class="col-12"><label class="form-label" for="rr-edit-category">Customer category</label><input id="rr-edit-category" type="text" name="customer_category" class="form-control" maxlength="80" data-rr-pattern="[A-Za-z0-9_-]+" data-rr-required><p class="rr-field-error"></p></div>
+                <div class="col-12"><label class="form-label" for="rr-edit-percent">Discount percent</label><input id="rr-edit-percent" type="number" name="discount_percent" class="form-control" min="0" max="100" step="0.01" data-rr-required><p class="rr-field-error"></p></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -345,5 +351,5 @@
 @push('scripts')
 <script type="application/json" id="rr-catalog">@json(['types' => $typeOptions, 'resources' => $resourceOptions])</script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/resource-rates.js') }}?v=11"></script>
+<script src="{{ asset('js/resource-rates.js') }}?v=12"></script>
 @endpush
