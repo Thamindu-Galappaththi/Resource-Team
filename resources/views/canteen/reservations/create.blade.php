@@ -2,29 +2,37 @@
 
 @section('title', 'Create Canteen Reservation')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/canteen-pages.css') }}?v=1">
+@endpush
+
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+<div class="container-fluid py-4 cp-page">
+    <header class="cd-header">
         <div>
-            <h1 class="h3 text-white mb-2">Create Canteen Reservation</h1>
-            <p class="text-white-50 mb-0">Enter the service details and expected order count.</p>
+            <div class="cd-eyebrow"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i> Canteen operations</div>
+            <h1 class="cd-title">Create reservation</h1>
+            <p class="cd-subtitle">Plan your meal service with the canteen team.</p>
         </div>
-        <a href="{{ route('canteen.index') }}" class="btn btn-outline-light"><i class="ti ti-arrow-left me-1"></i>All reservations</a>
-    </div>
+        <div class="cd-actions">
+            <a href="{{ route('canteen.index') }}" class="btn btn-outline-light"><i class="ti ti-arrow-left me-1" aria-hidden="true"></i>All reservations</a>
+        </div>
+    </header>
 
     @if($errors->any())
         <div class="alert alert-danger" role="alert"><strong>Please check the form.</strong> Some details need your attention.</div>
     @endif
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white border-bottom py-3">
+    <section class="cp-surface">
+        <div class="cp-panel-heading">
             <h2 class="h5 mb-1">Reservation request</h2>
             <p class="text-muted small mb-0">Requests remain pending until reviewed by the canteen team.</p>
         </div>
-        <div class="card-body p-4">
+        <div class="cp-form-body">
             <form id="canteenReservationForm" method="POST" action="{{ route('canteen.store') }}">
                 @include('canteen.reservations._form')
-                <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 pt-4 mt-2 border-top">
+                <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 pt-4 mt-2 border-top cp-form-actions">
                     <a href="{{ route('canteen.index') }}" class="btn btn-outline-secondary">Discard</a>
                     <button id="canteenSubmitButton" type="submit" class="btn btn-primary">
                         <span class="submit-label"><i class="ti ti-check me-1" aria-hidden="true"></i>Submit reservation</span>
@@ -33,7 +41,7 @@
                 </div>
             </form>
         </div>
-    </div>
+    </section>
 </div>
 @endsection
 
@@ -70,4 +78,8 @@
         });
     });
 </script>
+@endpush
+
+@push('scripts')
+<script src="{{ asset('js/canteen-ui.js') }}?v=1"></script>
 @endpush

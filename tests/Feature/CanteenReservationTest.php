@@ -303,7 +303,7 @@ class CanteenReservationTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_canteen_staff_can_approve_pending_reservation_from_the_list(): void
+    public function test_canteen_staff_can_approve_pending_reservation_from_the_dashboard(): void
     {
         $staff = User::factory()->role('canteen')->create();
         $requester = User::factory()->role('slt_employee')->create();
@@ -317,14 +317,22 @@ class CanteenReservationTest extends TestCase
         $this->actingAs($staff)
             ->get(route('canteen.index'))
             ->assertOk()
-            ->assertSee('Approve')
-            ->assertSee('Reject');
+            ->assertDontSee('>Approve</button>', false)
+            ->assertDontSee('>Reject</button>', false);
 
         $this->actingAs($staff)
             ->get(route('canteen.show', $reservation))
             ->assertOk()
-            ->assertSee('Review request')
-            ->assertSee('Approve reservation');
+            ->assertDontSee('Review request')
+            ->assertDontSee('Approve reservation');
+
+        $this->get(route('canteen.dashboard'))
+            ->assertOk()
+            ->assertSee('Pending requests')
+            ->assertSee('Approve')
+            ->assertSee('Reject')
+            ->assertSee('Reason for rejection')
+            ->assertSee('Keep pending');
 
         $this->actingAs($staff)
             ->patch(route('canteen.status', $reservation), ['status' => 'approved'])
@@ -397,8 +405,8 @@ class CanteenReservationTest extends TestCase
         $this->actingAs($staff)
             ->get(route('canteen.dashboard'))
             ->assertOk()
-            ->assertSee('>17</h3>', false)
-            ->assertDontSee('>108</h3>', false);
+            ->assertSeeText('17 orders')
+            ->assertDontSeeText('108 orders');
     }
 
     public function test_store_accepts_browser_time_with_seconds(): void

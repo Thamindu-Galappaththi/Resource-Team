@@ -74,8 +74,22 @@ class CanteenReservationController extends Controller
             'rejected' => (clone $summaryQuery)->where('status', CanteenReservationStatus::REJECTED->value)->count(),
         ];
 
+        $pendingApprovals = collect();
+        $canReview = $this->seesAllCanteenReservations();
+
+        if ($canReview) {
+            $pendingApprovals = CanteenReservation::query()
+                ->with(['requestedBy', 'location'])
+                ->where('status', CanteenReservationStatus::PENDING->value)
+                ->orderBy('reservation_date')
+                ->orderBy('reservation_time')
+                ->get();
+        }
+
         return view('canteen.dashboard', [
             'summary' => $summary,
+            'pendingApprovals' => $pendingApprovals,
+            'canReview' => $canReview,
             'forecast' => $forecast,
             'mealBreakdown' => $mealBreakdown,
             'todayTotal' => $todayReservations->sum('number_of_orders'),
