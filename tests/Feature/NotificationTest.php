@@ -98,7 +98,7 @@ class NotificationTest extends TestCase
         $developer = User::factory()->role('developer')->create();
         $inactiveAdmin = User::factory()->role('admin')->inactive()->create();
         $coordinator = User::factory()->role('coordinator')->create();
-        $finance = User::factory()->role('finance')->create();
+        $management = User::factory()->role('management')->create();
 
         $this->actingAs($creator)
             ->post(route('create.user.store'), [
@@ -117,7 +117,7 @@ class NotificationTest extends TestCase
         Notification::assertSentTo([$otherAdmin, $superAdmin, $developer], NewUserCreated::class, function (NewUserCreated $notification) use ($newUser, $creator) {
             return $notification->user->is($newUser) && $notification->creator->is($creator);
         });
-        Notification::assertNotSentTo([$creator, $inactiveAdmin, $coordinator, $finance, $newUser], NewUserCreated::class);
+        Notification::assertNotSentTo([$creator, $inactiveAdmin, $coordinator, $management, $newUser], NewUserCreated::class);
     }
 
     public function test_new_resource_reservation_notifies_approval_permission_holders(): void
@@ -127,7 +127,7 @@ class NotificationTest extends TestCase
         $requester = User::factory()->role('coordinator')->create();
         $approver = User::factory()->role('resource_owner')->create();
         $admin = User::factory()->role('admin')->create();
-        $finance = User::factory()->role('finance')->create();
+        $management = User::factory()->role('management')->create();
         $resource = Resource::factory()->create();
 
         $this->actingAs($requester)->post(route('reservations.store'), [
@@ -145,7 +145,7 @@ class NotificationTest extends TestCase
 
         Notification::assertNotSentTo($requester, ReservationCreated::class);
         Notification::assertSentTo([$approver, $admin], NewReservationPending::class);
-        Notification::assertNotSentTo([$requester, $finance], NewReservationPending::class);
+        Notification::assertNotSentTo([$requester, $management], NewReservationPending::class);
     }
 
     public function test_booking_for_another_user_notifies_that_requester_not_the_creator(): void

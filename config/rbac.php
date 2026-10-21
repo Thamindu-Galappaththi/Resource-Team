@@ -42,10 +42,6 @@ return [
             'name' => 'Management',
             'description' => 'Oversight and decision-making reports for the assigned role.',
         ],
-        'finance' => [
-            'name' => 'Finance',
-            'description' => 'Manages resource pricing and reviews financial records.',
-        ],
         'canteen' => [
             'name' => 'Canteen',
             'description' => 'Views meal forecasts and manages large group canteen orders.',
@@ -229,11 +225,6 @@ return [
             'payments.view',
             'payments.rates.manage',
             'reports.view',
-        ],
-        'finance' => [
-            'dashboard',
-            'payments.view',
-            'payments.rates.manage',
         ],
         'canteen' => [
             'dashboard',
