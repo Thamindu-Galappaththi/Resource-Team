@@ -112,13 +112,13 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
-    align-items: end;
+    align-items: start;
 }
 .rsv-modal .rr-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
-    align-items: end;
+    align-items: start;
 }
 .rr-admin .rr-field,
 .rsv-modal .rr-field {
@@ -144,6 +144,14 @@
 .rr-admin .rr-card-head .rr-rate-search { flex: 0 1 320px; width: min(100%, 320px); max-width: 320px; min-width: 0; }
 .rr-admin .form-label,
 .rsv-modal .form-label { margin: 0; color: #34445b; font-size: 12px; font-weight: 700; }
+.rr-admin .rr-field:has([data-rr-required]) > .form-label::after,
+.rsv-modal .rr-field:has([data-rr-required]) > .form-label::after,
+.rsv-modal .col-12:has([data-rr-required]) > .form-label::after {
+    content: "*";
+    margin-left: .25rem;
+    color: #dc3545;
+    font-weight: 700;
+}
 .rr-admin .form-control,
 .rr-admin .cu-select,
 .rr-admin .cu-dropdown-toggle,
