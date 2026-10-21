@@ -35,7 +35,7 @@ class LecturerPayable extends Model
      */
     public function lectureSession(): BelongsTo
     {
-        return $this->belongsTo(LectureSession::class);
+        return $this->belongsTo(LectureSession::class, 'lecture_session_id');
     }
 
     /**
@@ -51,6 +51,6 @@ class LecturerPayable extends Model
      */
     public function rateCard(): BelongsTo
     {
-        return $this->belongsTo(RateCard::class);
+        return $this->belongsTo(RateCard::class, 'rate_card_id');
     }
 }
