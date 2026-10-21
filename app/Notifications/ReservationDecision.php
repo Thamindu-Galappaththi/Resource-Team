@@ -6,7 +6,6 @@ use App\Enums\ReservationStatus;
 use App\Models\Reservation;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class ReservationDecision extends Notification
@@ -17,16 +16,7 @@ class ReservationDecision extends Notification
 
     public function via($notifiable): array
     {
-        return ['database', 'mail'];
-    }
-
-    public function toMail($notifiable): MailMessage
-    {
-        return (new MailMessage)
-            ->subject('Reservation '.$this->reservation->reference.' '.$this->reservation->statusEnum()->label())
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('Your reservation '.$this->reservation->reference.' is '.$this->reservation->statusEnum()->label().'.')
-            ->line('Comment from '.$this->approver->name.': '.$this->comment);
+        return ['database'];
     }
 
     public function toArray($notifiable): array
