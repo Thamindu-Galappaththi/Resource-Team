@@ -5,21 +5,28 @@
 @section('content')
 <div class="container-fluid">
 
+    
     {{-- Page Header --}}
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4"
+        style="
+            background: linear-gradient(110deg, #0756a8 0%, #245fc5 55%, #594bc8 100%);
+            padding: 26px;
+            border-radius: 18px;
+            color: white;
+            box-shadow: 0 8px 24px rgba(20, 65, 150, 0.18);
+        ">
+
         <div>
-            <h2 class="mb-1">Lecture Fees</h2>
-            <p class="text-muted mb-0">
+            <h1 class="mb-1 fw-bold" style="font-size: 36px; color: white;">
+                Lecture Fees
+            </h1>
+
+            <p class="mb-0" style="font-size: 16px; color: #eaf1ff;">
                 View calculated lecture fees based on lecture hours and approved rates.
             </p>
         </div>
-
-        <div>
-            <a href="{{ route('payments.lecture-fees') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-sync-alt"></i> Reset
-            </a>
-        </div>
     </div>
+
 
     {{-- Filters --}}
     <div class="card mb-4">
@@ -30,7 +37,12 @@
         </div>
 
         <div class="card-body">
-            <form method="GET" action="{{ route('payments.lecture-fees') }}">
+            <form
+                method="GET"
+                action="{{ route('payments.lecture-fees') }}"
+                id="lecture-fees-filters"
+                data-url="{{ route('payments.lecture-fees') }}"
+            >
 
                 <div class="row">
 
@@ -40,10 +52,11 @@
                         <input
                             type="text"
                             name="search"
-                            id="search"
+                            id="lecture-fees-search"
                             class="form-control"
-                            placeholder="Search lecturer..."
+                            placeholder="Search by lecturer..."
                             value="{{ request('search') }}"
+                            autocomplete="off"
                         >
                     </div>
 
@@ -88,11 +101,12 @@
                         >
                     </div>
 
-                    {{-- Search Button --}}
+                    {{-- Reset Button --}}
                     <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-search"></i> Search
-                        </button>
+                        <a href="{{ route('payments.lecture-fees') }}"
+                        class="btn btn-outline-primary w-100">
+                            <i class="fas fa-sync-alt me-1"></i> Reset
+                        </a>
                     </div>
 
                 </div>
@@ -101,137 +115,218 @@
         </div>
     </div>
 
-    {{-- Lecture Fees Table --}}
-    <div class="card">
+    {{-- Lecture Fees Results --}}
+    <div id="lecture-fees-results">
+        <div class="card">
 
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                Lecture Fee Records
-            </h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    Lecture Fee Records
+                </h5>
 
-            <span class="text-muted">
-                {{ $payables->total() }} record(s)
-            </span>
-        </div>
+                <span class="text-muted">
+                    {{ $payables->total() }} record(s)
+                </span>
+            </div>
 
-        <div class="card-body p-0">
+            <div class="card-body p-0">
 
-            <div class="table-responsive">
+                <div class="table-responsive">
 
-                <table class="table table-hover table-bordered mb-0">
+                    <table class="table table-hover table-bordered mb-0">
 
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>Lecturer</th>
-                            <th>Department</th>
-                            <th>Qualification</th>
-                            <th>Lecture Date</th>
-                            <th>Hours</th>
-                            <th>Hourly Rate</th>
-                            <th>Total Fee</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        @forelse($payables as $payable)
-
+                        <thead class="table-light">
                             <tr>
+                                <th>#</th>
+                                <th>Lecturer</th>
+                                <th>Department</th>
+                                <th>Qualification</th>
+                                <th>Lecture Date</th>
+                                <th>Hours</th>
+                                <th>Hourly Rate</th>
+                                <th>Total Fee</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
 
-                                {{-- Number --}}
-                                <td>
-                                    {{ $payables->firstItem() + $loop->index }}
-                                </td>
+                        <tbody>
 
-                                {{-- Lecturer --}}
-                                <td>
-                                    <strong>
-                                        {{ $payable->lecturer->name ?? 'N/A' }}
-                                    </strong>
-                                </td>
+                            @forelse($payables as $payable)
 
-                                {{-- Department --}}
-                                <td>
-                                    {{ $payable->lectureSession->department ?? 'N/A' }}
-                                </td>
+                                <tr>
 
-                                {{-- Qualification --}}
-                                <td>
-                                    {{ $payable->lectureSession->qualification ?? 'N/A' }}
-                                </td>
+                                    {{-- Number --}}
+                                    <td>
+                                        {{ $payables->firstItem() + $loop->index }}
+                                    </td>
 
-                                {{-- Date --}}
-                                <td>
-                                    {{ $payable->lectureSession->session_date?->format('d M Y') }}
-                                </td>
+                                    {{-- Lecturer --}}
+                                    <td>
+                                        <strong>
+                                            {{ $payable->lecturer->name ?? 'N/A' }}
+                                        </strong>
+                                    </td>
 
-                                {{-- Hours --}}
-                                <td>
-                                    {{ number_format((float) $payable->hours, 2) }}
-                                </td>
+                                    {{-- Department --}}
+                                    <td>
+                                        {{ $payable->lectureSession->department ?? 'N/A' }}
+                                    </td>
 
-                                {{-- Hourly Rate --}}
-                                <td>
-                                    {{ $payable->currency }}
-                                    {{ number_format($payable->hourly_rate_minor / 100, 2) }}
-                                </td>
+                                    {{-- Qualification --}}
+                                    <td>
+                                        {{ $payable->lectureSession->qualification ?? 'N/A' }}
+                                    </td>
 
-                                {{-- Total Fee --}}
-                                <td>
-                                    <strong>
+                                    {{-- Date --}}
+                                    <td>
+                                        {{ $payable->lectureSession->session_date?->format('d M Y') }}
+                                    </td>
+
+                                    {{-- Hours --}}
+                                    <td>
+                                        {{ number_format((float) $payable->hours, 2) }}
+                                    </td>
+
+                                    {{-- Hourly Rate --}}
+                                    <td>
                                         {{ $payable->currency }}
-                                        {{ number_format($payable->net_amount_minor / 100, 2) }}
-                                    </strong>
-                                </td>
+                                        {{ number_format($payable->hourly_rate_minor / 100, 2) }}
+                                    </td>
 
-                                {{-- Status --}}
-                                <td>
-                                    @if($payable->status === 'pending')
-                                        <span class="badge badge-warning text-dark">
-                                            Pending
-                                        </span>
-                                    @elseif($payable->status === 'paid')
-                                        <span class="badge badge-success">
-                                            Paid
-                                        </span>
-                                    @else
-                                        <span class="badge badge-secondary">
-                                            {{ ucfirst($payable->status) }}
-                                        </span>
-                                    @endif
-                                </td>
+                                    {{-- Total Fee --}}
+                                    <td>
+                                        <strong>
+                                            {{ $payable->currency }}
+                                            {{ number_format($payable->net_amount_minor / 100, 2) }}
+                                        </strong>
+                                    </td>
 
-                            </tr>
+                                    {{-- Status --}}
+                                    <td>
+                                        @if($payable->status === 'pending')
+                                            <span class="badge badge-warning text-dark">
+                                                Pending
+                                            </span>
+                                        @elseif($payable->status === 'paid')
+                                            <span class="badge badge-success">
+                                                Paid
+                                            </span>
+                                        @else
+                                            <span class="badge badge-secondary">
+                                                {{ ucfirst($payable->status) }}
+                                            </span>
+                                        @endif
+                                    </td>
 
-                        @empty
+                                </tr>
 
-                            <tr>
-                                <td colspan="9" class="text-center py-4">
-                                    <i class="fas fa-info-circle"></i>
-                                    No lecture fee records found.
-                                </td>
-                            </tr>
+                            @empty
 
-                        @endforelse
+                                <tr>
+                                    <td colspan="9" class="text-center py-4">
+                                        <i class="fas fa-info-circle"></i>
+                                        No lecture fee records found.
+                                    </td>
+                                </tr>
 
-                    </tbody>
+                            @endforelse
 
-                </table>
+                        </tbody>
+
+                    </table>
+
+                </div>
 
             </div>
 
-        </div>
+            {{-- Pagination --}}
+            @if($payables->hasPages())
+                <div class="card-footer">
+                    {{ $payables->links() }}
+                </div>
+            @endif
 
-        {{-- Pagination --}}
-        @if($payables->hasPages())
-            <div class="card-footer">
-                {{ $payables->links() }}
-            </div>
-        @endif
-
+        </div>    
     </div>
+
+    
+    @push('scripts')
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('lecture-fees-filters');
+        const search = document.getElementById('lecture-fees-search');
+        const results = document.getElementById('lecture-fees-results');
+
+        if (!form || !search || !results) return;
+
+        let debounceTimer;
+        let controller;
+
+        async function refreshTable(url = null) {
+            if (controller) controller.abort();
+            controller = new AbortController();
+
+            const requestUrl = url || (() => {
+                const target = new URL(form.dataset.url, window.location.origin);
+                target.search = new URLSearchParams(new FormData(form)).toString();
+                return target.href;
+            })();
+
+            results.style.opacity = '0.5';
+
+            try {
+                const response = await fetch(requestUrl, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    signal: controller.signal
+                });
+
+                if (!response.ok) throw new Error('Unable to load lecture fees.');
+
+                const html = await response.text();
+                const documentResult = new DOMParser().parseFromString(html, 'text/html');
+                const newResults = documentResult.getElementById('lecture-fees-results');
+
+                if (!newResults) throw new Error('Lecture fees results not found.');
+
+                results.innerHTML = newResults.innerHTML;
+
+                const currentUrl = new URL(requestUrl);
+                history.replaceState({}, '', currentUrl.pathname + currentUrl.search);
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error(error);
+                }
+            } finally {
+                results.style.opacity = '1';
+            }
+        }
+
+        search.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => refreshTable(), 300);
+        });
+
+        form.querySelectorAll('select, input[type="date"]').forEach(function (field) {
+            field.addEventListener('change', () => refreshTable());
+        });
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            clearTimeout(debounceTimer);
+            refreshTable();
+        });
+
+        results.addEventListener('click', function (event) {
+            const link = event.target.closest('.pagination a');
+            if (!link) return;
+
+            event.preventDefault();
+            refreshTable(link.href);
+        });
+    });
+    </script>
+    @endpush
+
 
 </div>
 @endsection
