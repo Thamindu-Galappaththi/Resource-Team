@@ -163,7 +163,7 @@ class DashboardService
         return [
             'kpis' => [
                 $this->kpi('Open requests', $pending, 'Awaiting approval', 'ti ti-inbox', 'warning', $this->url($user, 'reservations.index', 'reservations.index')),
-                $this->kpi('Next 7 days', $upcomingWeek, 'Confirmed & pending', 'ti ti-calendar-week', 'primary', $this->url($user, 'reservations.calendar', 'reservations.calendar')),
+                $this->kpi('Next 7 days', $upcomingWeek, 'Confirmed & pending', 'ti ti-calendar-time', 'primary', $this->url($user, 'reservations.calendar', 'reservations.calendar')),
                 $this->kpi('On the calendar today', (clone $all)->whereDate('reservation_date', $this->today())->count(), 'Live schedule', 'ti ti-clock', 'info'),
                 $this->kpi('Created by me', (clone $mine)->count(), 'This workspace', 'ti ti-pencil', 'success', $this->url($user, 'reservations.create', 'reservations.create')),
             ],
@@ -345,7 +345,7 @@ class DashboardService
 
         return [
             'kpis' => [
-                $this->kpi('Expected today', $expected, 'Pending + confirmed covers', 'ti ti-users-group', 'primary', $this->url($user, 'canteen.view', 'canteen.dashboard')),
+                $this->kpi('Expected today', $expected, 'Pending + confirmed covers', 'ti ti-users', 'primary', $this->url($user, 'canteen.view', 'canteen.dashboard')),
                 $this->kpi('Confirmed meals', $confirmed, 'Kitchen can prepare', 'ti ti-tools-kitchen-2', 'success'),
                 $this->kpi('Pending orders', $pending, 'Need confirmation', 'ti ti-clock', 'warning', $this->url($user, 'canteen.index', 'canteen.index')),
                 $this->kpi('7-day volume', $weekVolume, 'Covers in the window', 'ti ti-chart-line', 'info'),

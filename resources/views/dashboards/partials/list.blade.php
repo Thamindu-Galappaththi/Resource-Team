@@ -12,7 +12,7 @@
                 'warning' => ['icon' => 'ti ti-clock-hour-4',  'bg' => '#fef9c3', 'color' => '#a16207'],
                 'danger'  => ['icon' => 'ti ti-circle-x',      'bg' => '#fee2e2', 'color' => '#b91c1c'],
                 'info'    => ['icon' => 'ti ti-calendar-event', 'bg' => '#dbeafe', 'color' => '#1d4ed8'],
-                'neutral' => ['icon' => 'ti ti-minus-circle',   'bg' => '#f1f5f9', 'color' => '#64748b'],
+                'neutral' => ['icon' => 'ti ti-circle-minus',   'bg' => '#f1f5f9', 'color' => '#64748b'],
             ];
         @endphp
 
