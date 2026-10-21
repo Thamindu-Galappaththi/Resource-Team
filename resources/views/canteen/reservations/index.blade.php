@@ -27,27 +27,35 @@
     @endif
 
     <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-4">
-            <div class="card border-0 h-100">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="text-muted small text-uppercase fw-semibold">Reservations</div>
                     <div class="fs-3 fw-semibold mt-1">{{ number_format($summary['total'] ?? 0) }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-4">
-            <div class="card border-0 h-100">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="text-muted small text-uppercase fw-semibold">Awaiting review</div>
                     <div class="fs-3 fw-semibold mt-1">{{ number_format($summary['pending'] ?? 0) }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-4">
-            <div class="card border-0 h-100">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Rejected or cancelled</div>
-                    <div class="fs-3 fw-semibold mt-1">{{ number_format($summary['rejected_cancelled'] ?? 0) }}</div>
+                    <div class="text-muted small text-uppercase fw-semibold">Approved</div>
+                    <div class="fs-3 fw-semibold text-success mt-1">{{ number_format($summary['approved'] ?? 0) }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-semibold">Rejected</div>
+                    <div class="fs-3 fw-semibold text-danger mt-1">{{ number_format($summary['rejected'] ?? 0) }}</div>
                 </div>
             </div>
         </div>
@@ -81,11 +89,22 @@
                     <label class="form-label" for="status">Status</label>
                     <select id="status" name="status" class="form-select">
                         <option value="">All</option>
-                        @foreach(\App\Enums\CanteenReservationStatus::cases() as $status)
+                        @foreach([\App\Enums\CanteenReservationStatus::PENDING, \App\Enums\CanteenReservationStatus::APPROVED, \App\Enums\CanteenReservationStatus::REJECTED] as $status)
                             <option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>
                         @endforeach
                     </select>
                 </div>
+                @if($requesters->isNotEmpty())
+                    <div class="col-sm-6 col-md-3">
+                        <label class="form-label" for="requested_by_user_id">Requester</label>
+                        <select id="requested_by_user_id" name="requested_by_user_id" class="form-select">
+                            <option value="">All requesters</option>
+                            @foreach($requesters as $requester)
+                                <option value="{{ $requester->id }}" @selected((string) request('requested_by_user_id') === (string) $requester->id)>{{ $requester->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
                 <div class="col-12 col-md-auto d-flex gap-2">
                     <button class="btn btn-primary"><i class="ti ti-filter me-1"></i>Apply</button>
                     @if(request()->query())
@@ -147,22 +166,26 @@
                                                 <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-sm btn-outline-secondary">View</a>
                                             @endcan
                                             @can('update', $reservation)
-                                                @if($reservation->canBeEdited() || auth()->user()?->hasRole('developer', 'super_admin', 'admin', 'coordinator'))
-                                                    <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                                @endif
+                                                <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-primary">Edit</a>
                                             @endcan
                                             @can('manageStatus', $reservation)
                                                 @if($reservation->status === \App\Enums\CanteenReservationStatus::PENDING->value)
                                                     <form method="POST" action="{{ route('canteen.status', $reservation) }}" class="d-inline">
                                                         @csrf
                                                         @method('PATCH')
-                                                        <input type="hidden" name="status" value="confirmed">
+                                                        <input type="hidden" name="status" value="approved">
                                                         <button class="btn btn-sm btn-success" type="submit">Approve</button>
                                                     </form>
                                                     <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectCanteen-{{ $reservation->id }}">Reject</button>
                                                 @endif
                                             @endcan
-                                            @can('cancel', $reservation)
+                                            @can('delete', $reservation)
+                                                <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this reservation?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                                </form>
+                                            @elsecan('cancel', $reservation)
                                                 <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel this reservation?')">
                                                     @csrf
                                                     @method('DELETE')

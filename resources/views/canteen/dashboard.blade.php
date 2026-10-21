@@ -7,7 +7,7 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
             <h1 class="h3 text-white mb-2">Canteen Dashboard</h1>
-            <p class="text-white-50 mb-0">Plan service around confirmed and pending meal demand.</p>
+            <p class="text-white-50 mb-0">Plan service around approved and pending meal demand.</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             @can('viewAny', \App\Models\CanteenReservation::class)
@@ -19,9 +19,44 @@
         </div>
     </div>
 
+    <div class="row g-3 mb-4" aria-label="Reservation summary">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-semibold">Total reservations</div>
+                    <div class="fs-3 fw-semibold mt-2">{{ number_format($summary['total'] ?? 0) }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-semibold">Pending approvals</div>
+                    <div class="fs-3 fw-semibold text-warning mt-2">{{ number_format($summary['pending'] ?? 0) }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-semibold">Approved</div>
+                    <div class="fs-3 fw-semibold text-success mt-2">{{ number_format($summary['approved'] ?? 0) }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-semibold">Rejected</div>
+                    <div class="fs-3 fw-semibold text-danger mt-2">{{ number_format($summary['rejected'] ?? 0) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 h-100">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="text-muted small text-uppercase fw-semibold">Expected today</div>
                     <div class="d-flex align-items-baseline gap-2 mt-2"><h3 class="mb-0">{{ number_format($todayTotal ?? 0) }}</h3><span class="text-muted">orders</span></div>
@@ -29,15 +64,15 @@
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 h-100">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Confirmed meals</div>
+                    <div class="text-muted small text-uppercase fw-semibold">Approved meals today</div>
                     <div class="d-flex align-items-baseline gap-2 mt-2"><h3 class="mb-0">{{ number_format($todayConfirmed ?? 0) }}</h3><span class="text-muted">orders</span></div>
                 </div>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 h-100">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="text-muted small text-uppercase fw-semibold">Awaiting review</div>
                     <div class="d-flex align-items-baseline gap-2 mt-2"><h3 class="mb-0">{{ number_format($todayPending ?? 0) }}</h3><span class="text-muted">groups</span></div>
@@ -45,7 +80,7 @@
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 h-100">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="text-muted small text-uppercase fw-semibold">Busiest service slot</div>
                     <h3 class="mt-2 mb-0">{{ $peakSlot ?? 'No bookings' }}</h3>
@@ -79,7 +114,7 @@
                     <div class="d-flex justify-content-between align-items-end mb-3">
                         <div>
                             <h2 class="h5 mb-1">Next 7 days</h2>
-                            <p class="text-muted mb-0">Pending and confirmed orders only</p>
+                            <p class="text-muted mb-0">Pending and approved orders only</p>
                         </div>
                     </div>
                     <div class="row g-3">

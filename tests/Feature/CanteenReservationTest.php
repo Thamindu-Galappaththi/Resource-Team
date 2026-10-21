@@ -19,7 +19,7 @@ class CanteenReservationTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_create_valid_reservation_succeeds_and_defaults_to_confirmed_status(): void
+    public function test_create_valid_reservation_succeeds_and_defaults_to_pending_status(): void
     {
         $user = User::factory()->role('slt_employee')->create();
 
@@ -38,7 +38,7 @@ class CanteenReservationTest extends TestCase
         $this->assertDatabaseHas('canteen_reservations', [
             'requested_by_user_id' => $user->id,
             'reservation_name' => 'Team lunch',
-            'status' => 'confirmed',
+            'status' => 'pending',
         ]);
     }
 
@@ -105,7 +105,7 @@ class CanteenReservationTest extends TestCase
             ->assertSessionHasErrors('number_of_orders');
     }
 
-    public function test_large_group_order_is_flagged_pending(): void
+    public function test_reservation_remains_pending_until_reviewed(): void
     {
         $user = User::factory()->role('slt_employee')->create();
 
@@ -138,13 +138,13 @@ class CanteenReservationTest extends TestCase
 
         $this->actingAs($approver)
             ->patch(route('canteen.status', $reservation), [
-                'status' => 'confirmed',
+                'status' => 'approved',
                 'approval_comments' => 'Approved',
             ])
             ->assertRedirect();
 
         $reservation->refresh();
-        $this->assertSame('confirmed', $reservation->status);
+        $this->assertSame('approved', $reservation->status);
         Notification::assertSentTo($requester, \App\Notifications\CanteenReservationStatusUpdated::class);
     }
 
@@ -208,9 +208,9 @@ class CanteenReservationTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get(route('canteen.index', ['status' => 'pending']))
+            ->get(route('canteen.index', ['status' => 'approved']))
             ->assertOk()
-            ->assertSee('pending');
+            ->assertSee('Approved');
     }
 
     public function test_canteen_role_cannot_access_create_route(): void
@@ -327,28 +327,63 @@ class CanteenReservationTest extends TestCase
             ->assertSee('Approve reservation');
 
         $this->actingAs($staff)
-            ->patch(route('canteen.status', $reservation), ['status' => 'confirmed'])
+            ->patch(route('canteen.status', $reservation), ['status' => 'approved'])
             ->assertRedirect(route('canteen.show', $reservation));
 
         $this->assertDatabaseHas('canteen_reservations', [
             'id' => $reservation->id,
-            'status' => 'confirmed',
+            'status' => 'approved',
             'approved_by_user_id' => $staff->id,
         ]);
     }
 
-    public function test_dashboard_counts_only_pending_and_confirmed_orders(): void
+    public function test_regular_user_cannot_approve_another_users_reservation(): void
+    {
+        $requester = User::factory()->role('slt_employee')->create();
+        $otherUser = User::factory()->role('slt_employee')->create();
+        $reservation = CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($otherUser)
+            ->patch(route('canteen.status', $reservation), ['status' => 'approved'])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('canteen_reservations', [
+            'id' => $reservation->id,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_system_admin_can_delete_another_users_reservation(): void
+    {
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $reservation = CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('canteen.destroy', $reservation))
+            ->assertRedirect(route('canteen.index'));
+
+        $this->assertDatabaseMissing('canteen_reservations', ['id' => $reservation->id]);
+    }
+
+    public function test_dashboard_counts_only_pending_and_approved_orders(): void
     {
         $staff = User::factory()->role('canteen')->create();
         $requester = User::factory()->role('slt_employee')->create();
 
         CanteenReservation::factory()->create([
             'requested_by_user_id' => $requester->id,
-            'reservation_name' => 'Confirmed kitchen lunch',
+            'reservation_name' => 'Approved kitchen lunch',
             'reservation_date' => now()->toDateString(),
             'reservation_time' => '12:00:00',
             'number_of_orders' => 17,
-            'status' => 'confirmed',
+            'status' => 'approved',
         ]);
         CanteenReservation::factory()->create([
             'requested_by_user_id' => $requester->id,

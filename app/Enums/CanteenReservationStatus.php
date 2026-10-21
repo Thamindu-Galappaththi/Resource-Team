@@ -5,6 +5,7 @@ namespace App\Enums;
 enum CanteenReservationStatus: string
 {
     case PENDING = 'pending';
+    case APPROVED = 'approved';
     case CONFIRMED = 'confirmed';
     case REJECTED = 'rejected';
     case CANCELLED = 'cancelled';
@@ -17,18 +18,18 @@ enum CanteenReservationStatus: string
 
     public static function kitchen(): array
     {
-        return [self::PENDING->value, self::CONFIRMED->value];
+        return [self::PENDING->value, self::APPROVED->value, self::CONFIRMED->value];
     }
 
     public function label(): string
     {
-        return ucfirst($this->value);
+        return $this === self::CONFIRMED ? 'Approved' : ucfirst($this->value);
     }
 
     public function badgeClass(): string
     {
         return match ($this) {
-            self::CONFIRMED => 'bg-success-subtle text-success',
+            self::APPROVED, self::CONFIRMED => 'bg-success-subtle text-success',
             self::PENDING => 'bg-warning-subtle text-dark',
             self::REJECTED, self::CANCELLED => 'bg-danger-subtle text-danger',
             self::COMPLETED => 'bg-secondary-subtle text-secondary',
