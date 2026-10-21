@@ -108,9 +108,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/resource-rates', [ResourceRateController::class, 'store'])->middleware('permission:payments.rates.manage')->name('rates.store');
         Route::put('/resource-rates/{rate}', [ResourceRateController::class, 'update'])->middleware('permission:payments.rates.manage')->name('rates.update');
         Route::patch('/resource-rates/{rate}/deactivate', [ResourceRateController::class, 'deactivate'])->middleware('permission:payments.rates.manage')->name('rates.deactivate');
+        Route::patch('/resource-rates/{rate}/activate', [ResourceRateController::class, 'activate'])->middleware('permission:payments.rates.manage')->name('rates.activate');
         Route::post('/resource-payment-discounts', [ResourceRateController::class, 'storeDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.store');
         Route::put('/resource-payment-discounts/{rule}', [ResourceRateController::class, 'updateDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.update');
         Route::patch('/resource-payment-discounts/{rule}/deactivate', [ResourceRateController::class, 'deactivateDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.deactivate');
+        Route::patch('/resource-payment-discounts/{rule}/activate', [ResourceRateController::class, 'activateDiscount'])->middleware('permission:payments.rates.manage')->name('discounts.activate');
     });
 
     Route::prefix('reports')->name('reports.')->middleware('permission:reports.view')->controller(ReportController::class)->group(function () {
