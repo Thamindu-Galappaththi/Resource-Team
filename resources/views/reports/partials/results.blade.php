@@ -289,7 +289,7 @@
 
     <div class="rpt-kpi-grid rpt-kpi-grid-tight mb-3">
         <div class="rpt-kpi">
-            <div class="rpt-kpi-label">Total Payable</div>
+            <div class="rpt-kpi-label">Total Lecture Fees</div>
             <div class="rpt-kpi-value rpt-kpi-money">LKR {{ number_format($data['financial']['total_payable_lkr'], 2) }}</div>
             <div class="rpt-kpi-sub">{{ $data['financial']['payable_count'] }} records</div>
         </div>

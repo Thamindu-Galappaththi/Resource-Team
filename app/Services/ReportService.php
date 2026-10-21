@@ -413,9 +413,8 @@ class ReportService
             })->get();
 
         $totalPayable    = $payables->sum('net_amount_minor') / 100;  // convert minor units
-        $paidPayables    = $payables->where('status', 'paid');
         $unpaidPayables  = $payables->where('status', 'unpaid');
-        $pendingPayables = $payables->whereNotIn('status', ['paid', 'unpaid']);
+        $paidPayables    = $payables->where('status', '!=', 'unpaid');
 
         $totalPaid   = $paidPayables->sum('net_amount_minor') / 100;
         $totalUnpaid = $unpaidPayables->sum('net_amount_minor') / 100;
@@ -423,14 +422,18 @@ class ReportService
         // Per-lecturer summary
         $byLecturer = $payables->groupBy('lecturer_id')->map(function ($group) {
             $first = $group->first();
+            $paid   = round($group->where('status', '!=', 'unpaid')->sum('net_amount_minor') / 100, 2);
+            $unpaid = round($group->where('status', 'unpaid')->sum('net_amount_minor') / 100, 2);
+            $total  = round($group->sum('net_amount_minor') / 100, 2);
+
             return [
                 'name'        => $first->lecturer?->name ?? 'Unknown',
                 'sessions'    => $group->count(),
                 'total_hours' => round($group->sum('hours'), 1),
-                'total_lkr'   => round($group->sum('net_amount_minor') / 100, 2),
-                'paid_lkr'    => round($group->where('status', 'paid')->sum('net_amount_minor') / 100, 2),
-                'unpaid_lkr'  => round($group->where('status', 'unpaid')->sum('net_amount_minor') / 100, 2),
-                'status'      => $group->where('status', 'unpaid')->count() > 0 ? 'has_unpaid' : 'all_paid',
+                'total_lkr'   => $total,
+                'paid_lkr'    => $paid,
+                'unpaid_lkr'  => $unpaid,
+                'status'      => $unpaid > 0 ? 'has_unpaid' : 'all_paid',
             ];
         })->values();
 
