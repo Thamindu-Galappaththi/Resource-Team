@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class RolePermissionSeeder extends Seeder
@@ -51,6 +52,17 @@ class RolePermissionSeeder extends Seeder
             }
 
             $role->permissions()->sync($ids);
+        }
+
+        $retired = Role::query()
+            ->whereNotIn('slug', array_keys(config('rbac.roles', [])))
+            ->get();
+
+        foreach ($retired as $role) {
+            $role->permissions()->detach();
+            $role->users()->detach();
+            $role->update(['is_active' => false]);
+            User::query()->where('role_id', $role->id)->update(['is_active' => false]);
         }
     }
 }
