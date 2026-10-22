@@ -56,16 +56,16 @@
         </section>
 
         <section class="cp-filter-area" aria-label="Filter reservations">
-            <form method="GET" action="{{ route('canteen.index') }}" class="cp-filter-grid">
-                <div>
+            <form method="GET" action="{{ route('canteen.index') }}" class="cp-filters" data-action-lock="off">
+                <div class="cp-filter cp-f-search">
                     <label class="form-label" for="search">Search</label>
                     <input id="search" type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Reference, reservation, requester">
                 </div>
-                <div>
+                <div class="cp-filter">
                     <label class="form-label" for="from_date">From</label>
                     <input id="from_date" type="date" name="from_date" class="form-control" value="{{ request('from_date') }}">
                 </div>
-                <div>
+                <div class="cp-filter">
                     <label class="form-label" for="to_date">To</label>
                     <input id="to_date" type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                 </div>
@@ -75,25 +75,25 @@
                     $selectedCanteenStatus = collect($statusOptions)->first(fn ($status) => $status->value === request('status'));
                     $selectedRequester = $requesters->firstWhere('id', (int) request('requested_by_user_id'));
                 @endphp
-                <div>
+                <div class="cp-filter">
                     <label class="form-label" for="meal_type">Meal type</label>
                     <x-rm-select id="meal_type" name="meal_type" placeholder="All meals" :value="(string) request('meal_type', '')" :selected-label="$selectedMeal?->label() ?? 'All meals'"
                         :options="collect([['value' => '', 'label' => 'All meals']])->concat(collect(\App\Enums\MealType::cases())->map(fn ($type) => ['value' => $type->value, 'label' => $type->label()]))->all()" />
                 </div>
-                <div>
+                <div class="cp-filter">
                     <label class="form-label" for="status">Status</label>
                     <x-rm-select id="status" name="status" placeholder="All statuses" :value="(string) request('status', '')" :selected-label="$selectedCanteenStatus?->label() ?? 'All statuses'"
                         :options="collect([['value' => '', 'label' => 'All statuses']])->concat(collect($statusOptions)->map(fn ($status) => ['value' => $status->value, 'label' => $status->label()]))->all()" />
                 </div>
                 @if($requesters->isNotEmpty())
-                    <div>
+                    <div class="cp-filter">
                         <label class="form-label" for="requested_by_user_id">Requester</label>
                         <x-rm-select id="requested_by_user_id" name="requested_by_user_id" placeholder="All requesters" :value="(string) request('requested_by_user_id', '')" :selected-label="$selectedRequester?->name ?? 'All requesters'"
                             :options="collect([['value' => '', 'label' => 'All requesters']])->concat($requesters->map(fn ($requester) => ['value' => (string) $requester->id, 'label' => $requester->name]))->all()" />
                     </div>
                 @endif
                 <div class="cp-filter-actions">
-                    <button class="btn btn-primary"><i class="ti ti-filter me-1"></i>Apply</button>
+                    <button type="submit" class="btn btn-primary"><i class="ti ti-filter me-1"></i>Apply</button>
                     @if(request()->query())
                         <a href="{{ route('canteen.index') }}" class="btn btn-outline-secondary">Clear</a>
                     @endif
