@@ -12,7 +12,7 @@
     <div class="row g-3">
         <div class="col-md-6">
             <label class="form-label" for="reservation_name">Reservation name <span class="text-danger">*</span></label>
-            <input id="reservation_name" type="text" maxlength="255" class="form-control @error('reservation_name') is-invalid @enderror" name="reservation_name" value="{{ old('reservation_name', $reservation?->reservation_name) }}" placeholder="e.g. Engineering team lunch" required autofocus>
+            <input id="reservation_name" type="text" maxlength="255" class="form-control @error('reservation_name') is-invalid @enderror" name="reservation_name" value="{{ old('reservation_name', $reservation?->reservation_name) }}" placeholder="e.g. Engineering team lunch" required>
             @error('reservation_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         @php

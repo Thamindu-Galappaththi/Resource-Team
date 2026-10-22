@@ -25,44 +25,47 @@ class CanteenReservationController extends Controller
         $this->authorize('viewAny', CanteenReservation::class);
 
         $today = now()->toDateString();
+        $windowEnd = now()->addDays(6)->toDateString();
         $query = CanteenReservation::query()->with('requestedBy');
         $this->restrictToOwnUnlessStaff($query);
 
         $reservations = $query
-            ->whereBetween('reservation_date', [$today, now()->addDays(6)->toDateString()])
+            ->whereDate('reservation_date', '>=', $today)
+            ->whereDate('reservation_date', '<=', $windowEnd)
             ->whereIn('status', CanteenReservationStatus::kitchen())
             ->orderBy('reservation_date')
-            ->get();
+            ->get()
+            ->groupBy(fn (CanteenReservation $reservation) => $this->serviceDate($reservation));
 
         $forecast = collect();
         for ($i = 0; $i < 7; $i++) {
             $date = now()->addDays($i)->toDateString();
-            $dayReservations = $reservations->filter(
-                fn (CanteenReservation $reservation) => $reservation->reservation_date->toDateString() === $date
-            );
+            $dayReservations = $reservations->get($date, collect());
             $forecast->push([
                 'date' => $date,
-                'total' => $dayReservations->sum('number_of_orders'),
+                'total' => $this->orderCount($dayReservations),
                 'groups' => $dayReservations->count(),
             ]);
         }
 
-        $todayReservations = $reservations->filter(
-            fn (CanteenReservation $reservation) => $reservation->reservation_date->toDateString() === $today
-        );
+        $todayReservations = $reservations->get($today, collect());
         $peakSlot = $todayReservations
             ->groupBy(fn (CanteenReservation $reservation) => $reservation->serviceTimeInput())
-            ->sortByDesc(fn ($slot) => $slot->sum('number_of_orders'))
+            ->sortByDesc(fn ($slot) => $this->orderCount($slot))
             ->keys()
             ->first();
 
-        $mealBreakdown = $todayReservations
-            ->groupBy('meal_type')
-            ->map(fn ($group, $mealType) => [
-                'meal' => MealType::tryFrom((string) $mealType)?->label() ?? ucfirst(str_replace('_', ' ', (string) $mealType)),
-                'orders' => $group->sum('number_of_orders'),
-                'groups' => $group->count(),
-            ])
+        $mealBreakdown = collect(MealType::cases())
+            ->map(function (MealType $meal) use ($todayReservations) {
+                $group = $todayReservations->where('meal_type', $meal->value);
+
+                return [
+                    'meal' => $meal->label(),
+                    'orders' => $this->orderCount($group),
+                    'groups' => $group->count(),
+                ];
+            })
+            ->filter(fn (array $row) => $row['orders'] > 0)
             ->values();
 
         $summaryQuery = CanteenReservation::query();
@@ -94,13 +97,13 @@ class CanteenReservationController extends Controller
             'canReview' => $canReview,
             'forecast' => $forecast,
             'mealBreakdown' => $mealBreakdown,
-            'todayTotal' => $todayReservations->sum('number_of_orders'),
-            'todayConfirmed' => $todayReservations
-                ->whereIn('status', CanteenReservationStatus::accepted())
-                ->sum('number_of_orders'),
-            'todayPending' => $todayReservations
-                ->where('status', CanteenReservationStatus::PENDING->value)
-                ->count(),
+            'todayTotal' => $this->orderCount($todayReservations),
+            'todayConfirmed' => $this->orderCount(
+                $todayReservations->whereIn('status', CanteenReservationStatus::accepted())
+            ),
+            'todayPending' => $this->orderCount(
+                $todayReservations->where('status', CanteenReservationStatus::PENDING->value)
+            ),
             'todayBookings' => $todayReservations->count(),
             'peakSlot' => $peakSlot
                 ? (\Illuminate\Support\Facades\Date::createFromFormat('H:i', $peakSlot)?->format('g:i A') ?? $peakSlot)
@@ -149,7 +152,7 @@ class CanteenReservationController extends Controller
             $query->where('requested_by_user_id', $request->integer('requested_by_user_id'));
         }
 
-        $reservations = $query->paginate(15)->appends($request->query());
+        $reservations = $query->paginate(10)->appends($request->query());
 
         $requesters = $this->seesAllCanteenReservations()
             ? User::query()
@@ -301,6 +304,22 @@ class CanteenReservationController extends Controller
             'mealTypes' => MealType::cases(),
             'locations' => Location::query()->ordered()->get(),
         ];
+    }
+
+    private function serviceDate(CanteenReservation $reservation): string
+    {
+        return substr((string) $reservation->getRawOriginal('reservation_date'), 0, 10);
+    }
+
+    private function orderCount($reservations): int
+    {
+        $items = $reservations instanceof \Illuminate\Support\Enumerable
+            ? $reservations
+            : collect($reservations);
+
+        return (int) $items->sum(
+            fn (CanteenReservation $reservation) => (int) $reservation->number_of_orders
+        );
     }
 
     private function restrictToOwnUnlessStaff($query): void

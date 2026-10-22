@@ -22,7 +22,7 @@
     </header>
 
     @if($errors->any())
-        <div class="alert alert-danger" role="alert"><strong>Please check the form.</strong> Some details need your attention.</div>
+        <div class="alert alert-danger cp-auto-alert" role="alert"><strong>Please check the form.</strong> Some details need your attention.</div>
     @endif
 
     <section class="cp-surface">
@@ -95,5 +95,5 @@
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/canteen-ui.js') }}?v=2"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=4"></script>
 @endpush

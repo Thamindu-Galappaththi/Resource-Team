@@ -152,17 +152,23 @@
                                                     <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="Edit" aria-label="Edit {{ $reservation->reservation_ref }}"><i class="ti ti-pencil"></i></a>
                                                 @endcan
                                                 @can('delete', $reservation)
-                                                    <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this reservation?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button class="btn btn-sm btn-outline-danger cp-icon-btn" type="submit" title="Delete" aria-label="Delete {{ $reservation->reservation_ref }}"><i class="ti ti-trash"></i></button>
-                                                    </form>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger cp-icon-btn" title="Delete" aria-label="Delete {{ $reservation->reservation_ref }}"
+                                                        data-cp-confirm
+                                                        data-cp-action="{{ route('canteen.destroy', $reservation) }}"
+                                                        data-cp-title="Delete reservation?"
+                                                        data-cp-sub="{{ $reservation->reservation_ref }} · {{ $reservation->reservation_name }}"
+                                                        data-cp-copy="This will permanently remove the reservation."
+                                                        data-cp-submit="Delete reservation"
+                                                        data-cp-icon="ti ti-trash"><i class="ti ti-trash"></i></button>
                                                 @elsecan('cancel', $reservation)
-                                                    <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel this reservation?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button class="btn btn-sm btn-outline-danger cp-icon-btn" type="submit" title="Cancel" aria-label="Cancel {{ $reservation->reservation_ref }}"><i class="ti ti-ban"></i></button>
-                                                    </form>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger cp-icon-btn" title="Cancel" aria-label="Cancel {{ $reservation->reservation_ref }}"
+                                                        data-cp-confirm
+                                                        data-cp-action="{{ route('canteen.destroy', $reservation) }}"
+                                                        data-cp-title="Cancel reservation?"
+                                                        data-cp-sub="{{ $reservation->reservation_ref }} · {{ $reservation->reservation_name }}"
+                                                        data-cp-copy="This will cancel the meal request and notify the canteen team."
+                                                        data-cp-submit="Cancel reservation"
+                                                        data-cp-icon="ti ti-ban"><i class="ti ti-ban"></i></button>
                                                 @endcan
                                             </span>
                                         </td>
@@ -178,11 +184,12 @@
     </main>
 </div>
 
+@include('canteen.partials.confirm-modal')
 @endsection
 
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/canteen-ui.js') }}?v=2"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=4"></script>
 <script src="{{ asset('js/canteen-index.js') }}?v=1"></script>
 @endpush

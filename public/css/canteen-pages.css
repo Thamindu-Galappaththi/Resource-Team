@@ -359,10 +359,61 @@
 .cp-detail-label { color: #5b6b86; font-size: 13px; font-weight: 700; }
 .cp-detail-value { color: #14315e; font-size: 14px; font-weight: 700; word-break: break-word; }
 
-.cp-page .cd-header .badge {
-    padding: .45rem .85rem;
-    border-radius: 999px;
-    font-size: .78rem;
+.cp-page .cd-header .cd-status {
+    min-height: 34px;
+}
+
+.cp-modal .modal-content {
+    overflow: hidden;
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(15, 31, 84, .28);
+}
+.cp-modal .modal-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    padding: 1.1rem 3.5rem 1.1rem 1.35rem;
+    background: linear-gradient(120deg, #123a7a 0%, #1769c2 55%, #5b4fc9 100%);
+    border-bottom: 0;
+}
+.cp-modal .modal-header > div { min-width: 0; flex: 1; }
+.cp-modal .modal-title { margin: 0; color: #fff; font-weight: 700; }
+.cp-modal-sub { margin: .15rem 0 0; color: rgba(255,255,255,.8); font-size: .82rem; }
+.cp-modal-icon {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    font-size: 1.25rem;
+}
+.cp-modal-close {
+    position: absolute;
+    top: 18px;
+    right: 14px;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,.16);
+    color: #fff;
+}
+.cp-modal-close:hover { background: rgba(255,255,255,.28); color: #fff; }
+.cp-modal .modal-body { padding: 1.1rem 1.35rem; color: #24324a; }
+.cp-modal .modal-footer {
+    padding: .9rem 1.35rem 1.15rem;
+    border-top: 1px solid #d5def0;
+    background: #eef3ff;
 }
 
 .cp-empty-state { padding: 3.5rem 1rem; color: var(--cp-muted); text-align: center; }

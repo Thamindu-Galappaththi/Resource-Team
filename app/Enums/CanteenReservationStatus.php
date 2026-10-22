@@ -40,4 +40,15 @@ enum CanteenReservationStatus: string
             self::COMPLETED => 'bg-secondary-subtle text-secondary',
         };
     }
+
+    public function tone(): string
+    {
+        return match ($this) {
+            self::APPROVED, self::CONFIRMED => 'approved',
+            self::PENDING => 'pending',
+            self::REJECTED => 'rejected',
+            self::CANCELLED => 'cancelled',
+            self::COMPLETED => 'completed',
+        };
+    }
 }

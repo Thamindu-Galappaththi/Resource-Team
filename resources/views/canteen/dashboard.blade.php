@@ -38,6 +38,14 @@
         </nav>
     </header>
 
+    @if(session('success'))
+        <div class="alert alert-success cp-auto-alert" role="status">{{ session('success') }}</div>
+    @endif
+    @if($errors->any())
+        <div class="alert alert-danger cp-auto-alert" role="alert">{{ $errors->first() }}</div>
+    @endif
+    <div id="cd-flash" class="alert cp-auto-alert d-none" role="status"></div>
+
     <section class="cd-kpis" aria-label="Reservation summary">
         <article class="cd-kpi tone-primary">
             <div class="cd-kpi__top">
@@ -86,7 +94,7 @@
                 </a>
             </div>
 
-            <div class="cd-card__body">
+            <div class="cd-card__body" id="cd-pending-results">
                 @forelse($pendingApprovals as $reservation)
                     <article class="cd-request">
                         <div class="cd-request__icon" aria-hidden="true">
@@ -157,7 +165,7 @@
             </article>
             <article class="cd-glance__item tone-warning">
                 <div class="cd-glance__label"><i class="ti ti-clock" aria-hidden="true"></i>Awaiting review</div>
-                <p class="cd-glance__value">{{ number_format($todayPending ?? 0) }} <small>groups</small></p>
+                <p class="cd-glance__value">{{ number_format($todayPending ?? 0) }} <small>orders</small></p>
             </article>
             <article class="cd-glance__item tone-info">
                 <div class="cd-glance__label"><i class="ti ti-clock-hour-4" aria-hidden="true"></i>Busiest service slot</div>
@@ -183,7 +191,7 @@
                         <span class="cd-meal__icon" aria-hidden="true"><i class="ti ti-tools-kitchen-2"></i></span>
                         <div class="cd-meal__copy">
                             <div class="cd-meal__name">{{ $row['meal'] }}</div>
-                            <div class="cd-meal__meta">{{ number_format($row['groups']) }} {{ \Illuminate\Support\Str::plural('group', $row['groups']) }}</div>
+                            <div class="cd-meal__meta">{{ number_format($row['orders']) }} {{ \Illuminate\Support\Str::plural('order', $row['orders']) }} · {{ number_format($row['groups']) }} {{ \Illuminate\Support\Str::plural('group', $row['groups']) }}</div>
                             <div class="cd-meal__bar" aria-hidden="true"><span style="width: {{ $pct }}%"></span></div>
                         </div>
                         <div class="cd-meal__orders">{{ number_format($row['orders']) }}</div>
@@ -220,5 +228,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/canteen-ui.js') }}?v=2"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=4"></script>
 @endpush

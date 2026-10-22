@@ -1,5 +1,6 @@
 @if($paginator->hasPages())
 <nav class="cd-pager" aria-label="Pagination">
+    <p>Showing {{ $paginator->firstItem() }}–{{ $paginator->lastItem() }} of {{ $paginator->total() }}</p>
     <ul class="pagination mb-0">
         <li class="page-item {{ $paginator->onFirstPage() ? 'disabled' : '' }}">
             @if($paginator->onFirstPage())

@@ -132,17 +132,59 @@
 
 .cd-btn--outline,
 .cd-actions .btn-outline-light {
-    border-color: rgba(255,255,255,.55);
-    background: rgba(255,255,255,.08);
+    border: 1.5px solid #fff;
+    background: transparent;
     color: #fff;
-    backdrop-filter: blur(6px);
 }
 .cd-btn--outline:hover,
-.cd-actions .btn-outline-light:hover {
-    border-color: rgba(255,255,255,.85);
-    background: rgba(255,255,255,.22);
-    color: #fff;
+.cd-btn--outline:focus-visible,
+.cd-actions .btn-outline-light:hover,
+.cd-actions .btn-outline-light:focus-visible {
+    border-color: #fff;
+    background: #fff;
+    color: #1769c2;
 }
+
+.cd-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 34px;
+    padding: 0.28rem 0.9rem;
+    border: 0;
+    border-radius: 999px;
+    background: #fde68a;
+    color: #92400e;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    cursor: default;
+    pointer-events: none;
+    user-select: none;
+}
+.cd-status::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.cd-status--pending { background: #fde68a; color: #92400e; }
+.cd-status--approved { background: #bbf7d0; color: #166534; }
+.cd-status--rejected { background: #fecaca; color: #9f1239; }
+.cd-status--cancelled,
+.cd-status--completed { background: #e2e8f0; color: #475569; }
+
+.cp-auto-alert {
+    border: 0;
+    border-radius: 0.75rem;
+    box-shadow: 0 8px 20px rgba(18, 58, 122, .12);
+}
+
+#cd-pending-results { position: relative; transition: opacity .18s ease; }
+#cd-pending-results.is-loading { pointer-events: none; opacity: .55; }
 
 .cd-btn--solid,
 .cd-hero .cd-btn--solid,
@@ -566,14 +608,19 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 0.75rem;
     margin-top: 0.9rem;
     padding-top: 0.75rem;
     border-top: 1px solid #f1f5fb;
 }
-.cd-pager p { display: none; }
-.cd-pager .pagination { gap: 0.25rem; }
+.cd-pager p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.cd-pager .pagination { gap: 0.25rem; margin-left: auto; }
 .cd-pager .page-link {
     min-width: 36px;
     height: 36px;
@@ -664,7 +711,8 @@
     .cd-day:focus-visible {
         transform: none;
     }
-    .cd-pager { flex-direction: column; align-items: flex-start; }
+    .cd-pager { flex-direction: column; align-items: stretch; }
+    .cd-pager .pagination { justify-content: flex-end; }
 }
 
 @media (max-width: 479.98px) {

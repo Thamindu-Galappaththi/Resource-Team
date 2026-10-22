@@ -311,7 +311,8 @@ class CanteenReservationTest extends TestCase
             ->assertOk()
             ->assertSee('Create Canteen Reservation')
             ->assertSee('Order requirements')
-            ->assertSee('location_id');
+            ->assertSee('location_id')
+            ->assertDontSee('autofocus', false);
     }
 
     public function test_requester_cannot_view_or_edit_another_users_reservation(): void
@@ -419,7 +420,26 @@ class CanteenReservationTest extends TestCase
             'reservation_name' => 'Approved kitchen lunch',
             'reservation_date' => now()->toDateString(),
             'reservation_time' => '12:00:00',
+            'meal_type' => 'lunch',
             'number_of_orders' => 17,
+            'status' => 'approved',
+        ]);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'reservation_name' => 'Pending breakfast trays',
+            'reservation_date' => now()->toDateString(),
+            'reservation_time' => '08:00:00',
+            'meal_type' => 'breakfast',
+            'number_of_orders' => 9,
+            'status' => 'pending',
+        ]);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'reservation_name' => 'Tomorrow catering',
+            'reservation_date' => now()->addDay()->toDateString(),
+            'reservation_time' => '11:00:00',
+            'meal_type' => 'event_catering',
+            'number_of_orders' => 11,
             'status' => 'approved',
         ]);
         CanteenReservation::factory()->create([
@@ -434,8 +454,12 @@ class CanteenReservationTest extends TestCase
         $this->actingAs($staff)
             ->get(route('canteen.dashboard'))
             ->assertOk()
+            ->assertSeeText('26 orders')
             ->assertSeeText('17 orders')
-            ->assertDontSeeText('108 orders');
+            ->assertSeeText('9 orders')
+            ->assertSeeText('11 orders')
+            ->assertDontSeeText('108 orders')
+            ->assertDontSeeText('91 orders');
     }
 
     public function test_store_accepts_browser_time_with_seconds(): void
