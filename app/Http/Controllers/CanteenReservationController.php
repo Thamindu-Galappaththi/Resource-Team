@@ -9,7 +9,7 @@ use App\Http\Requests\UpdateCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationStatusRequest;
 use App\Models\CanteenReservation;
 use App\Models\Location;
-use App\Notifications\CanteenReservationCreated;
+use App\Models\User;
 use App\Notifications\CanteenReservationStatusUpdated;
 use App\Notifications\NewCanteenReservationPending;
 use App\Services\NotificationRecipients;
@@ -25,56 +25,85 @@ class CanteenReservationController extends Controller
         $this->authorize('viewAny', CanteenReservation::class);
 
         $today = now()->toDateString();
+        $windowEnd = now()->addDays(6)->toDateString();
         $query = CanteenReservation::query()->with('requestedBy');
         $this->restrictToOwnUnlessStaff($query);
 
         $reservations = $query
-            ->whereBetween('reservation_date', [$today, now()->addDays(6)->toDateString()])
+            ->whereDate('reservation_date', '>=', $today)
+            ->whereDate('reservation_date', '<=', $windowEnd)
             ->whereIn('status', CanteenReservationStatus::kitchen())
             ->orderBy('reservation_date')
-            ->get();
+            ->get()
+            ->groupBy(fn (CanteenReservation $reservation) => $this->serviceDate($reservation));
 
         $forecast = collect();
         for ($i = 0; $i < 7; $i++) {
             $date = now()->addDays($i)->toDateString();
-            $dayReservations = $reservations->filter(
-                fn (CanteenReservation $reservation) => $reservation->reservation_date->toDateString() === $date
-            );
+            $dayReservations = $reservations->get($date, collect());
             $forecast->push([
                 'date' => $date,
-                'total' => $dayReservations->sum('number_of_orders'),
+                'total' => $this->orderCount($dayReservations),
                 'groups' => $dayReservations->count(),
             ]);
         }
 
-        $todayReservations = $reservations->filter(
-            fn (CanteenReservation $reservation) => $reservation->reservation_date->toDateString() === $today
-        );
+        $todayReservations = $reservations->get($today, collect());
         $peakSlot = $todayReservations
             ->groupBy(fn (CanteenReservation $reservation) => $reservation->serviceTimeInput())
-            ->sortByDesc(fn ($slot) => $slot->sum('number_of_orders'))
+            ->sortByDesc(fn ($slot) => $this->orderCount($slot))
             ->keys()
             ->first();
 
-        $mealBreakdown = $todayReservations
-            ->groupBy('meal_type')
-            ->map(fn ($group, $mealType) => [
-                'meal' => MealType::tryFrom((string) $mealType)?->label() ?? ucfirst(str_replace('_', ' ', (string) $mealType)),
-                'orders' => $group->sum('number_of_orders'),
-                'groups' => $group->count(),
-            ])
+        $mealBreakdown = collect(MealType::cases())
+            ->map(function (MealType $meal) use ($todayReservations) {
+                $group = $todayReservations->where('meal_type', $meal->value);
+
+                return [
+                    'meal' => $meal->label(),
+                    'orders' => $this->orderCount($group),
+                    'groups' => $group->count(),
+                ];
+            })
+            ->filter(fn (array $row) => $row['orders'] > 0)
             ->values();
 
+        $summaryQuery = CanteenReservation::query();
+        $this->restrictToOwnUnlessStaff($summaryQuery);
+        $summary = [
+            'total' => (clone $summaryQuery)->count(),
+            'pending' => (clone $summaryQuery)->where('status', CanteenReservationStatus::PENDING->value)->count(),
+            'approved' => (clone $summaryQuery)->whereIn('status', CanteenReservationStatus::accepted())->count(),
+            'rejected' => (clone $summaryQuery)->where('status', CanteenReservationStatus::REJECTED->value)->count(),
+        ];
+
+        $pendingApprovals = collect();
+        $canReview = $this->seesAllCanteenReservations();
+
+        if ($canReview) {
+            $pendingApprovals = CanteenReservation::query()
+                ->with(['requestedBy', 'location'])
+                ->where('status', CanteenReservationStatus::PENDING->value)
+                ->orderBy('reservation_date')
+                ->orderBy('reservation_time')
+                ->paginate(5, ['*'], 'pending_page')
+                ->withQueryString()
+                ->fragment('pending-requests');
+        }
+
         return view('canteen.dashboard', [
+            'summary' => $summary,
+            'pendingApprovals' => $pendingApprovals,
+            'canReview' => $canReview,
             'forecast' => $forecast,
             'mealBreakdown' => $mealBreakdown,
-            'todayTotal' => $todayReservations->sum('number_of_orders'),
-            'todayConfirmed' => $todayReservations
-                ->where('status', CanteenReservationStatus::CONFIRMED->value)
-                ->sum('number_of_orders'),
-            'todayPending' => $todayReservations
-                ->where('status', CanteenReservationStatus::PENDING->value)
-                ->count(),
+            'todayTotal' => $this->orderCount($todayReservations),
+            'todayConfirmed' => $this->orderCount(
+                $todayReservations->whereIn('status', CanteenReservationStatus::accepted())
+            ),
+            'todayPending' => $this->orderCount(
+                $todayReservations->where('status', CanteenReservationStatus::PENDING->value)
+            ),
             'todayBookings' => $todayReservations->count(),
             'peakSlot' => $peakSlot
                 ? (\Illuminate\Support\Facades\Date::createFromFormat('H:i', $peakSlot)?->format('g:i A') ?? $peakSlot)
@@ -94,7 +123,8 @@ class CanteenReservationController extends Controller
             ->whereDate('reservation_date', $date)
             ->whereIn('status', CanteenReservationStatus::kitchen())
             ->orderBy('reservation_time')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('canteen.forecast', compact('date', 'records'));
     }
@@ -118,7 +148,18 @@ class CanteenReservationController extends Controller
             ])
             ->orderByDesc('created_at');
 
-        $reservations = $query->paginate(15)->appends($request->query());
+        if ($this->seesAllCanteenReservations() && $request->filled('requested_by_user_id')) {
+            $query->where('requested_by_user_id', $request->integer('requested_by_user_id'));
+        }
+
+        $reservations = $query->paginate(10)->appends($request->query());
+
+        $requesters = $this->seesAllCanteenReservations()
+            ? User::query()
+                ->whereIn('id', CanteenReservation::query()->select('requested_by_user_id')->distinct())
+                ->orderBy('name')
+                ->get(['id', 'name'])
+            : collect();
 
         $summaryQuery = CanteenReservation::query();
         $this->restrictToOwnUnlessStaff($summaryQuery);
@@ -126,10 +167,11 @@ class CanteenReservationController extends Controller
         $summary = [
             'total' => (clone $summaryQuery)->count(),
             'pending' => (clone $summaryQuery)->where('status', CanteenReservationStatus::PENDING->value)->count(),
-            'rejected_cancelled' => (clone $summaryQuery)->whereIn('status', [CanteenReservationStatus::REJECTED->value, CanteenReservationStatus::CANCELLED->value])->count(),
+            'approved' => (clone $summaryQuery)->whereIn('status', CanteenReservationStatus::accepted())->count(),
+            'rejected' => (clone $summaryQuery)->where('status', CanteenReservationStatus::REJECTED->value)->count(),
         ];
 
-        return view('canteen.reservations.index', compact('reservations', 'summary'));
+        return view('canteen.reservations.index', compact('reservations', 'summary', 'requesters'));
     }
 
     public function create(): View
@@ -145,24 +187,16 @@ class CanteenReservationController extends Controller
 
         $data = $request->validated();
         $data['requested_by_user_id'] = auth()->id();
-        $data['status'] = $this->statusForOrderCount((int) $data['number_of_orders']);
+        $data['status'] = CanteenReservationStatus::PENDING->value;
 
         $reservation = DB::transaction(function () use ($data) {
             $reservation = CanteenReservation::query()->create($data);
 
-            if ($reservation->status === CanteenReservationStatus::PENDING->value) {
-                NotificationRecipients::notify(
-                    'canteen.manage',
-                    new NewCanteenReservationPending($reservation),
-                    except: [auth()->id()]
-                );
-            } else {
-                NotificationRecipients::notify(
-                    'canteen.manage',
-                    new CanteenReservationCreated($reservation),
-                    except: [auth()->id()]
-                );
-            }
+            NotificationRecipients::notify(
+                'canteen.manage',
+                new NewCanteenReservationPending($reservation),
+                except: [auth()->id()]
+            );
 
             return $reservation;
         });
@@ -201,7 +235,7 @@ class CanteenReservationController extends Controller
         }
 
         $data = $request->validated();
-        $data['status'] = $this->statusForOrderCount((int) $data['number_of_orders']);
+        unset($data['status']);
 
         $reservation->update($data);
 
@@ -215,6 +249,9 @@ class CanteenReservationController extends Controller
         abort_unless($reservation->status === CanteenReservationStatus::PENDING->value, 403, 'Only pending reservations can be approved or rejected.');
 
         $status = $request->input('status');
+        $status = $status === CanteenReservationStatus::CONFIRMED->value
+            ? CanteenReservationStatus::APPROVED->value
+            : $status;
 
         DB::transaction(function () use ($request, $reservation, $status) {
             $reservation->forceFill([
@@ -232,13 +269,19 @@ class CanteenReservationController extends Controller
 
         return redirect()
             ->route('canteen.show', $reservation)
-            ->with('success', $status === CanteenReservationStatus::CONFIRMED->value
-                ? 'Reservation confirmed.'
+            ->with('success', $status === CanteenReservationStatus::APPROVED->value
+                ? 'Reservation approved.'
                 : 'Reservation rejected.');
     }
 
     public function destroy(CanteenReservation $reservation): RedirectResponse
     {
+        if (auth()->user()?->can('delete', $reservation)) {
+            $reservation->delete();
+
+            return redirect()->route('canteen.index')->with('success', 'Reservation deleted.');
+        }
+
         $this->authorize('cancel', $reservation);
 
         if (! $reservation->canBeCancelled()) {
@@ -260,8 +303,23 @@ class CanteenReservationController extends Controller
         return [
             'mealTypes' => MealType::cases(),
             'locations' => Location::query()->ordered()->get(),
-            'largeGroupThreshold' => config('canteen.large_group_threshold', 50),
         ];
+    }
+
+    private function serviceDate(CanteenReservation $reservation): string
+    {
+        return substr((string) $reservation->getRawOriginal('reservation_date'), 0, 10);
+    }
+
+    private function orderCount($reservations): int
+    {
+        $items = $reservations instanceof \Illuminate\Support\Enumerable
+            ? $reservations
+            : collect($reservations);
+
+        return (int) $items->sum(
+            fn (CanteenReservation $reservation) => (int) $reservation->number_of_orders
+        );
     }
 
     private function restrictToOwnUnlessStaff($query): void
@@ -278,10 +336,4 @@ class CanteenReservationController extends Controller
         return (bool) auth()->user()?->hasPermission('canteen.manage');
     }
 
-    private function statusForOrderCount(int $orders): string
-    {
-        return $orders > (int) config('canteen.large_group_threshold', 50)
-            ? CanteenReservationStatus::PENDING->value
-            : CanteenReservationStatus::CONFIRMED->value;
-    }
 }

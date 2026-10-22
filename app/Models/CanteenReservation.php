@@ -43,12 +43,7 @@ class CanteenReservation extends Model
             }
 
             if (empty($reservation->status)) {
-                $reservation->status = (
-                    $reservation->number_of_orders !== null
-                    && $reservation->number_of_orders > config('canteen.large_group_threshold', 50)
-                )
-                    ? CanteenReservationStatus::PENDING->value
-                    : CanteenReservationStatus::CONFIRMED->value;
+                $reservation->status = CanteenReservationStatus::PENDING->value;
             }
         });
     }
@@ -134,11 +129,11 @@ class CanteenReservation extends Model
             return false;
         }
 
-        if ($this->status === CanteenReservationStatus::CONFIRMED->value && $this->reservation_date && $this->reservation_date->isPast()) {
+        if (in_array($this->status, CanteenReservationStatus::accepted(), true) && $this->reservation_date && $this->reservation_date->isPast()) {
             return false;
         }
 
-        return $this->status === CanteenReservationStatus::PENDING->value || $this->status === CanteenReservationStatus::CONFIRMED->value;
+        return in_array($this->status, [CanteenReservationStatus::PENDING->value, ...CanteenReservationStatus::accepted()], true);
     }
 
     public function isPastReservation(): bool
@@ -174,7 +169,11 @@ class CanteenReservation extends Model
         }
 
         if (($filters['status'] ?? null) !== null && $filters['status'] !== '') {
-            $query->where('status', $filters['status']);
+            if ($filters['status'] === CanteenReservationStatus::APPROVED->value) {
+                $query->whereIn('status', CanteenReservationStatus::accepted());
+            } else {
+                $query->where('status', $filters['status']);
+            }
         }
 
         if (($filters['from_date'] ?? null) !== null && $filters['from_date'] !== '') {
