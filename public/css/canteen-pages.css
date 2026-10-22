@@ -15,7 +15,7 @@
 }
 
 .cp-surface {
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid #d5def0;
     border-radius: 1rem;
     background: linear-gradient(180deg, #f5f8ff 0%, #fff 110px);
@@ -135,7 +135,9 @@
     min-width: 0;
     padding: .2rem 1.15rem;
     border-right: 1px solid var(--cp-line);
+    border-radius: 12px;
     animation: cp-rise .45s ease both;
+    transition: transform .2s ease, box-shadow .2s ease;
 }
 
 .cp-stat:nth-child(2) { animation-delay: .04s; }
@@ -155,7 +157,23 @@
 .cp-stat-label i { color: var(--cp-tone); font-size: 1rem; }
 .cp-stat-value { margin-top: .45rem; color: var(--cp-tone); font-size: 1.7rem; font-weight: 750; line-height: 1; }
 
-.cp-filter-area { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--cp-line); }
+.cp-filter-area {
+    position: relative;
+    z-index: 3;
+    padding: 1.25rem 1.5rem;
+    overflow: visible;
+    border-bottom: 1px solid var(--cp-line);
+}
+
+.cp-page .cu-select { position: relative; z-index: 1; width: 100%; }
+.cp-page .cu-select:has(.show) { z-index: 30; }
+.cp-page .cu-dropdown-toggle { min-height: 48px; }
+.cp-page .cu-dropdown-menu { z-index: 1080; }
+
+.cp-stat:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 22px rgba(15,23,42,.08);
+}
 
 .cp-filter-grid {
     display: grid;

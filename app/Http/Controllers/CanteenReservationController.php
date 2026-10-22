@@ -83,7 +83,9 @@ class CanteenReservationController extends Controller
                 ->where('status', CanteenReservationStatus::PENDING->value)
                 ->orderBy('reservation_date')
                 ->orderBy('reservation_time')
-                ->get();
+                ->paginate(5, ['*'], 'pending_page')
+                ->withQueryString()
+                ->fragment('pending-requests');
         }
 
         return view('canteen.dashboard', [
@@ -118,7 +120,8 @@ class CanteenReservationController extends Controller
             ->whereDate('reservation_date', $date)
             ->whereIn('status', CanteenReservationStatus::kitchen())
             ->orderBy('reservation_time')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('canteen.forecast', compact('date', 'records'));
     }

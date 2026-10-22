@@ -3,8 +3,9 @@
 @section('title', 'Existing Canteen Reservations')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v=2">
-<link rel="stylesheet" href="{{ asset('css/canteen-pages.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
+<link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v={{ @filemtime(public_path('css/canteen-dashboard.css')) ?: time() }}">
+<link rel="stylesheet" href="{{ asset('css/canteen-pages.css') }}?v={{ @filemtime(public_path('css/canteen-pages.css')) ?: time() }}">
 @endpush
 
 @section('content')
@@ -68,33 +69,27 @@
                     <label class="form-label" for="to_date">To</label>
                     <input id="to_date" type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                 </div>
+                @php
+                    $selectedMeal = collect(\App\Enums\MealType::cases())->first(fn ($type) => $type->value === request('meal_type'));
+                    $statusOptions = [\App\Enums\CanteenReservationStatus::PENDING, \App\Enums\CanteenReservationStatus::APPROVED, \App\Enums\CanteenReservationStatus::REJECTED];
+                    $selectedCanteenStatus = collect($statusOptions)->first(fn ($status) => $status->value === request('status'));
+                    $selectedRequester = $requesters->firstWhere('id', (int) request('requested_by_user_id'));
+                @endphp
                 <div>
                     <label class="form-label" for="meal_type">Meal type</label>
-                    <select id="meal_type" name="meal_type" class="form-select">
-                        <option value="">All</option>
-                        @foreach(\App\Enums\MealType::cases() as $type)
-                            <option value="{{ $type->value }}" @selected(request('meal_type') === $type->value)>{{ $type->label() }}</option>
-                        @endforeach
-                    </select>
+                    <x-rm-select id="meal_type" name="meal_type" placeholder="All meals" :value="(string) request('meal_type', '')" :selected-label="$selectedMeal?->label() ?? 'All meals'"
+                        :options="collect([['value' => '', 'label' => 'All meals']])->concat(collect(\App\Enums\MealType::cases())->map(fn ($type) => ['value' => $type->value, 'label' => $type->label()]))->all()" />
                 </div>
                 <div>
                     <label class="form-label" for="status">Status</label>
-                    <select id="status" name="status" class="form-select">
-                        <option value="">All</option>
-                        @foreach([\App\Enums\CanteenReservationStatus::PENDING, \App\Enums\CanteenReservationStatus::APPROVED, \App\Enums\CanteenReservationStatus::REJECTED] as $status)
-                            <option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>
-                        @endforeach
-                    </select>
+                    <x-rm-select id="status" name="status" placeholder="All statuses" :value="(string) request('status', '')" :selected-label="$selectedCanteenStatus?->label() ?? 'All statuses'"
+                        :options="collect([['value' => '', 'label' => 'All statuses']])->concat(collect($statusOptions)->map(fn ($status) => ['value' => $status->value, 'label' => $status->label()]))->all()" />
                 </div>
                 @if($requesters->isNotEmpty())
                     <div>
                         <label class="form-label" for="requested_by_user_id">Requester</label>
-                        <select id="requested_by_user_id" name="requested_by_user_id" class="form-select">
-                            <option value="">All requesters</option>
-                            @foreach($requesters as $requester)
-                                <option value="{{ $requester->id }}" @selected((string) request('requested_by_user_id') === (string) $requester->id)>{{ $requester->name }}</option>
-                            @endforeach
-                        </select>
+                        <x-rm-select id="requested_by_user_id" name="requested_by_user_id" placeholder="All requesters" :value="(string) request('requested_by_user_id', '')" :selected-label="$selectedRequester?->name ?? 'All requesters'"
+                            :options="collect([['value' => '', 'label' => 'All requesters']])->concat($requesters->map(fn ($requester) => ['value' => (string) $requester->id, 'label' => $requester->name]))->all()" />
                     </div>
                 @endif
                 <div class="cp-filter-actions">
@@ -179,7 +174,12 @@
                     </table>
                 </div>
             @endif
-            <div class="mt-3 cp-pagination">{{ $reservations->links() }}</div>
+            @if($reservations->hasPages())
+                <div class="cd-pager mt-3">
+                    <p>Showing {{ $reservations->firstItem() }}–{{ $reservations->lastItem() }} of {{ $reservations->total() }}</p>
+                    {{ $reservations->onEachSide(1)->links() }}
+                </div>
+            @endif
         </section>
     </main>
 </div>
@@ -187,5 +187,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/canteen-ui.js') }}?v=1"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
+<script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=2"></script>
 @endpush

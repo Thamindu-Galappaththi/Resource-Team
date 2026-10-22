@@ -3,8 +3,9 @@
 @section('title', 'Create Canteen Reservation')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v=2">
-<link rel="stylesheet" href="{{ asset('css/canteen-pages.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
+<link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v={{ @filemtime(public_path('css/canteen-dashboard.css')) ?: time() }}">
+<link rel="stylesheet" href="{{ asset('css/canteen-pages.css') }}?v={{ @filemtime(public_path('css/canteen-pages.css')) ?: time() }}">
 @endpush
 
 @section('content')
@@ -52,6 +53,7 @@
         const button = document.getElementById('canteenSubmitButton');
         const date = document.getElementById('reservation_date');
         const orders = document.getElementById('number_of_orders');
+        const meal = document.getElementById('meal_type');
 
         if (!form || !button || !date || !orders) return;
 
@@ -66,8 +68,18 @@
         });
 
         form.addEventListener('submit', (event) => {
-            if (date.value < date.min || Number(orders.value) < 1 || Number(orders.value) > 10000) {
+            const mealWrap = meal?.closest('[data-cu-select]');
+            if (mealWrap) {
+                mealWrap.classList.toggle('is-invalid', !meal.value);
+            }
+
+            if (!meal?.value || date.value < date.min || Number(orders.value) < 1 || Number(orders.value) > 10000) {
                 event.preventDefault();
+                if (!meal?.value) {
+                    mealWrap?.querySelector('.cu-dropdown-toggle')?.classList.add('is-invalid');
+                    mealWrap?.querySelector('.cu-dropdown-toggle')?.focus();
+                    return;
+                }
                 form.reportValidity();
                 return;
             }
@@ -81,5 +93,7 @@
 @endpush
 
 @push('scripts')
-<script src="{{ asset('js/canteen-ui.js') }}?v=1"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
+<script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=2"></script>
 @endpush

@@ -74,12 +74,12 @@
     </section>
 
     @if($canReview)
-        <section class="cd-card" aria-labelledby="reviewQueueHeading">
+        <section class="cd-card cd-card--warning" id="pending-requests" aria-labelledby="reviewQueueHeading">
             <div class="cd-card__head">
                 <div>
                     <p class="cd-card__eyebrow"><i class="ti ti-inbox" aria-hidden="true"></i> Approvals</p>
                     <h2 id="reviewQueueHeading">Pending requests</h2>
-                    <p class="cd-card__sub">{{ number_format($pendingApprovals->count()) }} {{ \Illuminate\Support\Str::plural('request', $pendingApprovals->count()) }} awaiting review</p>
+                    <p class="cd-card__sub">{{ number_format($pendingApprovals->total()) }} {{ \Illuminate\Support\Str::plural('request', $pendingApprovals->total()) }} awaiting review</p>
                 </div>
                 <a href="{{ route('canteen.index', ['status' => 'pending']) }}" class="cd-link">
                     View reservation list <i class="ti ti-arrow-up-right" aria-hidden="true"></i>
@@ -133,11 +133,18 @@
                         <span>All requests are up to date.</span>
                     </div>
                 @endforelse
+
+                @if($pendingApprovals->hasPages())
+                    <div class="cd-pager">
+                        <p>Showing {{ $pendingApprovals->firstItem() }}–{{ $pendingApprovals->lastItem() }} of {{ $pendingApprovals->total() }}</p>
+                        {{ $pendingApprovals->onEachSide(1)->links() }}
+                    </div>
+                @endif
             </div>
         </section>
     @endif
 
-    <section class="cd-card" aria-labelledby="todayMetricsHeading">
+    <section class="cd-card cd-card--info" aria-labelledby="todayMetricsHeading">
         <div class="cd-card__head">
             <div>
                 <h2 id="todayMetricsHeading">Today at a glance</h2>
@@ -145,19 +152,19 @@
             </div>
         </div>
         <div class="cd-glance">
-            <article class="cd-glance__item">
+            <article class="cd-glance__item tone-primary">
                 <div class="cd-glance__label"><i class="ti ti-users" aria-hidden="true"></i>Expected today</div>
                 <p class="cd-glance__value">{{ number_format($todayTotal ?? 0) }} <small>orders</small></p>
             </article>
-            <article class="cd-glance__item">
+            <article class="cd-glance__item tone-success">
                 <div class="cd-glance__label"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i>Approved meals</div>
                 <p class="cd-glance__value">{{ number_format($todayConfirmed ?? 0) }} <small>orders</small></p>
             </article>
-            <article class="cd-glance__item">
+            <article class="cd-glance__item tone-warning">
                 <div class="cd-glance__label"><i class="ti ti-clock" aria-hidden="true"></i>Awaiting review</div>
                 <p class="cd-glance__value">{{ number_format($todayPending ?? 0) }} <small>groups</small></p>
             </article>
-            <article class="cd-glance__item">
+            <article class="cd-glance__item tone-info">
                 <div class="cd-glance__label"><i class="ti ti-clock-hour-4" aria-hidden="true"></i>Busiest service slot</div>
                 <p class="cd-glance__value">{{ $peakSlot ?? 'No bookings' }}</p>
             </article>
@@ -165,7 +172,7 @@
     </section>
 
     <div class="cd-split">
-        <section class="cd-card" aria-labelledby="mealBreakdownHeading">
+        <section class="cd-card cd-card--success" aria-labelledby="mealBreakdownHeading">
             <div class="cd-card__head">
                 <div>
                     <h2 id="mealBreakdownHeading">Today by meal</h2>
@@ -192,7 +199,7 @@
             </div>
         </section>
 
-        <section class="cd-card" aria-labelledby="forecastHeading">
+        <section class="cd-card cd-card--violet" aria-labelledby="forecastHeading">
             <div class="cd-card__head">
                 <div>
                     <h2 id="forecastHeading"><i class="ti ti-calendar-time" aria-hidden="true"></i> Next 7 days</h2>

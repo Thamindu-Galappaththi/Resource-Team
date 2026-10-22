@@ -2,6 +2,10 @@
 
 @section('title', 'Canteen Forecast')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v={{ @filemtime(public_path('css/canteen-dashboard.css')) ?: time() }}">
+@endpush
+
 @section('content')
 <div class="container-fluid py-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
@@ -57,6 +61,12 @@
                         </tbody>
                     </table>
                 </div>
+                @if($records->hasPages())
+                    <div class="cd-pager">
+                        <p>Showing {{ $records->firstItem() }}–{{ $records->lastItem() }} of {{ $records->total() }}</p>
+                        {{ $records->onEachSide(1)->links() }}
+                    </div>
+                @endif
             @endif
         </div>
     </div>
