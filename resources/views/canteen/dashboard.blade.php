@@ -2,108 +2,179 @@
 
 @section('title', 'Canteen Dashboard')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v=1">
+@endpush
+
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+<div class="container-fluid py-4 cd-page">
+    <header class="cd-header">
         <div>
-            <h1 class="h3 text-white mb-2">Canteen Dashboard</h1>
-            <p class="text-white-50 mb-0">Plan service around confirmed and pending meal demand.</p>
+            <div class="cd-eyebrow"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i> Canteen operations</div>
+            <h1 class="cd-title">Canteen dashboard</h1>
+            <p class="cd-subtitle">Plan service around approved and pending meal demand.</p>
         </div>
-        <div class="d-flex flex-wrap gap-2">
+        <div class="cd-actions">
             @can('viewAny', \App\Models\CanteenReservation::class)
-                <a href="{{ route('canteen.index') }}" class="btn btn-outline-light"><i class="ti ti-list-check me-1"></i>Existing reservations</a>
+                <a href="{{ route('canteen.index') }}" class="btn btn-outline-light"><i class="ti ti-list-check me-1" aria-hidden="true"></i>Existing reservations</a>
             @endcan
             @can('create', \App\Models\CanteenReservation::class)
-                <a href="{{ route('canteen.create') }}" class="btn btn-primary"><i class="ti ti-plus me-1"></i>New reservation</a>
+                <a href="{{ route('canteen.create') }}" class="btn btn-primary"><i class="ti ti-plus me-1" aria-hidden="true"></i>New reservation</a>
             @endcan
         </div>
-    </div>
+    </header>
 
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 h-100">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Expected today</div>
-                    <div class="d-flex align-items-baseline gap-2 mt-2"><h3 class="mb-0">{{ number_format($todayTotal ?? 0) }}</h3><span class="text-muted">orders</span></div>
-                </div>
+    <main class="cd-panel">
+        <section class="cd-summary" aria-label="Reservation summary">
+            <div class="cd-summary-item" style="--metric-color: #1769c2">
+                <div class="cd-summary-label"><i class="ti ti-calendar-stats" aria-hidden="true"></i>Total reservations</div>
+                <div class="cd-summary-value">{{ number_format($summary['total'] ?? 0) }}</div>
             </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 h-100">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Confirmed meals</div>
-                    <div class="d-flex align-items-baseline gap-2 mt-2"><h3 class="mb-0">{{ number_format($todayConfirmed ?? 0) }}</h3><span class="text-muted">orders</span></div>
-                </div>
+            <div class="cd-summary-item" style="--metric-color: #d97706">
+                <div class="cd-summary-label"><i class="ti ti-clock-hour-4" aria-hidden="true"></i>Pending approvals</div>
+                <div class="cd-summary-value">{{ number_format($summary['pending'] ?? 0) }}</div>
             </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 h-100">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Awaiting review</div>
-                    <div class="d-flex align-items-baseline gap-2 mt-2"><h3 class="mb-0">{{ number_format($todayPending ?? 0) }}</h3><span class="text-muted">groups</span></div>
-                </div>
+            <div class="cd-summary-item" style="--metric-color: #16a77a">
+                <div class="cd-summary-label"><i class="ti ti-circle-check" aria-hidden="true"></i>Approved</div>
+                <div class="cd-summary-value">{{ number_format($summary['approved'] ?? 0) }}</div>
             </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 h-100">
-                <div class="card-body">
-                    <div class="text-muted small text-uppercase fw-semibold">Busiest service slot</div>
-                    <h3 class="mt-2 mb-0">{{ $peakSlot ?? 'No bookings' }}</h3>
-                </div>
+            <div class="cd-summary-item" style="--metric-color: #dc4c5a">
+                <div class="cd-summary-label"><i class="ti ti-circle-x" aria-hidden="true"></i>Rejected</div>
+                <div class="cd-summary-value">{{ number_format($summary['rejected'] ?? 0) }}</div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <div class="row g-4">
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <h2 class="h5 mb-3">Today by meal</h2>
-                    @forelse($mealBreakdown as $row)
-                        <div class="d-flex justify-content-between align-items-center py-2 @if(! $loop->last) border-bottom @endif">
-                            <div>
-                                <div class="fw-semibold">{{ $row['meal'] }}</div>
-                                <div class="small text-muted">{{ number_format($row['groups']) }} {{ \Illuminate\Support\Str::plural('group', $row['groups']) }}</div>
+        @if($canReview)
+            <section class="cd-review-queue" aria-labelledby="reviewQueueHeading">
+                <div class="cd-review-heading">
+                    <div>
+                        <div class="cd-eyebrow cd-review-eyebrow"><i class="ti ti-inbox" aria-hidden="true"></i> Approvals</div>
+                        <h2 id="reviewQueueHeading">Pending requests</h2>
+                        <p>{{ number_format($pendingApprovals->count()) }} {{ \Illuminate\Support\Str::plural('request', $pendingApprovals->count()) }} awaiting review</p>
+                    </div>
+                    <a href="{{ route('canteen.index', ['status' => 'pending']) }}" class="cd-review-all">View reservation list <i class="ti ti-arrow-up-right" aria-hidden="true"></i></a>
+                </div>
+
+                @forelse($pendingApprovals as $reservation)
+                    <article class="cd-review-item">
+                        <div class="cd-review-info">
+                            <a class="cd-review-title" href="{{ route('canteen.show', $reservation) }}">{{ $reservation->reservation_name }}</a>
+                            <span class="cd-review-ref">{{ $reservation->reservation_ref }}</span>
+                            <div class="cd-review-meta">
+                                <span>{{ $reservation->requestedBy?->name ?? 'Unknown requester' }}</span>
+                                <span>{{ $reservation->reservation_date->format('d M Y') }} · {{ $reservation->serviceTimeLabel() }}</span>
+                                <span>{{ $reservation->mealTypeLabel() }} · {{ number_format($reservation->number_of_orders) }} orders</span>
+                                @if($reservation->location)<span>{{ $reservation->location->name }}</span>@endif
                             </div>
-                            <div class="fw-semibold">{{ number_format($row['orders']) }}</div>
+                        </div>
+                        @can('manageStatus', $reservation)
+                            <div class="cd-review-actions">
+                                <form method="POST" action="{{ route('canteen.status', $reservation) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="approved">
+                                    <button class="btn btn-success" type="submit"><i class="ti ti-check me-1" aria-hidden="true"></i>Approve</button>
+                                </form>
+                                <button class="btn btn-outline-danger" type="button" data-reject-toggle="#rejectDashboard-{{ $reservation->id }}" aria-expanded="false" aria-controls="rejectDashboard-{{ $reservation->id }}">
+                                    <i class="ti ti-x me-1" aria-hidden="true"></i>Reject
+                                </button>
+                            </div>
+                            <form id="rejectDashboard-{{ $reservation->id }}" class="cd-reject-form" method="POST" action="{{ route('canteen.status', $reservation) }}" hidden>
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="rejected">
+                                <label class="form-label" for="rejectDashboardReason-{{ $reservation->id }}">Reason for rejection</label>
+                                <textarea id="rejectDashboardReason-{{ $reservation->id }}" name="approval_comments" class="form-control" rows="2" maxlength="1000" required></textarea>
+                                <div class="cd-reject-actions">
+                                    <button class="btn btn-danger" type="submit">Confirm rejection</button>
+                                    <button class="btn btn-outline-secondary" type="button" data-reject-close>Keep pending</button>
+                                </div>
+                            </form>
+                        @endcan
+                    </article>
+                @empty
+                    <div class="cd-review-empty"><i class="ti ti-circle-check" aria-hidden="true"></i><span>All requests are up to date.</span></div>
+                @endforelse
+            </section>
+        @endif
+
+        <div class="cd-content">
+            <section aria-labelledby="todayMetricsHeading">
+                <div class="cd-section-heading">
+                    <div>
+                        <h2 id="todayMetricsHeading">Today at a glance</h2>
+                        <p>Meal demand and service planning</p>
+                    </div>
+                </div>
+                <div class="cd-today-metrics">
+                    <div class="cd-today-item">
+                        <div class="cd-today-label"><i class="ti ti-users" aria-hidden="true"></i>Expected today</div>
+                        <span class="cd-today-value">{{ number_format($todayTotal ?? 0) }} <span class="text-muted fs-6 fw-normal">orders</span></span>
+                    </div>
+                    <div class="cd-today-item">
+                        <div class="cd-today-label"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i>Approved meals</div>
+                        <span class="cd-today-value">{{ number_format($todayConfirmed ?? 0) }} <span class="text-muted fs-6 fw-normal">orders</span></span>
+                    </div>
+                    <div class="cd-today-item">
+                        <div class="cd-today-label"><i class="ti ti-clock" aria-hidden="true"></i>Awaiting review</div>
+                        <span class="cd-today-value">{{ number_format($todayPending ?? 0) }} <span class="text-muted fs-6 fw-normal">groups</span></span>
+                    </div>
+                    <div class="cd-today-item">
+                        <div class="cd-today-label"><i class="ti ti-clock-hour-4" aria-hidden="true"></i>Busiest service slot</div>
+                        <span class="cd-today-value">{{ $peakSlot ?? 'No bookings' }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <div class="cd-lower">
+                <section aria-labelledby="mealBreakdownHeading">
+                    <div class="cd-section-heading">
+                        <div>
+                            <h2 id="mealBreakdownHeading">Today by meal</h2>
+                            <p>Pending and approved orders</p>
+                        </div>
+                    </div>
+                    @forelse($mealBreakdown as $row)
+                        <div class="cd-meal-row">
+                            <div>
+                                <div class="cd-meal-name">{{ $row['meal'] }}</div>
+                                <div class="cd-meal-meta">{{ number_format($row['groups']) }} {{ \Illuminate\Support\Str::plural('group', $row['groups']) }}</div>
+                            </div>
+                            <div class="cd-meal-orders">{{ number_format($row['orders']) }}</div>
                         </div>
                     @empty
-                        <p class="text-muted mb-0">No pending or confirmed orders for today.</p>
+                        <p class="cd-empty">No pending or approved orders for today.</p>
                     @endforelse
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-end mb-3">
+                </section>
+
+                <section aria-labelledby="forecastHeading">
+                    <div class="cd-section-heading">
                         <div>
-                            <h2 class="h5 mb-1">Next 7 days</h2>
-                            <p class="text-muted mb-0">Pending and confirmed orders only</p>
+                            <h2 id="forecastHeading"><i class="ti ti-calendar-time" aria-hidden="true"></i> Next 7 days</h2>
+                            <p>Pending and approved orders only</p>
                         </div>
                     </div>
-                    <div class="row g-3">
+                    <div class="cd-forecast-grid">
                         @foreach($forecast as $entry)
-                            <div class="col-6 col-md-4 col-xl-3">
-                                <a href="{{ route('canteen.forecast', ['date' => $entry['date']]) }}" class="d-block h-100 text-decoration-none text-reset border rounded p-3">
-                                    <div class="d-flex justify-content-between align-items-start gap-2">
-                                        <div>
-                                            <div class="fw-semibold">{{ \Carbon\Carbon::parse($entry['date'])->format('D') }}</div>
-                                            <div class="text-muted small">{{ \Carbon\Carbon::parse($entry['date'])->format('d M') }}</div>
-                                        </div>
-                                        <i class="ti ti-arrow-up-right text-muted" aria-hidden="true"></i>
+                            <a href="{{ route('canteen.forecast', ['date' => $entry['date']]) }}" class="cd-forecast-day">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <div class="fw-semibold">{{ \Carbon\Carbon::parse($entry['date'])->format('D') }}</div>
+                                        <div class="cd-forecast-date">{{ \Carbon\Carbon::parse($entry['date'])->format('d M') }}</div>
                                     </div>
-                                    <div class="mt-3">
-                                        <span class="fs-4 fw-semibold">{{ number_format($entry['total'] ?? 0) }}</span>
-                                        <span class="text-muted small ms-1">orders</span>
-                                    </div>
-                                </a>
-                            </div>
+                                    <i class="ti ti-arrow-up-right text-muted" aria-hidden="true"></i>
+                                </div>
+                                <div class="cd-forecast-total">{{ number_format($entry['total'] ?? 0) }} <small>orders</small></div>
+                            </a>
                         @endforeach
                     </div>
-                </div>
+                </section>
             </div>
         </div>
-    </div>
+    </main>
 </div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/canteen-ui.js') }}?v=1"></script>
+@endpush

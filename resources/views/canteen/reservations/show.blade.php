@@ -25,7 +25,7 @@
     @endif
 
     <div class="row g-4">
-        <div class="col-lg-8">
+        <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
                     <h2 class="h5 mb-3">Reservation details</h2>
@@ -47,11 +47,15 @@
                     </div>
                     <div class="d-flex flex-wrap gap-2 mt-4">
                         @can('update', $reservation)
-                            @if($reservation->canBeEdited() || auth()->user()?->hasRole('developer', 'super_admin', 'admin', 'coordinator'))
-                                <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-outline-primary">Edit</a>
-                            @endif
+                            <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-outline-primary">Edit</a>
                         @endcan
-                        @can('cancel', $reservation)
+                        @can('delete', $reservation)
+                            <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" onsubmit="return confirm('Permanently delete this reservation?')">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn btn-outline-danger" type="submit">Delete reservation</button>
+                            </form>
+                        @elsecan('cancel', $reservation)
                             <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" onsubmit="return confirm('Cancel this reservation?')">
                                 @csrf
                                 @method('DELETE')
@@ -61,35 +65,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-lg-4">
-            @can('manageStatus', $reservation)
-                @if($reservation->status === \App\Enums\CanteenReservationStatus::PENDING->value)
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-body p-4">
-                            <h2 class="h5 mb-3">Review request</h2>
-                            <p class="text-muted small">Large-group orders stay pending until the canteen team confirms them.</p>
-                            <form method="POST" action="{{ route('canteen.status', $reservation) }}" class="mb-3">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="status" value="confirmed">
-                                <label class="form-label" for="approve_comments">Comment (optional)</label>
-                                <textarea id="approve_comments" name="approval_comments" class="form-control mb-3" rows="2" maxlength="1000">{{ old('approval_comments') }}</textarea>
-                                <button type="submit" class="btn btn-success w-100">Approve reservation</button>
-                            </form>
-                            <form method="POST" action="{{ route('canteen.status', $reservation) }}">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="status" value="rejected">
-                                <label class="form-label" for="reject_comments">Reason for rejection</label>
-                                <textarea id="reject_comments" name="approval_comments" class="form-control mb-3 @error('approval_comments') is-invalid @enderror" rows="2" maxlength="1000" required>{{ old('approval_comments') }}</textarea>
-                                @error('approval_comments')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                                <button type="submit" class="btn btn-outline-danger w-100">Reject reservation</button>
-                            </form>
-                        </div>
-                    </div>
-                @endif
-            @endcan
         </div>
     </div>
 </div>

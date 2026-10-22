@@ -54,7 +54,7 @@
         <div class="col-md-4">
             <label class="form-label" for="number_of_orders">Number of orders <span class="text-danger">*</span></label>
             <input id="number_of_orders" type="number" min="1" max="10000" class="form-control @error('number_of_orders') is-invalid @enderror" name="number_of_orders" value="{{ old('number_of_orders', $reservation?->number_of_orders) }}" placeholder="0" required>
-            <div class="form-text">Orders above {{ $largeGroupThreshold }} require canteen review.</div>
+            <div class="form-text">Every reservation starts pending and requires canteen review.</div>
             @error('number_of_orders')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-md-8">
