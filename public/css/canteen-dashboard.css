@@ -566,13 +566,13 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 0.75rem;
     margin-top: 0.9rem;
     padding-top: 0.75rem;
     border-top: 1px solid #f1f5fb;
 }
-.cd-pager p { margin: 0; color: #64748b; font-size: 0.8rem; }
+.cd-pager p { display: none; }
 .cd-pager .pagination { gap: 0.25rem; }
 .cd-pager .page-link {
     min-width: 36px;

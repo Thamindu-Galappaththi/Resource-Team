@@ -34,8 +34,8 @@
                 </div>
             @else
                 <div class="cp-table-scroll">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                    <table class="table cp-table align-middle mb-0">
+                        <thead>
                             <tr>
                                 <th>Reservation</th>
                                 <th>Requester</th>
@@ -44,25 +44,25 @@
                                 <th>Location</th>
                                 <th>Orders</th>
                                 <th>Status</th>
-                                <th></th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($records as $reservation)
                                 <tr>
-                                    <td>
+                                    <td data-label="Reservation">
                                         <div class="fw-semibold">{{ $reservation->reservation_name }}</div>
                                         <span class="small text-muted font-monospace">{{ $reservation->reservation_ref }}</span>
                                     </td>
-                                    <td>{{ $reservation->requestedBy?->name ?? 'Unknown' }}</td>
-                                    <td>{{ $reservation->mealTypeLabel() }}</td>
-                                    <td>{{ $reservation->serviceTimeLabel() }}</td>
-                                    <td>{{ $reservation->location?->name ?? '—' }}</td>
-                                    <td class="fw-semibold">{{ number_format($reservation->number_of_orders) }}</td>
-                                    <td><span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span></td>
-                                    <td class="text-end">
+                                    <td data-label="Requester">{{ $reservation->requestedBy?->name ?? 'Unknown' }}</td>
+                                    <td data-label="Meal">{{ $reservation->mealTypeLabel() }}</td>
+                                    <td data-label="Time">{{ $reservation->serviceTimeLabel() }}</td>
+                                    <td data-label="Location">{{ $reservation->location?->name ?? '—' }}</td>
+                                    <td data-label="Orders" class="fw-semibold">{{ number_format($reservation->number_of_orders) }}</td>
+                                    <td data-label="Status"><span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span></td>
+                                    <td class="text-end cp-actions" data-label="Actions">
                                         @can('view', $reservation)
-                                            <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-sm btn-outline-secondary">View</a>
+                                            <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="View" aria-label="View {{ $reservation->reservation_ref }}"><i class="ti ti-eye"></i></a>
                                         @endcan
                                     </td>
                                 </tr>
@@ -70,12 +70,7 @@
                         </tbody>
                     </table>
                 </div>
-                @if($records->hasPages())
-                    <div class="cd-pager">
-                        <p>Showing {{ $records->firstItem() }}–{{ $records->lastItem() }} of {{ $records->total() }}</p>
-                        {{ $records->onEachSide(1)->links() }}
-                    </div>
-                @endif
+                @include('canteen.partials.pager', ['paginator' => $records])
             @endif
         </div>
     </section>

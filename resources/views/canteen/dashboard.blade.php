@@ -134,12 +134,7 @@
                     </div>
                 @endforelse
 
-                @if($pendingApprovals->hasPages())
-                    <div class="cd-pager">
-                        <p>Showing {{ $pendingApprovals->firstItem() }}–{{ $pendingApprovals->lastItem() }} of {{ $pendingApprovals->total() }}</p>
-                        {{ $pendingApprovals->onEachSide(1)->links() }}
-                    </div>
-                @endif
+                @include('canteen.partials.pager', ['paginator' => $pendingApprovals])
             </div>
         </section>
     @endif

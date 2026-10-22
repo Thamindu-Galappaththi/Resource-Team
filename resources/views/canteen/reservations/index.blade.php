@@ -112,8 +112,8 @@
                     </div>
                 @else
                     <div class="cp-table-scroll">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
+                        <table class="table cp-table align-middle mb-0">
+                            <thead>
                                 <tr>
                                     <th scope="col">Reference / reservation</th>
                                     <th scope="col">Requester</th>
@@ -128,43 +128,43 @@
                             <tbody>
                                 @foreach($reservations as $reservation)
                                     <tr>
-                                        <td>
+                                        <td data-label="Reservation">
                                             <div class="fw-semibold">{{ $reservation->reservation_name }}</div>
                                             <span class="small text-muted font-monospace">{{ $reservation->reservation_ref }}</span>
                                         </td>
-                                        <td>{{ $reservation->requestedBy?->name ?? 'Unknown' }}</td>
-                                        <td>
+                                        <td data-label="Requester">{{ $reservation->requestedBy?->name ?? 'Unknown' }}</td>
+                                        <td data-label="Service">
                                             <div>{{ $reservation->reservation_date->format('d M Y') }}</div>
                                             <span class="small text-muted">{{ $reservation->serviceTimeLabel() }}</span>
                                         </td>
-                                        <td>{{ $reservation->mealTypeLabel() }}</td>
-                                        <td>{{ $reservation->location?->name ?? '—' }}</td>
-                                        <td class="fw-semibold">{{ number_format($reservation->number_of_orders) }}</td>
-                                        <td>
+                                        <td data-label="Meal">{{ $reservation->mealTypeLabel() }}</td>
+                                        <td data-label="Location">{{ $reservation->location?->name ?? '—' }}</td>
+                                        <td data-label="Orders" class="fw-semibold">{{ number_format($reservation->number_of_orders) }}</td>
+                                        <td data-label="Status">
                                             <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
                                         </td>
-                                        <td class="text-end">
-                                            <div class="d-flex flex-wrap justify-content-end gap-1">
+                                        <td class="text-end cp-actions" data-label="Actions">
+                                            <span class="cp-action-group">
                                                 @can('view', $reservation)
-                                                    <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-sm btn-outline-secondary">View</a>
+                                                    <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="View" aria-label="View {{ $reservation->reservation_ref }}"><i class="ti ti-eye"></i></a>
                                                 @endcan
                                                 @can('update', $reservation)
-                                                    <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                                    <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="Edit" aria-label="Edit {{ $reservation->reservation_ref }}"><i class="ti ti-pencil"></i></a>
                                                 @endcan
                                                 @can('delete', $reservation)
                                                     <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this reservation?')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                                        <button class="btn btn-sm btn-outline-danger cp-icon-btn" type="submit" title="Delete" aria-label="Delete {{ $reservation->reservation_ref }}"><i class="ti ti-trash"></i></button>
                                                     </form>
                                                 @elsecan('cancel', $reservation)
                                                     <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel this reservation?')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button class="btn btn-sm btn-outline-danger">Cancel</button>
+                                                        <button class="btn btn-sm btn-outline-danger cp-icon-btn" type="submit" title="Cancel" aria-label="Cancel {{ $reservation->reservation_ref }}"><i class="ti ti-ban"></i></button>
                                                     </form>
                                                 @endcan
-                                            </div>
+                                            </span>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -172,12 +172,7 @@
                         </table>
                     </div>
                 @endif
-                @if($reservations->hasPages())
-                    <div class="cd-pager mt-3">
-                        <p>Showing {{ $reservations->firstItem() }}–{{ $reservations->lastItem() }} of {{ $reservations->total() }}</p>
-                        {{ $reservations->onEachSide(1)->links() }}
-                    </div>
-                @endif
+                @include('canteen.partials.pager', ['paginator' => $reservations])
             </div>
         </section>
     </main>

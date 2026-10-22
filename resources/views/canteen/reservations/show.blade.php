@@ -2,70 +2,76 @@
 
 @section('title', 'Canteen Reservation '.$reservation->reservation_ref)
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v={{ @filemtime(public_path('css/canteen-dashboard.css')) ?: time() }}">
+<link rel="stylesheet" href="{{ asset('css/canteen-pages.css') }}?v={{ @filemtime(public_path('css/canteen-pages.css')) ?: time() }}">
+@endpush
+
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+<div class="container-fluid py-4 cp-page">
+    <header class="cd-header">
         <div>
-            <h1 class="h3 text-white mb-2">{{ $reservation->reservation_ref }}</h1>
-            <p class="text-white-50 mb-0">{{ $reservation->reservation_name }}</p>
+            <div class="cd-eyebrow"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i> Canteen operations</div>
+            <h1 class="cd-title">{{ $reservation->reservation_ref }}</h1>
+            <p class="cd-subtitle">{{ $reservation->reservation_name }}</p>
         </div>
-        <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div class="cd-actions">
             <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
-            <a href="{{ route('canteen.index') }}" class="btn btn-outline-light">Back to list</a>
+            <a href="{{ route('canteen.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to list</a>
         </div>
-    </div>
+    </header>
 
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <div class="alert alert-success cp-auto-alert" role="status">{{ session('success') }}</div>
     @endif
     @if($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
-        </div>
+        <div class="alert alert-danger cp-auto-alert" role="alert">{{ $errors->first() }}</div>
     @endif
 
-    <div class="row g-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <h2 class="h5 mb-3">Reservation details</h2>
-                    <div class="row g-3">
-                        <div class="col-md-6"><div class="small text-muted">Reservation name</div><div class="fw-medium">{{ $reservation->reservation_name }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Requester</div><div class="fw-medium">{{ $reservation->requestedBy?->name ?? 'Unknown' }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Meal type</div><div class="fw-medium">{{ $reservation->mealTypeLabel() }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Location</div><div class="fw-medium">{{ $reservation->location?->name ?? '—' }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Date & time</div><div class="fw-medium">{{ $reservation->reservation_date->format('d M Y') }} at {{ $reservation->serviceTimeLabel() }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Orders</div><div class="fw-medium">{{ number_format($reservation->number_of_orders) }}</div></div>
-                        <div class="col-12"><div class="small text-muted">Order details</div><div class="fw-medium">{{ $reservation->order_details ?: '—' }}</div></div>
-                        <div class="col-12"><div class="small text-muted">Special remarks</div><div class="fw-medium">{{ $reservation->special_remarks ?: '—' }}</div></div>
-                        @if($reservation->approvedBy)
-                            <div class="col-md-6"><div class="small text-muted">Reviewed by</div><div class="fw-medium">{{ $reservation->approvedBy->name }}</div></div>
-                        @endif
-                        @if($reservation->approval_comments)
-                            <div class="col-12"><div class="small text-muted">Approval comment</div><div class="fw-medium">{{ $reservation->approval_comments }}</div></div>
-                        @endif
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 mt-4">
-                        @can('update', $reservation)
-                            <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-outline-primary">Edit</a>
-                        @endcan
-                        @can('delete', $reservation)
-                            <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" onsubmit="return confirm('Permanently delete this reservation?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-outline-danger" type="submit">Delete reservation</button>
-                            </form>
-                        @elsecan('cancel', $reservation)
-                            <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" onsubmit="return confirm('Cancel this reservation?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-outline-danger">Cancel reservation</button>
-                            </form>
-                        @endcan
-                    </div>
-                </div>
+    <section class="cp-surface">
+        <div class="cp-panel-heading d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h2 class="h5 mb-1">Reservation details</h2>
+                <p class="text-muted small mb-0">Meal request, service slot, and review notes.</p>
+            </div>
+            <div class="cp-action-group">
+                @can('update', $reservation)
+                    <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="Edit" aria-label="Edit reservation"><i class="ti ti-pencil"></i></a>
+                @endcan
+                @can('delete', $reservation)
+                    <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this reservation?')">
+                        @csrf
+                        @method('DELETE')
+                        <button class="btn btn-sm btn-outline-danger cp-icon-btn" type="submit" title="Delete" aria-label="Delete reservation"><i class="ti ti-trash"></i></button>
+                    </form>
+                @elsecan('cancel', $reservation)
+                    <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" class="d-inline" onsubmit="return confirm('Cancel this reservation?')">
+                        @csrf
+                        @method('DELETE')
+                        <button class="btn btn-sm btn-outline-danger cp-icon-btn" type="submit" title="Cancel" aria-label="Cancel reservation"><i class="ti ti-ban"></i></button>
+                    </form>
+                @endcan
             </div>
         </div>
-    </div>
+
+        <div class="cp-form-body">
+            <div class="cp-details">
+                <div class="cp-detail-row"><span class="cp-detail-label">Reservation name</span><span class="cp-detail-value">{{ $reservation->reservation_name }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Requester</span><span class="cp-detail-value">{{ $reservation->requestedBy?->name ?? 'Unknown' }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Meal type</span><span class="cp-detail-value">{{ $reservation->mealTypeLabel() }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Location</span><span class="cp-detail-value">{{ $reservation->location?->name ?? '—' }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Date & time</span><span class="cp-detail-value">{{ $reservation->reservation_date->format('d M Y') }} at {{ $reservation->serviceTimeLabel() }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Orders</span><span class="cp-detail-value">{{ number_format($reservation->number_of_orders) }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Order details</span><span class="cp-detail-value">{{ $reservation->order_details ?: '—' }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Special remarks</span><span class="cp-detail-value">{{ $reservation->special_remarks ?: '—' }}</span></div>
+                @if($reservation->approvedBy)
+                    <div class="cp-detail-row"><span class="cp-detail-label">Reviewed by</span><span class="cp-detail-value">{{ $reservation->approvedBy->name }}</span></div>
+                @endif
+                @if($reservation->approval_comments)
+                    <div class="cp-detail-row"><span class="cp-detail-label">Approval comment</span><span class="cp-detail-value">{{ $reservation->approval_comments }}</span></div>
+                @endif
+            </div>
+        </div>
+    </section>
 </div>
 @endsection
