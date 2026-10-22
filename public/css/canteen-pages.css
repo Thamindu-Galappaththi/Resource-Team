@@ -3,6 +3,7 @@
     --cp-ink: #152238;
     --cp-muted: #65738a;
     --cp-line: #dce5f2;
+    overflow-x: hidden;
     color: var(--cp-ink);
 }
 
@@ -259,8 +260,11 @@
 
 .cp-register {
     position: relative;
+    max-width: 100%;
+    overflow-x: hidden;
     padding: 1.3rem 1.5rem 1.5rem;
 }
+#cp-results { max-width: 100%; overflow-x: hidden; }
 
 .cp-loading {
     position: absolute;
@@ -295,8 +299,18 @@
     white-space: nowrap;
 }
 
-.cp-table-scroll { overflow-x: auto; border: 1px solid #c9d6ee; border-radius: 12px; }
-.cp-page .table { min-width: 850px; margin: 0; }
+.cp-table-scroll {
+    overflow-x: hidden;
+    max-width: 100%;
+    border: 1px solid #c9d6ee;
+    border-radius: 12px;
+}
+.cp-page .table {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    table-layout: auto;
+}
 .cp-page .cp-table thead th {
     padding: .9rem 1rem;
     border-bottom: 0;
@@ -306,7 +320,7 @@
     font-weight: 700;
     letter-spacing: .045em;
     text-transform: uppercase;
-    white-space: nowrap;
+    white-space: normal;
 }
 .cp-page .cp-table tbody td {
     padding: .85rem 1rem;
@@ -314,6 +328,8 @@
     background: #fff;
     color: #26364d;
     vertical-align: middle;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 .cp-page .cp-table tbody tr { animation: cp-row-in .36s ease both; }
 .cp-page .cp-table tbody tr:nth-child(even) td { background: #f5f8ff; }
@@ -430,8 +446,8 @@
 }
 
 @keyframes cp-row-in {
-    from { opacity: 0; transform: translateX(8px); }
-    to { opacity: 1; transform: translateX(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes cp-ripple {
@@ -466,7 +482,13 @@
     }
     .cp-filter-clear { flex: 1 1 auto; width: 100%; }
     .cp-detail-row { grid-template-columns: 1fr; gap: 4px; }
+    .cp-table-scroll {
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+    }
     .cp-page .cp-table thead { display: none; }
+    .cp-page .table,
     .cp-page .cp-table,
     .cp-page .cp-table tbody,
     .cp-page .cp-table tr,

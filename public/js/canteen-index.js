@@ -81,6 +81,7 @@
                 throw new Error('The reservation list could not be updated.');
             }
             currentResults.replaceWith(nextResults);
+            document.querySelector('#cp-results .cp-table-scroll')?.scrollTo(0, 0);
             history.replaceState(null, '', url);
             toggleClear();
         } catch (error) {

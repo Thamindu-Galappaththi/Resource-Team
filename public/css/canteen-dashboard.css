@@ -88,10 +88,12 @@
 .cd-title {
     margin: 0 0 0.4rem;
     color: #fff;
-    font-size: clamp(1.45rem, 3vw, 2.1rem);
+    font-size: clamp(1.28rem, 3vw, 2.1rem);
     font-weight: 800;
     letter-spacing: -0.04em;
-    line-height: 1.1;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .cd-hero__sub,
@@ -100,6 +102,8 @@
     max-width: 42rem;
     color: rgba(255,255,255,.75);
     font-size: 0.93rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .cd-hero__actions,
@@ -674,15 +678,38 @@
 @media (max-width: 767.98px) {
     .cd-header,
     .cd-hero {
-        align-items: flex-start;
+        align-items: stretch;
         flex-direction: column;
-        padding: 1.2rem 1.05rem 1.1rem;
+        gap: 0.9rem;
+        padding: 1.1rem 1rem 1rem;
         border-radius: 18px;
     }
+    .cd-hero__copy,
+    .cd-header > div:first-child { flex: 1 1 auto; }
     .cd-hero__actions,
-    .cd-actions { width: 100%; justify-content: stretch; }
+    .cd-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        justify-content: stretch;
+        gap: 0.45rem;
+    }
     .cd-btn,
-    .cd-actions .btn { flex: 1 1 calc(50% - .25rem); }
+    .cd-actions .btn {
+        flex: 1 1 0;
+        min-width: 0;
+        width: auto;
+        padding: 0.4rem 0.7rem;
+        font-size: 0.78rem;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.2;
+    }
+    .cd-status {
+        flex: 0 0 auto;
+        align-self: center;
+    }
     .cd-kpis { gap: 0.7rem; }
     .cd-kpi { padding: 0.9rem 0.95rem 0.85rem; }
     .cd-kpi__value { font-size: 1.5rem; }
@@ -711,16 +738,23 @@
     .cd-day:focus-visible {
         transform: none;
     }
-    .cd-pager { flex-direction: column; align-items: stretch; }
-    .cd-pager .pagination { justify-content: flex-end; }
+    .cd-pager {
+        flex-direction: column;
+        align-items: stretch;
+        max-width: 100%;
+    }
+    .cd-pager .pagination {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        margin-left: 0;
+        max-width: 100%;
+    }
 }
 
 @media (max-width: 479.98px) {
     .cd-kpis,
     .cd-glance,
     .cd-forecast { grid-template-columns: 1fr; }
-    .cd-btn,
-    .cd-actions .btn { flex: 1 1 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
