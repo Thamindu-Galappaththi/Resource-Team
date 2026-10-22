@@ -145,13 +145,19 @@
 }
 
 .cd-btn--solid,
+.cd-hero .cd-btn--solid,
+.cd-header .cd-btn--solid,
 .cd-actions .btn-primary {
-    border-color: #fff;
+    border: 1.5px solid #fff;
     background: #fff;
     color: #1769c2;
+    box-shadow: 0 .25rem .75rem rgba(15, 23, 42, .16);
 }
 .cd-btn--solid:hover,
+.cd-hero .cd-btn--solid:hover,
+.cd-header .cd-btn--solid:hover,
 .cd-actions .btn-primary:hover {
+    border-color: #e8f0fe;
     background: #e8f0fe;
     color: #0d47a1;
 }

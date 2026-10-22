@@ -235,7 +235,12 @@ class CanteenReservationTest extends TestCase
 
         $this->get(route('canteen.index'))
             ->assertOk()
-            ->assertSee('Reservation register');
+            ->assertSee('Reservation register')
+            ->assertSee('Clear');
+
+        $this->get(route('canteen.forecast', ['date' => now()->toDateString()]))
+            ->assertOk()
+            ->assertSee('Forecast for');
 
         $this->assertFalse(\Illuminate\Support\Facades\Route::has('canteen.maintenance'));
         $this->assertFalse(\Illuminate\Support\Facades\Route::has('canteen.reservations.index'));

@@ -17,7 +17,7 @@
             <p class="cd-subtitle">{{ $reservation->reservation_ref }} · {{ $reservation->reservation_name }}</p>
         </div>
         <div class="cd-actions">
-            <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-outline-light"><i class="ti ti-arrow-left me-1"></i>Back to details</a>
+            <a href="{{ route('canteen.show', $reservation) }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to details</a>
         </div>
     </header>
 

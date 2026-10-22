@@ -17,7 +17,7 @@
             <p class="cd-subtitle">Plan your meal service with the canteen team.</p>
         </div>
         <div class="cd-actions">
-            <a href="{{ route('canteen.index') }}" class="btn btn-outline-light"><i class="ti ti-arrow-left me-1" aria-hidden="true"></i>All reservations</a>
+            <a href="{{ route('canteen.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>All reservations</a>
         </div>
     </header>
 
