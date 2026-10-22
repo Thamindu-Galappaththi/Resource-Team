@@ -30,7 +30,7 @@ class NewUserCreated extends Notification
             'created_by' => $this->creator->name,
             'icon' => 'ti-user-plus',
             'title' => 'New user account',
-            'url' => route('user.management'),
+            'url' => route('user.management', ['search' => $this->user->name]),
             'message' => $this->creator->name.' created a new user account for '.$this->user->name.'.',
         ];
     }

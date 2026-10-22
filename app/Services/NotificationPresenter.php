@@ -73,13 +73,19 @@ class NotificationPresenter
     public static function url(DatabaseNotification $notification): ?string
     {
         $data = $notification->data;
+        if (filled($data['url'] ?? null)) {
+            return $data['url'];
+        }
+
         $type = class_basename($notification->type);
         $reservationId = $data['reservation_id'] ?? null;
         $reservationType = $data['reservation_type'] ?? null;
         $reference = (string) ($data['reference'] ?? '');
 
-        $knownUrl = match ($type) {
-            'NewUserCreated' => route('user.management'),
+        return match ($type) {
+            'NewUserCreated' => route('user.management', array_filter([
+                'search' => $data['user_name'] ?? null,
+            ])),
             'ReservationCreated', 'ReservationCancelled', 'ReservationDecision' => self::reservationShowUrl($reservationId, $reservationType, $reference),
             'NewReservationPending' => self::pendingUrl($reservationId, $reservationType, $reference),
             'CanteenReservationCreated', 'NewCanteenReservationPending', 'CanteenReservationStatusUpdated' => $reservationId
@@ -87,12 +93,6 @@ class NotificationPresenter
                 : route('canteen.index'),
             default => null,
         };
-
-        if ($knownUrl !== null) {
-            return $knownUrl;
-        }
-
-        return filled($data['url'] ?? null) ? $data['url'] : null;
     }
 
     private static function isHostel(?string $type, string $reference): bool
