@@ -15,7 +15,7 @@
         <tbody>
         @forelse($rates as $rate)
             @php $scope = ($rate->resourceType?->name ?? 'Type').($rate->resource ? ' · '.$rate->resource->name_model : ' · all resources'); @endphp
-            <tr data-rate>
+            <tr data-rate data-type="{{ $rate->resource_type_id }}" data-active="{{ $rate->is_active ? '1' : '0' }}">
                 <td data-label="Scope">{{ $scope }}</td>
                 <td data-label="Base">LKR {{ number_format($rate->base_fee, 2) }}</td>
                 <td data-label="Included">{{ number_format($rate->base_duration_hours, 2) }} hrs</td>
