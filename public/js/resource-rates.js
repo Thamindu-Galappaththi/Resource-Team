@@ -67,6 +67,7 @@
             return response.text();
         }).then((html) => {
             target.innerHTML = html;
+            applyCatalogFilters();
             history.replaceState({}, '', href);
         }).catch(() => {
             window.location.href = href;
@@ -103,6 +104,52 @@
             searchTimer = setTimeout(() => loadSection('rate_catalog', catalogSearchUrl()), 350);
         });
     }
+
+    const typeFilter = document.getElementById('rr-type-filter');
+    const statusFilter = document.getElementById('rr-status-filter');
+    function applyCatalogFilters() {
+        const type = typeFilter && window.RMSelect ? window.RMSelect.getValue('rr-type-filter') : '';
+        const status = statusFilter && window.RMSelect ? window.RMSelect.getValue('rr-status-filter') : 'active';
+        page.querySelectorAll('#rr-rate-table tbody tr[data-rate]').forEach((row) => {
+            const typeMatches = !type || row.dataset.type === String(type);
+            const statusMatches = status === 'all' || (status === 'inactive' ? row.dataset.active === '0' : row.dataset.active === '1');
+            row.hidden = !(typeMatches && statusMatches);
+        });
+    }
+    [typeFilter, statusFilter].forEach((filter) => filter?.addEventListener('change', applyCatalogFilters));
+    applyCatalogFilters();
+
+    page.querySelectorAll('.rr-tabs a').forEach((tab) => tab.addEventListener('click', (event) => {
+        const target = document.querySelector(tab.getAttribute('href'));
+        if (!target) return;
+        event.preventDefault();
+        page.querySelectorAll('.rr-tabs a').forEach((item) => {
+            item.classList.toggle('is-active', item === tab);
+            if (item === tab) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
+        });
+        const section = tab.getAttribute('href');
+        page.querySelectorAll('.rr-catalog-panel, .rr-management, .rr-stats').forEach((item) => { item.hidden = true; });
+        if (section === '#rr-rates') {
+            document.querySelectorAll('.rr-catalog-panel, #rr-add-rate, .rr-stats').forEach((item) => { item.hidden = false; });
+        } else if (section === '#rr-discounts') {
+            document.querySelector('#rr-discounts').hidden = false;
+        } else {
+            document.querySelectorAll('#rr-history, #rr-rate-history-panel').forEach((item) => { item.hidden = false; });
+        }
+    }));
+    page.querySelector('.rr-tabs a.is-active')?.click();
+
+    page.querySelector('.rr-export-btn')?.addEventListener('click', () => {
+        const table = document.getElementById('rr-rate-table');
+        if (!table) return;
+        const rows = [...table.querySelectorAll('tr')].filter((row) => !row.hidden && !row.classList.contains('rr-empty-row'));
+        const csv = rows.map((row) => [...row.querySelectorAll('th, td')].slice(0, 7).map((cell) => `"${cell.innerText.trim().replace(/"/g, '""')}"`).join(',')).join('\r\n');
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        link.download = 'resource-rates.csv';
+        link.click();
+        URL.revokeObjectURL(link.href);
+    });
 
     function constraintFields(form) {
         return form.querySelectorAll('[data-rr-required]:not([data-cu-select]), [data-rr-pattern]');
@@ -274,7 +321,7 @@
         alert.className = `alert alert-${type} rsv-auto-alert`;
         alert.setAttribute('role', type === 'danger' ? 'alert' : 'status');
         alert.textContent = message;
-        page.querySelector('.rsv-header')?.insertAdjacentElement('afterend', alert);
+        (page.querySelector('.rr-page-heading') || page.querySelector('.rsv-header'))?.insertAdjacentElement('afterend', alert);
         setTimeout(() => {
             alert.style.transition = 'opacity .3s ease';
             alert.style.opacity = '0';
