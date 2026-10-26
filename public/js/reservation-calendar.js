@@ -20,6 +20,22 @@ document.addEventListener('DOMContentLoaded', () => {
         'calendar-resource': 'All resources',
         'calendar-status': 'All statuses',
     };
+    let suppressFilterChange = false;
+
+    function syncDependentFilters(changedId) {
+        if (!window.RMSelect?.cascadeResourceFilters) return;
+        window.RMSelect.cascadeResourceFilters({
+            resources: window.RSVCal?.filterCatalog?.resources || [],
+            categories: window.RSVCal?.filterCatalog?.categories || [],
+            locationSelectId: 'calendar-location',
+            categorySelectId: 'calendar-category',
+            resourceSelectId: 'calendar-resource',
+            emptyValue: '',
+            updateCategories: changedId !== 'calendar-category' && changedId !== 'calendar-resource',
+        });
+    }
+
+    syncDependentFilters();
 
     let bookings = [];
     let holidays = [];
@@ -250,7 +266,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (clearFiltersButton) clearFiltersButton.disabled = !hasFilters();
     }
 
-    filters?.addEventListener('change', () => {
+    filters?.addEventListener('change', (event) => {
+        if (suppressFilterChange) return;
+        const changedId = event.target?.id;
+        if (changedId === 'calendar-location' || changedId === 'calendar-category') {
+            suppressFilterChange = true;
+            syncDependentFilters(changedId);
+            suppressFilterChange = false;
+        }
         toggleClear();
         resetLoadedRange();
         calendar.refetchEvents();
@@ -262,10 +285,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     clearFiltersButton?.addEventListener('click', () => {
         if (clearFiltersButton.disabled) return;
+        suppressFilterChange = true;
         filterIds.forEach((id) => {
             if (!document.getElementById(id)) return;
             window.RMSelect.setValue(id, '', filterLabels[id]);
         });
+        syncDependentFilters();
+        suppressFilterChange = false;
         toggleClear();
         resetLoadedRange();
         calendar.refetchEvents();

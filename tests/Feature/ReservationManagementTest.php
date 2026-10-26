@@ -315,7 +315,13 @@ class ReservationManagementTest extends TestCase
             ->assertSee('reservationCalendar')
             ->assertSee('id="refreshCalendarButton"', false)
             ->assertSee('fullcalendar@6.1.19', false)
-            ->assertSee('js/reservation-calendar.js', false);
+            ->assertSee('js/reservation-calendar.js', false)
+            ->assertSeeInOrder([
+                'id="calendar-location"',
+                'id="calendar-category"',
+                'id="calendar-resource"',
+                'id="calendar-status"',
+            ], false);
         $this->actingAs($user)->get(route('reservations.create'))->assertOk()->assertSee('Purpose of Reservation');
         $this->actingAs($user)->get(route('reservations.index'))->assertOk()->assertSee('Existing Reservations');
     }
@@ -385,6 +391,19 @@ class ReservationManagementTest extends TestCase
             ['Welisara', 'Moratuwa', 'Peradeniya'],
             collect($response->json('locations'))->pluck('name')->all()
         );
+    }
+
+    public function test_calendar_filter_catalog_maps_resource_location_and_category(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Audio Mixer Pro']);
+
+        $this->actingAs($user)->get(route('reservations.calendar'))
+            ->assertOk()
+            ->assertSee('filterCatalog', false)
+            ->assertSee('"name":"Audio Mixer Pro"', false)
+            ->assertSee('"location_id":"'.$resource->location_id.'"', false)
+            ->assertSee('"category_id":"'.$resource->type->resource_category_id.'"', false);
     }
 
     /**

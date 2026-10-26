@@ -103,10 +103,28 @@ class ReservationController extends Controller
     {
         $this->authorize('viewAny', Reservation::class);
 
+        $categories = ResourceCategory::query()->orderBy('name')->get();
+        $resources = Resource::query()
+            ->with('type:id,resource_category_id')
+            ->orderBy('name_model')
+            ->get(['id', 'name_model', 'location_id', 'resource_type_id']);
+
         return $this->htmlPage('reservations.calendar', $this->calendarPayload($request) + [
             'locations' => Location::query()->ordered()->get(),
-            'categories' => ResourceCategory::query()->orderBy('name')->get(),
-            'resources' => Resource::query()->orderBy('name_model')->get(['id', 'name_model']),
+            'categories' => $categories,
+            'resources' => $resources,
+            'filterCatalog' => [
+                'categories' => $categories->map(fn (ResourceCategory $category) => [
+                    'id' => (string) $category->id,
+                    'name' => $category->name,
+                ])->values(),
+                'resources' => $resources->map(fn (Resource $resource) => [
+                    'id' => (string) $resource->id,
+                    'name' => $resource->name_model,
+                    'location_id' => (string) $resource->location_id,
+                    'category_id' => (string) ($resource->type?->resource_category_id ?? ''),
+                ])->values(),
+            ],
             'statuses' => collect(ReservationStatus::cases())->reject(fn (ReservationStatus $status) => in_array($status, [
                 ReservationStatus::DRAFT,
                 ReservationStatus::CANCELLED,

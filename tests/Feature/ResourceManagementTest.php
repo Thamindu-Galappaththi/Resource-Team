@@ -209,6 +209,12 @@ class ResourceManagementTest extends TestCase
             ->assertSee('id="resourceCalendar"', false)
             ->assertSee('id="refreshCalendarButton"', false)
             ->assertSee('id="resource-calendar-filters"', false)
+            ->assertSeeInOrder([
+                'id="locationFilter"',
+                'id="categoryFilter"',
+                'id="resourceFilter"',
+                'id="statusFilter"',
+            ], false)
             ->assertSee('id="upcomingPagination"', false)
             ->assertSee('id="upcomingResultCount"', false)
             ->assertSee('Active resources')
