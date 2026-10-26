@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    protected $redirectRoute = 'login.admin';
+
     public function authorize(): bool
     {
         return true;
