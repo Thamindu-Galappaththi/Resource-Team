@@ -167,6 +167,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusFilter = document.getElementById('statusFilter');
     const categoryFilter = document.getElementById('categoryFilter');
     const clearFiltersButton = document.getElementById('clearFiltersButton');
+
+    function syncDependentFilters(changedId) {
+        if (!window.RMSelect?.cascadeResourceFilters) return;
+        window.RMSelect.cascadeResourceFilters({
+            resources: schedulerResources,
+            categories: (window.RC?.filterCatalog?.categories) || [],
+            locationSelectId: 'locationFilter',
+            categorySelectId: 'categoryFilter',
+            resourceSelectId: 'resourceFilter',
+            emptyValue: 'all',
+            updateCategories: changedId !== 'categoryFilter' && changedId !== 'resourceFilter',
+        });
+    }
+
+    syncDependentFilters();
     const schedulerPanel = document.getElementById('schedulerPanel');
     const schedulerGrid = document.getElementById('schedulerGrid');
     const schedulerDate = document.getElementById('schedulerDate');
@@ -257,8 +272,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let suppressFilterChange = false;
-    document.getElementById('resource-calendar-filters')?.addEventListener('change', () => {
+    document.getElementById('resource-calendar-filters')?.addEventListener('change', (event) => {
         if (suppressFilterChange) return;
+        const changedId = event.target?.id;
+        if (changedId === 'locationFilter' || changedId === 'categoryFilter') {
+            suppressFilterChange = true;
+            syncDependentFilters(changedId);
+            suppressFilterChange = false;
+        }
         selectedSchedulerResources.clear();
         updateSchedulerSelectionCount();
         toggleClear();
@@ -267,10 +288,11 @@ document.addEventListener('DOMContentLoaded', () => {
     clearFiltersButton?.addEventListener('click', () => {
         if (clearFiltersButton.disabled) return;
         suppressFilterChange = true;
-        window.RMSelect.setValue('resourceFilter', 'all', 'All resources');
         window.RMSelect.setValue('locationFilter', 'all', 'All locations');
-        window.RMSelect.setValue('statusFilter', 'all', 'All statuses');
         window.RMSelect.setValue('categoryFilter', 'all', 'All categories');
+        window.RMSelect.setValue('resourceFilter', 'all', 'All resources');
+        window.RMSelect.setValue('statusFilter', 'all', 'All statuses');
+        syncDependentFilters();
         suppressFilterChange = false;
         selectedSchedulerResources.clear();
         updateSchedulerSelectionCount();
