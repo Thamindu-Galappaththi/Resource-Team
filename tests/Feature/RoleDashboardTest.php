@@ -31,7 +31,7 @@ class RoleDashboardTest extends TestCase
             'admin' => 'Admin Dashboard',
             'coordinator' => 'Coordinator Dashboard',
             'resource_owner' => 'Resource Owner Dashboard',
-            'slt_employee' => 'SLT Employee Dashboard',
+            'slt_employee' => 'Welcome to the resource reservation system',
             'nebula_sms_user' => 'Nebula SMS User Dashboard',
             'management' => 'Management Dashboard',
             'canteen' => 'Canteen Dashboard',
@@ -65,7 +65,7 @@ class RoleDashboardTest extends TestCase
             ->assertSee('User management');
     }
 
-    public function test_employee_dashboard_only_lists_own_reservations(): void
+    public function test_employee_dashboard_shows_reservation_hub_cards(): void
     {
         $employee = User::factory()->role('slt_employee')->create();
         $other = User::factory()->role('admin')->create();
@@ -86,9 +86,15 @@ class RoleDashboardTest extends TestCase
         $this->actingAs($employee)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('My projector booking')
+            ->assertSee('Welcome to the resource reservation system')
+            ->assertSee('Normal reservation')
+            ->assertSee('Hostel reservation')
+            ->assertSee('Canteen reservation')
+            ->assertSee(route('reservations.home', absolute: false))
+            ->assertSee(route('hostel.home', absolute: false))
+            ->assertSee(route('canteen.home', absolute: false))
             ->assertDontSee('Secret other booking')
-            ->assertSee('New reservation');
+            ->assertDontSee('Create Hostel Reservation');
     }
 
     public function test_sms_user_dashboard_is_view_only(): void

@@ -61,6 +61,21 @@ class RoleFunctionAccessTest extends TestCase
         'reports.view' => 'hide-menu">Reports',
     ];
 
+    /**
+     * Permissions a role may hold for page access, but should not appear as staff list tabs.
+     *
+     * @var array<string, list<string>>
+     */
+    private const SIDEBAR_HIDDEN = [
+        'slt_employee' => [
+            'reservations.calendar',
+            'reservations.create',
+            'reservations.index',
+            'hostel.create',
+            'canteen.create',
+        ],
+    ];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -92,7 +107,9 @@ class RoleFunctionAccessTest extends TestCase
                 ->getContent();
 
             foreach (self::SIDEBAR as $permission => $marker) {
-                if ($this->roleHas($role, $permission)) {
+                $hidden = in_array($permission, self::SIDEBAR_HIDDEN[$role] ?? [], true);
+
+                if ($this->roleHas($role, $permission) && ! $hidden) {
                     $this->assertStringContainsString($marker, $html, "{$role} sidebar missing {$permission}");
                 } else {
                     $this->assertStringNotContainsString($marker, $html, "{$role} sidebar should hide {$permission}");

@@ -165,6 +165,7 @@ class ReservationController extends Controller
             ->where('status', '!=', ReservationStatus::DRAFT->value)
             ->whereHas('items', fn ($items) => $items->where('starts_at', '<', $rangeEnd)->where('ends_at', '>', $rangeStart));
         $this->restrictToOwnUnlessStaff($baseQuery);
+        $this->excludeHostelForSlt($baseQuery);
 
         $visibleReservations = (clone $baseQuery)->get();
         $blockingStatuses = ReservationStatus::blockingItemStatuses();
@@ -317,6 +318,7 @@ class ReservationController extends Controller
             ]);
 
         $this->restrictToOwnUnlessStaff($query);
+        $this->excludeHostelForSlt($query);
         $query->filter($filters);
 
         $calendarReservations = $query->orderBy('start_time')->get()->map(function (Reservation $reservation) {
@@ -525,6 +527,13 @@ class ReservationController extends Controller
     private function restrictToOwnUnlessStaff($query): void
     {
         $query->visibleTo(auth()->user());
+    }
+
+    private function excludeHostelForSlt($query): void
+    {
+        if (auth()->user()?->hasRole('slt_employee')) {
+            $query->where('type', '!=', ReservationType::HOSTEL->value);
+        }
     }
 
     private function formLookups(Request $request): array

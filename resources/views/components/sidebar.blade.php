@@ -1,22 +1,26 @@
 <div>
     @php
         $user = auth()->user();
+        $isSltEmployee = $user->hasRole('slt_employee');
         $canDashboard = $user->hasPermission('dashboard');
         $canCreateUser = $user->hasPermission('user.create');
         $canManageUsers = $user->hasPermission('user.management');
         $canReservationCalendar = $user->hasPermission('reservations.calendar');
         $canCreateReservation = $user->hasPermission('reservations.create');
-        $canExistingReservation = $user->hasPermission('reservations.index');
+        $canExistingReservation = $user->hasPermission('reservations.index') && ! $isSltEmployee;
+        $canSltResourceRequests = $isSltEmployee && $user->hasPermission('reservations.index');
         $canCreateResource = $user->hasPermission('resources.create');
         $canExistingResource = $user->hasPermission('resources.index');
         $canResourceCalendar = $user->hasPermission('resources.calendar');
         $canApprovals = $user->hasPermission('approvals.index');
         $canSpecialApprovals = $user->hasPermission('approvals.special');
-        $canHostelIndex = $user->hasPermission('hostel.index');
+        $canHostelIndex = $user->hasPermission('hostel.index') && ! $isSltEmployee;
         $canHostelCreate = $user->hasPermission('hostel.create');
-        $canCanteenDashboard = $user->hasPermission('canteen.view');
+        $canSltHostelRequests = $isSltEmployee && $user->hasPermission('hostel.index');
+        $canCanteenDashboard = $user->hasPermission('canteen.view') && ! $isSltEmployee;
         $canCanteenCreate = $user->hasPermission('canteen.create');
-        $canCanteenIndex = $user->hasPermission('canteen.index');
+        $canCanteenIndex = $user->hasPermission('canteen.index') && ! $isSltEmployee;
+        $canSltCanteenRequests = $isSltEmployee && $user->hasPermission('canteen.index');
         $canPayments = $user->hasPermission('payments.view');
         $canPaymentRates = $user->hasPermission('payments.rates.manage');
         $canReports = $user->hasPermission('reports.view');
@@ -47,6 +51,82 @@
                 </li>
             @endif
 
+            @if($isSltEmployee)
+                @php
+                    $sltResource = request()->routeIs('reservations.home', 'reservations.calendar', 'reservations.create', 'reservations.mine', 'reservations.show');
+                    $sltHostel = request()->routeIs('hostel.home', 'hostel.calendar', 'hostel.create', 'hostel.mine', 'hostel.show');
+                    $sltCanteen = request()->routeIs('canteen.home', 'canteen.calendar', 'canteen.create', 'canteen.mine', 'canteen.show', 'canteen.edit');
+                @endphp
+
+                @if($sltResource)
+                    <li class="nav-small-cap">
+                        <span class="nav-small-cap-text">NORMAL RESERVATION</span>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('reservations.calendar') ? 'active' : '' }}" href="{{ route('reservations.calendar') }}">
+                            <span><i class="ti ti-calendar-event"></i></span>
+                            <span class="hide-menu">Reservation Calendar</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('reservations.create') ? 'active' : '' }}" href="{{ route('reservations.create') }}">
+                            <span><i class="ti ti-calendar-plus"></i></span>
+                            <span class="hide-menu">Create Reservation</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('reservations.mine') ? 'active' : '' }}" href="{{ route('reservations.mine') }}">
+                            <span><i class="ti ti-list"></i></span>
+                            <span class="hide-menu">My requests</span>
+                        </a>
+                    </li>
+                @elseif($sltHostel)
+                    <li class="nav-small-cap">
+                        <span class="nav-small-cap-text">HOSTEL</span>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('hostel.calendar') ? 'active' : '' }}" href="{{ route('hostel.calendar') }}">
+                            <span><i class="ti ti-calendar-event"></i></span>
+                            <span class="hide-menu">Reservation Calendar</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('hostel.create') ? 'active' : '' }}" href="{{ route('hostel.create') }}">
+                            <span><i class="ti ti-bed"></i></span>
+                            <span class="hide-menu">Create Hostel Reservation</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('hostel.mine') ? 'active' : '' }}" href="{{ route('hostel.mine') }}">
+                            <span><i class="ti ti-list"></i></span>
+                            <span class="hide-menu">My requests</span>
+                        </a>
+                    </li>
+                @elseif($sltCanteen)
+                    <li class="nav-small-cap">
+                        <span class="nav-small-cap-text">CANTEEN</span>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('canteen.calendar') ? 'active' : '' }}" href="{{ route('canteen.calendar') }}">
+                            <span><i class="ti ti-calendar-event"></i></span>
+                            <span class="hide-menu">Reservation Calendar</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('canteen.create', 'canteen.edit') ? 'active' : '' }}" href="{{ route('canteen.create') }}">
+                            <span><i class="ti ti-plus"></i></span>
+                            <span class="hide-menu">Create reservation</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('canteen.mine') ? 'active' : '' }}" href="{{ route('canteen.mine') }}">
+                            <span><i class="ti ti-list"></i></span>
+                            <span class="hide-menu">My requests</span>
+                        </a>
+                    </li>
+                @endif
+            @else
+
             @if($canCreateUser || $canManageUsers)
                 <li class="nav-small-cap">
                     <span class="nav-small-cap-text">USER MANAGEMENT</span>
@@ -71,7 +151,7 @@
                 @endif
             @endif
 
-            @if($canReservationCalendar || $canCreateReservation || $canExistingReservation)
+            @if($canReservationCalendar || $canCreateReservation || $canExistingReservation || $canSltResourceRequests)
                 <li class="nav-small-cap">
                     <span class="nav-small-cap-text">RESERVATION MANAGEMENT</span>
                 </li>
@@ -99,6 +179,15 @@
                         <a class="sidebar-link {{ request()->routeIs('reservations.index') ? 'active' : '' }}" href="{{ route('reservations.index') }}">
                             <span><i class="ti ti-list-details"></i></span>
                             <span class="hide-menu">Existing Reservations</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canSltResourceRequests)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('reservations.mine') ? 'active' : '' }}" href="{{ route('reservations.mine') }}">
+                            <span><i class="ti ti-list"></i></span>
+                            <span class="hide-menu">My requests</span>
                         </a>
                     </li>
                 @endif
@@ -161,7 +250,7 @@
                 @endif
             @endif
 
-            @if($canHostelIndex || $canHostelCreate)
+            @if($canHostelIndex || $canHostelCreate || $canSltHostelRequests)
                 <li class="nav-small-cap">
                     <span class="nav-small-cap-text">HOSTEL</span>
                 </li>
@@ -183,9 +272,18 @@
                         </a>
                     </li>
                 @endif
+
+                @if($canSltHostelRequests)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('hostel.mine') ? 'active' : '' }}" href="{{ route('hostel.mine') }}">
+                            <span><i class="ti ti-list"></i></span>
+                            <span class="hide-menu">My requests</span>
+                        </a>
+                    </li>
+                @endif
             @endif
 
-            @if($canCanteenDashboard || $canCanteenCreate || $canCanteenIndex)
+            @if($canCanteenDashboard || $canCanteenCreate || $canCanteenIndex || $canSltCanteenRequests)
                 <li class="nav-small-cap">
                     <span class="nav-small-cap-text">CANTEEN</span>
                 </li>
@@ -213,6 +311,15 @@
                         <a class="sidebar-link {{ request()->routeIs('canteen.index', 'canteen.show') ? 'active' : '' }}" href="{{ route('canteen.index') }}">
                             <span><i class="ti ti-list-check"></i></span>
                             <span class="hide-menu">Existing Canteen Reservations</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canSltCanteenRequests)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('canteen.mine') ? 'active' : '' }}" href="{{ route('canteen.mine') }}">
+                            <span><i class="ti ti-list"></i></span>
+                            <span class="hide-menu">My requests</span>
                         </a>
                     </li>
                 @endif
@@ -254,6 +361,8 @@
                         <span class="hide-menu">Reports & Analytics</span>
                     </a>
                 </li>
+            @endif
+
             @endif
 
         </ul>

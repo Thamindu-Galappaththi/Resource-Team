@@ -270,9 +270,9 @@ return [
             'widgets' => ['Assigned resources', 'Pending approvals', 'Approved requests', 'Rejected requests', 'Maintenance schedules'],
         ],
         'slt_employee' => [
-            'title' => 'SLT Employee Dashboard',
-            'subtitle' => 'Available resources, new reservations, and personal booking status.',
-            'widgets' => ['Available resources', 'My reservations', 'Reservation status'],
+            'title' => 'Welcome to the resource reservation system',
+            'subtitle' => 'Choose a reservation type to get started.',
+            'widgets' => ['Normal reservation', 'Hostel reservation', 'Canteen reservation'],
         ],
         'nebula_sms_user' => [
             'title' => 'Nebula SMS User Dashboard',

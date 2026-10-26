@@ -10,6 +10,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PasswordSetupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\SltEmployeeDashboardController;
+use App\Http\Controllers\SltEmployeeRequestController;
 use App\Http\Controllers\ResourceCalendarController;
 use App\Http\Controllers\ResourceCategoryController;
 use App\Http\Controllers\ResourceController;
@@ -57,12 +59,14 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
         Route::get('/', 'index')->middleware('permission:reservations.index')->name('index');
         Route::get('/feed', 'feed')->middleware('permission:reservations.index')->name('feed');
+        Route::get('/home', [SltEmployeeDashboardController::class, 'resource'])->middleware('permission:reservations.create')->name('home');
         Route::get('/create', 'create')->middleware('permission:reservations.create')->name('create');
         Route::get('/calendar', 'calendar')->middleware('permission:reservations.calendar')->name('calendar');
         Route::get('/calendar/stats', 'calendarStats')->middleware('permission:reservations.calendar')->name('calendar.stats');
         Route::get('/calendar/events', 'calendarEvents')->middleware('permission:reservations.calendar')->name('calendar.events');
         Route::get('/lookups', 'lookups')->middleware('permission:reservations.create')->name('lookups');
         Route::get('/availability', 'availability')->middleware('permission:reservations.create')->name('availability');
+        Route::get('/my-requests', [SltEmployeeRequestController::class, 'resources'])->middleware('permission:reservations.index')->name('mine');
         Route::get('/{reservation}', 'show')->middleware('permission:reservations.index')->name('show');
     });
 
@@ -88,15 +92,21 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
         Route::get('/', 'index')->middleware('permission:hostel.index')->name('index');
+        Route::get('/home', [SltEmployeeDashboardController::class, 'hostel'])->middleware('permission:hostel.create')->name('home');
+        Route::get('/calendar', [SltEmployeeDashboardController::class, 'hostelCalendar'])->middleware('permission:hostel.index')->name('calendar');
         Route::get('/create', 'create')->middleware('permission:hostel.create')->name('create');
+        Route::get('/my-requests', [SltEmployeeRequestController::class, 'hostel'])->middleware('permission:hostel.index')->name('mine');
         Route::get('/{reservation}', 'show')->middleware('permission:hostel.index')->name('show');
     });
 
     Route::prefix('canteen')->name('canteen.')->controller(CanteenReservationController::class)->group(function () {
         Route::get('/', 'dashboard')->middleware('permission:canteen.view')->name('dashboard');
         Route::get('/forecast/{date}', 'forecast')->middleware('permission:canteen.view')->name('forecast');
+        Route::get('/home', [SltEmployeeDashboardController::class, 'canteen'])->middleware('permission:canteen.create')->name('home');
+        Route::get('/calendar', [SltEmployeeDashboardController::class, 'canteenCalendar'])->middleware('permission:canteen.index')->name('calendar');
         Route::get('/reservations', 'index')->middleware('permission:canteen.index')->name('index');
         Route::get('/reservations/create', 'create')->middleware('permission:canteen.create')->name('create');
+        Route::get('/reservations/my-requests', [SltEmployeeRequestController::class, 'canteen'])->middleware('permission:canteen.index')->name('mine');
         Route::get('/reservations/{reservation}', 'show')->middleware('permission:canteen.index')->name('show');
         Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
     });
