@@ -35,11 +35,14 @@ Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : redi
 // ===========================================================================
 
 Route::middleware('guest')->prefix('login')->controller(AuthController::class)->group(function () {
-    Route::get('/', 'showLogin')->name('login'); // login page
+    Route::get('/', 'showLogin')->name('login');
+    Route::get('/admin', 'showAdminLogin')->name('login.admin');
+    Route::get('/microsoft', 'redirectToMicrosoft')->middleware('throttle:10,1')->name('login.microsoft');
+    Route::get('/microsoft/callback', 'handleMicrosoftCallback')->name('login.microsoft.callback');
 });
 
 Route::middleware('guest')->get('/forgot-password', function () {
-    return redirect()->route('login')->with('status', 'Please contact an administrator to reset your password.');
+    return redirect()->route('login.admin')->with('status', 'Please contact an administrator to reset your password.');
 })->name('password.request');
 
 Route::middleware(['auth', 'active'])->group(function () {
