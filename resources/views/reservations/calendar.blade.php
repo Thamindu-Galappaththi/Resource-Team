@@ -128,5 +128,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=26"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=27"></script>
 @endpush

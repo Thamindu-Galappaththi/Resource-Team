@@ -159,17 +159,19 @@ document.addEventListener('DOMContentLoaded', () => {
             showDayEventList(date, holiday ? [holiday, ...items] : items);
         },
         headerToolbar: isMobile
-            ? { left: 'prev,next', center: 'title', right: 'refreshCalendar today' }
-            : { left: 'prev,next today', center: 'title', right: 'refreshCalendar dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
-        customButtons: {
-            refreshCalendar: {
-                text: 'Refresh',
-                hint: 'Refresh calendar',
-                click() {
-                    refreshCalendar();
+            ? { left: 'prev,next', center: 'title', right: isSltEmployee ? 'refreshCalendar today' : 'today' }
+            : { left: 'prev,next today', center: 'title', right: isSltEmployee ? 'refreshCalendar dayGridMonth,timeGridWeek,timeGridDay,listWeek' : 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+        customButtons: isSltEmployee
+            ? {
+                refreshCalendar: {
+                    text: 'Refresh',
+                    hint: 'Refresh calendar',
+                    click() {
+                        refreshCalendar();
+                    },
                 },
-            },
-        },
+            }
+            : {},
         buttonText: { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'Agenda' },
         eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
         slotLabelFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
@@ -244,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         dateClick(info) {
             if (info.view.type !== 'dayGridMonth') return;
-            if (info.jsEvent?.target?.closest('.rc-month-chip, .rc-month-more, .rc-more-pop')) {
+            if (isSltEmployee && info.jsEvent?.target?.closest('.rc-month-chip, .rc-month-more, .rc-more-pop')) {
                 return;
             }
             const holiday = holidayOn(info.date);
