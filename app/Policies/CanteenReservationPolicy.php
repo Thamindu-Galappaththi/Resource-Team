@@ -41,7 +41,7 @@ class CanteenReservationPolicy
 
     public function update(User $user, CanteenReservation $reservation): bool
     {
-        if ($user->hasRole('super_admin', 'admin', 'coordinator')) {
+        if ($user->hasRole('super_admin', 'admin', 'developer', 'coordinator')) {
             return true;
         }
 
@@ -51,22 +51,18 @@ class CanteenReservationPolicy
 
     public function delete(User $user, CanteenReservation $reservation): bool
     {
-        return $this->cancel($user, $reservation);
+        return $user->hasRole('super_admin', 'admin', 'developer');
     }
 
     public function cancel(User $user, CanteenReservation $reservation): bool
     {
-        if ($user->hasRole('super_admin', 'admin', 'coordinator')) {
-            return true;
-        }
-
         return $user->id === $reservation->requested_by_user_id
             && $reservation->canBeCancelled();
     }
 
     public function manageStatus(User $user, CanteenReservation $reservation): bool
     {
-        if (! $user->hasPermission('canteen.manage') && ! $user->hasRole('super_admin', 'admin', 'coordinator', 'canteen')) {
+        if (! $user->hasPermission('canteen.manage') && ! $user->hasRole('canteen')) {
             return false;
         }
 

@@ -78,6 +78,56 @@ window.RMSelect = {
         if (typeof options?.disabled === 'boolean') this.setDisabled(id, options.disabled);
     },
 
+    cascadeResourceFilters(config) {
+        const resources = Array.isArray(config?.resources) ? config.resources : [];
+        const emptyValue = config?.emptyValue ?? '';
+        const isEmpty = (value) => value == null || value === '' || String(value) === String(emptyValue);
+        const locationId = this.getValue(config.locationSelectId);
+        const resourceLocation = (resource) => String(resource.location_id ?? resource.locationId ?? '');
+        const resourceCategory = (resource) => String(resource.category_id ?? resource.categoryId ?? '');
+        const resourceName = (resource) => resource.name || resource.name_model || '';
+        const categories = Array.isArray(config?.categories) && config.categories.length
+            ? config.categories
+            : (() => {
+                const seen = new Map();
+                resources.forEach((resource) => {
+                    const id = resourceCategory(resource);
+                    if (!id || seen.has(id)) return;
+                    seen.set(id, {
+                        id,
+                        name: resource.category_name || resource.category || 'Uncategorized',
+                    });
+                });
+                return [...seen.values()].sort((left, right) => left.name.localeCompare(right.name));
+            })();
+
+        if (config.updateCategories !== false) {
+            const allowed = new Set(
+                resources
+                    .filter((resource) => isEmpty(locationId) || resourceLocation(resource) === String(locationId))
+                    .map((resource) => resourceCategory(resource))
+                    .filter(Boolean)
+            );
+            const categoryItems = (isEmpty(locationId) ? categories : categories.filter((category) => allowed.has(String(category.id))))
+                .map((category) => ({ value: String(category.id), label: category.name }));
+            this.setOptions(config.categorySelectId, categoryItems, config.categoryPlaceholder || 'All categories', {
+                placeholderValue: emptyValue,
+            });
+        }
+
+        const categoryId = this.getValue(config.categorySelectId);
+        const resourceItems = resources
+            .filter((resource) => {
+                if (!isEmpty(locationId) && resourceLocation(resource) !== String(locationId)) return false;
+                if (!isEmpty(categoryId) && resourceCategory(resource) !== String(categoryId)) return false;
+                return true;
+            })
+            .map((resource) => ({ value: String(resource.id), label: resourceName(resource) }));
+        this.setOptions(config.resourceSelectId, resourceItems, config.resourcePlaceholder || 'All resources', {
+            placeholderValue: emptyValue,
+        });
+    },
+
     setDisabled(id, disabled) {
         const wrap = this.wrapFor(id);
         const toggle = wrap?.querySelector('.cu-dropdown-toggle');

@@ -260,8 +260,8 @@ class NotificationTest extends TestCase
         ])->assertRedirect();
 
         Notification::assertNotSentTo($requester, CanteenReservationCreated::class);
-        Notification::assertSentTo($kitchen, CanteenReservationCreated::class);
         Notification::assertNotSentTo($requester, NewCanteenReservationPending::class);
+        Notification::assertSentTo($kitchen, NewCanteenReservationPending::class);
 
         $this->actingAs($requester)->post(route('canteen.store'), [
             'reservation_name' => 'Large event lunch',

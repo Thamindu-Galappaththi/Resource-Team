@@ -39,17 +39,22 @@
 
     <div class="rc-filters" id="resource-calendar-filters">
         <div class="rc-filter">
-            <label>Resource</label>
-            <x-rm-select id="resourceFilter" value="all" selected-label="All resources" placeholder="All resources"
-                :options="collect([['value' => 'all', 'label' => 'All resources']])->concat($resources->map(fn ($resource) => ['value' => (string) $resource->id, 'label' => $resource->name_model]))->all()" />
-        </div>
-        <div class="rc-filter">
-            <label>Location</label>
+            <label for="locationFilter">Location</label>
             <x-rm-select id="locationFilter" value="all" selected-label="All locations" placeholder="All locations"
                 :options="collect([['value' => 'all', 'label' => 'All locations']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
         </div>
         <div class="rc-filter">
-            <label>Status</label>
+            <label for="categoryFilter">Category</label>
+            <x-rm-select id="categoryFilter" value="all" selected-label="All categories" placeholder="All categories"
+                :options="collect([['value' => 'all', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
+        </div>
+        <div class="rc-filter">
+            <label for="resourceFilter">Resource</label>
+            <x-rm-select id="resourceFilter" value="all" selected-label="All resources" placeholder="All resources"
+                :options="collect([['value' => 'all', 'label' => 'All resources']])->concat($resources->map(fn ($resource) => ['value' => (string) $resource->id, 'label' => $resource->name_model]))->all()" />
+        </div>
+        <div class="rc-filter">
+            <label for="statusFilter">Status</label>
             <x-rm-select id="statusFilter" value="all" selected-label="All statuses" placeholder="All statuses" :options="[
                 ['value' => 'all', 'label' => 'All statuses'],
                 ['value' => 'approved', 'label' => 'Approved'],
@@ -57,11 +62,6 @@
                 ['value' => 'rejected', 'label' => 'Rejected'],
                 ['value' => 'cancelled', 'label' => 'Cancelled'],
             ]" />
-        </div>
-        <div class="rc-filter">
-            <label>Category</label>
-            <x-rm-select id="categoryFilter" value="all" selected-label="All categories" placeholder="All categories"
-                :options="collect([['value' => 'all', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
         </div>
         <div class="rc-filter-actions">
             <button type="button" id="refreshCalendarButton" class="rc-filter-button rc-filter-refresh">
@@ -172,8 +172,11 @@
         schedulerResources: @json($schedulerResources),
         canReserve: @json($canReserve),
         createReservationUrl: @json(route('reservations.create')),
+        filterCatalog: {
+            categories: @json($categories->map(fn ($category) => ['id' => (string) $category->id, 'name' => $category->name])->values()),
+        },
     };
 </script>
-<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=36"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=3"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=37"></script>
 @endpush

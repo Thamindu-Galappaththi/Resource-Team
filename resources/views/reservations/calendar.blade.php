@@ -121,8 +121,9 @@
         calendarUrl: @json(route('reservations.calendar')),
         statsUrl: @json(route('reservations.calendar.stats')),
         holidayImageBase: @json(asset('images/holidays')),
+        filterCatalog: @json($filterCatalog),
     };
 </script>
-<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=15"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=3"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=16"></script>
 @endpush

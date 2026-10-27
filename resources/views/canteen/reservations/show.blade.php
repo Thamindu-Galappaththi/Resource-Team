@@ -2,95 +2,88 @@
 
 @section('title', 'Canteen Reservation '.$reservation->reservation_ref)
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v={{ @filemtime(public_path('css/canteen-dashboard.css')) ?: time() }}">
+<link rel="stylesheet" href="{{ asset('css/canteen-pages.css') }}?v={{ @filemtime(public_path('css/canteen-pages.css')) ?: time() }}">
+@endpush
+
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+<div class="container-fluid py-4 cp-page">
+    <header class="cd-header">
         <div>
-            <h1 class="h3 text-white mb-2">{{ $reservation->reservation_ref }}</h1>
-            <p class="text-white-50 mb-0">{{ $reservation->reservation_name }}</p>
+            <div class="cd-eyebrow"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i> Canteen operations</div>
+            <h1 class="cd-title">{{ $reservation->reservation_ref }}</h1>
+            <p class="cd-subtitle">{{ $reservation->reservation_name }}</p>
         </div>
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
-            <a href="{{ route('canteen.index') }}" class="btn btn-outline-light">Back to list</a>
+        <div class="cd-actions">
+            <span class="cd-status cd-status--{{ $reservation->statusEnum()->tone() }}">{{ $reservation->statusEnum()->label() }}</span>
+            <a href="{{ route('canteen.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to list</a>
         </div>
-    </div>
+    </header>
 
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <div class="alert alert-success cp-auto-alert" role="status">{{ session('success') }}</div>
     @endif
     @if($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
-        </div>
+        <div class="alert alert-danger cp-auto-alert" role="alert">{{ $errors->first() }}</div>
     @endif
 
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <h2 class="h5 mb-3">Reservation details</h2>
-                    <div class="row g-3">
-                        <div class="col-md-6"><div class="small text-muted">Reservation name</div><div class="fw-medium">{{ $reservation->reservation_name }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Requester</div><div class="fw-medium">{{ $reservation->requestedBy?->name ?? 'Unknown' }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Meal type</div><div class="fw-medium">{{ $reservation->mealTypeLabel() }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Location</div><div class="fw-medium">{{ $reservation->location?->name ?? '—' }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Date & time</div><div class="fw-medium">{{ $reservation->reservation_date->format('d M Y') }} at {{ $reservation->serviceTimeLabel() }}</div></div>
-                        <div class="col-md-6"><div class="small text-muted">Orders</div><div class="fw-medium">{{ number_format($reservation->number_of_orders) }}</div></div>
-                        <div class="col-12"><div class="small text-muted">Order details</div><div class="fw-medium">{{ $reservation->order_details ?: '—' }}</div></div>
-                        <div class="col-12"><div class="small text-muted">Special remarks</div><div class="fw-medium">{{ $reservation->special_remarks ?: '—' }}</div></div>
-                        @if($reservation->approvedBy)
-                            <div class="col-md-6"><div class="small text-muted">Reviewed by</div><div class="fw-medium">{{ $reservation->approvedBy->name }}</div></div>
-                        @endif
-                        @if($reservation->approval_comments)
-                            <div class="col-12"><div class="small text-muted">Approval comment</div><div class="fw-medium">{{ $reservation->approval_comments }}</div></div>
-                        @endif
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 mt-4">
-                        @can('update', $reservation)
-                            @if($reservation->canBeEdited() || auth()->user()?->hasRole('developer', 'super_admin', 'admin', 'coordinator'))
-                                <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-outline-primary">Edit</a>
-                            @endif
-                        @endcan
-                        @can('cancel', $reservation)
-                            <form action="{{ route('canteen.destroy', $reservation) }}" method="POST" onsubmit="return confirm('Cancel this reservation?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-outline-danger">Cancel reservation</button>
-                            </form>
-                        @endcan
-                    </div>
-                </div>
+    <section class="cp-surface">
+        <div class="cp-panel-heading d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h2 class="h5 mb-1">Reservation details</h2>
+                <p class="text-muted small mb-0">Meal request, service slot, and review notes.</p>
+            </div>
+            <div class="cp-action-group">
+                @can('update', $reservation)
+                    <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="Edit" aria-label="Edit reservation"><i class="ti ti-pencil"></i></a>
+                @endcan
+                @can('delete', $reservation)
+                    <button type="button" class="btn btn-sm btn-outline-danger cp-icon-btn" title="Delete" aria-label="Delete reservation"
+                        data-cp-confirm
+                        data-cp-action="{{ route('canteen.destroy', $reservation) }}"
+                        data-cp-title="Delete reservation?"
+                        data-cp-sub="{{ $reservation->reservation_ref }} · {{ $reservation->reservation_name }}"
+                        data-cp-copy="This will permanently remove the reservation."
+                        data-cp-submit="Delete reservation"
+                        data-cp-icon="ti ti-trash"><i class="ti ti-trash"></i></button>
+                @elsecan('cancel', $reservation)
+                    <button type="button" class="btn btn-sm btn-outline-danger cp-icon-btn" title="Cancel" aria-label="Cancel reservation"
+                        data-cp-confirm
+                        data-cp-action="{{ route('canteen.destroy', $reservation) }}"
+                        data-cp-title="Cancel reservation?"
+                        data-cp-sub="{{ $reservation->reservation_ref }} · {{ $reservation->reservation_name }}"
+                        data-cp-copy="This will cancel the meal request and notify the canteen team."
+                        data-cp-submit="Cancel reservation"
+                        data-cp-icon="ti ti-ban"><i class="ti ti-ban"></i></button>
+                @endcan
             </div>
         </div>
-        <div class="col-lg-4">
-            @can('manageStatus', $reservation)
-                @if($reservation->status === \App\Enums\CanteenReservationStatus::PENDING->value)
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-body p-4">
-                            <h2 class="h5 mb-3">Review request</h2>
-                            <p class="text-muted small">Large-group orders stay pending until the canteen team confirms them.</p>
-                            <form method="POST" action="{{ route('canteen.status', $reservation) }}" class="mb-3">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="status" value="confirmed">
-                                <label class="form-label" for="approve_comments">Comment (optional)</label>
-                                <textarea id="approve_comments" name="approval_comments" class="form-control mb-3" rows="2" maxlength="1000">{{ old('approval_comments') }}</textarea>
-                                <button type="submit" class="btn btn-success w-100">Approve reservation</button>
-                            </form>
-                            <form method="POST" action="{{ route('canteen.status', $reservation) }}">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="status" value="rejected">
-                                <label class="form-label" for="reject_comments">Reason for rejection</label>
-                                <textarea id="reject_comments" name="approval_comments" class="form-control mb-3 @error('approval_comments') is-invalid @enderror" rows="2" maxlength="1000" required>{{ old('approval_comments') }}</textarea>
-                                @error('approval_comments')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                                <button type="submit" class="btn btn-outline-danger w-100">Reject reservation</button>
-                            </form>
-                        </div>
-                    </div>
+
+        <div class="cp-form-body">
+            <div class="cp-details">
+                <div class="cp-detail-row"><span class="cp-detail-label">Reservation name</span><span class="cp-detail-value">{{ $reservation->reservation_name }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Requester</span><span class="cp-detail-value">{{ $reservation->requestedBy?->name ?? 'Unknown' }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Meal type</span><span class="cp-detail-value">{{ $reservation->mealTypeLabel() }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Location</span><span class="cp-detail-value">{{ $reservation->location?->name ?? '—' }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Date & time</span><span class="cp-detail-value">{{ $reservation->reservation_date->format('d M Y') }} at {{ $reservation->serviceTimeLabel() }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Orders</span><span class="cp-detail-value">{{ number_format($reservation->number_of_orders) }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Order details</span><span class="cp-detail-value">{{ $reservation->order_details ?: '—' }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Special remarks</span><span class="cp-detail-value">{{ $reservation->special_remarks ?: '—' }}</span></div>
+                @if($reservation->approvedBy)
+                    <div class="cp-detail-row"><span class="cp-detail-label">Reviewed by</span><span class="cp-detail-value">{{ $reservation->approvedBy->name }}</span></div>
                 @endif
-            @endcan
+                @if($reservation->approval_comments)
+                    <div class="cp-detail-row"><span class="cp-detail-label">Approval comment</span><span class="cp-detail-value">{{ $reservation->approval_comments }}</span></div>
+                @endif
+            </div>
         </div>
-    </div>
+    </section>
 </div>
+
+@include('canteen.partials.confirm-modal')
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/canteen-ui.js') }}?v=4"></script>
+@endpush

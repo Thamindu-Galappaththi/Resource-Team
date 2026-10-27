@@ -6,6 +6,7 @@ html,
 body {
     margin: 0;
     min-height: 100%;
+    min-height: 100svh;
 }
 
 body {
@@ -13,10 +14,13 @@ body {
     color: #111827;
     background: #12081c url("../images/backgrounds/nebula.jpg") center / cover no-repeat fixed;
     min-height: 100vh;
+    min-height: 100svh;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 #starfield {
@@ -39,12 +43,14 @@ body {
 .login-shell {
     position: relative;
     z-index: 1;
+    flex: 1 1 auto;
     width: 100%;
-    min-height: 100vh;
+    min-height: 0;
     display: flex;
     align-items: center;
+    align-items: safe center;
     justify-content: center;
-    padding: 2rem 1rem;
+    padding: 2rem 1rem 1.25rem;
 }
 
 .login-card {
@@ -52,7 +58,7 @@ body {
     max-width: 420px;
     background: #ffffff;
     border-radius: 18px;
-    padding: 2.15rem 2rem 1.7rem;
+    padding: 1.7rem 1.85rem 1.4rem;
     box-shadow: 0 22px 60px rgba(8, 16, 40, 0.38);
     position: relative;
 }
@@ -70,26 +76,26 @@ body {
 
 .login-logo {
     display: block;
-    width: 220px;
+    width: 190px;
     max-width: 72%;
     height: auto;
-    margin: 0 auto 1.35rem;
+    margin: 0 auto 1rem;
 }
 
 h1 {
     margin: 0;
     text-align: center;
-    font-size: 1.7rem;
+    font-size: 1.55rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     color: #111827;
 }
 
 .login-subtitle {
-    margin: 0.45rem 0 1.45rem;
+    margin: 0.35rem 0 1.1rem;
     text-align: center;
     color: #9ca3af;
-    font-size: 0.92rem;
+    font-size: 0.9rem;
 }
 
 .login-alert {
@@ -220,6 +226,190 @@ button.login-btn {
     text-decoration: underline;
 }
 
+.login-card--gateway {
+    max-width: 460px;
+    padding-bottom: 1.45rem;
+}
+
+.login-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: -0.15rem 0 0.85rem;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.login-back:hover {
+    color: #0b3d91;
+}
+
+.login-badge {
+    display: inline-flex;
+    margin: 0 auto 0.7rem;
+    padding: 0.22rem 0.7rem;
+    border-radius: 999px;
+    background: #eef4ff;
+    color: #0b3d91;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.login-card--admin .login-badge {
+    display: table;
+}
+
+.login-choice {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 0.95rem 1rem 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.login-choice:hover,
+.login-choice:focus-visible {
+    transform: translateY(-3px);
+    border-color: #c7d2fe;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    outline: none;
+}
+
+.login-choice-kicker {
+    display: block;
+    margin-bottom: 0.28rem;
+    color: #6b7280;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.login-choice-title {
+    display: block;
+    color: #111827;
+    font-size: 1.08rem;
+    font-weight: 700;
+}
+
+.login-choice-hint {
+    display: block;
+    margin: 0.22rem 0 0.75rem;
+    color: #9ca3af;
+    font-size: 0.84rem;
+    line-height: 1.4;
+}
+
+.ms-login-btn,
+.admin-login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    width: 100%;
+    min-height: 46px;
+    padding: 0.55rem 1.2rem;
+    border-radius: 999px;
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #fff;
+}
+
+.ms-login-btn {
+    background: #0078d4;
+    box-shadow: 0 8px 18px rgba(0, 120, 212, 0.28);
+}
+
+.login-choice--microsoft:hover .ms-login-btn,
+.login-choice--microsoft:focus-visible .ms-login-btn {
+    background: #006cbe;
+}
+
+.ms-logo {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+}
+
+.admin-login-btn {
+    background: #0b3d91;
+    box-shadow: 0 8px 18px rgba(11, 61, 145, 0.24);
+}
+
+.login-choice--admin:hover .admin-login-btn,
+.login-choice--admin:focus-visible .admin-login-btn {
+    background: #09327a;
+}
+
+.admin-login-btn i {
+    font-size: 1.05rem;
+}
+
+.login-or {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.8rem 0;
+    color: #9ca3af;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.login-or::before,
+.login-or::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+.login-footer {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+    width: 100%;
+    padding: 1.15rem 1.25rem 1.2rem;
+    text-align: center;
+    background: linear-gradient(180deg, rgba(10, 8, 22, 0) 0%, rgba(10, 8, 22, 0.42) 38%, rgba(10, 8, 22, 0.78) 100%);
+    pointer-events: none;
+}
+
+.login-footer-accent {
+    width: 88px;
+    height: 2px;
+    margin: 0 auto 0.7rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, #00aeef, transparent);
+}
+
+.login-footer-brand,
+.login-footer-meta {
+    margin: 0;
+}
+
+.login-footer-brand {
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 0.84rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.login-footer-meta {
+    margin-top: 0.28rem;
+    color: rgba(226, 232, 240, 0.72);
+    font-size: 0.75rem;
+}
+
 @media (max-width: 576px) {
     .login-card {
         padding: 1.6rem 1.25rem 1.4rem;
@@ -232,5 +422,24 @@ button.login-btn {
 
     .login-logo {
         width: 180px;
+    }
+
+    .login-choice {
+        padding: 1rem 0.9rem 1.05rem;
+    }
+
+    .login-page,
+    .login-shell {
+        padding: 1.15rem 1rem 0.5rem;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .login-footer {
+        padding: 0.85rem 1rem 1rem;
+    }
+
+    .login-footer-brand {
+        font-size: 0.78rem;
     }
 }
