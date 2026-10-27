@@ -10,12 +10,12 @@ class CompleteCanteenReservations extends Command
 {
     protected $signature = 'canteen:complete-reservations';
 
-    protected $description = 'Mark confirmed canteen reservations as completed once their date and time have passed.';
+    protected $description = 'Mark approved canteen reservations as completed once their date and time have passed.';
 
     public function handle(): int
     {
         $updated = CanteenReservation::query()
-            ->where('status', CanteenReservationStatus::CONFIRMED->value)
+            ->whereIn('status', CanteenReservationStatus::accepted())
             ->where('reservation_date', '<=', now()->toDateString())
             ->get()
             ->filter(function (CanteenReservation $reservation) {

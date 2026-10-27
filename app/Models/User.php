@@ -160,6 +160,11 @@ class User extends Authenticatable
         return $this->role?->slug ?? RoleHelper::normalizeRole($this->user_role);
     }
 
+    public function isSltEmployeeStaff(): bool
+    {
+        return $this->slt_employee || $this->hasRole('slt_employee');
+    }
+
     public function hasRole(string ...$roles): bool
     {
         $assignedRoles = $this->roles()->pluck('slug')

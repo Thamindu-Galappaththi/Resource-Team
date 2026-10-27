@@ -15,7 +15,7 @@ class UpdateCanteenReservationStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'string', 'in:'.CanteenReservationStatus::CONFIRMED->value.','.CanteenReservationStatus::REJECTED->value],
+            'status' => ['required', 'string', 'in:'.CanteenReservationStatus::APPROVED->value.','.CanteenReservationStatus::CONFIRMED->value.','.CanteenReservationStatus::REJECTED->value],
             'approval_comments' => ['nullable', 'string', 'max:1000'],
         ];
     }

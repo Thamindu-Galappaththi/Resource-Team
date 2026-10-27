@@ -1,5 +1,5 @@
 (function () {
-    const skipForm = 'form[data-action-lock="off"], .rsv-filters, #ap-filters, #rsv-filters, #um-filters, .hr-filters, #hr-filters';
+    const skipForm = 'form[data-action-lock="off"], .rsv-filters, #ap-filters, #rsv-filters, #um-filters, .hr-filters, #hr-filters, .cp-filters';
     const skipButton = '[data-bs-dismiss], [data-bs-toggle="dropdown"], [data-bs-toggle="modal"], [data-bs-toggle="tab"], .rsv-filter-clear, .um-filter-clear, .hr-filter-clear, .rc-filter-clear';
 
     function rootOf(scope) {
