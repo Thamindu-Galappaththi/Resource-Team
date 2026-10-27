@@ -58,7 +58,7 @@
 
 .is-slt-calendar .fc-dayGridMonth-view .fc-daygrid-day-frame {
     height: auto;
-    min-height: 138px;
+    min-height: 112px;
     overflow: visible;
 }
 
@@ -68,6 +68,7 @@
 
 .is-slt-calendar .fc-dayGridMonth-view .rc-month-chips {
     flex: 0 0 auto;
+    gap: 3px;
 }
 
 .is-slt-calendar .fc-dayGridMonth-view .rc-month-chip {
@@ -79,8 +80,9 @@
 
 .is-slt-calendar .fc-dayGridMonth-view .rc-month-more {
     display: block;
-    margin-top: 8px;
-    padding-top: 2px;
+    margin: 0;
+    padding: 0;
+    line-height: 1.2;
     cursor: pointer;
 }
 
