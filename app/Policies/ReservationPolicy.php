@@ -75,7 +75,8 @@ class ReservationPolicy
 
     public function view(User $user, Reservation $reservation): bool
     {
-        if ($user->hasRole('developer', 'coordinator', 'resource_owner')) {
+        if ($user->hasPermission('approvals.index')
+            || $user->hasRole('developer', 'coordinator', 'resource_owner', 'management')) {
             return true;
         }
 

@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ReservationType;
 use App\Models\Location;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
 use App\Models\ResourceType;
 use App\Models\User;
 use App\Models\Reservation;
+use App\Models\ReservationItem;
 use Database\Seeders\HostelRoomSeeder;
 use Database\Seeders\LocationSeeder;
 use Database\Seeders\ReservationSeeder;
@@ -191,7 +193,9 @@ class ResourceManagementTest extends TestCase
             ->assertSee('Resource Owner')
             ->assertSee('e.g., Nadun')
             ->assertSee('Update the category name and features.')
-            ->assertSee('editAddFeatureBtn', false);
+            ->assertSee('editAddFeatureBtn', false)
+            ->assertSee('id="existingCategoriesPagination"', false)
+            ->assertSee('id="existingCategoriesCount"', false);
     }
 
     public function test_resource_calendar_page_renders_filters_and_calendar_root(): void
@@ -203,6 +207,16 @@ class ResourceManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Resource calendar')
             ->assertSee('id="resourceCalendar"', false)
+            ->assertSee('id="refreshCalendarButton"', false)
+            ->assertSee('id="resource-calendar-filters"', false)
+            ->assertSeeInOrder([
+                'id="locationFilter"',
+                'id="categoryFilter"',
+                'id="resourceFilter"',
+                'id="statusFilter"',
+            ], false)
+            ->assertSee('id="upcomingPagination"', false)
+            ->assertSee('id="upcomingResultCount"', false)
             ->assertSee('Active resources')
             ->assertDontSee('My Resources')
             ->assertSee('Independence Day')
@@ -214,6 +228,131 @@ class ResourceManagementTest extends TestCase
             ->assertSee('2028-02-04')
             ->assertSee('2028-01-12')
             ->assertSee('poya.svg', false);
+    }
+
+    public function test_resource_calendar_embeds_iso8601_times_from_reservation_items(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Hall A', 'status' => 'active']);
+        $reservation = Reservation::factory()->create([
+            'requester_id' => $user->id,
+            'created_by_user_id' => $user->id,
+            'title' => 'Lab session',
+        ]);
+        $start = now('UTC')->addDay()->setTime(3, 30, 0);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'resource_id' => $resource->id,
+            'starts_at' => $start,
+            'ends_at' => $start->copy()->addHours(3),
+            'resource_name_snapshot' => 'Hall A',
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('resources.calendar.events', [
+                'start' => $start->copy()->subDay()->toIso8601String(),
+                'end' => $start->copy()->addDays(2)->toIso8601String(),
+            ]))
+            ->assertOk()
+            ->assertSee('Hall A', false)
+            ->assertSee($start->copy()->timezone('Asia/Colombo')->format('Y-m-d\TH:i:s'), false)
+            ->assertDontSee('"start":"T', false);
+    }
+
+    public function test_resource_calendar_uses_nights_and_stay_bounds_for_hostel_bookings(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Moratuwa Single 101', 'status' => 'active']);
+        $start = now('Asia/Colombo')->addDays(5)->setTime(11, 0, 0);
+        $end = $start->copy()->addHours(61);
+        $reservation = Reservation::factory()->create([
+            'requester_id' => $user->id,
+            'created_by_user_id' => $user->id,
+            'type' => ReservationType::HOSTEL->value,
+            'title' => 'Hostel stay',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'resource_id' => $resource->id,
+            'starts_at' => $start->copy()->utc(),
+            'ends_at' => $end->copy()->utc(),
+            'resource_name_snapshot' => 'Moratuwa Single 101',
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('resources.calendar.events', [
+                'start' => $start->copy()->subDay()->toIso8601String(),
+                'end' => $end->copy()->addDay()->toIso8601String(),
+            ]))
+            ->assertOk()
+            ->assertSee('Moratuwa Single 101', false)
+            ->assertSee('2 nights', false)
+            ->assertSee('"reservationType":"hostel"', false)
+            ->assertDontSee('61 hr', false);
+    }
+
+    public function test_resource_calendar_shows_other_users_bookings_to_developer(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $developer = User::factory()->role('developer')->create();
+        $owner = User::factory()->role('admin')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Hall A', 'status' => 'active']);
+        $reservation = Reservation::factory()->create([
+            'requester_id' => $owner->id,
+            'created_by_user_id' => $owner->id,
+            'title' => 'Shared lab booking',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'resource_id' => $resource->id,
+            'resource_name_snapshot' => 'Hall A',
+        ]);
+
+        $this->actingAs($developer)
+            ->getJson(route('resources.calendar.events', [
+                'start' => now()->subDay()->toIso8601String(),
+                'end' => now()->addMonths(2)->toIso8601String(),
+            ]))
+            ->assertOk()
+            ->assertSee('Hall A', false)
+            ->assertSee('Shared lab booking', false);
+    }
+
+    public function test_resource_calendar_events_honor_resource_filter(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        $keep = Resource::factory()->create(['name_model' => 'Keep Hall', 'status' => 'active']);
+        $hide = Resource::factory()->create(['name_model' => 'Hide Hall', 'status' => 'active']);
+        $start = now('UTC')->addDay()->setTime(3, 30, 0);
+        foreach ([$keep, $hide] as $resource) {
+            $reservation = Reservation::factory()->create([
+                'requester_id' => $user->id,
+                'created_by_user_id' => $user->id,
+                'location_id' => $resource->location_id,
+                'title' => $resource->name_model.' booking',
+            ]);
+            ReservationItem::factory()->create([
+                'reservation_id' => $reservation->id,
+                'resource_id' => $resource->id,
+                'starts_at' => $start,
+                'ends_at' => $start->copy()->addHours(2),
+                'resource_name_snapshot' => $resource->name_model,
+            ]);
+        }
+
+        $range = [
+            'start' => $start->copy()->subDay()->toIso8601String(),
+            'end' => $start->copy()->addDays(2)->toIso8601String(),
+        ];
+
+        $this->actingAs($user)
+            ->getJson(route('resources.calendar.events', $range + ['resource_id' => $keep->id]))
+            ->assertOk()
+            ->assertSee('Keep Hall', false)
+            ->assertDontSee('Hide Hall', false);
     }
 
     public function test_empty_category_features_are_not_stored(): void

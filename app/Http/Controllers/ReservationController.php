@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReservationStatus;
+use App\Enums\ReservationType;
 use App\Exceptions\ReservationConflictException;
 use App\Http\Requests\CancelReservationRequest;
 use App\Http\Requests\StoreReservationRequest;
@@ -16,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -23,23 +25,24 @@ class ReservationController extends Controller
 {
     public function __construct(private readonly ReservationBookingService $bookings) {}
 
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Reservation::class);
 
-        $payload = $this->indexPayload($request);
-
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json($payload);
-        }
-
-        return view('reservations.index', [
-            'payload' => $payload,
+        return $this->htmlPage('reservations.index', [
+            'payload' => $this->indexPayload($request),
             'locations' => Location::query()->ordered()->get(),
             'categories' => ResourceCategory::query()->orderBy('name')->get(),
             'resources' => Resource::query()->orderBy('name_model')->get(['id', 'name_model', 'serial_number']),
             'statuses' => ReservationStatus::cases(),
         ]);
+    }
+
+    public function feed(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Reservation::class);
+
+        return $this->uncachedJson($this->indexPayload($request));
     }
 
     public function create(Request $request): View
@@ -77,7 +80,7 @@ class ReservationController extends Controller
         return view('reservations.show', compact('reservation'));
     }
 
-    public function cancel(CancelReservationRequest $request, Reservation $reservation): RedirectResponse
+    public function cancel(CancelReservationRequest $request, Reservation $reservation): RedirectResponse|JsonResponse
     {
         $this->authorize('cancel', $reservation);
 
@@ -96,27 +99,151 @@ class ReservationController extends Controller
             ->with('success', 'Reservation cancelled successfully.');
     }
 
-    public function calendar(Request $request): View|JsonResponse
+    public function calendar(Request $request): Response
     {
         $this->authorize('viewAny', Reservation::class);
 
-        $payload = $this->calendarPayload($request);
+        $categories = ResourceCategory::query()->orderBy('name')->get();
+        $resources = Resource::query()
+            ->with('type:id,resource_category_id')
+            ->orderBy('name_model')
+            ->get(['id', 'name_model', 'location_id', 'resource_type_id']);
 
-        if ($request->wantsJson()) {
-            return response()->json(collect($payload)->except('currentDate')->all());
-        }
-
-        return view('reservations.calendar', $payload + [
+        return $this->htmlPage('reservations.calendar', $this->calendarPayload($request) + [
             'locations' => Location::query()->ordered()->get(),
-            'categories' => ResourceCategory::query()->orderBy('name')->get(),
-            'resources' => Resource::query()->orderBy('name_model')->get(['id', 'name_model']),
+            'categories' => $categories,
+            'resources' => $resources,
+            'filterCatalog' => [
+                'categories' => $categories->map(fn (ResourceCategory $category) => [
+                    'id' => (string) $category->id,
+                    'name' => $category->name,
+                ])->values(),
+                'resources' => $resources->map(fn (Resource $resource) => [
+                    'id' => (string) $resource->id,
+                    'name' => $resource->name_model,
+                    'location_id' => (string) $resource->location_id,
+                    'category_id' => (string) ($resource->type?->resource_category_id ?? ''),
+                ])->values(),
+            ],
             'statuses' => collect(ReservationStatus::cases())->reject(fn (ReservationStatus $status) => in_array($status, [
                 ReservationStatus::DRAFT,
                 ReservationStatus::CANCELLED,
                 ReservationStatus::REJECTED,
             ], true))->values(),
             'canCreate' => $request->user()?->can('create', Reservation::class),
+            'eventsUrl' => route('reservations.calendar.events'),
+            'availabilityUrl' => route('reservations.availability'),
+            'createUrl' => route('reservations.create'),
         ]);
+    }
+
+    public function calendarStats(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Reservation::class);
+
+        return $this->uncachedJson(collect($this->calendarPayload($request))->except('currentDate')->all());
+    }
+
+    public function calendarEvents(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Reservation::class);
+        $filters = $request->validate([
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:start'],
+            'location_id' => ['nullable', 'integer', 'exists:locations,id'],
+            'resource_category_id' => ['nullable', 'integer', 'exists:resource_categories,id'],
+            'resource_type_id' => ['nullable', 'integer', 'exists:resource_types,id'],
+            'resource_id' => ['nullable', 'integer', 'exists:resources,id'],
+            'requester_id' => ['nullable', 'integer', 'exists:users,id'],
+            'status' => ['nullable', 'in:'.implode(',', ReservationStatus::values())],
+        ]);
+
+        $rangeStart = Carbon::parse($filters['start'])->utc();
+        $rangeEnd = Carbon::parse($filters['end'])->utc();
+        $baseQuery = Reservation::query()
+            ->with(['requester', 'location', 'items.resource.type.category'])
+            ->where('status', '!=', ReservationStatus::DRAFT->value)
+            ->whereHas('items', fn ($items) => $items->where('starts_at', '<', $rangeEnd)->where('ends_at', '>', $rangeStart));
+        $this->restrictToOwnUnlessStaff($baseQuery);
+
+        $visibleReservations = (clone $baseQuery)->get();
+        $blockingStatuses = ReservationStatus::blockingItemStatuses();
+        $bookedItems = $visibleReservations->flatMap(fn (Reservation $reservation) =>
+            $reservation->items
+                ->filter(fn ($item) => in_array($item->status, $blockingStatuses, true) && $item->starts_at && $item->ends_at)
+                ->map(fn ($item) => [
+                    'reservation_id' => $reservation->id,
+                    'resource_id' => $item->resource_id,
+                    'starts_at' => $item->starts_at,
+                    'ends_at' => $item->ends_at,
+                ])
+        );
+        $conflicts = [];
+        foreach ($bookedItems->groupBy('resource_id') as $items) {
+            $items = $items->sortBy(fn ($item) => $item['starts_at']->getTimestamp())->values();
+            for ($i = 0; $i < $items->count(); $i++) {
+                for ($j = $i + 1; $j < $items->count(); $j++) {
+                    if (! $items[$i]['starts_at']->lt($items[$j]['ends_at'])) break;
+                    if ($items[$i]['reservation_id'] !== $items[$j]['reservation_id']
+                        && $items[$i]['ends_at']->gt($items[$j]['starts_at'])) {
+                        $conflicts[$items[$i]['reservation_id']] = true;
+                        $conflicts[$items[$j]['reservation_id']] = true;
+                    }
+                }
+            }
+        }
+
+        $query = (clone $baseQuery)
+            ->when($filters['location_id'] ?? null, fn ($q, $value) => $q->where('location_id', $value))
+            ->when($filters['requester_id'] ?? null, fn ($q, $value) => $q->where('requester_id', $value))
+            ->when($filters['status'] ?? null, fn ($q, $value) => $q->where('status', $value))
+            ->when(($filters['resource_id'] ?? null) || ($filters['resource_type_id'] ?? null) || ($filters['resource_category_id'] ?? null), function ($q) use ($filters) {
+                $q->whereHas('items.resource', function ($resources) use ($filters) {
+                    if ($filters['resource_id'] ?? null) $resources->whereKey($filters['resource_id']);
+                    if ($filters['resource_type_id'] ?? null) $resources->where('resource_type_id', $filters['resource_type_id']);
+                    if ($filters['resource_category_id'] ?? null) {
+                        $resources->whereHas('type', fn ($types) => $types->where('resource_category_id', $filters['resource_category_id']));
+                    }
+                });
+            });
+
+        $events = $query->orderBy('reservation_date')->orderBy('start_time')->get()
+            ->flatMap(function (Reservation $reservation) use ($conflicts, $filters, $rangeStart, $rangeEnd) {
+                $items = $reservation->items->filter(function ($item) use ($filters, $rangeStart, $rangeEnd) {
+                    if (! $item->starts_at || ! $item->ends_at || ! $item->starts_at->lt($item->ends_at)) {
+                        return false;
+                    }
+                    if (! $item->starts_at->lt($rangeEnd) || ! $item->ends_at->gt($rangeStart)) {
+                        return false;
+                    }
+                    if (($filters['resource_id'] ?? null) && (int) $item->resource_id !== (int) $filters['resource_id']) {
+                        return false;
+                    }
+                    if (($filters['resource_type_id'] ?? null) && (int) $item->resource?->resource_type_id !== (int) $filters['resource_type_id']) {
+                        return false;
+                    }
+                    if (($filters['resource_category_id'] ?? null)
+                        && (int) $item->resource?->type?->resource_category_id !== (int) $filters['resource_category_id']) {
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                if ($items->isEmpty()) {
+                    return [];
+                }
+
+                return $items->flatMap(fn ($item) => $this->calendarItemSegments($reservation, $item, $conflicts, $rangeStart, $rangeEnd));
+            });
+
+        $holidays = collect(SriLankaHolidays::calendarEvents())->filter(function (array $event) use ($filters) {
+            $date = substr((string) ($event['start'] ?? ''), 0, 10);
+
+            return $date >= substr($filters['start'], 0, 10) && $date < substr($filters['end'], 0, 10);
+        });
+
+        return response()->json($events->values()->merge($holidays)->values());
     }
 
     public function lookups(): JsonResponse
@@ -288,7 +415,7 @@ class ReservationController extends Controller
                 'resource_category_id' => $request->input('resource_category_id'),
             ]);
 
-        $reservations = $query->paginate(10)->appends($request->query());
+        $reservations = $query->paginate(10)->appends($request->except('partial'))->setPath(route('reservations.index'));
         $user = $request->user();
 
         $base = Reservation::query();
@@ -373,7 +500,8 @@ class ReservationController extends Controller
             'items' => $reservation->items->map(fn ($item) => [
                 'name' => $item->resource_name_snapshot,
                 'category' => $item->resource?->type?->category?->name ?? '—',
-                'status' => ucfirst((string) $item->status),
+                'status' => $reservation->bookedItemStatusLabel($item),
+                'status_badge' => $reservation->statusEnum()->badgeClass(),
             ])->values(),
             'history' => $reservation->statusHistory->map(fn ($history) => [
                 'from' => $this->statusLabel($history->from_status),
@@ -396,15 +524,7 @@ class ReservationController extends Controller
 
     private function restrictToOwnUnlessStaff($query): void
     {
-        $user = auth()->user();
-        if ($user?->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'resource_owner')) {
-            return;
-        }
-
-        $query->where(function ($inner) use ($user) {
-            $inner->where('requester_id', $user?->id)
-                ->orWhere('created_by_user_id', $user?->id);
-        });
+        $query->visibleTo(auth()->user());
     }
 
     private function formLookups(Request $request): array
@@ -463,5 +583,96 @@ class ReservationController extends Controller
             'categories' => ResourceCategory::query()->orderBy('name')->get(['id', 'name']),
             'resources' => $resources,
         ];
+    }
+
+    /**
+     * @param  array<int, bool>  $conflicts
+     * @return list<array<string, mixed>>
+     */
+    private function calendarItemSegments(Reservation $reservation, $item, array $conflicts, Carbon $rangeStart, Carbon $rangeEnd): array
+    {
+        $timezone = $this->bookings->timezone();
+        $start = $item->starts_at->timezone($timezone);
+        $end = $item->ends_at->timezone($timezone);
+        $minutes = max(0, (int) $start->diffInMinutes($end));
+        $overnight = $start->toDateString() !== $end->copy()->subSecond()->toDateString();
+        $duration = trim(implode(' ', array_filter([
+            intdiv($minutes, 60) ? intdiv($minutes, 60).' hr' : null,
+            $minutes % 60 ? ($minutes % 60).' min' : null,
+        ]))) ?: 'Less than a minute';
+        if ($reservation->type === ReservationType::HOSTEL->value && $overnight) {
+            $nights = max(1, (int) $start->copy()->startOfDay()->diffInDays($end->copy()->subSecond()->startOfDay()));
+            $duration = $nights === 1 ? '1 night' : $nights.' nights';
+        }
+        $conflict = isset($conflicts[$reservation->id]);
+        [$color, $textColor] = match ($reservation->status) {
+            ReservationStatus::APPROVED->value, ReservationStatus::CONFIRMED->value, ReservationStatus::IN_PROGRESS->value => ['#16845b', '#fff'],
+            ReservationStatus::CANCELLED->value, ReservationStatus::REJECTED->value, ReservationStatus::EXPIRED->value => ['#7b8493', '#fff'],
+            ReservationStatus::COMPLETED->value => ['#4778d0', '#fff'],
+            default => ['#d18b00', '#fff'],
+        };
+        $resourceName = $item->resource_name_snapshot ?: $item->resource?->name_model ?: '—';
+        $segments = [];
+        $segmentStart = $start->copy();
+
+        while ($segmentStart->lt($end)) {
+            $midnight = $segmentStart->copy()->startOfDay()->addDay();
+            $segmentEnd = $end->lt($midnight) ? $end->copy() : $midnight;
+
+            if ($segmentStart->lt($rangeEnd) && $segmentEnd->gt($rangeStart)) {
+                $visibleStart = $segmentStart->lt($rangeStart)
+                    ? $rangeStart->copy()->timezone($timezone)
+                    : $segmentStart->copy();
+                $visibleEnd = $segmentEnd->gt($rangeEnd)
+                    ? $rangeEnd->copy()->timezone($timezone)
+                    : $segmentEnd->copy();
+
+                $segments[] = [
+                    'id' => $reservation->id.'-'.$item->id.'-'.$segmentStart->toDateString(),
+                    'title' => $reservation->reference.' · '.($reservation->title ?: $reservation->purpose),
+                    'start' => $visibleStart->toIso8601String(),
+                    'end' => $visibleEnd->toIso8601String(),
+                    'backgroundColor' => $conflict ? '#c0392b' : $color,
+                    'borderColor' => $conflict ? '#a93226' : $color,
+                    'textColor' => $textColor,
+                    'classNames' => $conflict ? ['reservation-conflict'] : [],
+                    'extendedProps' => [
+                        'reservationId' => $reservation->id,
+                        'reference' => $reservation->reference,
+                        'purpose' => $reservation->title ?: $reservation->purpose,
+                        'reservationStart' => $start->toIso8601String(),
+                        'reservationEnd' => $end->toIso8601String(),
+                        'resource' => $resourceName,
+                        'owner' => $reservation->requester?->name ?? 'Unknown',
+                        'location' => $reservation->location?->name ?? '—',
+                        'duration' => $duration,
+                        'reservationType' => $reservation->type,
+                            'status' => $reservation->statusEnum()->label(),
+                            'statusKey' => $reservation->status,
+                            'statusValue' => $reservation->status,
+                            'conflict' => $conflict,
+                        'url' => $this->calendarReservationUrl($reservation),
+                    ],
+                ];
+            }
+
+            $segmentStart = $segmentEnd;
+        }
+
+        return $segments;
+    }
+
+    private function calendarReservationUrl(Reservation $reservation): ?string
+    {
+        $user = request()->user();
+        if ($reservation->type === ReservationType::HOSTEL->value && $user?->can('viewHostel', $reservation)) {
+            return route('hostel.show', $reservation);
+        }
+
+        if ($user?->can('view', $reservation) && $user?->hasPermission('reservations.index')) {
+            return route('reservations.show', $reservation);
+        }
+
+        return null;
     }
 }

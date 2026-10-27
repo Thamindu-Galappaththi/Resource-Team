@@ -213,6 +213,37 @@
     box-shadow: 0 24px 60px rgba(18, 58, 122, .28);
 }
 
+.rm-page .modal-dialog-scrollable {
+    max-height: calc(100vh - 2rem);
+    margin: 1rem auto;
+}
+
+.rm-page .modal-dialog-scrollable .modal-content {
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+}
+
+.rm-page .modal-dialog-scrollable form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.rm-page .modal-dialog-scrollable .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.rm-page .modal-dialog-scrollable .modal-header,
+.rm-page .modal-dialog-scrollable .modal-footer {
+    flex-shrink: 0;
+}
+
 .rm-page .modal-header {
     position: relative;
     display: flex;

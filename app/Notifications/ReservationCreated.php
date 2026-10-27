@@ -25,6 +25,10 @@ class ReservationCreated extends Notification
             'reservation_id' => $this->reservation->id,
             'reference' => $this->reservation->reference,
             'status' => $this->reservation->status,
+            'reservation_type' => $this->reservation->type,
+            'icon' => 'ti-calendar-plus',
+            'title' => 'Reservation submitted',
+            'url' => $this->reservation->destinationUrl(),
             'message' => 'Reservation '.$this->reservation->reference.' submitted successfully and sent for approval.',
         ];
     }

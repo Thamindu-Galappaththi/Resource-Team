@@ -72,6 +72,7 @@ return [
         'canteen.create' => ['name' => 'Create canteen reservations', 'module' => 'canteen'],
         'canteen.manage' => ['name' => 'Manage canteen reservations', 'module' => 'canteen'],
         'payments.view' => ['name' => 'View payments', 'module' => 'payments'],
+        'payments.rates.manage' => ['name' => 'Manage resource rates', 'module' => 'payments'],
         'reports.view' => ['name' => 'Reports and analytics', 'module' => 'reports'],
     ],
 
@@ -137,6 +138,7 @@ return [
             'section' => 'Payments',
             'actions' => [
                 ['slug' => 'payments.view', 'action' => 'View'],
+                ['slug' => 'payments.rates.manage', 'action' => 'Manage rates'],
             ],
         ],
         [
@@ -174,6 +176,7 @@ return [
             'canteen.create',
             'canteen.manage',
             'payments.view',
+            'payments.rates.manage',
             'reports.view',
         ],
         'coordinator' => [
@@ -220,6 +223,7 @@ return [
             'reservations.calendar',
             'resources.index',
             'payments.view',
+            'payments.rates.manage',
             'reports.view',
         ],
         'canteen' => [

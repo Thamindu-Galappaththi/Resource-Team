@@ -18,6 +18,7 @@
         $canCanteenCreate = $user->hasPermission('canteen.create');
         $canCanteenIndex = $user->hasPermission('canteen.index');
         $canPayments = $user->hasPermission('payments.view');
+        $canPaymentRates = $user->hasPermission('payments.rates.manage');
         $canReports = $user->hasPermission('reports.view');
     @endphp
 
@@ -233,6 +234,14 @@
                         <span class="hide-menu">Resource Payments</span>
                     </a>
                 </li>
+                @if($canPaymentRates)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('payments.rates.*') ? 'active' : '' }}" href="{{ route('payments.rates.index') }}">
+                            <span><i class="ti ti-tag"></i></span>
+                            <span class="hide-menu">Resource Rates</span>
+                        </a>
+                    </li>
+                @endif
             @endif
 
             @if($canReports)
@@ -248,11 +257,11 @@
             @endif
 
         </ul>
-        <div class="sidebar-footer">
-            <div class="bg-light rounded p-3 d-flex flex-column gap-2 align-items-center">
-                <a href="{{ route('user.profile') }}" class="btn w-100" style="background-color: #6c8cff; color: #fff; font-weight: 500;">My Profile</a>
-                <a href="{{ route('logout') }}" class="btn w-100" style="background-color: #ff8c7a; color: #fff; font-weight: 500;">Logout</a>
-            </div>
-        </div>
     </nav>
+    <div class="sidebar-footer">
+        <div class="bg-light rounded p-3 d-flex flex-column gap-2 align-items-center">
+            <a href="{{ route('user.profile') }}" class="btn w-100" style="background-color: #6c8cff; color: #fff; font-weight: 500;">My Profile</a>
+            <a href="{{ route('logout') }}" class="btn w-100" style="background-color: #ff8c7a; color: #fff; font-weight: 500;">Logout</a>
+        </div>
+    </div>
 </div>

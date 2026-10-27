@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\LecturerProfile;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,7 +35,7 @@ class LecturerPayable extends Model
      */
     public function lectureSession(): BelongsTo
     {
-        return $this->belongsTo(LectureSession::class);
+        return $this->belongsTo(LectureSession::class, 'lecture_session_id');
     }
 
     /**
@@ -42,7 +43,7 @@ class LecturerPayable extends Model
      */
     public function lecturer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'lecturer_id');
+        return $this->belongsTo(LecturerProfile::class, 'lecturer_id');
     }
 
     /**
@@ -50,6 +51,6 @@ class LecturerPayable extends Model
      */
     public function rateCard(): BelongsTo
     {
-        return $this->belongsTo(RateCard::class);
+        return $this->belongsTo(RateCard::class, 'rate_card_id');
     }
 }

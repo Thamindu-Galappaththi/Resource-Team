@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\ReservationItemStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use Illuminate\Database\Eloquent\Builder;
@@ -36,6 +35,7 @@ class Reservation extends Model
         'approved_at',
         'cancelled_at',
         'cancellation_reason',
+        'approval_archived_at',
         'version',
     ];
 
@@ -46,6 +46,7 @@ class Reservation extends Model
             'submitted_at' => 'datetime',
             'approved_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'approval_archived_at' => 'datetime',
         ];
     }
 
@@ -134,6 +135,24 @@ class Reservation extends Model
         return in_array($this->status, ReservationStatus::cancellable(), true);
     }
 
+    public function bookedItemStatusLabel($item = null): string
+    {
+        return $this->statusEnum()->label();
+    }
+
+    public function destinationUrl(bool $forApprover = false): string
+    {
+        if ($this->type === ReservationType::HOSTEL->value) {
+            return route('hostel.show', $this);
+        }
+
+        if ($forApprover) {
+            return route('approvals.index', ['search' => $this->reference]);
+        }
+
+        return route('reservations.show', $this);
+    }
+
     public function resourceNames(): string
     {
         return $this->items
@@ -141,6 +160,31 @@ class Reservation extends Model
             ->filter()
             ->unique()
             ->implode(', ');
+    }
+
+    public function scopeVisibleTo(Builder $query, ?User $user): Builder
+    {
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->hasPermission('approvals.index')
+            || $user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'management')) {
+            return $query;
+        }
+
+        if ($user->hasRole('hostel_manager') || $user->hasPermission('hostel.manage')) {
+            return $query->where(function (Builder $inner) use ($user) {
+                $inner->where('type', ReservationType::HOSTEL->value)
+                    ->orWhere('requester_id', $user->id)
+                    ->orWhere('created_by_user_id', $user->id);
+            });
+        }
+
+        return $query->where(function (Builder $inner) use ($user) {
+            $inner->where('requester_id', $user->id)
+                ->orWhere('created_by_user_id', $user->id);
+        });
     }
 
     public function scopeSearch(Builder $query, ?string $search): Builder

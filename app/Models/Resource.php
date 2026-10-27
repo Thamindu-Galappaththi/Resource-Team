@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Resource extends Model
 {
@@ -120,4 +122,15 @@ class Resource extends Model
                 $category->where('name', config('hostel.category_name', 'Hostel Room'));
             });
     }
+
+    public function lecturerProfile(): HasOne
+    {
+        return $this->hasOne(LecturerProfile::class);
+    }
+
+    public function rates(): HasMany
+    {
+        return $this->hasMany(ResourceRate::class);
+    }
+    
 }

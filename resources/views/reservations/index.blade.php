@@ -139,7 +139,8 @@
 
 <div class="modal fade rsv-modal" id="rsv-cancel-modal" tabindex="-1" aria-labelledby="rsv-cancel-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form id="rsv-cancel-form" class="modal-content">
+        <form id="rsv-cancel-form" method="POST" class="modal-content">
+            @csrf
             <div class="modal-header">
                 <span class="rsv-modal-icon" aria-hidden="true"><i class="ti ti-ban"></i></span>
                 <div>
@@ -163,13 +164,14 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
 <script>
 window.RSVIndex = {
     url: @json(route('reservations.index')),
+    feed: @json(route('reservations.feed')),
     payload: @json($payload),
 };
 </script>
-<script src="{{ asset('js/reservation-index.js') }}?v=6"></script>
+<script src="{{ asset('js/reservation-index.js') }}?v=11"></script>
 @endpush

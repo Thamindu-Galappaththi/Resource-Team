@@ -175,13 +175,28 @@
         document.body.style.removeProperty('padding-right');
     }
 
+    function pageUrl(url) {
+        const source = new URL(url || config.url, window.location.origin);
+        const page = new URL(config.url, window.location.origin);
+        page.search = source.search;
+        page.searchParams.delete('partial');
+        return page;
+    }
+
+    function feedUrl(url) {
+        const page = pageUrl(url);
+        const feed = new URL(config.feed, window.location.origin);
+        feed.search = page.search;
+        return feed.toString();
+    }
+
     function fetchList(url, push = true) {
         closeModals();
         const target = url || `${config.url}${Object.keys(currentParams()).length ? `?${new URLSearchParams(currentParams())}` : ''}`;
         if (request) request.abort();
         setLoading(true);
         request = new AbortController();
-        fetch(target, { headers: headers(), signal: request.signal, credentials: 'same-origin' })
+        fetch(feedUrl(target), { headers: headers(), signal: request.signal, credentials: 'same-origin', cache: 'no-store' })
             .then((response) => {
                 if (!response.ok) throw new Error('Could not update the list.');
                 return response.json();
@@ -189,8 +204,8 @@
             .then((payload) => {
                 render(payload);
                 if (push) {
-                    const next = new URL(target, window.location.origin);
-                    history.replaceState({}, '', `${window.location.pathname}${next.search}`);
+                    const page = pageUrl(target);
+                    history.replaceState({}, '', `${page.pathname}${page.search}`);
                 }
             })
             .catch((error) => {
@@ -213,7 +228,7 @@
         badge.className = `badge ${row.status_badge}`;
         badge.textContent = row.status_label;
         const items = (row.items || []).length
-            ? row.items.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.status)}</td></tr>`).join('')
+            ? row.items.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.category)}</td><td><span class="badge ${escapeHtml(item.status_badge || row.status_badge || 'bg-secondary')}">${escapeHtml(item.status)}</span></td></tr>`).join('')
             : '<tr><td colspan="3" class="text-muted">No resources recorded.</td></tr>';
         const history = (row.history || []).length
             ? row.history.map((item) => `<div class="rsv-history">
@@ -326,10 +341,10 @@
         const reason = document.getElementById('rsv-cancel-reason');
         const error = document.getElementById('rsv-cancel-error');
         const submit = document.getElementById('rsv-cancel-submit');
-        const body = new FormData();
+        const form = event.currentTarget;
+        const body = new FormData(form);
         body.set('cancellation_reason', reason.value.trim());
-        submit.disabled = true;
-        fetch(active.cancel_url, { method: 'POST', headers: headers(), body, credentials: 'same-origin' })
+        const run = () => fetch(active.cancel_url, { method: 'POST', headers: headers(), body, credentials: 'same-origin' })
             .then(async (response) => {
                 const data = await response.json().catch(() => ({}));
                 if (response.status === 422) {
@@ -346,8 +361,13 @@
             })
             .catch((error) => {
                 if (error.message !== 'invalid') showFlash(error.message, 'danger');
-            })
-            .finally(() => { submit.disabled = false; });
+            });
+        if (window.RMAction) {
+            window.RMAction.around(form, run);
+            return;
+        }
+        submit.disabled = true;
+        run().finally(() => { submit.disabled = false; });
     });
 
     document.querySelectorAll('.rsv-auto-alert').forEach((alert) => dismissAlert(alert));

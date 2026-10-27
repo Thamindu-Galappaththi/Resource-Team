@@ -26,6 +26,9 @@ class CanteenReservationCreated extends Notification
             'reservation_id' => $this->reservation->id,
             'reservation_ref' => $this->reservation->reservation_ref,
             'status' => $this->reservation->status,
+            'icon' => 'ti-tools-kitchen-2',
+            'title' => 'Canteen reservation',
+            'url' => route('canteen.show', $this->reservation),
             'message' => 'Your canteen reservation '.$this->reservation->reservation_ref.' has been submitted.',
         ];
     }

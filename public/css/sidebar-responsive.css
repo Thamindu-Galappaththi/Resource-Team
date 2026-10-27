@@ -72,8 +72,10 @@ body {
 }
 
 .sidebar-footer {
-    margin-top: 24px;
-    padding-bottom: 16px;
+    flex: 0 0 auto;
+    margin-top: 0;
+    padding: 12px 20px 16px;
+    background: #fff;
 }
 
 .sidebar-backdrop {
@@ -164,4 +166,30 @@ body.sidebar-open {
         min-width: 40px;
         min-height: 40px;
     }
+}
+
+.app-header .dropdown-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 16px);
+    margin: 0 8px;
+    border-radius: 8px;
+    color: #2a3547;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.app-header .dropdown-menu .dropdown-item i,
+.app-header .dropdown-menu .dropdown-item span,
+.app-header .dropdown-menu .dropdown-item p {
+    color: inherit;
+}
+
+.app-header .dropdown-menu .dropdown-item:hover,
+.app-header .dropdown-menu .dropdown-item:focus,
+.app-header .dropdown-menu .dropdown-item:focus-visible {
+    background-color: #ecf2ff;
+    color: #5d87ff;
 }

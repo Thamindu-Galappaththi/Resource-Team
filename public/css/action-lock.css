@@ -1,0 +1,8 @@
+form.is-busy button[type="submit"],
+form.is-busy button:not([type]),
+form.is-busy input[type="submit"],
+form.is-busy [form][type="submit"],
+form.is-busy [data-action-lock] {
+    cursor: wait;
+    opacity: .72;
+}

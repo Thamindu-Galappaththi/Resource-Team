@@ -34,9 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('resourceTableBody')?.addEventListener('click', onTableClick);
     document.getElementById('rmPagination')?.addEventListener('click', onPaginationClick);
     document.getElementById('resourceCategorySelect')?.addEventListener('change', (event) => {
+        clearFieldError('resourceCategorySelect');
         const types = editResourceTypes.filter((item) => String(item.resource_category_id) === String(event.currentTarget.value));
         window.RMSelect.setOptions('resourceTypeSelect', types.map((item) => ({ value: item.id, label: item.name })), 'Select a resource type (e.g., Laptop)', { disabled: !event.currentTarget.value });
     });
+    ['resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', () => clearFieldError(id));
+    });
+    document.getElementById('resourceNameModel')?.addEventListener('input', () => clearFieldError('resourceNameModel'));
     document.getElementById('editResourceForm')?.addEventListener('submit', saveResource);
 
     async function loadResources() {
@@ -328,12 +333,14 @@ document.addEventListener('DOMContentLoaded', () => {
         editResourceTypes = lookups.types;
         window.RMSelect.setOptions('resourceCategorySelect', lookups.categories.map((item) => ({ value: item.id, label: item.name })), 'Select a category (e.g., IT Equipment)');
         window.RMSelect.setOptions('resourceLocationSelect', lookups.locations.map((item) => ({ value: item.id, label: item.name })), 'Select a location (e.g., Block A, Floor 2)');
-        const categoryId = resource.type?.resource_category_id;
+        clearEditErrors();
+        const typeRecord = lookups.types.find((item) => String(item.id) === String(resource.resource_type_id));
+        const categoryId = resource.type?.resource_category_id || typeRecord?.resource_category_id;
         const category = lookups.categories.find((item) => String(item.id) === String(categoryId));
         if (category) window.RMSelect.setValue('resourceCategorySelect', category.id, category.name);
         const filteredTypes = lookups.types.filter((item) => String(item.resource_category_id) === String(categoryId));
-        window.RMSelect.setOptions('resourceTypeSelect', filteredTypes.map((item) => ({ value: item.id, label: item.name })), 'Select a resource type (e.g., Laptop)', { disabled: false });
-        const type = filteredTypes.find((item) => String(item.id) === String(resource.resource_type_id));
+        window.RMSelect.setOptions('resourceTypeSelect', filteredTypes.map((item) => ({ value: item.id, label: item.name })), 'Select a resource type (e.g., Laptop)', { disabled: !categoryId });
+        const type = filteredTypes.find((item) => String(item.id) === String(resource.resource_type_id)) || typeRecord;
         if (type) window.RMSelect.setValue('resourceTypeSelect', type.id, type.name);
         const location = lookups.locations.find((item) => String(item.id) === String(resource.location_id));
         if (location) window.RMSelect.setValue('resourceLocationSelect', location.id, location.name);
@@ -424,27 +431,46 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveResource(event) {
         event.preventDefault();
         const form = event.currentTarget;
-        const button = document.getElementById('editResourceSaveButton');
-        button.disabled = true;
-        try {
-            await requestJSON(config.updateUrl.replace('__ID__', form.dataset.resourceId), 'PUT', {
-                category_id: document.getElementById('resourceCategorySelect').value,
-                resource_type_id: document.getElementById('resourceTypeSelect').value,
-                location_id: document.getElementById('resourceLocationSelect').value,
-                resource_owner: document.getElementById('resourceOwner')?.value.trim() || null,
-                name_model: document.getElementById('resourceNameModel').value.trim(),
-                serial_number: document.getElementById('serialNumber').value.trim() || null,
-                status: document.getElementById('resourceStatusSelect').value,
-                linked_resource_ids: [...form.querySelectorAll('input[name="linked_resource_ids[]"]:checked')].map((input) => input.value),
-            });
-            bootstrap.Modal.getInstance(document.getElementById('editResourceModal'))?.hide();
-            await loadResources();
-            await swalFire({ icon: 'success', title: 'Resource updated', text: 'Changes were saved.', timer: 2500, showConfirmButton: false });
-        } catch (error) {
-            await swalFire({ icon: 'error', title: 'Update failed', text: error.message });
-        } finally {
-            button.disabled = false;
+        clearEditErrors();
+        const payload = {
+            category_id: window.RMSelect.getValue('resourceCategorySelect'),
+            resource_type_id: window.RMSelect.getValue('resourceTypeSelect'),
+            location_id: window.RMSelect.getValue('resourceLocationSelect'),
+            resource_owner: document.getElementById('resourceOwner')?.value.trim() || null,
+            name_model: document.getElementById('resourceNameModel').value.trim(),
+            serial_number: document.getElementById('serialNumber').value.trim() || null,
+            status: window.RMSelect.getValue('resourceStatusSelect'),
+            linked_resource_ids: [...form.querySelectorAll('input[name="linked_resource_ids[]"]:checked')].map((input) => input.value),
+        };
+        if (!payload.category_id) showFieldError('resourceCategorySelect', 'Select a category.');
+        if (!payload.resource_type_id) showFieldError('resourceTypeSelect', 'Select a type.');
+        if (!payload.location_id) showFieldError('resourceLocationSelect', 'Select a location.');
+        if (!payload.status) showFieldError('resourceStatusSelect', 'Select a status.');
+        if (!payload.name_model) showFieldError('resourceNameModel', 'Enter a resource name/model.');
+        if (!payload.category_id || !payload.resource_type_id || !payload.location_id || !payload.status || !payload.name_model) {
+            return;
         }
+
+        const save = async () => {
+            try {
+                await requestJSON(config.updateUrl.replace('__ID__', form.dataset.resourceId), 'PUT', payload);
+                bootstrap.Modal.getInstance(document.getElementById('editResourceModal'))?.hide();
+                await loadResources();
+                await swalFire({ icon: 'success', title: 'Resource updated', text: 'Changes were saved.', timer: 2500, showConfirmButton: false });
+            } catch (error) {
+                showRequestErrors(error, {
+                    category_id: 'resourceCategorySelect',
+                    resource_type_id: 'resourceTypeSelect',
+                    location_id: 'resourceLocationSelect',
+                    name_model: 'resourceNameModel',
+                    serial_number: 'serialNumber',
+                    resource_owner: 'resourceOwner',
+                    status: 'resourceStatusSelect',
+                });
+                await swalFire({ icon: 'error', title: 'Update failed', text: error.message });
+            }
+        };
+        window.RMAction ? await window.RMAction.around(form, save) : await save();
     }
 
     async function confirmDelete(id) {
@@ -512,8 +538,43 @@ document.addEventListener('DOMContentLoaded', () => {
             body: data ? JSON.stringify(data) : undefined,
         });
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.message || Object.values(payload.errors || {}).flat()[0] || 'Request failed.');
+        if (!response.ok) {
+            const error = new Error(payload.message || Object.values(payload.errors || {}).flat()[0] || 'Request failed.');
+            error.errors = payload.errors || {};
+            throw error;
+        }
         return payload;
+    }
+
+    function showFieldError(id, message) {
+        const field = document.getElementById(id);
+        if (!field) return;
+        const wrap = field.closest('[data-cu-select]');
+        (wrap?.querySelector('.cu-dropdown-toggle') || field).classList.add('is-invalid');
+        const feedback = (wrap || field).parentElement.querySelector('.invalid-feedback');
+        if (feedback) {
+            feedback.textContent = message;
+            feedback.classList.add('d-block');
+        }
+    }
+
+    function clearFieldError(id) {
+        const field = document.getElementById(id);
+        if (!field) return;
+        const wrap = field.closest('[data-cu-select]');
+        (wrap?.querySelector('.cu-dropdown-toggle') || field).classList.remove('is-invalid');
+        (wrap || field).parentElement.querySelector('.invalid-feedback')?.classList.remove('d-block');
+    }
+
+    function clearEditErrors() {
+        ['resourceCategorySelect', 'resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'resourceNameModel', 'serialNumber', 'resourceOwner']
+            .forEach(clearFieldError);
+    }
+
+    function showRequestErrors(error, map) {
+        Object.entries(map).forEach(([field, id]) => {
+            if (error.errors?.[field]) showFieldError(id, error.errors[field][0]);
+        });
     }
 
     function statusLabel(status) {

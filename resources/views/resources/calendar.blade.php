@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=32">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
 @endpush
 
 @section('content')
@@ -37,19 +37,24 @@
         </div>
     </div>
 
-    <div class="rc-filters">
+    <div class="rc-filters" id="resource-calendar-filters">
         <div class="rc-filter">
-            <label>Resource</label>
-            <x-rm-select id="resourceFilter" value="all" selected-label="All resources" placeholder="All resources"
-                :options="collect([['value' => 'all', 'label' => 'All resources']])->concat($resources->map(fn ($resource) => ['value' => (string) $resource->id, 'label' => $resource->name_model]))->all()" />
-        </div>
-        <div class="rc-filter">
-            <label>Location</label>
+            <label for="locationFilter">Location</label>
             <x-rm-select id="locationFilter" value="all" selected-label="All locations" placeholder="All locations"
                 :options="collect([['value' => 'all', 'label' => 'All locations']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
         </div>
         <div class="rc-filter">
-            <label>Status</label>
+            <label for="categoryFilter">Category</label>
+            <x-rm-select id="categoryFilter" value="all" selected-label="All categories" placeholder="All categories"
+                :options="collect([['value' => 'all', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
+        </div>
+        <div class="rc-filter">
+            <label for="resourceFilter">Resource</label>
+            <x-rm-select id="resourceFilter" value="all" selected-label="All resources" placeholder="All resources"
+                :options="collect([['value' => 'all', 'label' => 'All resources']])->concat($resources->map(fn ($resource) => ['value' => (string) $resource->id, 'label' => $resource->name_model]))->all()" />
+        </div>
+        <div class="rc-filter">
+            <label for="statusFilter">Status</label>
             <x-rm-select id="statusFilter" value="all" selected-label="All statuses" placeholder="All statuses" :options="[
                 ['value' => 'all', 'label' => 'All statuses'],
                 ['value' => 'approved', 'label' => 'Approved'],
@@ -58,12 +63,10 @@
                 ['value' => 'cancelled', 'label' => 'Cancelled'],
             ]" />
         </div>
-        <div class="rc-filter">
-            <label>Category</label>
-            <x-rm-select id="categoryFilter" value="all" selected-label="All categories" placeholder="All categories"
-                :options="collect([['value' => 'all', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
-        </div>
         <div class="rc-filter-actions">
+            <button type="button" id="refreshCalendarButton" class="rc-filter-button rc-filter-refresh">
+                <i class="ti ti-refresh" aria-hidden="true"></i>Refresh
+            </button>
             <button type="button" id="clearFiltersButton" class="rc-filter-button rc-filter-clear" disabled>Clear</button>
         </div>
     </div>
@@ -74,7 +77,7 @@
     </div>
 
     <div class="rc-calendar-card">
-        <div id="calendarLoading" class="rc-loading" role="status">Loading reservations…</div>
+        <div id="calendarLoading" class="rc-loading" role="status"><i class="ti ti-loader-2" aria-hidden="true"></i>Loading reservations…</div>
         <div id="calendarEmpty" class="rc-empty" hidden>No reservations match your filters.</div>
         <div class="rc-calendar-legend" aria-label="Holiday types">
             <span><i class="rc-holiday-swatch poya"></i>Poya</span>
@@ -125,6 +128,10 @@
                 </tbody>
             </table>
         </div>
+        <div class="rc-table-footer">
+            <p class="rc-table-count" id="upcomingResultCount" aria-live="polite"></p>
+            <ul class="pagination rc-pagination mb-0" id="upcomingPagination"></ul>
+        </div>
     </div>
 </div>
 
@@ -145,7 +152,10 @@
             <div class="rc-detail-row"><div class="rc-detail-label">Booking time</div><div id="detailTime" class="rc-detail-value">—</div></div>
             <div class="rc-detail-row"><div class="rc-detail-label">Reserved by</div><div id="detailOwner" class="rc-detail-value">—</div></div>
             <div class="rc-detail-row"><div class="rc-detail-label">Location</div><div id="detailLocation" class="rc-detail-value">—</div></div>
+            <div class="rc-detail-row"><div class="rc-detail-label">Purpose</div><div id="detailPurpose" class="rc-detail-value">—</div></div>
             <div class="rc-detail-row"><div class="rc-detail-label">Status</div><div id="detailStatus" class="rc-detail-value">—</div></div>
+            <div id="detailConflict" class="alert alert-danger mt-2 mb-0" hidden>This booking overlaps another reservation for the same resource.</div>
+            <a id="detailLink" class="btn btn-primary mt-2" hidden>View reservation</a>
         </div>
     </div>
 </div>
@@ -156,14 +166,17 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
 <script>
     window.RC = {
-        events: @json($calendarEvents),
+        eventsUrl: @json(route('resources.calendar.events')),
         holidays: @json($holidayEvents),
         holidayImageBase: @json(asset('images/holidays')),
         schedulerResources: @json($schedulerResources),
         canReserve: @json($canReserve),
         createReservationUrl: @json(route('reservations.create')),
+        filterCatalog: {
+            categories: @json($categories->map(fn ($category) => ['id' => (string) $category->id, 'name' => $category->name])->values()),
+        },
     };
 </script>
-<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=25"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=3"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=37"></script>
 @endpush

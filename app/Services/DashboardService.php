@@ -163,7 +163,7 @@ class DashboardService
         return [
             'kpis' => [
                 $this->kpi('Open requests', $pending, 'Awaiting approval', 'ti ti-inbox', 'warning', $this->url($user, 'reservations.index', 'reservations.index')),
-                $this->kpi('Next 7 days', $upcomingWeek, 'Confirmed & pending', 'ti ti-calendar-week', 'primary', $this->url($user, 'reservations.calendar', 'reservations.calendar')),
+                $this->kpi('Next 7 days', $upcomingWeek, 'Confirmed & pending', 'ti ti-calendar-time', 'primary', $this->url($user, 'reservations.calendar', 'reservations.calendar')),
                 $this->kpi('On the calendar today', (clone $all)->whereDate('reservation_date', $this->today())->count(), 'Live schedule', 'ti ti-clock', 'info'),
                 $this->kpi('Created by me', (clone $mine)->count(), 'This workspace', 'ti ti-pencil', 'success', $this->url($user, 'reservations.create', 'reservations.create')),
             ],
@@ -331,22 +331,22 @@ class DashboardService
         $todayOrders = (clone $orders)->whereDate('reservation_date', $today);
         $expected = (int) (clone $todayOrders)->whereIn('status', [
             CanteenReservationStatus::PENDING->value,
-            CanteenReservationStatus::CONFIRMED->value,
+            ...CanteenReservationStatus::accepted(),
         ])->sum('number_of_orders');
-        $confirmed = (int) (clone $todayOrders)->where('status', CanteenReservationStatus::CONFIRMED->value)->sum('number_of_orders');
+        $confirmed = (int) (clone $todayOrders)->whereIn('status', CanteenReservationStatus::accepted())->sum('number_of_orders');
         $pending = (clone $orders)->where('status', CanteenReservationStatus::PENDING->value)->count();
         $weekVolume = (int) (clone $orders)
             ->whereDate('reservation_date', '>=', $today)
             ->whereDate('reservation_date', '<=', $this->today()->copy()->addDays(6)->toDateString())
-            ->whereIn('status', [CanteenReservationStatus::PENDING->value, CanteenReservationStatus::CONFIRMED->value])
+            ->whereIn('status', [CanteenReservationStatus::PENDING->value, ...CanteenReservationStatus::accepted()])
             ->sum('number_of_orders');
 
         $chart = $this->canteenChart();
 
         return [
             'kpis' => [
-                $this->kpi('Expected today', $expected, 'Pending + confirmed covers', 'ti ti-users-group', 'primary', $this->url($user, 'canteen.view', 'canteen.dashboard')),
-                $this->kpi('Confirmed meals', $confirmed, 'Kitchen can prepare', 'ti ti-tools-kitchen-2', 'success'),
+                $this->kpi('Expected today', $expected, 'Pending + approved covers', 'ti ti-users', 'primary', $this->url($user, 'canteen.view', 'canteen.dashboard')),
+                $this->kpi('Approved meals', $confirmed, 'Kitchen can prepare', 'ti ti-tools-kitchen-2', 'success'),
                 $this->kpi('Pending orders', $pending, 'Need confirmation', 'ti ti-clock', 'warning', $this->url($user, 'canteen.index', 'canteen.index')),
                 $this->kpi('7-day volume', $weekVolume, 'Covers in the window', 'ti ti-chart-line', 'info'),
             ],
@@ -468,24 +468,65 @@ class DashboardService
 
     private function reservationChart(Builder $query, string $title): array
     {
+        $start = $this->today()->copy()->subDays(6);
+        $rows = (clone $query)
+            ->whereDate('reservation_date', '>=', $start->toDateString())
+            ->whereDate('reservation_date', '<=', $this->today()->toDateString())
+            ->selectRaw('DATE(reservation_date) as day, status, COUNT(*) as total')
+            ->groupByRaw('DATE(reservation_date), status')
+            ->get();
+
+        $byDay = [];
+        foreach ($rows as $row) {
+            $day = substr((string) $row->day, 0, 10);
+            $byDay[$day][(string) $row->status] = (int) $row->total;
+        }
+
+        $groups = [
+            ['key' => 'open', 'label' => 'Open', 'color' => '#1769c2', 'statuses' => [
+                ReservationStatus::PENDING_APPROVAL->value,
+                ReservationStatus::CHANGES_REQUESTED->value,
+                ReservationStatus::DRAFT->value,
+                ReservationStatus::IN_PROGRESS->value,
+            ]],
+            ['key' => 'confirmed', 'label' => 'Confirmed', 'color' => '#16a77a', 'statuses' => [
+                ReservationStatus::APPROVED->value,
+                ReservationStatus::CONFIRMED->value,
+                ReservationStatus::COMPLETED->value,
+            ]],
+            ['key' => 'closed', 'label' => 'Closed', 'color' => '#94a3b8', 'statuses' => [
+                ReservationStatus::REJECTED->value,
+                ReservationStatus::CANCELLED->value,
+                ReservationStatus::EXPIRED->value,
+            ]],
+        ];
+
         $points = [];
-        $max = 1;
+        $series = array_map(fn (array $group) => [
+            'label' => $group['label'],
+            'color' => $group['color'],
+            'values' => [],
+        ], $groups);
+
         for ($i = 6; $i >= 0; $i--) {
             $day = $this->today()->copy()->subDays($i);
-            $value = (clone $query)->whereDate('reservation_date', $day->toDateString())->count();
-            $max = max($max, $value);
+            $counts = $byDay[$day->toDateString()] ?? [];
+            $total = 0;
+            foreach ($groups as $index => $group) {
+                $value = 0;
+                foreach ($group['statuses'] as $status) {
+                    $value += $counts[$status] ?? 0;
+                }
+                $series[$index]['values'][] = $value;
+                $total += $value;
+            }
             $points[] = [
                 'label' => $day->format('D'),
-                'value' => $value,
-                'pct' => 0,
+                'value' => $total,
             ];
         }
 
-        foreach ($points as &$point) {
-            $point['pct'] = $point['value'] === 0 ? 0 : max(8, (int) round(100 * $point['value'] / $max));
-        }
-
-        return compact('title', 'points');
+        return compact('title', 'points', 'series');
     }
 
     private function canteenChart(): array
@@ -498,7 +539,7 @@ class DashboardService
                 ->whereDate('reservation_date', $day->toDateString())
                 ->whereIn('status', [
                     CanteenReservationStatus::PENDING->value,
-                    CanteenReservationStatus::CONFIRMED->value,
+                    ...CanteenReservationStatus::accepted(),
                     CanteenReservationStatus::COMPLETED->value,
                 ])
                 ->sum('number_of_orders');
@@ -601,11 +642,11 @@ class DashboardService
         $items = [];
         foreach ($counts as $status => $value) {
             $items[] = [
-                'label' => ucfirst(str_replace('_', ' ', (string) $status)),
+                'label' => CanteenReservationStatus::tryFrom((string) $status)?->label() ?? ucfirst(str_replace('_', ' ', (string) $status)),
                 'value' => (int) $value,
                 'pct' => (int) round(100 * (int) $value / $total),
                 'tone' => match ($status) {
-                    CanteenReservationStatus::CONFIRMED->value, CanteenReservationStatus::COMPLETED->value => 'success',
+                    CanteenReservationStatus::APPROVED->value, CanteenReservationStatus::CONFIRMED->value, CanteenReservationStatus::COMPLETED->value => 'success',
                     CanteenReservationStatus::PENDING->value => 'warning',
                     default => 'danger',
                 },
@@ -650,8 +691,9 @@ class DashboardService
             return [
                 'title' => $reservation->reservation_name ?: $reservation->reservation_ref,
                 'meta' => trim(($reservation->reservation_ref ?? '').' · '.$reservation->number_of_orders.' covers · '.$when, ' ·'),
-                'status' => ucfirst(str_replace('_', ' ', (string) $reservation->status)),
+                'status' => $reservation->statusEnum()->label(),
                 'tone' => match ($reservation->status) {
+                    CanteenReservationStatus::APPROVED->value => 'success',
                     CanteenReservationStatus::CONFIRMED->value => 'success',
                     CanteenReservationStatus::PENDING->value => 'warning',
                     default => 'neutral',

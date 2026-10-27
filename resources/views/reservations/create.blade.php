@@ -17,6 +17,16 @@
         <a href="{{ route('reservations.index') }}" class="btn rv-back"><i class="ti ti-arrow-left me-1"></i>Existing Reservations</a>
     </div>
 
+    <div class="alert alert-info d-flex align-items-start gap-2" role="note">
+        <i class="ti ti-info-circle mt-1" aria-hidden="true"></i>
+        <div>
+            Hostel bookings use check-in and check-out dates instead of start and end times, so create them separately from Hostel Reservations.
+            @can('createHostel', \App\Models\Reservation::class)
+                <a href="{{ route('hostel.create') }}" class="alert-link">Create a hostel reservation</a>.
+            @endcan
+        </div>
+    </div>
+
     @if($errors->any())
         <div class="alert alert-danger rv-auto-alert" role="alert">
             {{ $errors->first() }}
@@ -116,7 +126,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/resource-select.js') }}?v=1"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
 <script>
 window.RVCreate = {

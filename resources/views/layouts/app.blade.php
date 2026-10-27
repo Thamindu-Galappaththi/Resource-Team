@@ -16,8 +16,9 @@
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/sidebar-responsive.css') }}?v=10" rel="stylesheet">
-    <link href="{{ asset('css/notifications.css') }}?v=3" rel="stylesheet">
+    <link href="{{ asset('css/sidebar-responsive.css') }}?v=12" rel="stylesheet">
+    <link href="{{ asset('css/notifications.css') }}?v=9" rel="stylesheet">
+    <link href="{{ asset('css/action-lock.css') }}?v=1" rel="stylesheet">
     @stack('styles')
 
     <!-- JS -->
@@ -29,7 +30,8 @@
     <script src="{{ asset('js/sidebarmenu.js') }}"></script>
     <!-- Global utilities -->
     <script src="{{ asset('js/global-utilities.js') }}"></script>
-    <script src="{{ asset('js/notifications.js') }}?v=2"></script>
+    <script src="{{ asset('js/action-lock.js') }}?v=2"></script>
+    <script src="{{ asset('js/notifications.js') }}?v=8"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         body {
@@ -92,7 +94,11 @@
                     <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
                         <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
                             <div class="user-name">
-                                <li class="nav-item mr-10" id="greeting"></li>
+                                <li class="nav-item mr-10" id="greeting">
+                                    @auth
+                                        {{ \App\Support\TimeGreeting::phrase() }}, <b>{{ auth()->user()->name }}</b>
+                                    @endauth
+                                </li>
                             </div>
                             @auth
                                 @include('components.notification-bell')
@@ -123,7 +129,7 @@
                                         <a href="{{ route('user.profile') }}"
                                             class="d-flex align-items-center gap-2 dropdown-item">
                                             <i class="ti ti-user fs-6"></i>
-                                            <p class="mb-0 fs-3">My Profile</p>
+                                            <span>My Profile</span>
                                         </a>
                                         <a href="{{ route('logout') }}"
                                             class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
@@ -147,32 +153,6 @@
             </div>
         </div>
     </div>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // Get the current time
-            var currentTime = new Date();
-            var currentHour = currentTime.getHours();
-            var greeting;
-
-            // Define the greeting based on the current time
-            if (currentHour >= 5 && currentHour < 12) {
-                greeting = 'Good morning';
-            } else if (currentHour >= 12 && currentHour < 18) {
-                greeting = 'Good afternoon';
-            } else {
-                greeting = 'Good evening ';
-            }
-
-            // Get the user's name
-            var userName = "{{ auth()->check() ? auth()->user()->name : '' }}";
-
-            // Display the greeting and user's name
-            if (userName) {
-                document.getElementById("greeting").innerHTML = greeting + ", <b>" + userName + "</b>";
-            }
-        });
-    </script>
 
     @yield('scripts')
     @stack('scripts')

@@ -14,6 +14,13 @@ return [
     |
     */
 
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'tenant' => env('MICROSOFT_TENANT', 'organizations'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI'),
+    ],
+
     'slt_erp' => [
         'url' => env('SLT_ERP_URL', 'https://oneidentitytest.slt.com.lk/ERPAPIs/api/ERPData/GetAllEmployeeDetailsForServiceNo'),
         'username' => env('SLT_ERP_USERNAME'),

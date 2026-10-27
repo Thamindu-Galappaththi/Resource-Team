@@ -1,17 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
     const calendarElement = document.getElementById('resourceCalendar');
-    if (!calendarElement || typeof FullCalendar === 'undefined') return;
+    const loading = document.getElementById('calendarLoading');
+    const refreshButton = document.getElementById('refreshCalendarButton');
 
     const config = window.RC || {};
-    const events = config.events || [];
-    let filteredEvents = events;
+    let events = [];
+    let filteredEvents = [];
+    let loadedRangeStart = null;
+    let loadedRangeEnd = null;
+    let eventsRequest = 0;
+    let eventsAbort = null;
     const holidays = config.holidays || [];
     const holidayImageBase = (config.holidayImageBase || '/images/holidays').replace(/\/$/, '');
     const schedulerResources = config.schedulerResources || [];
     const canReserve = Boolean(config.canReserve);
     const createReservationUrl = config.createReservationUrl;
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
-    const swalFire = (options) => window.RMSwal.fire(options);
+    const partsFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const swalFire = (options) => window.RMSwal?.fire ? window.RMSwal.fire(options) : window.Swal?.fire(options);
+    let lastCalendarView = null;
+    const upcomingPageSize = 10;
+    let upcomingRows = [];
+    let upcomingPage = 1;
+    document.getElementById('upcomingPagination')?.addEventListener('click', onUpcomingPaginationClick);
+
+    try {
+        renderUpcoming(events);
+        const empty = document.getElementById('calendarEmpty');
+        if (empty) empty.hidden = true;
+    } catch (error) {
+        console.error('Resource calendar upcoming list failed', error);
+    }
+
+    if (!calendarElement || typeof FullCalendar === 'undefined') {
+        setCalendarLoading(false);
+        return;
+    }
 
     const calendar = new FullCalendar.Calendar(calendarElement, {
         initialView: isMobile ? 'listWeek' : 'dayGridMonth',
@@ -19,8 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
         contentHeight: 'auto',
         expandRows: false,
         views: {
-            timeGridWeek: { contentHeight: 640, dayMaxEvents: 2 },
-            timeGridDay: { contentHeight: 640, dayMaxEvents: 2 },
+            timeGridWeek: { contentHeight: 640, dayMaxEvents: 2, eventMaxStack: 3 },
+            timeGridDay: { contentHeight: 640, dayMaxEvents: 2, eventMaxStack: 3 },
         },
         fixedWeekCount: false,
         firstDay: 0,
@@ -29,6 +53,15 @@ document.addEventListener('DOMContentLoaded', () => {
         selectable: false,
         nowIndicator: true,
         dayMaxEvents: 2,
+        lazyFetching: false,
+        moreLinkClick(info) {
+            info.jsEvent?.preventDefault();
+            info.jsEvent?.stopPropagation();
+            const date = info.date;
+            const items = eventsFromMoreLink(info);
+            const holiday = holidayOn(date);
+            showDayEventList(date, holiday ? [holiday, ...items] : items);
+        },
         dateClick(info) {
             if (info.view.type !== 'dayGridMonth') return;
             const holiday = holidayOn(info.date);
@@ -44,7 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!items.length) return;
             showDayEventList(info.date, holiday ? [holiday, ...items] : items);
         },
-        datesSet() {
+        datesSet(info) {
+            lastCalendarView = info.view.type;
             queueMicrotask(paintMonthCells);
         },
         headerToolbar: isMobile
@@ -89,11 +123,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullLabel = `${info.timeText ? `${info.timeText} ` : ''}${info.event.title}`.trim();
                 return { html: `<span class="rc-event-title" data-full-label="${escapeHtml(fullLabel)}">${escapeHtml(fullLabel)}</span>` };
             }
-            const time = info.timeText ? `<span class="rc-event-time">${escapeHtml(info.timeText)}</span>` : '';
+            const start = details.actualStart || info.event.start;
+            const end = details.actualEnd || info.event.end;
+            const timeLabel = formatTimeRange(
+                start instanceof Date ? start : new Date(start),
+                end instanceof Date ? end : new Date(end),
+            );
+            const time = timeLabel && timeLabel !== '—' ? `<span class="rc-event-time">${escapeHtml(timeLabel)}</span>` : '';
             const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
             return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(info.event.title)}</span></div>` };
         },
-        events: [...events.map(withEventColors), ...holidays],
+        events(fetchInfo, success, failure) {
+            const viewType = fetchInfo.view?.type || lastCalendarView;
+            const start = Date.parse(fetchInfo.startStr);
+            const end = Date.parse(fetchInfo.endStr);
+            const covered = loadedRangeStart != null && loadedRangeStart <= start && loadedRangeEnd >= end;
+            if (covered) {
+                success(forCalendarView(filteredEvents, viewType));
+                return;
+            }
+            loadResourceEvents(fetchInfo, success, failure);
+        },
         eventClick(info) {
             if (info.event.extendedProps?.isHoliday) {
                 if (info.event.display === 'background') return;
@@ -104,15 +154,34 @@ document.addEventListener('DOMContentLoaded', () => {
         },
     });
 
-    calendar.render();
-    document.getElementById('calendarLoading').hidden = true;
-    paintMonthCells();
+    try {
+        calendar.render();
+        paintMonthCells();
+    } catch (error) {
+        console.error('Resource calendar failed to render', error);
+        setCalendarLoading(false);
+    }
 
     const resourceFilter = document.getElementById('resourceFilter');
     const locationFilter = document.getElementById('locationFilter');
     const statusFilter = document.getElementById('statusFilter');
     const categoryFilter = document.getElementById('categoryFilter');
     const clearFiltersButton = document.getElementById('clearFiltersButton');
+
+    function syncDependentFilters(changedId) {
+        if (!window.RMSelect?.cascadeResourceFilters) return;
+        window.RMSelect.cascadeResourceFilters({
+            resources: schedulerResources,
+            categories: (window.RC?.filterCatalog?.categories) || [],
+            locationSelectId: 'locationFilter',
+            categorySelectId: 'categoryFilter',
+            resourceSelectId: 'resourceFilter',
+            emptyValue: 'all',
+            updateCategories: changedId !== 'categoryFilter' && changedId !== 'resourceFilter',
+        });
+    }
+
+    syncDependentFilters();
     const schedulerPanel = document.getElementById('schedulerPanel');
     const schedulerGrid = document.getElementById('schedulerGrid');
     const schedulerDate = document.getElementById('schedulerDate');
@@ -127,22 +196,57 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeDrag = null;
     let suppressSlotClick = false;
 
-    document.getElementById('calendarEmpty').hidden = events.length > 0;
-    renderUpcoming(events);
+    const calendarEmpty = document.getElementById('calendarEmpty');
+    if (calendarEmpty) calendarEmpty.hidden = true;
 
-    function applyFilters() {
-        const selRes = String(resourceFilter.value);
-        const selLoc = String(locationFilter.value);
-        const selStat = String(statusFilter.value);
-        const selCat = String(categoryFilter.value);
+    function isTimeGrid(viewType) {
+        return ['timeGridWeek', 'timeGridDay'].includes(viewType);
+    }
+
+    function forCalendarView(eventList, viewType) {
+        if (!isTimeGrid(viewType)) {
+            return [...eventList.map(withEventColors), ...holidays];
+        }
+
+        return [
+            ...eventList.map((event) => {
+                const start = new Date(event.start);
+                return withEventColors({
+                    ...event,
+                    end: Number.isNaN(start.getTime())
+                        ? event.end
+                        : new Date(start.getTime() + 45 * 60 * 1000).toISOString(),
+                    extendedProps: {
+                        ...event.extendedProps,
+                        actualStart: event.start,
+                        actualEnd: event.end,
+                    },
+                });
+            }),
+            ...holidays.filter((event) => event.display !== 'background'),
+        ];
+    }
+
+    function currentFilters() {
+        const value = (id) => window.RMSelect?.getValue(id) || document.getElementById(id)?.value || 'all';
+        return {
+            resource: String(value('resourceFilter') || 'all'),
+            location: String(value('locationFilter') || 'all'),
+            status: String(value('statusFilter') || 'all'),
+            category: String(value('categoryFilter') || 'all'),
+        };
+    }
+
+    function applyFilters(options = {}) {
+        const { resource: selRes, location: selLoc, status: selStat, category: selCat } = currentFilters();
         appliedFilters = { resource: selRes, location: selLoc, status: selStat, category: selCat };
 
         const filtered = events.filter((event) => {
             const props = event.extendedProps || {};
-            const resOk = selRes === 'all' || String(props.resourceId) === selRes;
-            const locOk = selLoc === 'all' || String(props.locationId) === selLoc;
-            const categoryOk = selCat === 'all' || String(props.categoryId) === selCat;
-            const statOk = selStat === 'all'
+            const resOk = selRes === 'all' || selRes === '' || String(props.resourceId) === selRes;
+            const locOk = selLoc === 'all' || selLoc === '' || String(props.locationId) === selLoc;
+            const categoryOk = selCat === 'all' || selCat === '' || String(props.categoryId) === selCat;
+            const statOk = selStat === 'all' || selStat === ''
                 || (selStat === 'approved' && ['approved', 'confirmed', 'in_progress', 'completed'].includes(props.statusValue))
                 || (selStat === 'pending' && ['pending_approval', 'changes_requested'].includes(props.statusValue))
                 || String(props.statusValue) === selStat;
@@ -150,9 +254,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         filteredEvents = filtered;
-        calendar.removeAllEvents();
-        calendar.addEventSource([...filtered.map(withEventColors), ...holidays]);
-        document.getElementById('calendarEmpty').hidden = filtered.length > 0;
+        if (!options.skipRefetch) refreshCalendar();
+        const emptyState = document.getElementById('calendarEmpty');
+        if (emptyState) emptyState.hidden = filtered.length > 0;
         toggleClear();
         renderUpcoming(filtered);
         queueMicrotask(paintMonthCells);
@@ -160,58 +264,191 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function hasFilters() {
-        return [resourceFilter, locationFilter, statusFilter, categoryFilter]
-            .some((el) => String(el.value) !== 'all');
+        return Object.values(currentFilters()).some((value) => value !== 'all' && value !== '');
     }
 
     function toggleClear() {
         if (clearFiltersButton) clearFiltersButton.disabled = !hasFilters();
     }
 
-    [resourceFilter, locationFilter, statusFilter, categoryFilter].forEach((el) => {
-        el.addEventListener('change', () => {
-            selectedSchedulerResources.clear();
-            updateSchedulerSelectionCount();
-            applyFilters();
-        });
-    });
-    clearFiltersButton.addEventListener('click', () => {
-        if (clearFiltersButton.disabled) return;
-        window.RMSelect.setValue('resourceFilter', 'all', 'All resources');
-        window.RMSelect.setValue('locationFilter', 'all', 'All locations');
-        window.RMSelect.setValue('statusFilter', 'all', 'All statuses');
-        window.RMSelect.setValue('categoryFilter', 'all', 'All categories');
+    let suppressFilterChange = false;
+    document.getElementById('resource-calendar-filters')?.addEventListener('change', (event) => {
+        if (suppressFilterChange) return;
+        const changedId = event.target?.id;
+        if (changedId === 'locationFilter' || changedId === 'categoryFilter') {
+            suppressFilterChange = true;
+            syncDependentFilters(changedId);
+            suppressFilterChange = false;
+        }
         selectedSchedulerResources.clear();
         updateSchedulerSelectionCount();
-        applyFilters();
+        toggleClear();
+        refreshCalendar();
+    });
+    clearFiltersButton?.addEventListener('click', () => {
+        if (clearFiltersButton.disabled) return;
+        suppressFilterChange = true;
+        window.RMSelect.setValue('locationFilter', 'all', 'All locations');
+        window.RMSelect.setValue('categoryFilter', 'all', 'All categories');
+        window.RMSelect.setValue('resourceFilter', 'all', 'All resources');
+        window.RMSelect.setValue('statusFilter', 'all', 'All statuses');
+        syncDependentFilters();
+        suppressFilterChange = false;
+        selectedSchedulerResources.clear();
+        updateSchedulerSelectionCount();
+        toggleClear();
+        refreshCalendar();
     });
     toggleClear();
+    refreshButton?.addEventListener('click', () => refreshCalendar());
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshCalendar();
+    });
+
+    function setCalendarLoading(isLoading) {
+        if (loading) loading.hidden = !isLoading;
+        if (refreshButton) {
+            refreshButton.disabled = isLoading;
+            refreshButton.classList.toggle('is-loading', isLoading);
+            refreshButton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        }
+    }
+
+    function refreshCalendar() {
+        loadedRangeStart = null;
+        loadedRangeEnd = null;
+        calendar.refetchEvents();
+    }
+
+    function loadResourceEvents(fetchInfo, success, failure) {
+        const requestId = ++eventsRequest;
+        eventsAbort?.abort();
+        eventsAbort = new AbortController();
+        setCalendarLoading(true);
+        const params = new URLSearchParams({
+            start: fetchInfo.startStr,
+            end: fetchInfo.endStr,
+            _: String(Date.now()),
+        });
+        const filters = currentFilters();
+        if (filters.resource && filters.resource !== 'all') params.set('resource_id', filters.resource);
+        if (filters.location && filters.location !== 'all') params.set('location_id', filters.location);
+        if (filters.category && filters.category !== 'all') params.set('resource_category_id', filters.category);
+        if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+        const eventsUrl = config.eventsUrl || calendarElement.dataset.eventsUrl;
+        fetch(`${eventsUrl}?${params}`, {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            signal: eventsAbort.signal,
+        }).then((response) => {
+            if (!response.ok) throw new Error('Reservations could not be loaded.');
+            return response.json();
+        }).then((payload) => {
+            if (requestId !== eventsRequest) return;
+            events = (Array.isArray(payload) ? payload : []).filter((event) => /^\d{4}-\d{2}-\d{2}/.test(String(event?.start || '')));
+            loadedRangeStart = Date.parse(fetchInfo.startStr);
+            loadedRangeEnd = Date.parse(fetchInfo.endStr);
+            applyFilters({ skipRefetch: true });
+            setCalendarLoading(false);
+            success(forCalendarView(filteredEvents, fetchInfo.view?.type || lastCalendarView));
+            queueMicrotask(paintMonthCells);
+        }).catch((error) => {
+            if (error?.name === 'AbortError' || requestId !== eventsRequest) return;
+            setCalendarLoading(false);
+            if (events.length) {
+                applyFilters({ skipRefetch: true });
+                success(forCalendarView(filteredEvents, fetchInfo.view?.type || lastCalendarView));
+                return;
+            }
+            failure?.(error);
+        });
+    }
 
     function renderUpcoming(list) {
-        const body = document.getElementById('upcomingReservationsBody');
-        if (!body) return;
         const now = Date.now();
-        const rows = [...list]
-            .filter((event) => Date.parse(event.end || event.start) >= now)
-            .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
-            .slice(0, 12);
+        upcomingRows = uniqueEvents(list)
+            .filter((event) => Date.parse(event.extendedProps?.reservationEnd || event.end || event.start) >= now)
+            .sort((a, b) => Date.parse(a.extendedProps?.reservationStart || a.start) - Date.parse(b.extendedProps?.reservationStart || b.start));
+        upcomingPage = 1;
+        paintUpcomingPage();
+    }
 
+    function paintUpcomingPage() {
+        const body = document.getElementById('upcomingReservationsBody');
+        const count = document.getElementById('upcomingResultCount');
+        if (!body) return;
         body.replaceChildren();
-        if (!rows.length) {
+        if (!upcomingRows.length) {
             body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No upcoming reservations match your filters.</td></tr>';
+            if (count) count.textContent = '';
+            renderUpcomingPagination(0);
             return;
         }
+
+        const totalPages = Math.max(1, Math.ceil(upcomingRows.length / upcomingPageSize));
+        if (upcomingPage > totalPages) upcomingPage = totalPages;
+        const start = (upcomingPage - 1) * upcomingPageSize;
+        const rows = upcomingRows.slice(start, start + upcomingPageSize);
         rows.forEach((event) => {
+            const details = event.extendedProps || {};
+            const start = details.reservationStart ? new Date(details.reservationStart) : new Date(event.start);
+            const end = details.reservationEnd ? new Date(details.reservationEnd) : new Date(event.end);
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${escapeHtml(event.title)}</td>
-                <td>${formatDate(new Date(event.start))}</td>
-                <td>${formatTimeRange(new Date(event.start), new Date(event.end))}</td>
-                <td>${escapeHtml(event.extendedProps?.owner || '—')}</td>
-                <td>${statusBadge(event.extendedProps?.statusValue, event.extendedProps?.status)}</td>
+                <td>${escapeHtml(details.resource || event.title)}</td>
+                <td>${formatStayDates(start, end)}</td>
+                <td>${formatStayTimes(start, end, details.duration, details.reservationType)}</td>
+                <td>${escapeHtml(details.owner || '—')}</td>
+                <td>${statusBadge(details.statusValue, details.status)}</td>
             `;
             body.appendChild(tr);
         });
+        if (count) count.textContent = `Showing ${start + 1}–${start + rows.length} of ${upcomingRows.length}`;
+        renderUpcomingPagination(totalPages);
+    }
+
+    function upcomingVisiblePages(total, current) {
+        if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+        const pages = new Set([1, total, current, current - 1, current + 1]);
+        const ordered = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
+        return ordered.reduce((list, page, index) => {
+            if (index && page - ordered[index - 1] > 1) list.push('…');
+            list.push(page);
+            return list;
+        }, []);
+    }
+
+    function renderUpcomingPagination(totalPages) {
+        const nav = document.getElementById('upcomingPagination');
+        if (!nav) return;
+        nav.replaceChildren();
+        if (totalPages <= 1) return;
+
+        const addItem = (label, page, disabled, active) => {
+            const li = document.createElement('li');
+            li.className = `page-item${disabled ? ' disabled' : ''}${active ? ' active' : ''}`;
+            li.innerHTML = `<button type="button" class="page-link" data-page="${page}">${label}</button>`;
+            nav.appendChild(li);
+        };
+
+        addItem('Prev', upcomingPage - 1, upcomingPage === 1, false);
+        upcomingVisiblePages(totalPages, upcomingPage).forEach((page) => {
+            if (page === '…') {
+                const li = document.createElement('li');
+                li.className = 'page-item disabled';
+                li.innerHTML = '<span class="page-link">…</span>';
+                nav.appendChild(li);
+                return;
+            }
+            addItem(String(page), page, false, page === upcomingPage);
+        });
+        addItem('Next', upcomingPage + 1, upcomingPage === totalPages, false);
+    }
+
+    function onUpcomingPaginationClick(event) {
+        const button = event.target.closest('[data-page]');
+        if (!button || button.parentElement.classList.contains('disabled')) return;
+        upcomingPage = Number(button.dataset.page);
+        paintUpcomingPage();
     }
 
     function updateSchedulerSelectionCount() {
@@ -286,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const allResourceEvents = events.filter((event) => String(event.extendedProps.resourceId) === String(resource.id) && event.start.slice(0, 10) === date);
         const resourceEvents = filteredEvents.filter((event) => String(event.extendedProps.resourceId) === String(resource.id) && event.start.slice(0, 10) === date);
         const blockingEvents = allResourceEvents.filter((event) => event.extendedProps.blocking);
-        const bookedMinutes = blockingEvents.reduce((total, event) => total + Math.max(0, Math.min(1200, timeMinutes(event.end)) - Math.max(480, timeMinutes(event.start))), 0);
+        const bookedMinutes = blockingEvents.reduce((total, event) => total + Math.max(0, Math.min(1200, eventEndMinutes(event)) - Math.max(480, timeMinutes(event.start))), 0);
         const load = Math.round((bookedMinutes / (12 * 60)) * 100);
         const isMaintenance = resource.status === 'under_maintenance';
         const track = document.createElement('div');
@@ -385,7 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cellWidth = (track.clientWidth - 220) / 12;
             resourceEvents.forEach((event) => {
                 const start = timeMinutes(event.start);
-                const end = timeMinutes(event.end);
+                const end = eventEndMinutes(event);
                 const clippedStart = Math.max(480, start);
                 const clippedEnd = Math.min(1200, end);
                 if (clippedEnd <= clippedStart) return;
@@ -485,12 +722,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeReservationModal(); });
 
     function dateKey(value) {
+        const match = String(value ?? '').match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
         if (value instanceof Date && !Number.isNaN(value.getTime())) {
             const month = String(value.getMonth() + 1).padStart(2, '0');
             const day = String(value.getDate()).padStart(2, '0');
             return `${value.getFullYear()}-${month}-${day}`;
         }
-        return String(value || '').slice(0, 10);
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) {
+            const month = String(parsed.getMonth() + 1).padStart(2, '0');
+            const day = String(parsed.getDate()).padStart(2, '0');
+            return `${parsed.getFullYear()}-${month}-${day}`;
+        }
+        return '';
     }
 
     function bookingsOn(date) {
@@ -575,32 +820,57 @@ document.addEventListener('DOMContentLoaded', () => {
     function uniqueEvents(eventList) {
         const seen = new Set();
         return eventList.filter((event) => {
-            const key = String(event.id || `${event.title}-${event.start}`);
+            const props = event.extendedProps || {};
+            const key = String(props.reservationId && props.resourceId
+                ? `${props.reservationId}-${props.resourceId}`
+                : props.reservationId || event.id || `${event.title}-${event.start}`);
             if (seen.has(key)) return false;
             seen.add(key);
             return true;
         });
     }
 
+    function eventsFromMoreLink(info) {
+        let items = uniqueEvents(bookingsOn(info.date));
+        if (items.length) return items;
+        const segs = [...(info.allSegs || []), ...(info.hiddenSegs || [])];
+        return uniqueEvents(segs.map((seg) => {
+            const event = seg.event || {};
+            return {
+                id: event.id,
+                start: event.start,
+                end: event.end,
+                title: event.title,
+                extendedProps: event.extendedProps || {},
+            };
+        }).filter((event) => event.title || event.extendedProps?.resource));
+    }
+
     async function showDayEventList(date, eventList) {
-        const bookings = eventList
+        const bookings = uniqueEvents(eventList
             .filter((event) => !event.extendedProps?.isHoliday)
             .sort((left, right) => {
                 const leftStart = left.start instanceof Date ? left.start : new Date(left.start);
                 const rightStart = right.start instanceof Date ? right.start : new Date(right.start);
                 return leftStart - rightStart;
-            });
+            }));
         const holiday = eventList.find((event) => event.extendedProps?.isHoliday);
         const rows = bookings.map((event, index) => {
             const details = event.extendedProps || {};
             const colors = eventColors(details.statusValue);
-            const start = event.start instanceof Date ? event.start : new Date(event.start);
-            const end = event.end instanceof Date ? event.end : new Date(event.end);
-            const meta = [details.location, details.status].filter(Boolean).join(' · ');
+            const start = details.reservationStart ? new Date(details.reservationStart)
+                : details.actualStart ? new Date(details.actualStart)
+                : (event.start instanceof Date ? event.start : new Date(event.start));
+            const end = details.reservationEnd ? new Date(details.reservationEnd)
+                : details.actualEnd ? new Date(details.actualEnd)
+                : (event.end instanceof Date ? event.end : new Date(event.end));
+            const time = formatStayTimes(start, end, details.duration, details.reservationType);
+            const meta = [details.location, details.reference].filter(Boolean).join(' · ');
+            const badge = details.status ? statusBadge(details.statusValue, details.status) : '';
             return `<button type="button" class="rc-day-item" data-index="${index}" style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
-                <span class="rc-day-item-time">${escapeHtml(formatTimeRange(start, end))}</span>
                 <span class="rc-day-item-title">${escapeHtml(details.resource || event.title)}</span>
-                ${meta ? `<span class="rc-day-item-meta">${escapeHtml(meta)}</span>` : ''}
+                <span class="rc-day-item-time">${escapeHtml(time)}</span>
+                <span class="rc-day-item-meta">${badge}${meta ? `<span>${escapeHtml(meta)}</span>` : ''}</span>
             </button>`;
         }).join('');
         const holidayRow = holiday
@@ -630,14 +900,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showReservationDetails(event) {
         const details = event.extendedProps || {};
-        const start = event.start instanceof Date ? event.start : new Date(event.start);
-        const end = event.end instanceof Date ? event.end : new Date(event.end);
-        document.getElementById('detailResource').textContent = details.resource || event.title;
-        document.getElementById('detailDate').textContent = formatDate(start);
-        document.getElementById('detailTime').textContent = formatTimeRange(start, end);
+        const start = details.reservationStart ? new Date(details.reservationStart)
+            : (event.start instanceof Date ? event.start : new Date(event.start));
+        const end = details.reservationEnd ? new Date(details.reservationEnd)
+            : (event.end instanceof Date ? event.end : new Date(event.end));
+        const title = document.getElementById('reservationModalTitle');
+        if (title) title.textContent = details.reference || 'Reservation details';
+        document.getElementById('detailResource').textContent = details.resource || event.title || '—';
+        document.getElementById('detailDate').textContent = formatStayDates(start, end);
+        document.getElementById('detailTime').textContent = formatStayTimes(start, end, details.duration, details.reservationType);
         document.getElementById('detailOwner').textContent = details.owner || '—';
         document.getElementById('detailLocation').textContent = details.location || '—';
+        const purpose = document.getElementById('detailPurpose');
+        if (purpose) purpose.textContent = details.purpose || '—';
         document.getElementById('detailStatus').innerHTML = statusBadge(details.statusValue, details.status);
+        const conflict = document.getElementById('detailConflict');
+        const link = document.getElementById('detailLink');
+        if (conflict) conflict.hidden = !details.conflict;
+        if (link) {
+            link.hidden = !details.url;
+            if (details.url) link.href = details.url;
+        }
         modal.classList.add('show');
         modal.setAttribute('aria-hidden', 'false');
     }
@@ -662,11 +945,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const time = String(value).slice(11, 16).split(':').map(Number);
         return (time[0] || 0) * 60 + (time[1] || 0);
     }
+    function eventEndMinutes(event) {
+        const startDate = String(event.start || '').slice(0, 10);
+        const endDate = String(event.end || '').slice(0, 10);
+        const minutes = timeMinutes(event.end);
+        if (endDate && startDate && endDate > startDate && minutes === 0) return 24 * 60;
+        return minutes;
+    }
     function formatClock(minutes) {
         return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
     }
     function overlapsHour(event, hour) {
-        return timeMinutes(event.start) < (hour + 1) * 60 && timeMinutes(event.end) > hour * 60;
+        return timeMinutes(event.start) < (hour + 1) * 60 && eventEndMinutes(event) > hour * 60;
     }
     function bookingState(event) {
         if (['pending_approval', 'changes_requested', 'draft'].includes(event.extendedProps.statusValue)) return 'tentative';
@@ -695,12 +985,44 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!date || Number.isNaN(date.getTime())) return '—';
         return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
     }
+    function formatEventClock(date) {
+        if (!date || Number.isNaN(date.getTime())) return '—';
+        return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    }
+    function localDateKey(date) {
+        const parts = Object.fromEntries(partsFormat.formatToParts(date).map(({ type, value }) => [type, value]));
+        return `${parts.year}-${parts.month}-${parts.day}`;
+    }
+    function stayEndDate(end) {
+        if (end.getHours() === 0 && end.getMinutes() === 0) {
+            return new Date(end.getTime() - 1000);
+        }
+        return end;
+    }
+    function isOvernightStay(start, end) {
+        if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+        return localDateKey(start) !== localDateKey(stayEndDate(end));
+    }
+    function formatStayDates(start, end) {
+        if (!start || Number.isNaN(start.getTime())) return '—';
+        if (!end || Number.isNaN(end.getTime()) || !isOvernightStay(start, end)) return formatDate(start);
+        return `${formatDate(start)} – ${formatDate(stayEndDate(end))}`;
+    }
+    function formatStayTimes(start, end, duration, type) {
+        if (!start || Number.isNaN(start.getTime())) return '—';
+        if (type === 'hostel' || isOvernightStay(start, end)) {
+            const endLabel = end && !Number.isNaN(end.getTime()) ? formatEventClock(end) : '—';
+            const time = `Check-in ${formatEventClock(start)} · Check-out ${endLabel}`;
+            return duration ? `${time} · ${duration}` : time;
+        }
+        const time = formatTimeRange(start, end);
+        return duration ? `${time} · ${duration}` : time;
+    }
     function formatTimeRange(start, end) {
         if (!start || Number.isNaN(start.getTime())) return '—';
-        const options = { hour: 'numeric', minute: '2-digit' };
-        const startText = start.toLocaleTimeString('en-GB', options);
+        const startText = formatEventClock(start);
         if (!end || Number.isNaN(end.getTime())) return startText;
-        return `${startText} – ${end.toLocaleTimeString('en-GB', options)}`;
+        return `${startText} – ${formatEventClock(end)}`;
     }
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (character) => ({

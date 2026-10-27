@@ -30,6 +30,7 @@ return new class extends Migration
             $table->dateTime('approved_at')->nullable();
             $table->dateTime('cancelled_at')->nullable();
             $table->text('cancellation_reason')->nullable();
+            $table->timestamp('approval_archived_at')->nullable()->index();
             $table->unsignedInteger('version')->default(1);
             $table->timestamps();
 

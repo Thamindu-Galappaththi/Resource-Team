@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Notifications\AdminResetPasswordNotification;
 use App\Notifications\NewUserCreated;
+use App\Services\NotificationRecipients;
 use App\Rules\SriLankanNic;
 use App\Services\SltEmployeeDirectory;
 use Illuminate\Http\JsonResponse;
@@ -61,7 +62,7 @@ class UserManagementController extends Controller
         $users = $usersQuery->latest('id')->paginate(10)->withQueryString();
         $permissionGroups = config('rbac.permission_groups', []);
 
-        if ($request->ajax()) {
+        if ($request->boolean('partial') && $request->ajax()) {
             return view('user-management._users-table', [
                 'users' => $users,
                 'permissionGroups' => $permissionGroups,
@@ -441,16 +442,10 @@ class UserManagementController extends Controller
 
     private function notifyAdminsOfNewUser(User $user, User $creator): void
     {
-        $adminRoles = ['super_admin', 'admin'];
-
-        User::query()
-            ->where('is_active', true)
-            ->whereKeyNot([$user->id, $creator->id])
-            ->where(function ($query) use ($adminRoles) {
-                $query->whereHas('role', fn ($role) => $role->whereIn('slug', $adminRoles))
-                    ->orWhereHas('roles', fn ($role) => $role->whereIn('slug', $adminRoles));
-            })
-            ->get()
-            ->each(fn (User $admin) => $admin->notify(new NewUserCreated($user, $creator)));
+        NotificationRecipients::notify(
+            'user.management',
+            new NewUserCreated($user, $creator),
+            except: [$user->id, $creator->id]
+        );
     }
 }

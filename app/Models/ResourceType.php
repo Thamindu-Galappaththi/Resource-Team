@@ -44,4 +44,9 @@ class ResourceType extends Model
     {
         return $this->hasMany(ResourceTypeFeatureValue::class);
     }
+
+    public function rates(): HasMany
+    {
+        return $this->hasMany(ResourceRate::class);
+    }
 }

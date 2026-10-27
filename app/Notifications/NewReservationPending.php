@@ -24,6 +24,10 @@ class NewReservationPending extends Notification
         return [
             'reservation_id' => $this->reservation->id,
             'reference' => $this->reservation->reference,
+            'reservation_type' => $this->reservation->type,
+            'icon' => 'ti-calendar-time',
+            'title' => 'Approval needed',
+            'url' => $this->reservation->destinationUrl(forApprover: true),
             'message' => 'A new reservation requires approval: '.$this->reservation->reference,
         ];
     }

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ReservationStatus;
 use App\Models\Reservation;
+use App\Models\ReservationItem;
 use App\Models\Resource;
 use App\Models\User;
 use App\Notifications\ReservationCreated;
@@ -47,7 +48,7 @@ class ReservationManagementTest extends TestCase
             'to_status' => ReservationStatus::PENDING_APPROVAL->value,
         ]);
 
-        Notification::assertSentTo($user, ReservationCreated::class);
+        Notification::assertNotSentTo($user, ReservationCreated::class);
     }
 
     public function test_overlapping_booking_is_rejected(): void
@@ -161,6 +162,18 @@ class ReservationManagementTest extends TestCase
             'reservation_id' => $reservation->id,
             'status' => 'cancelled',
         ]);
+
+        $this->actingAs($user)->post(route('reservations.store'), $this->payload($resource, $user, [
+            'reservation_date' => now('Asia/Colombo')->addDays(2)->toDateString(),
+        ]));
+        $second = Reservation::query()->latest('id')->first();
+        $this->actingAs($user)
+            ->postJson(route('reservations.cancel', $second), [
+                'cancellation_reason' => 'Room no longer needed',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Reservation cancelled successfully.');
+        $this->assertSame(ReservationStatus::CANCELLED->value, $second->fresh()->status);
     }
 
     public function test_cancelled_and_rejected_reservations_hide_cancel_for_admin(): void
@@ -188,7 +201,7 @@ class ReservationManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->getJson(route('reservations.index'))
+            ->getJson(route('reservations.feed'))
             ->assertOk()
             ->assertJsonFragment(['id' => $cancelled->id, 'can_cancel' => false])
             ->assertJsonFragment(['id' => $rejected->id, 'can_cancel' => false])
@@ -210,6 +223,49 @@ class ReservationManagementTest extends TestCase
         $this->post(route('reservations.cancel', $rejected), [
             'cancellation_reason' => 'again',
         ])->assertForbidden();
+    }
+
+    public function test_existing_reservations_modal_item_status_matches_reservation_status(): void
+    {
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $resource = Resource::factory()->create(['status' => 'active', 'name_model' => 'Welisara Single 101']);
+
+        $pending = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'purpose' => 'Pending hostel stay',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $pending->id,
+            'resource_id' => $resource->id,
+            'resource_name_snapshot' => 'Welisara Single 101',
+            'status' => 'cancelled',
+        ]);
+
+        $rejected = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::REJECTED->value,
+            'purpose' => 'Rejected hostel stay',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $rejected->id,
+            'resource_id' => $resource->id,
+            'resource_name_snapshot' => 'Welisara Single 101',
+            'status' => 'cancelled',
+        ]);
+
+        $payload = $this->actingAs($admin)
+            ->getJson(route('reservations.feed'))
+            ->assertOk()
+            ->json('reservations');
+        $pendingRow = collect($payload)->firstWhere('purpose', 'Pending hostel stay');
+        $rejectedRow = collect($payload)->firstWhere('purpose', 'Rejected hostel stay');
+        $this->assertSame('Pending approval', $pendingRow['items'][0]['status']);
+        $this->assertSame('Rejected', $rejectedRow['items'][0]['status']);
+        $this->assertNotSame('Cancelled', $pendingRow['items'][0]['status']);
     }
 
     public function test_existing_reservations_filter_by_status(): void
@@ -237,17 +293,35 @@ class ReservationManagementTest extends TestCase
             ->assertDontSee('Cancelled hall booking');
 
         $this->actingAs($admin)
-            ->getJson(route('reservations.index', ['status' => ReservationStatus::PENDING_APPROVAL->value]))
+            ->getJson(route('reservations.feed', ['status' => ReservationStatus::PENDING_APPROVAL->value]))
             ->assertOk()
             ->assertJsonFragment(['purpose' => 'Pending hall booking'])
             ->assertJsonMissing(['purpose' => 'Cancelled hall booking']);
+
+        $this->actingAs($admin)
+            ->getJson(route('reservations.index', ['search' => 'tt']))
+            ->assertOk()
+            ->assertHeader('content-type', 'text/html; charset=UTF-8')
+            ->assertSee('Existing Reservations', false);
     }
 
     public function test_calendar_and_create_pages_render(): void
     {
         $user = User::factory()->role('coordinator')->create();
 
-        $this->actingAs($user)->get(route('reservations.calendar'))->assertOk()->assertSee('Reservation Calendar');
+        $this->actingAs($user)->get(route('reservations.calendar'))
+            ->assertOk()
+            ->assertSee('Reservation Calendar')
+            ->assertSee('reservationCalendar')
+            ->assertSee('id="refreshCalendarButton"', false)
+            ->assertSee('fullcalendar@6.1.19', false)
+            ->assertSee('js/reservation-calendar.js', false)
+            ->assertSeeInOrder([
+                'id="calendar-location"',
+                'id="calendar-category"',
+                'id="calendar-resource"',
+                'id="calendar-status"',
+            ], false);
         $this->actingAs($user)->get(route('reservations.create'))->assertOk()->assertSee('Purpose of Reservation');
         $this->actingAs($user)->get(route('reservations.index'))->assertOk()->assertSee('Existing Reservations');
     }
@@ -257,12 +331,41 @@ class ReservationManagementTest extends TestCase
         $user = User::factory()->role('coordinator')->create();
 
         $this->actingAs($user)
-            ->getJson(route('reservations.calendar', ['year' => 2026, 'month' => 10]))
+            ->getJson(route('reservations.calendar.stats', ['year' => 2026, 'month' => 10]))
             ->assertOk()
             ->assertJsonPath('year', 2026)
             ->assertJsonPath('month', 10)
             ->assertJsonStructure(['label', 'cells', 'stats', 'reservationsByDate', 'holidaysByDate', 'prev', 'next'])
             ->assertJsonPath('holidaysByDate.2026-10-25.kind', 'poya');
+    }
+
+    public function test_calendar_events_include_each_resource_item(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $hallA = Resource::factory()->create(['name_model' => 'Hall A']);
+        $hallB = Resource::factory()->create([
+            'name_model' => 'Hall B',
+            'location_id' => $hallA->location_id,
+            'resource_type_id' => $hallA->resource_type_id,
+        ]);
+
+        $this->actingAs($user)->post(route('reservations.store'), $this->payload($hallA, $user, [
+            'resource_id' => $hallA->id,
+            'resource_ids' => [$hallA->id, $hallB->id],
+            'purpose' => 'Dual hall booking',
+        ]))->assertRedirect();
+
+        $events = $this->actingAs($user)
+            ->getJson(route('reservations.calendar.events', [
+                'start' => now()->startOfMonth()->toIso8601String(),
+                'end' => now()->endOfMonth()->addDay()->toIso8601String(),
+            ]))
+            ->assertOk()
+            ->json();
+
+        $resources = collect($events)->pluck('extendedProps.resource')->filter();
+        $this->assertTrue($resources->contains(fn ($name) => str_contains((string) $name, 'Hall A')));
+        $this->assertTrue($resources->contains(fn ($name) => str_contains((string) $name, 'Hall B')));
     }
 
     public function test_nebula_sms_user_cannot_create_but_can_view_list(): void
@@ -288,6 +391,19 @@ class ReservationManagementTest extends TestCase
             ['Welisara', 'Moratuwa', 'Peradeniya'],
             collect($response->json('locations'))->pluck('name')->all()
         );
+    }
+
+    public function test_calendar_filter_catalog_maps_resource_location_and_category(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Audio Mixer Pro']);
+
+        $this->actingAs($user)->get(route('reservations.calendar'))
+            ->assertOk()
+            ->assertSee('filterCatalog', false)
+            ->assertSee('"name":"Audio Mixer Pro"', false)
+            ->assertSee('"location_id":"'.$resource->location_id.'"', false)
+            ->assertSee('"category_id":"'.$resource->type->resource_category_id.'"', false);
     }
 
     /**

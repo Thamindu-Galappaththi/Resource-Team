@@ -25,7 +25,8 @@ class CanteenReservationPolicy
 
     public function view(User $user, CanteenReservation $reservation): bool
     {
-        if ($user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'canteen')) {
+        if ($user->hasPermission('canteen.manage')
+            || $user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'canteen')) {
             return true;
         }
 
@@ -40,7 +41,7 @@ class CanteenReservationPolicy
 
     public function update(User $user, CanteenReservation $reservation): bool
     {
-        if ($user->hasRole('super_admin', 'admin', 'coordinator')) {
+        if ($user->hasRole('super_admin', 'admin', 'developer', 'coordinator')) {
             return true;
         }
 
@@ -50,30 +51,25 @@ class CanteenReservationPolicy
 
     public function delete(User $user, CanteenReservation $reservation): bool
     {
-        return $this->cancel($user, $reservation);
+        return $user->hasRole('super_admin', 'admin', 'developer');
     }
 
     public function cancel(User $user, CanteenReservation $reservation): bool
     {
-        if ($user->hasRole('super_admin', 'admin', 'coordinator')) {
-            return true;
-        }
-
         return $user->id === $reservation->requested_by_user_id
             && $reservation->canBeCancelled();
     }
 
     public function manageStatus(User $user, CanteenReservation $reservation): bool
     {
-        if ($user->hasRole('super_admin', 'admin', 'coordinator')) {
-            return true;
+        if (! $user->hasPermission('canteen.manage') && ! $user->hasRole('canteen')) {
+            return false;
         }
 
-        return $user->hasRole('canteen')
-            && ! in_array($reservation->status, [
-                CanteenReservationStatus::REJECTED->value,
-                CanteenReservationStatus::CANCELLED->value,
-                CanteenReservationStatus::COMPLETED->value,
-            ], true);
+        return ! in_array($reservation->status, [
+            CanteenReservationStatus::REJECTED->value,
+            CanteenReservationStatus::CANCELLED->value,
+            CanteenReservationStatus::COMPLETED->value,
+        ], true);
     }
 }
