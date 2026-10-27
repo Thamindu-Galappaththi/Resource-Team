@@ -237,6 +237,8 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertOk()
             ->assertSee('Hostel reservation calendar')
             ->assertSee('Create Hostel Reservation')
+            ->assertSee('is-slt-calendar', false)
+            ->assertSee('reservation-calendar.js?v=23', false)
             ->assertDontSee('All locations')
             ->assertSee(route('hostel.create', absolute: false));
 
@@ -264,6 +266,8 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertOk()
             ->assertSee('Canteen reservation calendar')
             ->assertSee('Create reservation')
+            ->assertSee('is-slt-calendar', false)
+            ->assertSee('reservation-calendar.js?v=23', false)
             ->assertDontSee('All locations')
             ->assertSee(route('canteen.create', absolute: false));
 
@@ -410,6 +414,8 @@ class SltEmployeeDashboardTest extends TestCase
         $this->actingAs($employee)
             ->get(route('reservations.calendar'))
             ->assertOk()
+            ->assertSee('is-slt-calendar', false)
+            ->assertSee('reservation-calendar.js?v=23', false)
             ->assertSee('Employee Campus')
             ->assertSee('Employee Labs')
             ->assertSee('My Lab Room')
@@ -425,6 +431,57 @@ class SltEmployeeDashboardTest extends TestCase
             ->json());
         $this->assertTrue($filtered->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $mine->id));
         $this->assertFalse($filtered->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $theirs->id));
+    }
+
+    public function test_create_page_does_not_prefill_start_and_end_times(): void
+    {
+        $employee = User::factory()->role('slt_employee')->create();
+
+        $this->actingAs($employee)
+            ->get(route('reservations.create'))
+            ->assertOk()
+            ->assertDontSee('value="09:00"', false)
+            ->assertDontSee('value="10:00"', false);
+    }
+
+    public function test_slt_calendar_hides_cancelled_bookings_and_my_requests_have_actions(): void
+    {
+        $employee = User::factory()->role('slt_employee')->create();
+        $resource = Resource::factory()->create(['status' => 'active', 'name_model' => 'Hall A']);
+        $pending = $this->calendarBooking($employee, $resource, 'Pending hall');
+        $cancelled = $this->calendarBooking($employee, $resource, 'Cancelled hall');
+        $cancelled->update(['status' => ReservationStatus::CANCELLED->value]);
+
+        $range = [
+            'start' => now()->subDay()->toIso8601String(),
+            'end' => now()->addMonths(2)->toIso8601String(),
+        ];
+        $events = collect($this->actingAs($employee)
+            ->getJson(route('reservations.calendar.events', $range))
+            ->assertOk()
+            ->json());
+        $this->assertTrue($events->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $pending->id));
+        $this->assertFalse($events->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $cancelled->id));
+
+        $this->actingAs($employee)
+            ->get(route('reservations.mine'))
+            ->assertOk()
+            ->assertSee('Actions')
+            ->assertSee('ti-eye', false)
+            ->assertSee('ti-pencil', false)
+            ->assertSee('ti-trash', false)
+            ->assertSee(route('reservations.edit', $pending, false), false);
+
+        $this->actingAs($employee)
+            ->get(route('reservations.show', $pending))
+            ->assertOk()
+            ->assertSee('Back to my resource requests');
+
+        $this->actingAs($employee)
+            ->get(route('reservations.edit', $pending))
+            ->assertOk()
+            ->assertSee('Edit Reservation')
+            ->assertSee('Back to my resource requests');
     }
 
     private function calendarBooking(User $requester, Resource $resource, string $title): Reservation

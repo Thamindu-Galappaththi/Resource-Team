@@ -143,6 +143,109 @@ class ReservationBookingService
         });
     }
 
+    public function updatePending(Reservation $reservation, array $payload, User $actor): Reservation
+    {
+        if (! $reservation->canBeEdited()) {
+            throw ValidationException::withMessages([
+                'purpose' => 'This reservation can no longer be edited.',
+            ]);
+        }
+
+        if (! empty($payload['end_date'])) {
+            [$startsAt, $endsAt] = $this->utcDateTimeRange(
+                $payload['reservation_date'],
+                $payload['start_time'],
+                $payload['end_date'],
+                $payload['end_time'],
+            );
+        } else {
+            [$startsAt, $endsAt] = $this->utcRange(
+                $payload['reservation_date'],
+                $payload['start_time'],
+                $payload['end_time'],
+            );
+        }
+
+        $resourceIds = collect($payload['resource_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($resourceIds->isEmpty()) {
+            throw ValidationException::withMessages([
+                'resource_id' => 'Select a resource.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($payload, $actor, $startsAt, $endsAt, $resourceIds, $reservation) {
+            $reservation = Reservation::query()->whereKey($reservation->id)->lockForUpdate()->firstOrFail();
+            if (! $reservation->canBeEdited()) {
+                throw ValidationException::withMessages([
+                    'purpose' => 'This reservation can no longer be edited.',
+                ]);
+            }
+
+            $resources = Resource::query()
+                ->with('location')
+                ->whereIn('id', $resourceIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            if ($resources->count() !== $resourceIds->count()) {
+                throw ValidationException::withMessages([
+                    'resource_id' => 'One or more selected resources could not be found.',
+                ]);
+            }
+
+            foreach ($resources as $resource) {
+                if ($resource->status !== 'active') {
+                    throw ValidationException::withMessages([
+                        'resource_id' => $resource->name_model.' is not available for booking.',
+                    ]);
+                }
+            }
+
+            $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt, $reservation->id);
+
+            $primary = $resources[$resourceIds->first()];
+            $locationId = $payload['location_id'] ?? $primary->location_id;
+            $purpose = $payload['purpose'];
+            $title = $payload['title'] ?? $purpose;
+
+            $reservation->update([
+                'location_id' => $locationId,
+                'title' => $title,
+                'description' => $payload['description'] ?? $reservation->description,
+                'purpose' => $purpose,
+                'attendee_count' => $payload['attendee_count'] ?? null,
+                'reservation_date' => $payload['reservation_date'],
+                'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),
+                'end_time' => Carbon::parse($payload['end_time'])->format('H:i:s'),
+            ]);
+
+            $reservation->items()->delete();
+
+            foreach ($resourceIds as $resourceId) {
+                $resource = $resources[$resourceId];
+                ReservationItem::query()->create([
+                    'reservation_id' => $reservation->id,
+                    'resource_id' => $resource->id,
+                    'starts_at' => $startsAt,
+                    'ends_at' => $endsAt,
+                    'status' => ReservationItemStatus::HELD->value,
+                    'quantity' => 1,
+                    'resource_name_snapshot' => $resource->name_model,
+                ]);
+            }
+
+            $this->recordHistory($reservation, $reservation->status, $reservation->status, $actor, 'updated');
+
+            return $reservation->load(['requester', 'items', 'location']);
+        });
+    }
+
     public function cancel(Reservation $reservation, User $actor, string $reason): Reservation
     {
         if (! $reservation->canBeCancelled()) {

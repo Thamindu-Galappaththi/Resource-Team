@@ -3,7 +3,7 @@
 @section('title', 'Hostel '.$reservation->reference)
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/hostel-show.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/hostel-show.css') }}?v=2">
 @endpush
 
 @section('content')
@@ -19,9 +19,11 @@
         </div>
         <div class="hs-header-actions">
             <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
-            @unless(auth()->user()?->hasRole('slt_employee'))
+            @if(auth()->user()?->hasRole('slt_employee'))
+                <a href="{{ route('hostel.mine') }}" class="btn hs-back"><i class="ti ti-arrow-left me-1"></i>Back to my hostel requests</a>
+            @else
                 <a href="{{ route('hostel.index') }}" class="btn hs-back"><i class="ti ti-arrow-left me-1"></i>Back to list</a>
-            @endunless
+            @endif
         </div>
     </div>
 

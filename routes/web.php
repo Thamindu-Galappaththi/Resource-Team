@@ -67,6 +67,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/lookups', 'lookups')->middleware('permission:reservations.create')->name('lookups');
         Route::get('/availability', 'availability')->middleware('permission:reservations.create')->name('availability');
         Route::get('/my-requests', [SltEmployeeRequestController::class, 'resources'])->middleware('permission:reservations.index')->name('mine');
+        Route::get('/{reservation}/edit', 'edit')->middleware('permission:reservations.create')->name('edit');
         Route::get('/{reservation}', 'show')->middleware('permission:reservations.index')->name('show');
     });
 
@@ -98,6 +99,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/calendar/stats', [SltEmployeeDashboardController::class, 'hostelCalendarStats'])->middleware('permission:hostel.index')->name('calendar.stats');
         Route::get('/create', 'create')->middleware('permission:hostel.create')->name('create');
         Route::get('/my-requests', [SltEmployeeRequestController::class, 'hostel'])->middleware('permission:hostel.index')->name('mine');
+        Route::get('/{reservation}/edit', 'edit')->middleware('permission:hostel.create')->name('edit');
         Route::get('/{reservation}', 'show')->middleware('permission:hostel.index')->name('show');
     });
 
@@ -212,11 +214,13 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
         Route::post('/', 'store')->middleware('permission:reservations.create')->name('store');
+        Route::put('/{reservation}', 'update')->middleware('permission:reservations.create')->name('update');
         Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:reservations.index,reservations.create')->name('cancel');
     });
 
     Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
         Route::post('/', 'store')->middleware('permission:hostel.create')->name('store');
+        Route::put('/{reservation}', 'update')->middleware('permission:hostel.create')->name('update');
         Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:hostel.index,hostel.create,hostel.manage')->name('cancel');
         Route::post('/{reservation}/approval', 'updateApproval')->middleware('permission:hostel.manage')->name('approval');
     });

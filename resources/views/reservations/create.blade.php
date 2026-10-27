@@ -1,22 +1,26 @@
 @extends('layouts.app')
 
-@section('title', 'Create Reservation')
+@section('title', isset($reservation) ? 'Edit Reservation' : 'Create Reservation')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/reservation-create.css') }}?v=7">
+<link rel="stylesheet" href="{{ asset('css/reservation-create.css') }}?v=8">
 @endpush
 
 @section('content')
 <div class="container-fluid mt-4 rv-page">
     <div class="rv-header">
         <div>
-            <h1 class="rv-title">Create Reservation</h1>
-            <p class="rv-subtitle mb-0">Select a resource, date, and time. Overlapping bookings are blocked automatically.</p>
+            <h1 class="rv-title">{{ isset($reservation) ? 'Edit Reservation' : 'Create Reservation' }}</h1>
+            <p class="rv-subtitle mb-0">{{ isset($reservation) ? 'Update this request and keep it in the approval queue.' : 'Select a resource, date, and time. Overlapping bookings are blocked automatically.' }}</p>
         </div>
-        @unless(auth()->user()?->hasRole('slt_employee'))
+        @if(auth()->user()?->hasRole('slt_employee'))
+            @if(isset($reservation))
+                <a href="{{ route('reservations.mine') }}" class="btn rv-back"><i class="ti ti-arrow-left me-1"></i>Back to my resource requests</a>
+            @endif
+        @else
             <a href="{{ route('reservations.index') }}" class="btn rv-back"><i class="ti ti-arrow-left me-1"></i>Existing Reservations</a>
-        @endunless
+        @endif
     </div>
 
     <div class="alert alert-info d-flex align-items-start gap-2" role="note">
@@ -36,8 +40,11 @@
     @endif
     <div id="rv-flash" class="alert rv-auto-alert d-none" role="status"></div>
 
-    <form method="POST" action="{{ route('reservations.store') }}" id="reservationForm">
+    <form method="POST" action="{{ isset($reservation) ? route('reservations.update', $reservation) : route('reservations.store') }}" id="reservationForm">
         @csrf
+        @if(isset($reservation))
+            @method('PUT')
+        @endif
 
         <section class="rv-card">
             <h2 class="rv-card-title"><i class="ti ti-calendar-plus"></i> Reservation request</h2>
@@ -109,18 +116,18 @@
                 <div class="row g-3">
                     <div class="col-md-8">
                         <label class="form-label" for="purpose">Purpose of Reservation <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('purpose') is-invalid @enderror" id="purpose" name="purpose" value="{{ old('purpose') }}" maxlength="500" placeholder="e.g. CCNA Batch 12 practical lab" required>
+                        <input type="text" class="form-control @error('purpose') is-invalid @enderror" id="purpose" name="purpose" value="{{ old('purpose', $reservation->purpose ?? '') }}" maxlength="500" placeholder="e.g. CCNA Batch 12 practical lab" required>
                         @error('purpose')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="attendee_count">Attendee count</label>
-                        <input type="number" min="1" class="form-control" id="attendee_count" name="attendee_count" value="{{ old('attendee_count') }}">
+                        <input type="number" min="1" class="form-control" id="attendee_count" name="attendee_count" value="{{ old('attendee_count', $reservation->attendee_count ?? '') }}">
                     </div>
                 </div>
             </div>
 
             <div class="rv-actions">
-                <button type="submit" class="rv-submit" id="submitReservation">Submit for approval</button>
+                <button type="submit" class="rv-submit" id="submitReservation">{{ isset($reservation) ? 'Update reservation' : 'Submit for approval' }}</button>
             </div>
         </section>
     </form>
@@ -139,7 +146,8 @@ window.RVCreate = {
     prefillResourceIds: @json($prefillResourceIds),
     prefillLocationId: @json($prefillLocationId ? (string) $prefillLocationId : null),
     prefillCategoryId: @json($prefillCategoryId ? (string) $prefillCategoryId : null),
+    ignoreReservationId: @json(isset($reservation) ? $reservation->id : null),
 };
 </script>
-<script src="{{ asset('js/reservation-create.js') }}?v=3"></script>
+<script src="{{ asset('js/reservation-create.js') }}?v=4"></script>
 @endpush

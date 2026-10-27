@@ -227,6 +227,6 @@
 
 @media (max-width: 767.98px) {
     .rv-page .rv-header { flex-wrap: wrap; }
-    .rv-page .rv-back { width: 100%; justify-content: center; }
+    .rv-page .rv-back { width: 100%; justify-content: center; white-space: normal; }
     .rv-submit { width: 100%; }
 }

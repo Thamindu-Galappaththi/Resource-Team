@@ -35,7 +35,7 @@ class SltEmployeeRequestController extends Controller
             'title' => 'My resource requests',
             'subtitle' => 'Reservations you submitted for halls, labs, and equipment.',
             'columns' => ['Reference', 'Request', 'Date', 'Details', 'Status'],
-            'requests' => $this->mapPaginator($reservations, function (Reservation $reservation) {
+            'requests' => $this->mapPaginator($reservations, function (Reservation $reservation) use ($user) {
                 $status = ReservationStatus::tryFrom((string) $reservation->status);
 
                 return [
@@ -46,6 +46,11 @@ class SltEmployeeRequestController extends Controller
                     'status' => $status?->label() ?? (string) $reservation->status,
                     'tone' => $this->reservationTone((string) $reservation->status),
                     'href' => route('reservations.show', $reservation),
+                    'edit_href' => $user->can('update', $reservation) ? route('reservations.edit', $reservation) : null,
+                    'delete_action' => $user->can('cancel', $reservation) ? route('reservations.cancel', $reservation) : null,
+                    'delete_method' => 'POST',
+                    'delete_needs_reason' => true,
+                    'delete_title' => 'Cancel this request?',
                 ];
             }),
         ]);
@@ -72,7 +77,7 @@ class SltEmployeeRequestController extends Controller
             'title' => 'My hostel requests',
             'subtitle' => 'Hostel stays you requested for visitors and staff.',
             'columns' => ['Reference', 'Guest', 'Stay dates', 'Details', 'Status'],
-            'requests' => $this->mapPaginator($reservations, function (Reservation $reservation) {
+            'requests' => $this->mapPaginator($reservations, function (Reservation $reservation) use ($user) {
                 $status = ReservationStatus::tryFrom((string) $reservation->status);
                 $stay = $reservation->hostelStay;
 
@@ -84,6 +89,11 @@ class SltEmployeeRequestController extends Controller
                     'status' => $status?->label() ?? (string) $reservation->status,
                     'tone' => $this->reservationTone((string) $reservation->status),
                     'href' => route('hostel.show', $reservation),
+                    'edit_href' => $user->can('update', $reservation) ? route('hostel.edit', $reservation) : null,
+                    'delete_action' => $user->can('cancelHostel', $reservation) ? route('hostel.cancel', $reservation) : null,
+                    'delete_method' => 'POST',
+                    'delete_needs_reason' => true,
+                    'delete_title' => 'Cancel this request?',
                 ];
             }),
         ]);
@@ -106,7 +116,7 @@ class SltEmployeeRequestController extends Controller
             'title' => 'My canteen requests',
             'subtitle' => 'Meal and catering orders you submitted to the canteen.',
             'columns' => ['Reference', 'Request', 'Date', 'Details', 'Status'],
-            'requests' => $this->mapPaginator($reservations, function (CanteenReservation $reservation) {
+            'requests' => $this->mapPaginator($reservations, function (CanteenReservation $reservation) use ($user) {
                 $status = CanteenReservationStatus::tryFrom((string) $reservation->status);
                 $meal = MealType::tryFrom((string) $reservation->meal_type);
 
@@ -118,6 +128,11 @@ class SltEmployeeRequestController extends Controller
                     'status' => $status?->label() ?? (string) $reservation->status,
                     'tone' => $status?->tone() ?? 'pending',
                     'href' => route('canteen.show', $reservation),
+                    'edit_href' => $user->can('update', $reservation) ? route('canteen.edit', $reservation) : null,
+                    'delete_action' => ($user->can('delete', $reservation) || $user->can('cancel', $reservation)) ? route('canteen.destroy', $reservation) : null,
+                    'delete_method' => 'DELETE',
+                    'delete_needs_reason' => false,
+                    'delete_title' => $user->can('delete', $reservation) ? 'Delete this request?' : 'Cancel this request?',
                 ];
             }),
         ]);

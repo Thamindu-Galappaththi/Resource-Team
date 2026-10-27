@@ -621,30 +621,141 @@ a.slt-card--link {
 }
 
 .slt-table__action {
-    width: 44px;
+    width: 1%;
+    white-space: nowrap;
     text-align: right;
 }
 
-.slt-table__action a {
+.slt-action-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+}
+
+.slt-icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 32px;
     height: 32px;
-    border-radius: 999px;
+    padding: 0;
+    border: 1px solid #9bb8e3;
+    border-radius: 8px;
     color: #0b3d91;
-    background: #eef4ff;
+    background: #fff;
     text-decoration: none;
+    cursor: pointer;
 }
 
-.slt-hub--hostel .slt-table__action a {
+.slt-icon-btn:hover {
+    color: #fff;
+    background: #0b3d91;
+    border-color: #0b3d91;
+}
+
+.slt-icon-btn--danger {
+    color: #c24141;
+    border-color: #f0b4b4;
+}
+
+.slt-icon-btn--danger:hover {
+    color: #fff;
+    background: #c24141;
+    border-color: #c24141;
+}
+
+.slt-icon-btn.is-disabled {
+    opacity: 0.38;
+    cursor: default;
+    pointer-events: none;
+}
+
+.slt-hub--hostel .slt-icon-btn {
     color: #0f766e;
-    background: #ccfbf1;
+    border-color: #99f6e4;
 }
 
-.slt-hub--canteen .slt-table__action a {
+.slt-hub--hostel .slt-icon-btn:hover {
+    color: #fff;
+    background: #0f766e;
+    border-color: #0f766e;
+}
+
+.slt-hub--canteen .slt-icon-btn {
     color: #c2410c;
-    background: #ffedd5;
+    border-color: #fdba74;
+}
+
+.slt-hub--canteen .slt-icon-btn:hover {
+    color: #fff;
+    background: #c2410c;
+    border-color: #c2410c;
+}
+
+.swal2-container.slt-swal-backdrop {
+    padding: 12px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    background: rgba(32, 41, 54, 0.55) !important;
+}
+
+.slt-swal {
+    width: min(480px, 100%) !important;
+    max-width: 100% !important;
+    max-height: calc(100vh - 24px) !important;
+    padding: 1.35rem 1.35rem 1.1rem !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+    box-sizing: border-box !important;
+}
+
+.slt-swal-title {
+    margin: 0 !important;
+    padding: 0 0 0.35rem !important;
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    color: #1f2937 !important;
+}
+
+.slt-swal-body {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+}
+
+.slt-swal-sub {
+    margin: 0 0 0.9rem;
+    color: #64748b;
+    font-size: 0.95rem;
+    word-break: break-word;
+}
+
+.slt-swal-reason {
+    display: block;
+    width: 100%;
+    min-height: 92px;
+    resize: vertical;
+}
+
+.slt-swal-reason::-webkit-credentials-auto-fill-button,
+.slt-swal-reason::-webkit-contacts-auto-fill-button {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.slt-swal-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 0.6rem !important;
+    margin: 1rem 0 0 !important;
+    width: 100% !important;
+}
+
+.slt-swal-actions .rm-swal-btn {
+    min-width: 96px;
 }
 
 .slt-pager {
@@ -1098,10 +1209,88 @@ a.slt-card--link {
         padding: 1.15rem 0.9rem 4.2rem;
     }
 
+    .slt-hub__hero h1 {
+        font-size: clamp(1.35rem, 7vw, 2rem);
+        overflow-wrap: anywhere;
+    }
+
+    .slt-table-wrap {
+        overflow: visible;
+        background: transparent;
+        box-shadow: none;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .slt-table thead {
+        display: none;
+    }
+
+    .slt-table,
+    .slt-table tbody,
+    .slt-table tr,
+    .slt-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .slt-table tbody tr {
+        margin-bottom: 0.75rem;
+        padding: 0.75rem 0.9rem 0.85rem;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.97);
+        box-shadow: 0 10px 24px rgba(8, 16, 40, 0.16);
+    }
+
     .slt-table th,
     .slt-table td {
-        padding: 0.7rem 0.75rem;
+        padding: 0.4rem 0;
         white-space: normal;
+        border-bottom: 0;
+    }
+
+    .slt-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        background: transparent !important;
+    }
+
+    .slt-table tbody td::before {
+        content: attr(data-label);
+        flex: 0 0 auto;
+        color: #5b6b86;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .slt-table__action,
+    .slt-table tbody td.slt-table__action {
+        width: 100%;
+        padding-top: 0.7rem;
+        justify-content: flex-end;
+    }
+
+    .slt-table tbody td.slt-table__action::before {
+        margin-right: auto;
+        align-self: center;
+    }
+
+    .slt-swal {
+        padding: 1.1rem 1rem 0.95rem !important;
+    }
+
+    .slt-swal-title {
+        font-size: 1.15rem !important;
+    }
+
+    .slt-swal-actions .rm-swal-btn {
+        flex: 1 1 calc(50% - 0.4rem);
+        min-width: 0;
     }
 
     .slt-request {

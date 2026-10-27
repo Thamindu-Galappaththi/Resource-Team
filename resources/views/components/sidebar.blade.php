@@ -53,8 +53,8 @@
 
             @if($isSltEmployee)
                 @php
-                    $sltResource = request()->routeIs('reservations.home', 'reservations.calendar', 'reservations.create', 'reservations.mine', 'reservations.show');
-                    $sltHostel = request()->routeIs('hostel.home', 'hostel.calendar', 'hostel.create', 'hostel.mine', 'hostel.show');
+                    $sltResource = request()->routeIs('reservations.home', 'reservations.calendar', 'reservations.create', 'reservations.edit', 'reservations.mine', 'reservations.show');
+                    $sltHostel = request()->routeIs('hostel.home', 'hostel.calendar', 'hostel.create', 'hostel.edit', 'hostel.mine', 'hostel.show');
                     $sltCanteen = request()->routeIs('canteen.home', 'canteen.calendar', 'canteen.create', 'canteen.mine', 'canteen.show', 'canteen.edit');
                 @endphp
 
@@ -69,7 +69,7 @@
                         </a>
                     </li>
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ request()->routeIs('reservations.create') ? 'active' : '' }}" href="{{ route('reservations.create') }}">
+                        <a class="sidebar-link {{ request()->routeIs('reservations.create', 'reservations.edit') ? 'active' : '' }}" href="{{ route('reservations.create') }}">
                             <span><i class="ti ti-calendar-plus"></i></span>
                             <span class="hide-menu">Create Reservation</span>
                         </a>
@@ -91,7 +91,7 @@
                         </a>
                     </li>
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ request()->routeIs('hostel.create') ? 'active' : '' }}" href="{{ route('hostel.create') }}">
+                        <a class="sidebar-link {{ request()->routeIs('hostel.create', 'hostel.edit') ? 'active' : '' }}" href="{{ route('hostel.create') }}">
                             <span><i class="ti ti-bed"></i></span>
                             <span class="hide-menu">Create Hostel Reservation</span>
                         </a>
@@ -167,7 +167,7 @@
 
                 @if($canCreateReservation)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ request()->routeIs('reservations.create') ? 'active' : '' }}" href="{{ route('reservations.create') }}">
+                        <a class="sidebar-link {{ request()->routeIs('reservations.create', 'reservations.edit') ? 'active' : '' }}" href="{{ route('reservations.create') }}">
                             <span><i class="ti ti-calendar-plus"></i></span>
                             <span class="hide-menu">Create Reservations</span>
                         </a>
@@ -266,7 +266,7 @@
 
                 @if($canHostelCreate)
                     <li class="sidebar-item">
-                        <a class="sidebar-link {{ request()->routeIs('hostel.create') ? 'active' : '' }}" href="{{ route('hostel.create') }}">
+                        <a class="sidebar-link {{ request()->routeIs('hostel.create', 'hostel.edit') ? 'active' : '' }}" href="{{ route('hostel.create') }}">
                             <span><i class="ti ti-bed"></i></span>
                             <span class="hide-menu">Create Hostel Reservation</span>
                         </a>

@@ -5,11 +5,11 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
 <link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
-<link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=8">
+<link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=11">
 @endpush
 
 @section('content')
-<div class="rc-page reservation-calendar-page">
+<div class="rc-page reservation-calendar-page is-slt-calendar">
     <div class="rc-header">
         <div>
             <h1 class="rc-title">{{ $title }}</h1>
@@ -98,5 +98,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=20"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=23"></script>
 @endpush

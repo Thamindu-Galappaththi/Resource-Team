@@ -48,6 +48,80 @@
     });
 })();
 
+(function bindSltRequestActions() {
+    const swalFire = (options) => (window.RMSwal?.fire ? window.RMSwal.fire(options) : window.Swal?.fire?.(options));
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+        }[character]));
+    }
+
+    document.addEventListener('click', async function (event) {
+        const button = event.target.closest('[data-slt-delete]');
+        if (!button || button.disabled) {
+            return;
+        }
+
+        event.preventDefault();
+        const needsReason = button.dataset.reason === '1';
+        const result = await swalFire({
+            title: button.dataset.title || 'Delete this request?',
+            html: `<p class="slt-swal-sub">${escapeHtml(button.dataset.sub || '')}</p>${needsReason ? '<label class="visually-hidden" for="slt-swal-reason">Cancellation reason</label><textarea id="slt-swal-reason" class="form-control slt-swal-reason" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="Cancellation reason" rows="3"></textarea>' : ''}`,
+            showCancelButton: true,
+            confirmButtonText: 'Delete',
+            cancelButtonText: 'Keep',
+            reverseButtons: true,
+            focusConfirm: false,
+            allowOutsideClick: false,
+            scrollbarPadding: false,
+            heightAuto: false,
+            width: 480,
+            preConfirm: () => {
+                if (!needsReason) {
+                    return true;
+                }
+                const value = document.getElementById('slt-swal-reason')?.value.trim() || '';
+                if (!value) {
+                    window.Swal?.showValidationMessage('A reason is required.');
+                    return false;
+                }
+                return value;
+            },
+            customClass: {
+                ...(window.RMSwal?.base?.customClass || {}),
+                popup: 'rm-swal slt-swal',
+                title: 'slt-swal-title',
+                htmlContainer: 'slt-swal-body',
+                confirmButton: 'btn btn-danger rm-swal-btn',
+                cancelButton: 'btn btn-outline-secondary rm-swal-btn',
+                actions: 'slt-swal-actions',
+                container: 'slt-swal-backdrop',
+            },
+        });
+
+        if (!result?.isConfirmed) {
+            return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = button.dataset.action;
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const method = (button.dataset.method || 'POST').toUpperCase();
+        form.innerHTML = `<input type="hidden" name="_token" value="${token}">${method !== 'POST' ? `<input type="hidden" name="_method" value="${method}">` : ''}`;
+        if (needsReason) {
+            const reason = document.createElement('input');
+            reason.type = 'hidden';
+            reason.name = 'cancellation_reason';
+            reason.value = String(result.value || '').trim();
+            form.appendChild(reason);
+        }
+        document.body.appendChild(form);
+        form.submit();
+    });
+})();
+
 (function bindSltCalendar() {
     const root = document.querySelector('.slt-cal');
     const pop = document.getElementById('slt-cal-pop');

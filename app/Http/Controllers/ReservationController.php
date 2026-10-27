@@ -81,6 +81,53 @@ class ReservationController extends Controller
         return view('reservations.show', compact('reservation'));
     }
 
+    public function edit(Request $request, Reservation $reservation): View
+    {
+        abort_if($reservation->type === ReservationType::HOSTEL->value, 404);
+        $this->authorize('update', $reservation);
+        abort_unless($reservation->canBeEdited(), 403);
+
+        $reservation->load(['items.resource.type']);
+        $primary = $reservation->items->first()?->resource;
+        $lookups = $this->formLookups($request);
+
+        return view('reservations.create', array_merge($lookups, [
+            'reservation' => $reservation,
+            'prefillDate' => old('reservation_date', $reservation->reservation_date?->toDateString() ?: $lookups['prefillDate']),
+            'prefillStart' => old('start_time', substr((string) $reservation->start_time, 0, 5)),
+            'prefillEnd' => old('end_time', substr((string) $reservation->end_time, 0, 5)),
+            'prefillResourceId' => old('resource_id', $primary?->id),
+            'prefillResourceIds' => collect(old('resource_ids', $reservation->items->pluck('resource_id')->all()))
+                ->filter(fn ($id) => is_scalar($id) && ctype_digit((string) $id))
+                ->map(fn ($id) => (string) $id)
+                ->unique()
+                ->values(),
+            'prefillLocationId' => old('location_id', $reservation->location_id ?: $primary?->location_id),
+            'prefillCategoryId' => old('category_id', $primary?->type?->resource_category_id),
+        ]));
+    }
+
+    public function update(StoreReservationRequest $request, Reservation $reservation): RedirectResponse
+    {
+        abort_if($reservation->type === ReservationType::HOSTEL->value, 404);
+        $this->authorize('update', $reservation);
+        abort_unless($reservation->canBeEdited(), 403);
+
+        try {
+            $reservation = $this->bookings->updatePending($reservation, $request->validated(), $request->user());
+        } catch (ReservationConflictException $exception) {
+            return back()->withInput()->withErrors([
+                'start_time' => $exception->getMessage(),
+            ]);
+        } catch (ValidationException $exception) {
+            return back()->withInput()->withErrors($exception->errors());
+        }
+
+        return redirect()
+            ->route('reservations.show', $reservation)
+            ->with('success', 'Reservation updated successfully.');
+    }
+
     public function cancel(CancelReservationRequest $request, Reservation $reservation): RedirectResponse|JsonResponse
     {
         $this->authorize('cancel', $reservation);
@@ -141,6 +188,7 @@ class ReservationController extends Controller
             ->whereHas('items', fn ($items) => $items->where('starts_at', '<', $rangeEnd)->where('ends_at', '>', $rangeStart));
         $this->restrictCalendarVisibility($baseQuery);
         $this->excludeHostelForSlt($baseQuery);
+        $this->excludeInactiveForSlt($baseQuery);
 
         $visibleReservations = (clone $baseQuery)->get();
         $blockingStatuses = ReservationStatus::blockingItemStatuses();
@@ -246,6 +294,7 @@ class ReservationController extends Controller
             'reservation_date' => ['required', 'date'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'ignore_reservation_id' => ['nullable', 'integer', 'exists:reservations,id'],
         ]);
 
         try {
@@ -261,7 +310,7 @@ class ReservationController extends Controller
             ], 422);
         }
 
-        $conflict = $this->bookings->hasConflict($data['resource_ids'], $startsAt, $endsAt);
+        $conflict = $this->bookings->hasConflict($data['resource_ids'], $startsAt, $endsAt, $data['ignore_reservation_id'] ?? null);
 
         return response()->json([
             'available' => ! $conflict,
@@ -650,6 +699,13 @@ class ReservationController extends Controller
         }
     }
 
+    private function excludeInactiveForSlt($query): void
+    {
+        if (auth()->user()?->hasRole('slt_employee')) {
+            $query->whereIn('status', ReservationStatus::calendarActive());
+        }
+    }
+
     private function formLookups(Request $request): array
     {
         $today = now($this->bookings->timezone())->toDateString();
@@ -659,8 +715,8 @@ class ReservationController extends Controller
             'holidays' => SriLankaHolidays::indexedByDate(),
             'today' => $today,
             'prefillDate' => old('reservation_date', $request->query('date', $today)),
-            'prefillStart' => old('start_time', $request->query('start_time', '09:00')),
-            'prefillEnd' => old('end_time', $request->query('end_time', '10:00')),
+            'prefillStart' => old('start_time', $request->query('start_time', '')),
+            'prefillEnd' => old('end_time', $request->query('end_time', '')),
             'prefillResourceId' => old('resource_id', $request->query('resource_id')),
             'prefillResourceIds' => collect(old('resource_ids', $request->query('resource_ids', [])))
                 ->filter(fn ($id) => is_scalar($id) && ctype_digit((string) $id))

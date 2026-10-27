@@ -173,6 +173,7 @@ class SltEmployeeDashboardController extends Controller
             ->with(['hostelStay.roomType', 'location', 'requester'])
             ->where('type', ReservationType::HOSTEL->value)
             ->where('status', '!=', ReservationStatus::DRAFT->value)
+            ->when($user?->hasRole('slt_employee'), fn ($query) => $query->whereIn('status', ReservationStatus::calendarActive()))
             ->where(function ($query) use ($range) {
                 $query->whereBetween('reservation_date', [$range['start']->toDateString(), $range['end']->toDateString()])
                     ->orWhereHas('hostelStay', function ($stay) use ($range) {
@@ -203,6 +204,7 @@ class SltEmployeeDashboardController extends Controller
 
         $reservations = CanteenReservation::query()
             ->with(['location', 'requestedBy'])
+            ->when($user?->hasRole('slt_employee'), fn ($query) => $query->whereIn('status', CanteenReservationStatus::calendarActive()))
             ->whereDate('reservation_date', '>=', $range['start']->toDateString())
             ->whereDate('reservation_date', '<', $range['end']->toDateString())
             ->orderBy('reservation_date')
@@ -341,7 +343,7 @@ class SltEmployeeDashboardController extends Controller
             start: $start,
             end: $end,
             allDay: true,
-            resource: $title,
+            resource: $stay?->roomType?->name ?? $reservation->location?->name ?? $title,
             location: $reservation->location?->name ?? '—',
             status: $status?->label() ?? (string) $reservation->status,
             statusValue: (string) $reservation->status,
@@ -380,7 +382,7 @@ class SltEmployeeDashboardController extends Controller
             start: $start,
             end: $end,
             allDay: false,
-            resource: $title,
+            resource: $meal?->label() ?? $reservation->location?->name ?? $title,
             location: $reservation->location?->name ?? '—',
             status: $status?->label() ?? (string) $reservation->status,
             statusValue: match ($status) {
