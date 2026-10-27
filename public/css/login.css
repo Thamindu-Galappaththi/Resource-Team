@@ -307,7 +307,13 @@ button.login-btn {
     line-height: 1.4;
 }
 
+.login-choice + .login-choice {
+    margin-top: 0.8rem;
+}
+
 .ms-login-btn,
+.google-login-btn,
+.facebook-login-btn,
 .admin-login-btn {
     display: flex;
     align-items: center;
@@ -321,6 +327,7 @@ button.login-btn {
     font-weight: 700;
     letter-spacing: 0.01em;
     color: #fff;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .ms-login-btn {
@@ -333,7 +340,33 @@ button.login-btn {
     background: #006cbe;
 }
 
-.ms-logo {
+.google-login-btn {
+    background: #ffffff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.login-choice--google:hover .google-login-btn,
+.login-choice--google:focus-visible .google-login-btn {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.facebook-login-btn {
+    background: #1877f2;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(24, 119, 242, 0.28);
+}
+
+.login-choice--facebook:hover .facebook-login-btn,
+.login-choice--facebook:focus-visible .facebook-login-btn {
+    background: #1565c0;
+}
+
+.ms-logo,
+.google-logo,
+.fb-logo {
     width: 18px;
     height: 18px;
     flex: 0 0 18px;

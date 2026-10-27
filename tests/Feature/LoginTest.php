@@ -25,6 +25,8 @@ class LoginTest extends TestCase
             ->assertSee('Resource Reservation')
             ->assertSee('Choose how you sign in')
             ->assertSee('Login with Microsoft')
+            ->assertSee('Login with Google')
+            ->assertSee('Login with Facebook')
             ->assertSee('Nebula Administration')
             ->assertSee('Nebula Institute of Technology')
             ->assertSee('All rights reserved.')
@@ -232,6 +234,52 @@ class LoginTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_unconfigured_google_redirects_back_with_error(): void
+    {
+        config([
+            'services.google.client_id' => null,
+            'services.google.client_secret' => null,
+        ]);
+
+        $this->get(route('login.google'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('google');
+    }
+
+    public function test_configured_google_redirects_to_authorization_url(): void
+    {
+        $this->configureGoogle();
+
+        $response = $this->get(route('login.google'));
+
+        $response->assertRedirect();
+        $this->assertStringStartsWith('https://accounts.google.com/o/oauth2/v2/auth', (string) $response->headers->get('Location'));
+        $this->assertNotNull(session('google_oauth_state'));
+    }
+
+    public function test_unconfigured_facebook_redirects_back_with_error(): void
+    {
+        config([
+            'services.facebook.client_id' => null,
+            'services.facebook.client_secret' => null,
+        ]);
+
+        $this->get(route('login.facebook'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('facebook');
+    }
+
+    public function test_configured_facebook_redirects_to_authorization_url(): void
+    {
+        $this->configureFacebook();
+
+        $response = $this->get(route('login.facebook'));
+
+        $response->assertRedirect();
+        $this->assertStringStartsWith('https://www.facebook.com/v19.0/dialog/oauth', (string) $response->headers->get('Location'));
+        $this->assertNotNull(session('facebook_oauth_state'));
+    }
+
     private function configureMicrosoft(): void
     {
         config([
@@ -239,6 +287,24 @@ class LoginTest extends TestCase
             'services.microsoft.client_secret' => 'test-secret',
             'services.microsoft.tenant' => 'organizations',
             'services.microsoft.redirect' => 'http://localhost/login/microsoft/callback',
+        ]);
+    }
+
+    private function configureGoogle(): void
+    {
+        config([
+            'services.google.client_id' => 'test-google-client',
+            'services.google.client_secret' => 'test-google-secret',
+            'services.google.redirect' => 'http://localhost/login/google/callback',
+        ]);
+    }
+
+    private function configureFacebook(): void
+    {
+        config([
+            'services.facebook.client_id' => 'test-fb-client',
+            'services.facebook.client_secret' => 'test-fb-secret',
+            'services.facebook.redirect' => 'http://localhost/login/facebook/callback',
         ]);
     }
 

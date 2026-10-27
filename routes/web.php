@@ -39,6 +39,10 @@ Route::middleware('guest')->prefix('login')->controller(AuthController::class)->
     Route::get('/admin', 'showAdminLogin')->name('login.admin');
     Route::get('/microsoft', 'redirectToMicrosoft')->middleware('throttle:10,1')->name('login.microsoft');
     Route::get('/microsoft/callback', 'handleMicrosoftCallback')->name('login.microsoft.callback');
+    Route::get('/google', 'redirectToGoogle')->middleware('throttle:10,1')->name('login.google');
+    Route::get('/google/callback', 'handleGoogleCallback')->name('login.google.callback');
+    Route::get('/facebook', 'redirectToFacebook')->middleware('throttle:10,1')->name('login.facebook');
+    Route::get('/facebook/callback', 'handleFacebookCallback')->name('login.facebook.callback');
 });
 
 Route::middleware('guest')->get('/forgot-password', function () {

@@ -4,7 +4,7 @@ namespace App\Services;
 
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
-use RuntimeException;
+use Throwable;
 
 class MicrosoftAuthService
 {
@@ -67,18 +67,22 @@ class MicrosoftAuthService
     private function accessToken(string $code): string
     {
         try {
-            $response = Http::asForm()
+            $client = Http::asForm()
                 ->timeout(15)
-                ->acceptJson()
-                ->post($this->authority().'/oauth2/v2.0/token', [
-                    'client_id' => config('services.microsoft.client_id'),
-                    'client_secret' => config('services.microsoft.client_secret'),
-                    'code' => $code,
-                    'redirect_uri' => $this->redirectUri(),
-                    'grant_type' => 'authorization_code',
-                ])
-                ->throw();
-        } catch (RequestException $exception) {
+                ->acceptJson();
+
+            if (app()->environment('local', 'testing')) {
+                $client = $client->withoutVerifying();
+            }
+
+            $response = $client->post($this->authority().'/oauth2/v2.0/token', [
+                'client_id' => config('services.microsoft.client_id'),
+                'client_secret' => config('services.microsoft.client_secret'),
+                'code' => $code,
+                'redirect_uri' => $this->redirectUri(),
+                'grant_type' => 'authorization_code',
+            ])->throw();
+        } catch (Throwable $exception) {
             throw new RuntimeException('Could not complete Microsoft sign-in. Please try again.', 0, $exception);
         }
 
@@ -97,12 +101,16 @@ class MicrosoftAuthService
     private function graphProfile(string $accessToken): array
     {
         try {
-            $response = Http::withToken($accessToken)
+            $client = Http::withToken($accessToken)
                 ->timeout(15)
-                ->acceptJson()
-                ->get('https://graph.microsoft.com/v1.0/me')
-                ->throw();
-        } catch (RequestException $exception) {
+                ->acceptJson();
+
+            if (app()->environment('local', 'testing')) {
+                $client = $client->withoutVerifying();
+            }
+
+            $response = $client->get('https://graph.microsoft.com/v1.0/me')->throw();
+        } catch (Throwable $exception) {
             throw new RuntimeException('Could not complete Microsoft sign-in. Please try again.', 0, $exception);
         }
 
