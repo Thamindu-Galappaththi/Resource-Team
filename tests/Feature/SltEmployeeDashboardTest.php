@@ -144,10 +144,16 @@ class SltEmployeeDashboardTest extends TestCase
     {
         $employee = User::factory()->role('slt_employee')->create();
 
-        $this->actingAs($employee)->get(route('reservations.index'))->assertForbidden();
+        $this->actingAs($employee)->get(route('reservations.index'))
+            ->assertForbidden()
+            ->assertSee('Page not available')
+            ->assertSee('Calendar, Create, or My requests')
+            ->assertDontSee('This page is not available for your role.');
         $this->actingAs($employee)->get(route('reservations.feed'))->assertForbidden();
-        $this->actingAs($employee)->get(route('hostel.index'))->assertForbidden();
-        $this->actingAs($employee)->get(route('canteen.index'))->assertForbidden();
+        $this->actingAs($employee)->get(route('hostel.index'))
+            ->assertForbidden()
+            ->assertSee('Page not available');
+        $this->actingAs($employee)->get(route('canteen.index'))->assertForbidden()->assertSee('Page not available');
         $this->actingAs($employee)->get(route('canteen.dashboard'))->assertForbidden();
         $this->actingAs($employee)->get(route('canteen.forecast', ['date' => now()->toDateString()]))->assertForbidden();
 

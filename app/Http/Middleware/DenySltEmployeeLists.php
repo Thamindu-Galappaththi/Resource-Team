@@ -11,7 +11,7 @@ class DenySltEmployeeLists
     public function handle(Request $request, Closure $next): Response
     {
         if ($request->user()?->hasRole('slt_employee')) {
-            abort(403, 'This page is not available for your role.');
+            abort(403);
         }
 
         return $next($request);
