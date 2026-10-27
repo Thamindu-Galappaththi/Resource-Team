@@ -56,6 +56,16 @@
     border-color: #9bb6e8 !important;
 }
 
+.is-slt-calendar .fc-dayGridMonth-view .fc-daygrid-day-frame {
+    height: auto;
+    min-height: 138px;
+    overflow: visible;
+}
+
+.is-slt-calendar .fc-dayGridMonth-view .rc-month-summary {
+    overflow: visible;
+}
+
 .is-slt-calendar .fc-dayGridMonth-view .rc-month-chips {
     flex: 0 0 auto;
 }
@@ -69,7 +79,7 @@
 
 .is-slt-calendar .fc-dayGridMonth-view .rc-month-more {
     display: block;
-    margin-top: 12px !important;
+    margin-top: 8px;
     padding-top: 2px;
     cursor: pointer;
 }
