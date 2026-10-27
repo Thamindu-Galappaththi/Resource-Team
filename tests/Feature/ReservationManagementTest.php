@@ -176,6 +176,44 @@ class ReservationManagementTest extends TestCase
         $this->assertSame(ReservationStatus::CANCELLED->value, $second->fresh()->status);
     }
 
+    public function test_pending_reservation_can_be_edited_without_bypassing_conflict_checks(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $resource = Resource::factory()->create(['status' => 'active']);
+        $date = now('Asia/Colombo')->addDays(3)->toDateString();
+
+        $this->actingAs($user)->post(route('reservations.store'), $this->payload($resource, $user, [
+            'reservation_date' => $date,
+        ]));
+        $reservation = Reservation::query()->firstOrFail();
+
+        $this->actingAs($user)->putJson(route('reservations.update', $reservation), [
+            'reservation_date' => $date,
+            'start_time' => '13:00',
+            'end_time' => '14:00',
+            'purpose' => 'Updated session',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'start_time' => '13:00:00',
+            'end_time' => '14:00:00',
+            'purpose' => 'Updated session',
+        ]);
+
+        $this->actingAs($user)->post(route('reservations.store'), $this->payload($resource, $user, [
+            'reservation_date' => $date,
+            'start_time' => '15:00',
+            'end_time' => '16:00',
+        ]));
+        $this->actingAs($user)->putJson(route('reservations.update', $reservation), [
+            'reservation_date' => $date,
+            'start_time' => '15:30',
+            'end_time' => '16:30',
+            'purpose' => 'Conflicting session',
+        ])->assertUnprocessable();
+    }
+
     public function test_cancelled_and_rejected_reservations_hide_cancel_for_admin(): void
     {
         $admin = User::factory()->role('admin')->create();

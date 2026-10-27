@@ -720,6 +720,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeReservationModal').addEventListener('click', closeReservationModal);
     document.querySelector('.rc-modal-overlay').addEventListener('click', closeReservationModal);
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeReservationModal(); });
+    const editButton = document.getElementById('detailEditButton');
+    const cancelButton = document.getElementById('detailCancelButton');
+    let activeReservationDetails = null;
+    editButton?.addEventListener('click', () => editReservation(activeReservationDetails));
+    cancelButton?.addEventListener('click', () => cancelReservation(activeReservationDetails));
 
     function dateKey(value) {
         const match = String(value ?? '').match(/^(\d{4}-\d{2}-\d{2})/);
@@ -736,6 +741,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${parsed.getFullYear()}-${month}-${day}`;
         }
         return '';
+    }
+
+    function formatInputTime(value) {
+        const match = String(value ?? '').match(/T(\d{2}:\d{2})/);
+        return match?.[1] || '';
     }
 
     function bookingsOn(date) {
@@ -900,6 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showReservationDetails(event) {
         const details = event.extendedProps || {};
+        activeReservationDetails = { ...details, start: event.start, end: event.end, title: event.title };
         const start = details.reservationStart ? new Date(details.reservationStart)
             : (event.start instanceof Date ? event.start : new Date(event.start));
         const end = details.reservationEnd ? new Date(details.reservationEnd)
@@ -921,8 +932,93 @@ document.addEventListener('DOMContentLoaded', () => {
             link.hidden = !details.url;
             if (details.url) link.href = details.url;
         }
+        if (editButton) editButton.hidden = !details.canEdit;
+        if (cancelButton) cancelButton.hidden = !details.canCancel;
         modal.classList.add('show');
         modal.setAttribute('aria-hidden', 'false');
+    }
+
+    async function editReservation(details) {
+        if (!details?.canEdit) return;
+        const startDate = details.reservationDate || dateKey(details.reservationStart || details.start);
+        const startTime = details.reservationStartTime || formatInputTime(details.reservationStart || details.start);
+        const endTime = details.reservationEndTime || formatInputTime(details.reservationEnd || details.end);
+        const result = await swalFire({
+            title: 'Edit reservation',
+            customClass: { ...window.RMSwal.base.customClass, container: 'rc-action-swal' },
+            html: `<div class="rc-edit-form">
+                <label>Date<input id="rcEditDate" type="date" class="swal2-input" value="${escapeHtml(startDate)}" min="${localDateKey(new Date())}"></label>
+                <label>Start time<input id="rcEditStart" type="time" class="swal2-input" value="${escapeHtml(startTime)}"></label>
+                <label>End time<input id="rcEditEnd" type="time" class="swal2-input" value="${escapeHtml(endTime)}"></label>
+                <label>Purpose<textarea id="rcEditPurpose" class="swal2-textarea">${escapeHtml(details.purpose || '')}</textarea></label>
+            </div>`,
+            showCancelButton: true,
+            confirmButtonText: 'Save changes',
+            preConfirm: async () => {
+                const body = {
+                    reservation_date: document.getElementById('rcEditDate').value,
+                    start_time: document.getElementById('rcEditStart').value,
+                    end_time: document.getElementById('rcEditEnd').value,
+                    purpose: document.getElementById('rcEditPurpose').value,
+                };
+                if (!body.reservation_date || !body.start_time || !body.end_time || !body.purpose.trim()) {
+                    window.Swal.showValidationMessage('Complete all fields before saving.');
+                    return false;
+                }
+                const response = await fetch(details.editUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': config.csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify(body),
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    window.Swal.showValidationMessage(payload.message || Object.values(payload.errors || {}).flat()[0] || 'Reservation could not be updated.');
+                    return false;
+                }
+                return true;
+            },
+        });
+        if (result.isConfirmed) {
+            closeReservationModal();
+            refreshCalendar();
+            await swalFire({ icon: 'success', title: 'Reservation updated', timer: 1500, showConfirmButton: false });
+        }
+    }
+
+    async function cancelReservation(details) {
+        if (!details?.canCancel) return;
+        const result = await swalFire({
+            title: 'Delete reservation?',
+            customClass: { ...window.RMSwal.base.customClass, container: 'rc-action-swal' },
+            text: 'This will cancel the reservation and retain its history.',
+            input: 'textarea',
+            inputLabel: 'Reason for cancellation',
+            inputPlaceholder: 'Enter a reason',
+            inputAttributes: { maxlength: 1000, 'aria-label': 'Reason for cancellation' },
+            showCancelButton: true,
+            confirmButtonText: 'Delete reservation',
+            confirmButtonColor: '#dc2626',
+            inputValidator: (value) => value?.trim() ? undefined : 'Please enter a reason.',
+        });
+        if (!result.isConfirmed) return;
+        const response = await fetch(details.cancelUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': config.csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ cancellation_reason: result.value.trim() }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            await swalFire({ icon: 'error', title: 'Could not delete reservation', text: payload.message || 'Please try again.' });
+            return;
+        }
+        events = events.filter((event) => String(event.extendedProps?.reservationId) !== String(details.reservationId));
+        if (currentFilters().status === 'cancelled') {
+            window.RMSelect?.setValue('statusFilter', 'all', 'All statuses');
+        }
+        applyFilters({ skipRefetch: true });
+        closeReservationModal();
+        refreshCalendar();
+        await swalFire({ icon: 'success', title: 'Reservation deleted', text: 'The reservation was cancelled.', timer: 1600, showConfirmButton: false });
     }
 
     function closeReservationModal() {

@@ -198,12 +198,13 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
         Route::post('/', 'store')->middleware('permission:reservations.create')->name('store');
-        Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:reservations.index,reservations.create')->name('cancel');
+        Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:reservations.index,reservations.create,reservations.calendar')->name('cancel');
+        Route::put('/{reservation}', 'update')->middleware('permission:reservations.index,reservations.create,reservations.calendar')->name('update');
     });
 
     Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
         Route::post('/', 'store')->middleware('permission:hostel.create')->name('store');
-        Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:hostel.index,hostel.create,hostel.manage')->name('cancel');
+        Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:hostel.index,hostel.create,hostel.manage,reservations.calendar')->name('cancel');
         Route::post('/{reservation}/approval', 'updateApproval')->middleware('permission:hostel.manage')->name('approval');
     });
 

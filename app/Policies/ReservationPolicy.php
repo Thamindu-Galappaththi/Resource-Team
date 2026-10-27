@@ -102,4 +102,14 @@ class ReservationPolicy
         return $user->id === $reservation->requester_id
             || $user->id === $reservation->created_by_user_id;
     }
+
+    public function update(User $user, Reservation $reservation): bool
+    {
+        return in_array($reservation->status, [
+            \App\Enums\ReservationStatus::PENDING_APPROVAL->value,
+            \App\Enums\ReservationStatus::CHANGES_REQUESTED->value,
+        ], true) && ($user->hasRole('developer', 'super_admin', 'admin', 'coordinator', 'resource_owner')
+            || $user->id === $reservation->requester_id
+            || $user->id === $reservation->created_by_user_id);
+    }
 }

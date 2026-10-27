@@ -99,6 +99,29 @@ class ReservationController extends Controller
             ->with('success', 'Reservation cancelled successfully.');
     }
 
+    public function update(Request $request, Reservation $reservation): JsonResponse
+    {
+        $this->authorize('update', $reservation);
+        abort_if($reservation->type !== ReservationType::STANDARD->value, 422, 'Only standard reservations can be edited here.');
+
+        $data = $request->validate([
+            'reservation_date' => ['required', 'date', 'after_or_equal:today'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'purpose' => ['required', 'string', 'max:500'],
+        ]);
+
+        try {
+            $this->bookings->update($reservation, $data, $request->user());
+        } catch (ReservationConflictException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        } catch (ValidationException $exception) {
+            return response()->json(['message' => $exception->getMessage(), 'errors' => $exception->errors()], 422);
+        }
+
+        return response()->json(['message' => 'Reservation updated successfully.']);
+    }
+
     public function calendar(Request $request): Response
     {
         $this->authorize('viewAny', Reservation::class);

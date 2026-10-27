@@ -925,6 +925,7 @@
 
 .rc-modal { position: fixed; inset: 0; z-index: 99999; display: none; align-items: center; justify-content: center; }
 .rc-modal.show { display: flex; }
+.swal2-container.rc-action-swal { z-index: 100001 !important; }
 .rc-modal-overlay { position: absolute; inset: 0; background: rgba(15, 32, 68, .58); backdrop-filter: blur(4px); }
 .rc-modal-box {
     position: relative;
@@ -997,6 +998,11 @@
 .rc-detail-row:last-child { border-bottom: none; }
 .rc-detail-label { color: #5b6b86; font-size: 13px; font-weight: 700; }
 .rc-detail-value { color: #14315e; font-size: 14px; font-weight: 700; }
+.rc-detail-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.rc-detail-actions .btn { min-width: 118px; }
+.rc-edit-form { display: grid; gap: 10px; text-align: left; }
+.rc-edit-form label { display: grid; gap: 4px; color: #5b6b86; font-size: 13px; font-weight: 700; }
+.rc-edit-form .swal2-input, .rc-edit-form .swal2-textarea { box-sizing: border-box; width: 100%; margin: 0; }
 
 @media (max-width: 991.98px) {
     .rc-cards { grid-template-columns: repeat(2, 1fr); }

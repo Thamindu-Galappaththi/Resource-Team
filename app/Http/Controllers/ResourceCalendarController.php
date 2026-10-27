@@ -80,6 +80,7 @@ class ResourceCalendarController extends Controller
             ->with(['requester', 'location', 'items.resource.type.category'])
             ->visibleTo($request->user())
             ->where('status', '!=', ReservationStatus::DRAFT->value)
+            ->when($statuses === [], fn ($query) => $query->where('status', '!=', ReservationStatus::CANCELLED->value))
             ->whereHas('items', fn ($items) => $items->where('starts_at', '<', $rangeEnd)->where('ends_at', '>', $rangeStart))
             ->when($filters['location_id'] ?? null, fn ($query, $value) => $query->where('location_id', $value))
             ->when($statuses !== [], fn ($query) => $query->whereIn('status', $statuses))
@@ -218,6 +219,9 @@ class ResourceCalendarController extends Controller
                     'purpose' => $reservation->title ?: $reservation->purpose,
                     'reservationStart' => $start->toIso8601String(),
                     'reservationEnd' => $end->toIso8601String(),
+                    'reservationDate' => $reservation->reservation_date?->format('Y-m-d'),
+                    'reservationStartTime' => substr((string) $reservation->start_time, 0, 5),
+                    'reservationEndTime' => substr((string) $reservation->end_time, 0, 5),
                     'resource' => $resourceName,
                     'resourceId' => (string) $item->resource_id,
                     'categoryId' => (string) $item->resource?->type?->resource_category_id,
@@ -232,6 +236,16 @@ class ResourceCalendarController extends Controller
                     'conflict' => $conflict,
                     'blocking' => in_array($item->status, ['held', 'confirmed'], true),
                     'url' => $this->calendarReservationUrl($reservation),
+                    'canEdit' => $reservation->type === ReservationType::STANDARD->value
+                        && in_array($reservation->status, [ReservationStatus::PENDING_APPROVAL->value, ReservationStatus::CHANGES_REQUESTED->value], true)
+                        && request()->user()?->can('update', $reservation),
+                    'editUrl' => route('reservations.update', $reservation),
+                    'canCancel' => $reservation->type === ReservationType::HOSTEL->value
+                        ? (request()->user()?->can('cancelHostel', $reservation) ?? false)
+                        : (request()->user()?->can('cancel', $reservation) ?? false),
+                    'cancelUrl' => $reservation->type === ReservationType::HOSTEL->value
+                        ? route('hostel.cancel', $reservation)
+                        : route('reservations.cancel', $reservation),
                 ],
             ];
             $segmentStart = $segmentEnd;

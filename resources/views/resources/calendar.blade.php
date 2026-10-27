@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=40">
 @endpush
 
 @section('content')
@@ -155,6 +155,10 @@
             <div class="rc-detail-row"><div class="rc-detail-label">Purpose</div><div id="detailPurpose" class="rc-detail-value">—</div></div>
             <div class="rc-detail-row"><div class="rc-detail-label">Status</div><div id="detailStatus" class="rc-detail-value">—</div></div>
             <div id="detailConflict" class="alert alert-danger mt-2 mb-0" hidden>This booking overlaps another reservation for the same resource.</div>
+            <div class="rc-detail-actions mt-3">
+                <button type="button" id="detailEditButton" class="btn btn-outline-primary" hidden><i class="ti ti-edit"></i> Edit</button>
+                <button type="button" id="detailCancelButton" class="btn btn-outline-danger" hidden><i class="ti ti-trash"></i> Delete</button>
+            </div>
             <a id="detailLink" class="btn btn-primary mt-2" hidden>View reservation</a>
         </div>
     </div>
@@ -172,11 +176,12 @@
         schedulerResources: @json($schedulerResources),
         canReserve: @json($canReserve),
         createReservationUrl: @json(route('reservations.create')),
+        csrfToken: @json(csrf_token()),
         filterCatalog: {
             categories: @json($categories->map(fn ($category) => ['id' => (string) $category->id, 'name' => $category->name])->values()),
         },
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=37"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=40"></script>
 @endpush

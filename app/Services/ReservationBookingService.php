@@ -181,6 +181,39 @@ class ReservationBookingService
         });
     }
 
+    public function update(Reservation $reservation, array $payload, User $actor): Reservation
+    {
+        [$startsAt, $endsAt] = $this->utcRange(
+            $payload['reservation_date'],
+            $payload['start_time'],
+            $payload['end_time'],
+        );
+
+        return DB::transaction(function () use ($reservation, $payload, $actor, $startsAt, $endsAt) {
+            $locked = Reservation::query()->whereKey($reservation->id)->lockForUpdate()->firstOrFail();
+            if (! in_array($locked->status, [ReservationStatus::PENDING_APPROVAL->value, ReservationStatus::CHANGES_REQUESTED->value], true)) {
+                throw ValidationException::withMessages(['reservation' => 'Only reservations awaiting approval can be edited.']);
+            }
+
+            $resourceIds = $locked->items()->pluck('resource_id')->map(fn ($id) => (int) $id)->unique()->values();
+            $this->lockResourcesAndAssertNoOverlap($resourceIds, $startsAt, $endsAt, $locked->id);
+
+            $from = $locked->status;
+            $locked->update([
+                'reservation_date' => $payload['reservation_date'],
+                'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),
+                'end_time' => Carbon::parse($payload['end_time'])->format('H:i:s'),
+                'title' => $payload['purpose'],
+                'purpose' => $payload['purpose'],
+                'version' => $locked->version + 1,
+            ]);
+            $locked->items()->update(['starts_at' => $startsAt, 'ends_at' => $endsAt]);
+            $this->recordHistory($locked, $from, $from, $actor, 'Reservation details updated.');
+
+            return $locked->fresh(['requester', 'items', 'location']);
+        });
+    }
+
     public function confirm(Reservation $reservation): void
     {
         $reservation->items()
