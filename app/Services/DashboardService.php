@@ -63,7 +63,7 @@ class DashboardService
     {
         $user->loadMissing('role');
         $meta = config('rbac.dashboards.slt_employee', [
-            'title' => 'Welcome to the resource reservation system',
+            'title' => 'Resource Reservation System',
             'subtitle' => 'Choose a reservation type to get started.',
         ]);
 
@@ -84,7 +84,7 @@ class DashboardService
         return [
             'user' => $user,
             'role' => $user->role,
-            'title' => $meta['title'] ?? 'Welcome to the resource reservation system',
+            'title' => $meta['title'] ?? 'Resource Reservation System',
             'subtitle' => $meta['subtitle'] ?? 'Choose a reservation type to get started.',
             'as_of' => $this->now()->format('D, d M Y'),
             'slides' => [

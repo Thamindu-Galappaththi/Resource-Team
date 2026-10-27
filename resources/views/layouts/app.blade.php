@@ -147,7 +147,7 @@
             <div class="footer-wrapper mt-auto">
                 <footer class="footer bg-dark text-center py-3">
                     <div class="container">
-                        <p class="mb-0 text-white">© {{ now()->year }} Nebula Institute of Technology. All rights reserved.</p>
+                        <p class="mb-0 text-white">© {{ now()->year }} Resource Reservation System · Nebula Institute of Technology. All rights reserved.</p>
                     </div>
                 </footer>
             </div>

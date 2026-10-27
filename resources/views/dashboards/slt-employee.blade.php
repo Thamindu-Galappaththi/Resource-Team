@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $title ?? 'Welcome to the resource reservation system')
+@section('title', $title ?? 'Resource Reservation System')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/slt-dashboard.css') }}?v={{ @filemtime(public_path('css/slt-dashboard.css')) ?: time() }}">

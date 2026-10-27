@@ -31,7 +31,7 @@ class RoleDashboardTest extends TestCase
             'admin' => 'Admin Dashboard',
             'coordinator' => 'Coordinator Dashboard',
             'resource_owner' => 'Resource Owner Dashboard',
-            'slt_employee' => 'Welcome to the resource reservation system',
+            'slt_employee' => 'Resource Reservation System',
             'nebula_sms_user' => 'Nebula SMS User Dashboard',
             'management' => 'Management Dashboard',
             'canteen' => 'Canteen Dashboard',
@@ -86,7 +86,7 @@ class RoleDashboardTest extends TestCase
         $this->actingAs($employee)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Welcome to the resource reservation system')
+            ->assertSee('Resource Reservation System')
             ->assertSee('Normal reservation')
             ->assertSee('Hostel reservation')
             ->assertSee('Canteen reservation')

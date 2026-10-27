@@ -270,7 +270,7 @@ return [
             'widgets' => ['Assigned resources', 'Pending approvals', 'Approved requests', 'Rejected requests', 'Maintenance schedules'],
         ],
         'slt_employee' => [
-            'title' => 'Welcome to the resource reservation system',
+            'title' => 'Resource Reservation System',
             'subtitle' => 'Choose a reservation type to get started.',
             'widgets' => ['Normal reservation', 'Hostel reservation', 'Canteen reservation'],
         ],
