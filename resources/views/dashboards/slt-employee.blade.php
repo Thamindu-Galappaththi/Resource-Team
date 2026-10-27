@@ -22,7 +22,6 @@
         <canvas id="slt-hub-stars" class="slt-hub__stars"></canvas>
         <p class="slt-hub__caption" data-slt-caption>{{ is_array($slides[0] ?? null) ? ($slides[0]['caption'] ?? '') : '' }}</p>
         <div class="slt-hub__dots" data-slt-dots role="tablist" aria-label="Background slideshow"></div>
-        <div class="slt-hub__progress" aria-hidden="true"><span class="slt-hub__progress-bar" data-slt-progress></span></div>
     </div>
 
     <div class="slt-hub__inner">

@@ -129,24 +129,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const slides = Array.from(document.querySelectorAll('.slt-hub__slide'));
     const dotsWrap = document.querySelector('[data-slt-dots]');
     const captionEl = document.querySelector('[data-slt-caption]');
-    const progressEl = document.querySelector('[data-slt-progress]');
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const intervalMs = 6500;
     let index = 0;
     let timer = 0;
-
-    function restartProgress() {
-        if (!progressEl) {
-            return;
-        }
-        progressEl.style.transition = 'none';
-        progressEl.style.width = '0%';
-        void progressEl.offsetWidth;
-        if (!reduced && slides.length > 1) {
-            progressEl.style.transition = 'width ' + intervalMs + 'ms linear';
-            progressEl.style.width = '100%';
-        }
-    }
 
     function setSlide(next) {
         if (!slides.length) {
@@ -164,7 +150,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 dot.setAttribute('aria-selected', i === index ? 'true' : 'false');
             });
         }
-        restartProgress();
     }
 
     if (slides.length > 1 && dotsWrap) {
@@ -194,7 +179,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         if (!reduced && slides.length > 1) {
             timer = window.setInterval(tick, intervalMs);
-            restartProgress();
         }
     }
 
