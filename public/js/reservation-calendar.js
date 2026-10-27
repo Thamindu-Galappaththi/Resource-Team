@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarElement.classList.add('is-slt-employee');
         calendarElement.closest('.reservation-calendar-page')?.classList.add('is-slt-calendar');
     }
-    const isSimple = calendarElement.dataset.simple === '1';
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
     const swalFire = (options) => window.RMSwal.fire(options);
     const holidayImageBase = (window.RSVCal?.holidayImageBase || '/images/holidays').replace(/\/$/, '');
@@ -160,19 +159,17 @@ document.addEventListener('DOMContentLoaded', () => {
             showDayEventList(date, holiday ? [holiday, ...items] : items);
         },
         headerToolbar: isMobile
-            ? { left: 'prev,next', center: 'title', right: isSimple ? 'refreshCalendar today' : 'today' }
-            : { left: 'prev,next today', center: 'title', right: isSimple ? 'refreshCalendar dayGridMonth,timeGridWeek,timeGridDay,listWeek' : 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
-        customButtons: isSimple
-            ? {
-                refreshCalendar: {
-                    text: 'Refresh',
-                    hint: 'Refresh calendar',
-                    click() {
-                        refreshCalendar();
-                    },
+            ? { left: 'prev,next', center: 'title', right: 'refreshCalendar today' }
+            : { left: 'prev,next today', center: 'title', right: 'refreshCalendar dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+        customButtons: {
+            refreshCalendar: {
+                text: 'Refresh',
+                hint: 'Refresh calendar',
+                click() {
+                    refreshCalendar();
                 },
-            }
-            : {},
+            },
+        },
         buttonText: { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'Agenda' },
         eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
         slotLabelFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },

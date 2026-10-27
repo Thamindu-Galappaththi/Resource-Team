@@ -5,11 +5,12 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
 <link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
-<link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=13">
+<link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=14">
 @endpush
 
 @section('content')
-<div class="rc-page reservation-calendar-page{{ auth()->user()?->hasRole('slt_employee') ? ' is-slt-calendar' : '' }}">
+@php $isSltEmployee = auth()->user()?->hasRole('slt_employee'); @endphp
+<div class="rc-page reservation-calendar-page{{ $isSltEmployee ? ' is-slt-calendar' : '' }}">
     <div class="rc-header">
         <div>
             <h1 class="rc-title">Reservation Calendar</h1>
@@ -43,35 +44,37 @@
         </div>
     </div>
 
-    <form method="GET" action="{{ route('reservations.calendar') }}" class="rc-filters" id="reservation-calendar-filters">
+    <form method="GET" action="{{ route('reservations.calendar') }}" class="rc-filters" id="reservation-calendar-filters"@if($isSltEmployee) hidden @endif>
         <input type="hidden" name="year" id="rsv-year" value="{{ $year }}">
         <input type="hidden" name="month" id="rsv-month" value="{{ $month }}">
-        <div class="rc-filter">
-            <label for="calendar-location">Location</label>
-            <x-rm-select id="calendar-location" name="location_id" placeholder="All locations" :value="request('location_id', '')"
-                :options="collect([['value' => '', 'label' => 'All locations']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
-        </div>
-        <div class="rc-filter">
-            <label for="calendar-category">Category</label>
-            <x-rm-select id="calendar-category" name="resource_category_id" placeholder="All categories" :value="request('resource_category_id', '')"
-                :options="collect([['value' => '', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
-        </div>
-        <div class="rc-filter">
-            <label for="calendar-resource">Resource</label>
-            <x-rm-select id="calendar-resource" name="resource_id" placeholder="All resources" :value="request('resource_id', '')"
-                :options="collect([['value' => '', 'label' => 'All resources']])->concat($resources->map(fn ($resource) => ['value' => (string) $resource->id, 'label' => $resource->name_model]))->all()" />
-        </div>
-        <div class="rc-filter">
-            <label for="calendar-status">Status</label>
-            <x-rm-select id="calendar-status" name="status" placeholder="All statuses" :value="request('status', '')"
-                :options="collect([['value' => '', 'label' => 'All statuses']])->concat($statuses->map(fn ($status) => ['value' => $status->value, 'label' => $status->label()]))->all()" />
-        </div>
-        <div class="rc-filter-actions">
-            <button type="button" id="refreshCalendarButton" class="rc-filter-button rc-filter-refresh">
-                <i class="ti ti-refresh" aria-hidden="true"></i>Refresh
-            </button>
-            <button type="button" id="clearFiltersButton" class="rc-filter-button rc-filter-clear" disabled>Clear</button>
-        </div>
+        @unless($isSltEmployee)
+            <div class="rc-filter">
+                <label for="calendar-location">Location</label>
+                <x-rm-select id="calendar-location" name="location_id" placeholder="All locations" :value="request('location_id', '')"
+                    :options="collect([['value' => '', 'label' => 'All locations']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
+            </div>
+            <div class="rc-filter">
+                <label for="calendar-category">Category</label>
+                <x-rm-select id="calendar-category" name="resource_category_id" placeholder="All categories" :value="request('resource_category_id', '')"
+                    :options="collect([['value' => '', 'label' => 'All categories']])->concat($categories->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
+            </div>
+            <div class="rc-filter">
+                <label for="calendar-resource">Resource</label>
+                <x-rm-select id="calendar-resource" name="resource_id" placeholder="All resources" :value="request('resource_id', '')"
+                    :options="collect([['value' => '', 'label' => 'All resources']])->concat($resources->map(fn ($resource) => ['value' => (string) $resource->id, 'label' => $resource->name_model]))->all()" />
+            </div>
+            <div class="rc-filter">
+                <label for="calendar-status">Status</label>
+                <x-rm-select id="calendar-status" name="status" placeholder="All statuses" :value="request('status', '')"
+                    :options="collect([['value' => '', 'label' => 'All statuses']])->concat($statuses->map(fn ($status) => ['value' => $status->value, 'label' => $status->label()]))->all()" />
+            </div>
+            <div class="rc-filter-actions">
+                <button type="button" id="refreshCalendarButton" class="rc-filter-button rc-filter-refresh">
+                    <i class="ti ti-refresh" aria-hidden="true"></i>Refresh
+                </button>
+                <button type="button" id="clearFiltersButton" class="rc-filter-button rc-filter-clear" disabled>Clear</button>
+            </div>
+        @endunless
     </form>
 
     <div class="rc-calendar-card">
@@ -82,7 +85,7 @@
             <span><i class="rc-holiday-swatch mercantile"></i>Mercantile</span>
             <span><i class="rc-holiday-swatch public"></i>Government / public</span>
         </div>
-        <div id="reservationCalendar" data-events-url="{{ $eventsUrl }}" data-availability-url="{{ $availabilityUrl }}" data-create-url="{{ $createUrl }}" data-can-create="{{ $canCreate ? '1' : '0' }}" data-slt-employee="{{ auth()->user()?->hasRole('slt_employee') ? '1' : '0' }}" aria-label="Reservation calendar"></div>
+        <div id="reservationCalendar" data-events-url="{{ $eventsUrl }}" data-availability-url="{{ $availabilityUrl }}" data-create-url="{{ $createUrl }}" data-can-create="{{ $canCreate ? '1' : '0' }}" data-slt-employee="{{ $isSltEmployee ? '1' : '0' }}" aria-label="Reservation calendar"></div>
         <div id="calendar-slot-feedback" class="calendar-slot-feedback alert mt-3 mb-0" role="status" aria-live="polite" hidden></div>
     </div>
 </div>
@@ -125,5 +128,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=25"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=26"></script>
 @endpush

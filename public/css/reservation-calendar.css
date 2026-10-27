@@ -35,6 +35,10 @@
     display: none;
 }
 
+.reservation-calendar-page .rc-filters[hidden] {
+    display: none !important;
+}
+
 .reservation-calendar-page .fc-event.is-mine,
 .reservation-calendar-page .rc-day-item.is-mine,
 .reservation-calendar-page .rc-month-chip.is-mine {
