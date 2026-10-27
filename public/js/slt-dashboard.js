@@ -1,6 +1,12 @@
 (function bindSltRequestsPager() {
     let pending = null;
 
+    function withPartial(url) {
+        const next = new URL(url, window.location.origin);
+        next.searchParams.set('partial', '1');
+        return next.toString();
+    }
+
     async function loadPage(url) {
         const current = document.getElementById('slt-results');
         if (!current) {
@@ -10,12 +16,14 @@
         pending?.abort();
         pending = new AbortController();
         current.classList.add('is-loading');
+        current.setAttribute('aria-busy', 'true');
 
         try {
-            const response = await fetch(url, {
+            const response = await fetch(withPartial(url), {
                 headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html' },
                 signal: pending.signal,
                 credentials: 'same-origin',
+                cache: 'no-store',
             });
             if (!response.ok) {
                 throw new Error('Unable to load requests.');
@@ -33,13 +41,15 @@
             if (error.name === 'AbortError') {
                 return;
             }
-            document.getElementById('slt-results')?.classList.remove('is-loading');
+            const results = document.getElementById('slt-results');
+            results?.classList.remove('is-loading');
+            results?.removeAttribute('aria-busy');
         }
     }
 
     document.addEventListener('click', function (event) {
         const link = event.target.closest('#slt-results .pagination a.page-link');
-        if (!link) {
+        if (!link || link.closest('.page-item.disabled, .page-item.active')) {
             return;
         }
 

@@ -139,7 +139,26 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertDontSee('My resource requests')
             ->assertSee('Resource booking 11')
             ->assertSee('Resource booking 12')
-            ->assertDontSee('>Resource booking 1<', false);
+            ->assertDontSee('>Resource booking 1<', false)
+            ->assertDontSee('partial=1', false);
+
+        $this->actingAs($employee)
+            ->get(route('reservations.mine', ['page' => 2, 'partial' => 1]))
+            ->assertOk()
+            ->assertSee('Showing 11–12 of 12')
+            ->assertDontSee('My resource requests');
+
+        $queries = 0;
+        \Illuminate\Support\Facades\DB::listen(static function () use (&$queries) {
+            $queries++;
+        });
+
+        $this->actingAs($employee)
+            ->get(route('reservations.mine', ['page' => 2, 'partial' => 1]), ['X-Requested-With' => 'XMLHttpRequest'])
+            ->assertOk()
+            ->assertSee('Showing 11–12 of 12');
+
+        $this->assertLessThanOrEqual(15, $queries);
     }
 
     public function test_employees_cannot_open_staff_lists_or_see_list_buttons(): void
