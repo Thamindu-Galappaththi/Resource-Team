@@ -740,7 +740,12 @@ document.addEventListener('DOMContentLoaded', () => {
         more.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
-            showSltMorePopover(date, items, more);
+            const holiday = holidayOn(date);
+            if (isSltEmployee) {
+                showSltMorePopover(date, items, more);
+                return;
+            }
+            showDayEventList(date, holiday ? [holiday, ...items] : items);
         });
     }
 
@@ -781,7 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('');
             summary.hidden = false;
             summary.innerHTML = `${holidayChip}<div class="rc-month-chips">${chips}${extra > 0 ? `<span class="rc-month-more" role="button" tabindex="0">+${extra} more</span>` : ''}</div>`;
-            if (isSltEmployee) bindSltMonthActions(summary, date, preview, items);
+            bindSltMonthActions(summary, date, preview, items);
         });
     }
 
