@@ -224,9 +224,14 @@ class SltEmployeeDashboardController extends Controller
      */
     private function hostelCalendarStatsData(Carbon $month): array
     {
+        $user = request()->user();
         $reservations = Reservation::query()
             ->where('type', ReservationType::HOSTEL->value)
             ->where('status', '!=', ReservationStatus::DRAFT->value)
+            ->where(function ($query) use ($user) {
+                $query->where('requester_id', $user->id)
+                    ->orWhere('created_by_user_id', $user->id);
+            })
             ->where(function ($query) use ($month) {
                 $query->where(function ($inner) use ($month) {
                     $inner->whereYear('reservation_date', $month->year)
@@ -257,6 +262,7 @@ class SltEmployeeDashboardController extends Controller
     private function canteenCalendarStatsData(Carbon $month): array
     {
         $reservations = CanteenReservation::query()
+            ->where('requested_by_user_id', request()->user()->id)
             ->whereYear('reservation_date', $month->year)
             ->whereMonth('reservation_date', $month->month)
             ->get();

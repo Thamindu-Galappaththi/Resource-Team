@@ -7,6 +7,8 @@ use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Models\CanteenReservation;
 use App\Models\Reservation;
+use App\Models\ReservationItem;
+use App\Models\Resource;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -315,5 +317,137 @@ class SltEmployeeDashboardTest extends TestCase
             ->json());
         $this->assertStringContainsString('Guest wing stay', $hostelEvents);
         $this->assertStringNotContainsString('Lab session', $hostelEvents);
+    }
+
+    public function test_calendar_stat_cards_count_only_the_logged_in_employees_bookings(): void
+    {
+        $employee = User::factory()->role('slt_employee')->create();
+        $other = User::factory()->role('slt_employee')->create();
+        $today = now()->toDateString();
+
+        Reservation::factory()->create([
+            'requester_id' => $employee->id,
+            'title' => 'My lab booking',
+            'reservation_date' => $today,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+        ]);
+        Reservation::factory()->create([
+            'requester_id' => $other->id,
+            'title' => 'Other lab booking',
+            'reservation_date' => $today,
+            'status' => ReservationStatus::APPROVED->value,
+        ]);
+        Reservation::factory()->create([
+            'requester_id' => $employee->id,
+            'type' => ReservationType::HOSTEL->value,
+            'title' => 'My hostel stay',
+            'reservation_date' => $today,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+        ]);
+        Reservation::factory()->create([
+            'requester_id' => $other->id,
+            'type' => ReservationType::HOSTEL->value,
+            'title' => 'Other hostel stay',
+            'reservation_date' => $today,
+            'status' => ReservationStatus::APPROVED->value,
+        ]);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $employee->id,
+            'reservation_name' => 'My lunch order',
+            'reservation_date' => $today,
+            'status' => CanteenReservationStatus::PENDING->value,
+        ]);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $other->id,
+            'reservation_name' => 'Other lunch order',
+            'reservation_date' => $today,
+            'status' => CanteenReservationStatus::APPROVED->value,
+        ]);
+
+        $this->actingAs($employee)
+            ->getJson(route('reservations.calendar.stats'))
+            ->assertOk()
+            ->assertJsonPath('stats.month', 1)
+            ->assertJsonPath('stats.today', 1)
+            ->assertJsonPath('stats.pending', 1)
+            ->assertJsonPath('stats.approved', 0);
+
+        $this->actingAs($employee)
+            ->getJson(route('hostel.calendar.stats'))
+            ->assertOk()
+            ->assertJsonPath('stats.month', 1)
+            ->assertJsonPath('stats.today', 1)
+            ->assertJsonPath('stats.pending', 1)
+            ->assertJsonPath('stats.approved', 0);
+
+        $this->actingAs($employee)
+            ->getJson(route('canteen.calendar.stats'))
+            ->assertOk()
+            ->assertJsonPath('stats.month', 1)
+            ->assertJsonPath('stats.today', 1)
+            ->assertJsonPath('stats.pending', 1)
+            ->assertJsonPath('stats.approved', 0);
+    }
+
+    public function test_calendar_filters_only_list_and_return_the_employees_own_bookings(): void
+    {
+        $employee = User::factory()->role('slt_employee')->create();
+        $other = User::factory()->role('slt_employee')->create();
+        $mineResource = Resource::factory()->create(['name_model' => 'My Lab Room']);
+        $mineResource->location->update(['name' => 'Employee Campus']);
+        $mineResource->type->category->update(['name' => 'Employee Labs']);
+        $otherResource = Resource::factory()->create(['name_model' => 'Secret Hall']);
+        $otherResource->location->update(['name' => 'Other Campus']);
+        $otherResource->type->category->update(['name' => 'Other Halls']);
+
+        $mine = $this->calendarBooking($employee, $mineResource, 'My lab booking');
+        $theirs = $this->calendarBooking($other, $otherResource, 'Secret other booking');
+        $range = [
+            'start' => now()->subDay()->toIso8601String(),
+            'end' => now()->addMonths(2)->toIso8601String(),
+        ];
+
+        $this->actingAs($employee)
+            ->get(route('reservations.calendar'))
+            ->assertOk()
+            ->assertSee('Employee Campus')
+            ->assertSee('Employee Labs')
+            ->assertSee('My Lab Room')
+            ->assertDontSee('Other Campus')
+            ->assertDontSee('Other Halls')
+            ->assertDontSee('Secret Hall');
+
+        $filtered = collect($this->actingAs($employee)
+            ->getJson(route('reservations.calendar.events', $range + [
+                'location_id' => $mineResource->location_id,
+            ]))
+            ->assertOk()
+            ->json());
+        $this->assertTrue($filtered->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $mine->id));
+        $this->assertFalse($filtered->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $theirs->id));
+    }
+
+    private function calendarBooking(User $requester, Resource $resource, string $title): Reservation
+    {
+        $start = now('UTC')->addDay()->setTime(4, 30);
+        $reservation = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'location_id' => $resource->location_id,
+            'title' => $title,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'reservation_date' => now('Asia/Colombo')->addDay()->toDateString(),
+            'start_time' => '10:00:00',
+            'end_time' => '12:00:00',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'resource_id' => $resource->id,
+            'starts_at' => $start,
+            'ends_at' => $start->copy()->addHours(2),
+            'resource_name_snapshot' => $resource->name_model,
+        ]);
+
+        return $reservation;
     }
 }
