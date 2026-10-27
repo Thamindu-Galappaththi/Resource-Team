@@ -49,6 +49,13 @@ class SltEmployeeReservationSeederTest extends TestCase
         $this->assertTrue((clone $canteen)->where('reservation_name', 'SLT Demo: Colleague lunch')->where('requested_by_user_id', $colleague->id)->exists());
         $this->assertTrue((clone $canteen)->where('requested_by_user_id', $employee->id)->where('status', CanteenReservationStatus::APPROVED->value)->exists());
 
+        $this->assertGreaterThanOrEqual(5, (clone $resource)->whereDate('reservation_date', '2026-11-19')->count());
+        $this->assertTrue((clone $resource)->where('title', 'SLT Demo: Deepavali resource 01')->exists());
+        $this->assertTrue((clone $resource)->where('title', 'SLT Demo: Christmas resource 02')->where('requester_id', $colleague->id)->exists());
+        $this->assertGreaterThanOrEqual(5, (clone $hostel)->whereHas('hostelStay', fn ($query) => $query->whereDate('check_in_at', '2026-11-19'))->count());
+        $this->assertTrue((clone $hostel)->where('title', 'SLT Demo: Deepavali stay 02')->where('requester_id', $colleague->id)->exists());
+        $this->assertGreaterThanOrEqual(5, (clone $canteen)->whereDate('reservation_date', '2026-11-19')->count());
+
         $resourceCount = $resource->count();
         $hostelCount = $hostel->count();
         $canteenCount = $canteen->count();

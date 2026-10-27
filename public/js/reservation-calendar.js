@@ -246,11 +246,22 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         dateClick(info) {
             if (info.view.type !== 'dayGridMonth') return;
-            if (isSltEmployee && info.jsEvent?.target?.closest('.rc-month-chip, .rc-month-more, .rc-more-pop')) {
+            const target = info.jsEvent?.target;
+            if (target?.closest('.rc-more-pop')) {
                 return;
             }
             const holiday = holidayOn(info.date);
-            if (info.jsEvent?.target?.closest('[data-holiday]')) {
+            const items = bookingsOn(info.date);
+            const chip = target?.closest('.rc-month-chip[data-booking]');
+            if (chip) {
+                const booking = items[Number(chip.dataset.booking)];
+                if (isSltEmployee && booking) openSltBooking(booking);
+                return;
+            }
+            if (target?.closest('.rc-month-more')) {
+                return;
+            }
+            if (target?.closest('[data-holiday]')) {
                 if (holiday) showHolidayDialog(holiday);
                 return;
             }
@@ -258,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (canCreate) goCreate(info.date);
                 return;
             }
-            const items = bookingsOn(info.date);
             if (!items.length && holiday) {
                 showHolidayDialog(holiday);
                 return;
@@ -272,6 +282,9 @@ document.addEventListener('DOMContentLoaded', () => {
         eventClick(info) {
             if (info.event.extendedProps?.isHoliday) {
                 if (info.event.display === 'background') return;
+                if (info.jsEvent?.target?.closest('.rc-month-chip, .rc-month-more, .rc-more-pop')) {
+                    return;
+                }
                 showHolidayDialog(info.event);
                 return;
             }
@@ -699,8 +712,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function bindSltMonthActions(summary, date, preview, items) {
+        const stop = (event) => event.stopPropagation();
         summary.querySelectorAll('.rc-month-chip[data-booking]').forEach((chip) => {
-            const stop = (event) => event.stopPropagation();
             chip.addEventListener('pointerdown', stop);
             chip.addEventListener('mousedown', stop);
             chip.addEventListener('click', (event) => {
@@ -710,9 +723,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (booking) openSltBooking(booking);
             });
         });
+        summary.querySelectorAll('[data-holiday]').forEach((chip) => {
+            chip.addEventListener('pointerdown', stop);
+            chip.addEventListener('mousedown', stop);
+            chip.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const holiday = holidayOn(date);
+                if (holiday) showHolidayDialog(holiday);
+            });
+        });
         const more = summary.querySelector('.rc-month-more');
         if (!more) return;
-        const stop = (event) => event.stopPropagation();
         more.addEventListener('pointerdown', stop);
         more.addEventListener('mousedown', stop);
         more.addEventListener('click', (event) => {

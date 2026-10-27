@@ -10,12 +10,14 @@ use App\Models\CanteenReservation;
 use App\Models\Location;
 use App\Models\Reservation;
 use App\Models\Resource;
+use App\Models\ResourceCategory;
 use App\Models\ResourceType;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\HostelReservationService;
 use App\Services\ReservationBookingService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 
 class SltEmployeeReservationSeeder extends Seeder
@@ -50,6 +52,7 @@ class SltEmployeeReservationSeeder extends Seeder
         $this->seedResourceBookings($employee, $colleague, $today);
         $this->seedHostelBookings($employee, $colleague, $approver, $today);
         $this->seedCanteenBookings($employee, $colleague, $canteenApprover, $today);
+        $this->seedPackedCalendarDays($employee, $colleague, $approver, $canteenApprover, $today);
 
         $this->command?->info('SLT demo bookings are ready for slt@nebula.local (Password@123).');
         $this->command?->info('Colleague bookings use slt.colleague@nebula.local to test the privilege notice.');
@@ -106,23 +109,210 @@ class SltEmployeeReservationSeeder extends Seeder
         $rows[] = ['owner' => $colleague, 'serial' => 'LT-WEL-002', 'days' => 2, 'start' => '14:00', 'end' => '16:00', 'title' => 'SLT Demo: Colleague laptop', 'purpose' => 'Field work', 'after' => null];
 
         foreach ($rows as $row) {
-            $resource = Resource::query()->where('serial_number', $row['serial'])->where('status', 'active')->first();
-            if (! $resource) {
-                $this->command?->warn('Skipped resource booking '.$row['title'].': '.$row['serial'].' is missing.');
-                continue;
-            }
-
-            $reservation = $this->firstOrCreateResourceBooking($bookings, $row, $resource, $today);
-            if (! $reservation) {
-                continue;
-            }
-
-            $this->applyResourceOutcome($bookings, $reservation, $row['owner'], $row['after']);
+            $this->seedNamedResource($bookings, $row, $today);
         }
     }
 
     /**
-     * @param  array{owner: User, start: string, end: string, title: string, purpose: string, days: int}  $row
+     * Extra same-day bookings so month chips, +N more, and holiday clicks can be tested.
+     */
+    private function seedPackedCalendarDays(
+        User $employee,
+        User $colleague,
+        User $approver,
+        User $canteenApprover,
+        $today,
+    ): void {
+        $bookings = app(ReservationBookingService::class);
+        $service = app(HostelReservationService::class);
+        $this->ensureExtraHostelRooms();
+
+        $resourceStacks = [
+            ['date' => '2026-11-19', 'serials' => ['LH-WEL-B-002', 'MR-WEL-101', 'LT-WEL-001', 'LAB-WEL-03', 'PJ-WEL-001', 'LH-WEL-A-001']],
+            ['date' => '2026-11-08', 'serials' => ['LT-PER-001', 'PJ-MOR-001']],
+            ['date' => '2026-12-25', 'serials' => ['MR-MOR-201', 'LT-WEL-002']],
+        ];
+
+        foreach ($resourceStacks as $stack) {
+            $label = match ($stack['date']) {
+                '2026-11-19' => 'November stack',
+                '2026-11-08' => 'Deepavali',
+                default => 'Christmas',
+            };
+
+            foreach ($stack['serials'] as $offset => $serial) {
+                $owner = $offset === array_key_last($stack['serials']) || $offset >= 4 ? $colleague : $employee;
+                $this->seedNamedResource($bookings, [
+                    'owner' => $owner,
+                    'serial' => $serial,
+                    'date' => $stack['date'],
+                    'start' => sprintf('%02d:00', 8 + $offset),
+                    'end' => sprintf('%02d:00', 9 + $offset),
+                    'title' => sprintf('SLT Demo: %s resource %02d', $label, $offset + 1),
+                    'purpose' => $stack['date'] === '2026-11-19' ? 'Packed-day calendar test' : 'Holiday chip calendar test',
+                    'after' => $offset % 2 === 1 ? ReservationStatus::APPROVED->value : null,
+                ], $today);
+            }
+        }
+
+        $this->seedPackedHostelDay($service, $employee, $colleague, $approver, $today, '2026-11-19', 'November stack', 6);
+        $this->seedPackedHostelDay($service, $employee, $colleague, $approver, $today, '2026-11-08', 'Deepavali', 2);
+        $this->seedPackedHostelDay($service, $employee, $colleague, $approver, $today, '2026-12-25', 'Christmas', 2);
+
+        $this->seedPackedCanteenDay($employee, $colleague, $canteenApprover, $today, '2026-11-19', 'November stack', 6);
+        $this->seedPackedCanteenDay($employee, $colleague, $canteenApprover, $today, '2026-11-08', 'Deepavali', 2);
+        $this->seedPackedCanteenDay($employee, $colleague, $canteenApprover, $today, '2026-12-25', 'Christmas', 2);
+    }
+
+    /**
+     * @param  array{owner: User, serial: string, date: string, start: string, end: string, title: string, purpose: string, after: ?string}  $row
+     */
+    private function seedNamedResource(ReservationBookingService $bookings, array $row, $today): void
+    {
+        $resource = Resource::query()->where('serial_number', $row['serial'])->where('status', 'active')->first();
+        if (! $resource) {
+            $this->command?->warn('Skipped resource booking '.$row['title'].': '.$row['serial'].' is missing.');
+
+            return;
+        }
+
+        $reservation = $this->firstOrCreateResourceBooking($bookings, $row, $resource, $today);
+        if ($reservation) {
+            $this->applyResourceOutcome($bookings, $reservation, $row['owner'], $row['after']);
+        }
+    }
+
+    private function seedPackedHostelDay(
+        HostelReservationService $service,
+        User $employee,
+        User $colleague,
+        User $approver,
+        $today,
+        string $date,
+        string $label,
+        int $count,
+    ): void {
+        $categoryName = config('hostel.category_name', 'Hostel Room');
+        $single = ResourceType::query()
+            ->where('name', 'Single')
+            ->whereHas('category', fn ($query) => $query->where('name', $categoryName))
+            ->first();
+        $double = ResourceType::query()
+            ->where('name', 'Double')
+            ->whereHas('category', fn ($query) => $query->where('name', $categoryName))
+            ->first();
+        $welisara = Location::query()->where('name', 'Welisara')->first();
+        $moratuwa = Location::query()->where('name', 'Moratuwa')->first();
+        if (! $single || ! $double || ! $welisara || ! $moratuwa) {
+            return;
+        }
+
+        $slots = [
+            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'guests' => 1],
+            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'guests' => 1],
+            ['room_type_id' => $double->id, 'location_id' => $welisara->id, 'guests' => 2],
+            ['room_type_id' => $single->id, 'location_id' => $moratuwa->id, 'guests' => 1],
+            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'guests' => 1],
+            ['room_type_id' => $double->id, 'location_id' => $welisara->id, 'guests' => 2],
+        ];
+
+        for ($index = 1; $index <= $count; $index++) {
+            $slot = $slots[$index - 1];
+            $owner = $index === $count ? $colleague : $employee;
+            $reservation = $this->firstOrCreateHostelBooking($service, [
+                'owner' => $owner,
+                'title' => sprintf('SLT Demo: %s stay %02d', $label, $index),
+                'guest' => sprintf('%s Guest %02d', $label, $index),
+                'phone' => sprintf('+94 77 301 %02d%02d', (int) substr($date, 8, 2), $index),
+                'date' => $date,
+                'nights' => 1,
+                'room_type_id' => $slot['room_type_id'],
+                'location_id' => $slot['location_id'],
+                'guests' => $slot['guests'],
+                'requirements' => null,
+            ], $today);
+            if (! $reservation) {
+                continue;
+            }
+            if ($index % 2 === 0 && $reservation->status === ReservationStatus::PENDING_APPROVAL->value) {
+                try {
+                    $service->updateApproval($reservation, $approver, ReservationStatus::APPROVED->value);
+                } catch (\Throwable $exception) {
+                    $this->command?->warn('Could not approve '.$reservation->title.': '.$exception->getMessage());
+                }
+            }
+        }
+    }
+
+    private function seedPackedCanteenDay(
+        User $employee,
+        User $colleague,
+        User $approver,
+        $today,
+        string $date,
+        string $label,
+        int $count,
+    ): void {
+        $welisara = Location::query()->where('name', 'Welisara')->first();
+        $meals = [MealType::BREAKFAST, MealType::LUNCH, MealType::SNACKS, MealType::DINNER, MealType::EVENT_CATERING, MealType::LUNCH];
+        $times = ['08:00', '12:30', '15:00', '18:30', '10:00', '13:15'];
+
+        for ($index = 1; $index <= $count; $index++) {
+            $owner = $index === $count ? $colleague : $employee;
+            $approved = $index % 2 === 0;
+            CanteenReservation::query()->updateOrCreate(
+                ['reservation_name' => sprintf('SLT Demo: %s canteen %02d', $label, $index)],
+                [
+                    'requested_by_user_id' => $owner->id,
+                    'location_id' => $welisara?->id,
+                    'meal_type' => $meals[$index - 1]->value,
+                    'reservation_date' => $date,
+                    'reservation_time' => $times[$index - 1],
+                    'number_of_orders' => 6 + $index,
+                    'order_details' => $label.' packed-day order',
+                    'special_remarks' => 'Calendar +N more / holiday chip demo.',
+                    'status' => $approved ? CanteenReservationStatus::APPROVED->value : CanteenReservationStatus::PENDING->value,
+                    'approved_by_user_id' => $approved ? $approver->id : null,
+                    'approval_comments' => null,
+                ]
+            );
+        }
+    }
+
+    private function ensureExtraHostelRooms(): void
+    {
+        $category = ResourceCategory::query()->firstOrCreate(
+            ['name' => config('hostel.category_name', 'Hostel Room')]
+        );
+        $single = ResourceType::query()->firstOrCreate(
+            ['resource_category_id' => $category->id, 'name' => 'Single'],
+            ['description' => 'One occupant']
+        );
+        $double = ResourceType::query()->firstOrCreate(
+            ['resource_category_id' => $category->id, 'name' => 'Double'],
+            ['description' => 'Two occupants']
+        );
+        $welisara = Location::query()->firstOrCreate(['name' => 'Welisara']);
+
+        foreach ([
+            ['serial_number' => 'HR-WEL-S-103', 'name_model' => 'Welisara Single 103', 'type' => $single],
+            ['serial_number' => 'HR-WEL-S-104', 'name_model' => 'Welisara Single 104', 'type' => $single],
+            ['serial_number' => 'HR-WEL-D-202', 'name_model' => 'Welisara Double 202', 'type' => $double],
+        ] as $room) {
+            Resource::query()->firstOrCreate(
+                ['serial_number' => $room['serial_number']],
+                [
+                    'resource_type_id' => $room['type']->id,
+                    'location_id' => $welisara->id,
+                    'name_model' => $room['name_model'],
+                    'status' => 'active',
+                ]
+            );
+        }
+    }
+
+    /**
+     * @param  array{owner: User, start: string, end: string, title: string, purpose: string, days?: int, date?: string}  $row
      */
     private function firstOrCreateResourceBooking(
         ReservationBookingService $bookings,
@@ -143,7 +333,7 @@ class SltEmployeeReservationSeeder extends Seeder
                 'resource_ids' => [$resource->id],
                 'requester_id' => $row['owner']->id,
                 'location_id' => $resource->location_id,
-                'reservation_date' => $today->copy()->addDays($row['days'])->toDateString(),
+                'reservation_date' => $this->bookingDate($row, $today)->toDateString(),
                 'start_time' => $row['start'],
                 'end_time' => $row['end'],
                 'purpose' => $row['purpose'],
@@ -280,7 +470,7 @@ class SltEmployeeReservationSeeder extends Seeder
             return $existing;
         }
 
-        $checkIn = $today->copy()->addDays($row['days']);
+        $checkIn = $this->bookingDate($row, $today);
 
         try {
             return $service->create([
@@ -360,5 +550,17 @@ class SltEmployeeReservationSeeder extends Seeder
                 ]
             );
         }
+    }
+
+    /**
+     * @param  array{days?: int, date?: string}  $row
+     */
+    private function bookingDate(array $row, $today): Carbon
+    {
+        if (! empty($row['date'])) {
+            return Carbon::parse($row['date'], config('reservations.display_timezone', 'Asia/Colombo'))->startOfDay();
+        }
+
+        return $today->copy()->addDays((int) ($row['days'] ?? 0));
     }
 }

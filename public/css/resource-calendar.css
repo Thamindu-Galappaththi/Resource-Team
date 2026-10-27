@@ -348,7 +348,14 @@
 .fc-dayGridMonth-view .fc-daygrid-more-link {
     display: none !important;
 }
+.fc-dayGridMonth-view .fc-daygrid-day-bg,
+.fc-dayGridMonth-view .fc-daygrid-bg-harness,
+.fc-dayGridMonth-view .fc-bg-event {
+    pointer-events: none !important;
+}
 .fc-dayGridMonth-view .rc-month-summary {
+    position: relative;
+    z-index: 2;
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
@@ -366,6 +373,8 @@
 }
 .fc-dayGridMonth-view .rc-month-holiday,
 .fc-dayGridMonth-view .rc-month-chip {
+    position: relative;
+    z-index: 3;
     flex: 0 0 22px;
     height: 22px;
     padding: 0 6px;
@@ -376,6 +385,8 @@
     line-height: 22px;
     text-overflow: ellipsis;
     white-space: nowrap;
+    pointer-events: auto;
+    cursor: pointer;
 }
 .fc-dayGridMonth-view .rc-month-more {
     flex: 0 0 auto;
