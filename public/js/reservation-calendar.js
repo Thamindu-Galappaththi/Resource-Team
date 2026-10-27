@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarElement.classList.add('is-slt-employee');
         calendarElement.closest('.reservation-calendar-page')?.classList.add('is-slt-calendar');
     }
+    const isSimple = calendarElement.dataset.simple === '1';
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
     const swalFire = (options) => window.RMSwal.fire(options);
     const holidayImageBase = (window.RSVCal?.holidayImageBase || '/images/holidays').replace(/\/$/, '');
@@ -159,8 +160,19 @@ document.addEventListener('DOMContentLoaded', () => {
             showDayEventList(date, holiday ? [holiday, ...items] : items);
         },
         headerToolbar: isMobile
-            ? { left: 'prev,next', center: 'title', right: 'today' }
-            : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+            ? { left: 'prev,next', center: 'title', right: isSimple ? 'refreshCalendar today' : 'today' }
+            : { left: 'prev,next today', center: 'title', right: isSimple ? 'refreshCalendar dayGridMonth,timeGridWeek,timeGridDay,listWeek' : 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+        customButtons: isSimple
+            ? {
+                refreshCalendar: {
+                    text: 'Refresh',
+                    hint: 'Refresh calendar',
+                    click() {
+                        refreshCalendar();
+                    },
+                },
+            }
+            : {},
         buttonText: { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'Agenda' },
         eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
         slotLabelFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
@@ -287,7 +299,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (monthInput) monthInput.value = month;
             refreshStats(date, { force: false });
             closeSltMorePop();
-            queueMicrotask(paintMonthCells);
+            queueMicrotask(() => {
+                decorateRefreshButton();
+                paintMonthCells();
+            });
         },
         eventsSet() {
             queueMicrotask(paintMonthCells);
@@ -295,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     calendar.render();
+    decorateRefreshButton();
 
     function hasFilters() {
         return filterIds.some((id) => Boolean(document.getElementById(id)?.value));
@@ -346,13 +362,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     refreshButton?.addEventListener('click', () => refreshCalendar());
 
+    function toolbarRefreshButton() {
+        return calendarElement.querySelector('.fc-refreshCalendar-button');
+    }
+
+    function decorateRefreshButton() {
+        const button = toolbarRefreshButton();
+        if (!button) return;
+        button.setAttribute('aria-label', 'Refresh calendar');
+        button.setAttribute('title', 'Refresh calendar');
+        button.type = 'button';
+    }
+
     function setCalendarLoading(isLoading) {
         if (loading) loading.hidden = !isLoading;
-        if (refreshButton) {
-            refreshButton.disabled = isLoading;
-            refreshButton.classList.toggle('is-loading', isLoading);
-            refreshButton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
-        }
+        [refreshButton, toolbarRefreshButton()].forEach((button) => {
+            if (!button) return;
+            button.disabled = isLoading;
+            button.classList.toggle('is-loading', isLoading);
+            button.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        });
     }
 
     function refreshCalendar() {

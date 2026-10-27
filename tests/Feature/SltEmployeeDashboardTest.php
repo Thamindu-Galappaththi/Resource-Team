@@ -238,7 +238,7 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertSee('Hostel reservation calendar')
             ->assertSee('Create Hostel Reservation')
             ->assertSee('is-slt-calendar', false)
-            ->assertSee('reservation-calendar.js?v=23', false)
+            ->assertSee('reservation-calendar.js?v=25', false)
             ->assertDontSee('All locations')
             ->assertSee(route('hostel.create', absolute: false));
 
@@ -267,7 +267,7 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertSee('Canteen reservation calendar')
             ->assertSee('Create reservation')
             ->assertSee('is-slt-calendar', false)
-            ->assertSee('reservation-calendar.js?v=23', false)
+            ->assertSee('reservation-calendar.js?v=25', false)
             ->assertDontSee('All locations')
             ->assertSee(route('canteen.create', absolute: false));
 
@@ -415,7 +415,7 @@ class SltEmployeeDashboardTest extends TestCase
             ->get(route('reservations.calendar'))
             ->assertOk()
             ->assertSee('is-slt-calendar', false)
-            ->assertSee('reservation-calendar.js?v=23', false)
+            ->assertSee('reservation-calendar.js?v=25', false)
             ->assertSee('Employee Campus')
             ->assertSee('Employee Labs')
             ->assertSee('My Lab Room')
