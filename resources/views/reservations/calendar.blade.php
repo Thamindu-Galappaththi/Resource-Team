@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
 <link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
-<link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=6">
+<link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=7">
 @endpush
 
 @section('content')
@@ -82,7 +82,7 @@
             <span><i class="rc-holiday-swatch mercantile"></i>Mercantile</span>
             <span><i class="rc-holiday-swatch public"></i>Government / public</span>
         </div>
-        <div id="reservationCalendar" data-events-url="{{ $eventsUrl }}" data-availability-url="{{ $availabilityUrl }}" data-create-url="{{ $createUrl }}" data-can-create="{{ $canCreate ? '1' : '0' }}" aria-label="Reservation calendar"></div>
+        <div id="reservationCalendar" data-events-url="{{ $eventsUrl }}" data-availability-url="{{ $availabilityUrl }}" data-create-url="{{ $createUrl }}" data-can-create="{{ $canCreate ? '1' : '0' }}" data-slt-employee="{{ auth()->user()?->hasRole('slt_employee') ? '1' : '0' }}" aria-label="Reservation calendar"></div>
         <div id="calendar-slot-feedback" class="calendar-slot-feedback alert mt-3 mb-0" role="status" aria-live="polite" hidden></div>
     </div>
 </div>
@@ -125,5 +125,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=16"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=20"></script>
 @endpush

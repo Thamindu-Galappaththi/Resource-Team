@@ -9,7 +9,9 @@ use App\Enums\ReservationType;
 use App\Models\CanteenReservation;
 use App\Models\Reservation;
 use App\Services\DashboardService;
+use App\Support\SriLankaHolidays;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -36,94 +38,64 @@ class SltEmployeeDashboardController extends Controller
     {
         $this->authorize('viewAnyHostel', Reservation::class);
 
-        $user = $request->user();
-        $month = $this->month($request);
-        $items = [];
-
-        $reservations = Reservation::query()
-            ->with('hostelStay')
-            ->where('type', ReservationType::HOSTEL->value)
-            ->where(function ($query) use ($user) {
-                $query->where('requester_id', $user->id)->orWhere('created_by_user_id', $user->id);
-            })
-            ->where(function ($query) use ($month) {
-                $query->where(function ($inner) use ($month) {
-                    $inner->whereYear('reservation_date', $month->year)
-                        ->whereMonth('reservation_date', $month->month);
-                })->orWhereHas('hostelStay', function ($stay) use ($month) {
-                    $stay->where('check_in_at', '<', $month->copy()->endOfMonth()->endOfDay())
-                        ->where('check_out_at', '>', $month->copy()->startOfMonth()->startOfDay());
-                });
-            })
-            ->get();
-
-        foreach ($reservations as $reservation) {
-            $status = ReservationStatus::tryFrom((string) $reservation->status);
-            $event = [
-                'title' => $reservation->hostelStay?->guest_name ?: ($reservation->title ?: 'Hostel stay'),
-                'href' => route('hostel.show', $reservation),
-                'status' => $status?->label() ?? (string) $reservation->status,
-                'tone' => $this->reservationTone((string) $reservation->status),
-            ];
-
-            foreach ($this->hostelDates($reservation, $month) as $iso) {
-                $items[$iso][] = $event;
-            }
-        }
-
-        return view('dashboards.slt-calendar', $this->calendarViewData(
+        return view('dashboards.slt-fullcalendar', $this->sharedCalendarPage(
+            $request,
             kind: 'hostel',
             title: 'Hostel reservation calendar',
-            subtitle: 'Your hostel stays for this month.',
+            subtitle: 'Click a date to view stays or create one for that slot.',
             createUrl: route('hostel.create'),
             createLabel: 'Create Hostel Reservation',
-            homeUrl: route('hostel.home'),
-            month: $month,
-            items: $items,
+            eventsUrl: route('hostel.calendar.events'),
+            statsUrl: route('hostel.calendar.stats'),
+            calendarUrl: route('hostel.calendar'),
+            stats: $this->hostelCalendarStatsData($this->month($request)),
         ));
+    }
+
+    public function hostelCalendarEvents(Request $request): JsonResponse
+    {
+        $this->authorize('viewAnyHostel', Reservation::class);
+
+        return response()->json($this->hostelCalendarEventsData($request));
+    }
+
+    public function hostelCalendarStats(Request $request): JsonResponse
+    {
+        $this->authorize('viewAnyHostel', Reservation::class);
+
+        return response()->json(['stats' => $this->hostelCalendarStatsData($this->month($request))]);
     }
 
     public function canteenCalendar(Request $request): View
     {
         $this->authorize('viewAny', CanteenReservation::class);
 
-        $user = $request->user();
-        $month = $this->month($request);
-        $items = [];
-
-        $reservations = CanteenReservation::query()
-            ->where('requested_by_user_id', $user->id)
-            ->whereYear('reservation_date', $month->year)
-            ->whereMonth('reservation_date', $month->month)
-            ->orderBy('reservation_time')
-            ->get();
-
-        foreach ($reservations as $reservation) {
-            $status = CanteenReservationStatus::tryFrom((string) $reservation->status);
-            $meal = MealType::tryFrom((string) $reservation->meal_type);
-            $iso = $reservation->reservation_date?->toDateString();
-            if (! $iso) {
-                continue;
-            }
-
-            $items[$iso][] = [
-                'title' => $reservation->reservation_name ?: ($meal?->label() ?? 'Canteen order'),
-                'href' => route('canteen.show', $reservation),
-                'status' => $status?->label() ?? (string) $reservation->status,
-                'tone' => $status?->tone() ?? 'pending',
-            ];
-        }
-
-        return view('dashboards.slt-calendar', $this->calendarViewData(
+        return view('dashboards.slt-fullcalendar', $this->sharedCalendarPage(
+            $request,
             kind: 'canteen',
             title: 'Canteen reservation calendar',
-            subtitle: 'Your meal and catering orders for this month.',
+            subtitle: 'Click a date to view orders or create one for that slot.',
             createUrl: route('canteen.create'),
             createLabel: 'Create reservation',
-            homeUrl: route('canteen.home'),
-            month: $month,
-            items: $items,
+            eventsUrl: route('canteen.calendar.events'),
+            statsUrl: route('canteen.calendar.stats'),
+            calendarUrl: route('canteen.calendar'),
+            stats: $this->canteenCalendarStatsData($this->month($request)),
         ));
+    }
+
+    public function canteenCalendarEvents(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', CanteenReservation::class);
+
+        return response()->json($this->canteenCalendarEventsData($request));
+    }
+
+    public function canteenCalendarStats(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', CanteenReservation::class);
+
+        return response()->json(['stats' => $this->canteenCalendarStatsData($this->month($request))]);
     }
 
     private function module(Request $request, string $key): View
@@ -155,50 +127,312 @@ class SltEmployeeDashboardController extends Controller
     }
 
     /**
-     * @param  array<string, list<array<string, string>>>  $items
+     * @param  array<string, int>  $stats
      * @return array<string, mixed>
      */
-    private function calendarViewData(
+    private function sharedCalendarPage(
+        Request $request,
         string $kind,
         string $title,
         string $subtitle,
         string $createUrl,
         string $createLabel,
-        string $homeUrl,
-        Carbon $month,
-        array $items,
+        string $eventsUrl,
+        string $statsUrl,
+        string $calendarUrl,
+        array $stats,
     ): array {
-        $prev = $month->copy()->subMonth();
-        $next = $month->copy()->addMonth();
+        $month = $this->month($request);
+
+        return [
+            'kind' => $kind,
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'createUrl' => $createUrl,
+            'createLabel' => $createLabel,
+            'eventsUrl' => $eventsUrl,
+            'statsUrl' => $statsUrl,
+            'calendarUrl' => $calendarUrl,
+            'canCreate' => true,
+            'year' => $month->year,
+            'month' => $month->month,
+            'stats' => $stats,
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function hostelCalendarEventsData(Request $request): array
+    {
+        $range = $this->eventRange($request);
+        $user = $request->user();
+        $events = [];
+
+        $reservations = Reservation::query()
+            ->with(['hostelStay.roomType', 'location', 'requester'])
+            ->where('type', ReservationType::HOSTEL->value)
+            ->where('status', '!=', ReservationStatus::DRAFT->value)
+            ->where(function ($query) use ($range) {
+                $query->whereBetween('reservation_date', [$range['start']->toDateString(), $range['end']->toDateString()])
+                    ->orWhereHas('hostelStay', function ($stay) use ($range) {
+                        $stay->where('check_in_at', '<', $range['end'])
+                            ->where('check_out_at', '>', $range['start']);
+                    });
+            })
+            ->get();
+
+        foreach ($reservations as $reservation) {
+            $event = $this->hostelEvent($reservation, $user);
+            if ($event) {
+                $events[] = $event;
+            }
+        }
+
+        return $this->withHolidays($events, $range);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function canteenCalendarEventsData(Request $request): array
+    {
+        $range = $this->eventRange($request);
+        $user = $request->user();
+        $events = [];
+
+        $reservations = CanteenReservation::query()
+            ->with(['location', 'requestedBy'])
+            ->whereDate('reservation_date', '>=', $range['start']->toDateString())
+            ->whereDate('reservation_date', '<', $range['end']->toDateString())
+            ->orderBy('reservation_date')
+            ->orderBy('reservation_time')
+            ->get();
+
+        foreach ($reservations as $reservation) {
+            $event = $this->canteenEvent($reservation, $user);
+            if ($event) {
+                $events[] = $event;
+            }
+        }
+
+        return $this->withHolidays($events, $range);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function hostelCalendarStatsData(Carbon $month): array
+    {
+        $reservations = Reservation::query()
+            ->where('type', ReservationType::HOSTEL->value)
+            ->where('status', '!=', ReservationStatus::DRAFT->value)
+            ->where(function ($query) use ($month) {
+                $query->where(function ($inner) use ($month) {
+                    $inner->whereYear('reservation_date', $month->year)
+                        ->whereMonth('reservation_date', $month->month);
+                })->orWhereHas('hostelStay', function ($stay) use ($month) {
+                    $stay->where('check_in_at', '<', $month->copy()->endOfMonth()->endOfDay())
+                        ->where('check_out_at', '>', $month->copy()->startOfMonth()->startOfDay());
+                });
+            })
+            ->get();
+
         $today = now($month->timezoneName)->toDateString();
-        $cells = [];
 
-        for ($i = 0; $i < $month->dayOfWeek; $i++) {
-            $cells[] = ['empty' => true];
+        return [
+            'month' => $reservations->count(),
+            'today' => $reservations->filter(fn (Reservation $reservation) => in_array($today, $this->hostelDates($reservation, $month), true))->count(),
+            'pending' => $reservations->where('status', ReservationStatus::PENDING_APPROVAL->value)->count(),
+            'approved' => $reservations->whereIn('status', [
+                ReservationStatus::APPROVED->value,
+                ReservationStatus::CONFIRMED->value,
+            ])->count(),
+        ];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function canteenCalendarStatsData(Carbon $month): array
+    {
+        $reservations = CanteenReservation::query()
+            ->whereYear('reservation_date', $month->year)
+            ->whereMonth('reservation_date', $month->month)
+            ->get();
+
+        $today = now($month->timezoneName)->toDateString();
+
+        return [
+            'month' => $reservations->count(),
+            'today' => $reservations->filter(fn (CanteenReservation $reservation) => $reservation->reservation_date?->toDateString() === $today)->count(),
+            'pending' => $reservations->where('status', CanteenReservationStatus::PENDING->value)->count(),
+            'approved' => $reservations->whereIn('status', CanteenReservationStatus::accepted())->count(),
+        ];
+    }
+
+    /**
+     * @return array{start: Carbon, end: Carbon}
+     */
+    private function eventRange(Request $request): array
+    {
+        $data = $request->validate([
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:start'],
+        ]);
+
+        return [
+            'start' => Carbon::parse($data['start'])->startOfDay(),
+            'end' => Carbon::parse($data['end'])->startOfDay(),
+        ];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $events
+     * @param  array{start: Carbon, end: Carbon}  $range
+     * @return list<array<string, mixed>>
+     */
+    private function withHolidays(array $events, array $range): array
+    {
+        $start = $range['start']->toDateString();
+        $end = $range['end']->toDateString();
+        $holidays = collect(SriLankaHolidays::calendarEvents())->filter(function (array $event) use ($start, $end) {
+            $date = substr((string) ($event['start'] ?? ''), 0, 10);
+
+            return $date >= $start && $date < $end;
+        });
+
+        return collect($events)->merge($holidays)->values()->all();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function hostelEvent(Reservation $reservation, $user): ?array
+    {
+        $stay = $reservation->hostelStay;
+        $timezone = config('reservations.display_timezone', 'Asia/Colombo');
+        $mine = $this->ownsReservation($reservation, $user);
+        $status = ReservationStatus::tryFrom((string) $reservation->status);
+        $title = $mine
+            ? ($stay?->guest_name ?: ($reservation->title ?: 'Hostel stay'))
+            : ($stay?->roomType?->name ?? $reservation->location?->name ?? 'Hostel stay');
+
+        if ($stay?->check_in_at && $stay->check_out_at) {
+            $start = $stay->check_in_at->copy()->timezone($timezone)->startOfDay();
+            $end = $stay->check_out_at->copy()->timezone($timezone)->startOfDay()->addDay();
+        } elseif ($reservation->reservation_date) {
+            $start = $reservation->reservation_date->copy()->timezone($timezone)->startOfDay();
+            $end = $start->copy()->addDay();
+        } else {
+            return null;
         }
 
-        for ($day = 1; $day <= $month->daysInMonth; $day++) {
-            $date = $month->copy()->day($day);
-            $iso = $date->toDateString();
-            $dayItems = $items[$iso] ?? [];
-            $cells[] = [
-                'empty' => false,
-                'day' => $day,
-                'iso' => $iso,
-                'isToday' => $iso === $today,
-                'count' => count($dayItems),
-                'items' => $dayItems,
-            ];
+        return $this->calendarEvent(
+            id: 'hostel-'.$reservation->id,
+            reservationId: $reservation->id,
+            title: $title,
+            start: $start,
+            end: $end,
+            allDay: true,
+            resource: $title,
+            location: $reservation->location?->name ?? '—',
+            status: $status?->label() ?? (string) $reservation->status,
+            statusValue: (string) $reservation->status,
+            mine: $mine,
+            url: $mine ? route('hostel.show', $reservation) : null,
+            reference: $mine ? $reservation->reference : null,
+            owner: $mine ? ($reservation->requester?->name ?? 'Unknown') : null,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function canteenEvent(CanteenReservation $reservation, $user): ?array
+    {
+        $iso = $reservation->reservation_date?->toDateString();
+        if (! $iso) {
+            return null;
         }
 
-        while (count($cells) % 7 !== 0) {
-            $cells[] = ['empty' => true];
-        }
+        $timezone = config('reservations.display_timezone', 'Asia/Colombo');
+        $time = substr((string) $reservation->reservation_time, 0, 5) ?: '00:00';
+        $start = Carbon::parse($iso.' '.$time, $timezone);
+        $end = $start->copy()->addHour();
+        $status = CanteenReservationStatus::tryFrom((string) $reservation->status);
+        $meal = MealType::tryFrom((string) $reservation->meal_type);
+        $mine = (int) $reservation->requested_by_user_id === (int) $user->id;
+        $title = $mine
+            ? ($reservation->reservation_name ?: ($meal?->label() ?? 'Canteen order'))
+            : ($reservation->location?->name ?: ($meal?->label() ?? 'Canteen order'));
 
-        return compact('kind', 'title', 'subtitle', 'createUrl', 'createLabel', 'homeUrl', 'cells') + [
-            'label' => $month->format('F Y'),
-            'prev' => ['year' => $prev->year, 'month' => $prev->month],
-            'next' => ['year' => $next->year, 'month' => $next->month],
+        return $this->calendarEvent(
+            id: 'canteen-'.$reservation->id,
+            reservationId: $reservation->id,
+            title: $title,
+            start: $start,
+            end: $end,
+            allDay: false,
+            resource: $title,
+            location: $reservation->location?->name ?? '—',
+            status: $status?->label() ?? (string) $reservation->status,
+            statusValue: match ($status) {
+                CanteenReservationStatus::PENDING => ReservationStatus::PENDING_APPROVAL->value,
+                CanteenReservationStatus::APPROVED, CanteenReservationStatus::CONFIRMED => ReservationStatus::APPROVED->value,
+                CanteenReservationStatus::REJECTED => ReservationStatus::REJECTED->value,
+                CanteenReservationStatus::CANCELLED => ReservationStatus::CANCELLED->value,
+                CanteenReservationStatus::COMPLETED => ReservationStatus::COMPLETED->value,
+                default => ReservationStatus::PENDING_APPROVAL->value,
+            },
+            mine: $mine,
+            url: $mine ? route('canteen.show', $reservation) : null,
+            reference: $mine ? $reservation->reservation_ref : null,
+            owner: $mine ? ($reservation->requestedBy?->name ?? null) : null,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function calendarEvent(
+        string $id,
+        int $reservationId,
+        string $title,
+        Carbon $start,
+        Carbon $end,
+        bool $allDay,
+        string $resource,
+        string $location,
+        string $status,
+        string $statusValue,
+        bool $mine,
+        ?string $url,
+        ?string $reference,
+        ?string $owner,
+    ): array {
+        return [
+            'id' => $id,
+            'title' => $title,
+            'start' => $start->toIso8601String(),
+            'end' => $end->toIso8601String(),
+            'allDay' => $allDay,
+            'classNames' => $mine ? ['is-mine'] : [],
+            'extendedProps' => [
+                'reservationId' => $reservationId,
+                'reference' => $reference,
+                'purpose' => $mine ? $title : null,
+                'reservationStart' => $start->toIso8601String(),
+                'reservationEnd' => $end->toIso8601String(),
+                'resource' => $resource,
+                'owner' => $owner,
+                'location' => $location,
+                'status' => $status,
+                'statusKey' => $statusValue,
+                'statusValue' => $statusValue,
+                'mine' => $mine,
+                'url' => $url,
+            ],
         ];
     }
 
@@ -227,15 +461,10 @@ class SltEmployeeDashboardController extends Controller
         return $iso ? [$iso] : [];
     }
 
-    private function reservationTone(string $status): string
+    private function ownsReservation(Reservation $reservation, $user): bool
     {
-        return match ($status) {
-            ReservationStatus::APPROVED->value, ReservationStatus::CONFIRMED->value => 'approved',
-            ReservationStatus::PENDING_APPROVAL->value, ReservationStatus::CHANGES_REQUESTED->value, ReservationStatus::DRAFT->value => 'pending',
-            ReservationStatus::REJECTED->value, ReservationStatus::EXPIRED->value => 'rejected',
-            ReservationStatus::CANCELLED->value => 'cancelled',
-            ReservationStatus::COMPLETED->value => 'completed',
-            default => 'pending',
-        };
+        return (int) $reservation->requester_id === (int) $user->id
+            || (int) $reservation->created_by_user_id === (int) $user->id;
     }
+
 }

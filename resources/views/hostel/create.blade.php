@@ -18,7 +18,9 @@
             <h1 class="hc-title">Create Hostel Reservation</h1>
             <p class="hc-subtitle mb-0">Book a room, assign the stay dates, and send it for hostel approval.</p>
         </div>
-        <a href="{{ route('hostel.index') }}" class="btn hc-back"><i class="ti ti-arrow-left me-1"></i>Hostel Reservations</a>
+        @unless(auth()->user()?->hasRole('slt_employee'))
+            <a href="{{ route('hostel.index') }}" class="btn hc-back"><i class="ti ti-arrow-left me-1"></i>Hostel Reservations</a>
+        @endunless
     </div>
 
     @if($errors->any())
@@ -54,7 +56,7 @@
                     </div>
                     <div class="col-12 col-sm-6">
                         <label for="check_in_date" class="form-label">Check-in date <span class="text-danger">*</span></label>
-                        <input type="date" id="check_in_date" name="check_in_date" class="form-control @error('check_in_date') is-invalid @enderror" value="{{ old('check_in_date') }}" min="{{ $minCheckIn }}" required>
+                        <input type="date" id="check_in_date" name="check_in_date" class="form-control @error('check_in_date') is-invalid @enderror" value="{{ old('check_in_date', $prefillCheckIn ?? '') }}" min="{{ $minCheckIn }}" required>
                         @error('check_in_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12 col-sm-6">

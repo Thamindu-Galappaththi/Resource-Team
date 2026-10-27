@@ -278,9 +278,7 @@ class CanteenReservationTest extends TestCase
 
         $this->actingAs($employee)
             ->get(route('canteen.index'))
-            ->assertOk()
-            ->assertSee('Large group lunch')
-            ->assertSee('Kitchen Requester');
+            ->assertForbidden();
         $this->actingAs($employee)
             ->get(route('canteen.show', $order))
             ->assertOk();
@@ -312,6 +310,7 @@ class CanteenReservationTest extends TestCase
             ->assertSee('Create Canteen Reservation')
             ->assertSee('Order requirements')
             ->assertSee('location_id')
+            ->assertDontSee('All reservations')
             ->assertDontSee('autofocus', false);
     }
 

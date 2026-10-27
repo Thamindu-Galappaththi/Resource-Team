@@ -16,9 +16,11 @@
             <h1 class="cd-title">Create reservation</h1>
             <p class="cd-subtitle">Plan your meal service with the canteen team.</p>
         </div>
-        <div class="cd-actions">
-            <a href="{{ route('canteen.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>All reservations</a>
-        </div>
+        @unless(auth()->user()?->hasRole('slt_employee'))
+            <div class="cd-actions">
+                <a href="{{ route('canteen.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>All reservations</a>
+            </div>
+        @endunless
     </header>
 
     @if($errors->any())
@@ -34,7 +36,7 @@
             <form id="canteenReservationForm" method="POST" action="{{ route('canteen.store') }}">
                 @include('canteen.reservations._form')
                 <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 pt-4 mt-2 border-top cp-form-actions">
-                    <a href="{{ route('canteen.index') }}" class="btn btn-outline-secondary">Discard</a>
+                    <a href="{{ auth()->user()?->hasRole('slt_employee') ? route('canteen.home') : route('canteen.index') }}" class="btn btn-outline-secondary">Discard</a>
                     <button id="canteenSubmitButton" type="submit" class="btn btn-primary">
                         <span class="submit-label"><i class="ti ti-check me-1" aria-hidden="true"></i>Submit reservation</span>
                         <span class="submit-loading d-none"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Submitting...</span>
@@ -95,5 +97,5 @@
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/canteen-ui.js') }}?v=4"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=5"></script>
 @endpush

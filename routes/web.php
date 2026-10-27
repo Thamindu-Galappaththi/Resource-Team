@@ -57,8 +57,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
-        Route::get('/', 'index')->middleware('permission:reservations.index')->name('index');
-        Route::get('/feed', 'feed')->middleware('permission:reservations.index')->name('feed');
+        Route::get('/', 'index')->middleware(['permission:reservations.index', 'deny-slt-lists'])->name('index');
+        Route::get('/feed', 'feed')->middleware(['permission:reservations.index', 'deny-slt-lists'])->name('feed');
         Route::get('/home', [SltEmployeeDashboardController::class, 'resource'])->middleware('permission:reservations.create')->name('home');
         Route::get('/create', 'create')->middleware('permission:reservations.create')->name('create');
         Route::get('/calendar', 'calendar')->middleware('permission:reservations.calendar')->name('calendar');
@@ -91,20 +91,24 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
-        Route::get('/', 'index')->middleware('permission:hostel.index')->name('index');
+        Route::get('/', 'index')->middleware(['permission:hostel.index', 'deny-slt-lists'])->name('index');
         Route::get('/home', [SltEmployeeDashboardController::class, 'hostel'])->middleware('permission:hostel.create')->name('home');
         Route::get('/calendar', [SltEmployeeDashboardController::class, 'hostelCalendar'])->middleware('permission:hostel.index')->name('calendar');
+        Route::get('/calendar/events', [SltEmployeeDashboardController::class, 'hostelCalendarEvents'])->middleware('permission:hostel.index')->name('calendar.events');
+        Route::get('/calendar/stats', [SltEmployeeDashboardController::class, 'hostelCalendarStats'])->middleware('permission:hostel.index')->name('calendar.stats');
         Route::get('/create', 'create')->middleware('permission:hostel.create')->name('create');
         Route::get('/my-requests', [SltEmployeeRequestController::class, 'hostel'])->middleware('permission:hostel.index')->name('mine');
         Route::get('/{reservation}', 'show')->middleware('permission:hostel.index')->name('show');
     });
 
     Route::prefix('canteen')->name('canteen.')->controller(CanteenReservationController::class)->group(function () {
-        Route::get('/', 'dashboard')->middleware('permission:canteen.view')->name('dashboard');
-        Route::get('/forecast/{date}', 'forecast')->middleware('permission:canteen.view')->name('forecast');
+        Route::get('/', 'dashboard')->middleware(['permission:canteen.view', 'deny-slt-lists'])->name('dashboard');
+        Route::get('/forecast/{date}', 'forecast')->middleware(['permission:canteen.view', 'deny-slt-lists'])->name('forecast');
         Route::get('/home', [SltEmployeeDashboardController::class, 'canteen'])->middleware('permission:canteen.create')->name('home');
         Route::get('/calendar', [SltEmployeeDashboardController::class, 'canteenCalendar'])->middleware('permission:canteen.index')->name('calendar');
-        Route::get('/reservations', 'index')->middleware('permission:canteen.index')->name('index');
+        Route::get('/calendar/events', [SltEmployeeDashboardController::class, 'canteenCalendarEvents'])->middleware('permission:canteen.index')->name('calendar.events');
+        Route::get('/calendar/stats', [SltEmployeeDashboardController::class, 'canteenCalendarStats'])->middleware('permission:canteen.index')->name('calendar.stats');
+        Route::get('/reservations', 'index')->middleware(['permission:canteen.index', 'deny-slt-lists'])->name('index');
         Route::get('/reservations/create', 'create')->middleware('permission:canteen.create')->name('create');
         Route::get('/reservations/my-requests', [SltEmployeeRequestController::class, 'canteen'])->middleware('permission:canteen.index')->name('mine');
         Route::get('/reservations/{reservation}', 'show')->middleware('permission:canteen.index')->name('show');

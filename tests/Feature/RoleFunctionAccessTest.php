@@ -76,6 +76,18 @@ class RoleFunctionAccessTest extends TestCase
         ],
     ];
 
+    /**
+     * Staff list pages SLT employees can hold a permission for, but must not open.
+     *
+     * @var list<string>
+     */
+    private const SLT_DENIED_PAGES = [
+        'reservations.index',
+        'hostel.index',
+        'canteen.dashboard',
+        'canteen.index',
+    ];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -89,7 +101,10 @@ class RoleFunctionAccessTest extends TestCase
 
             foreach (self::PAGES as $route => $permission) {
                 $response = $this->actingAs($user)->get(route($route));
-                if ($this->roleHas($role, $permission)) {
+                $allowed = $this->roleHas($role, $permission)
+                    && ! ($role === 'slt_employee' && in_array($route, self::SLT_DENIED_PAGES, true));
+
+                if ($allowed) {
                     $this->assertEquals(200, $response->status(), "{$role} should open {$route}");
                 } else {
                     $this->assertEquals(403, $response->status(), "{$role} should be blocked from {$route}");
@@ -248,7 +263,7 @@ class RoleFunctionAccessTest extends TestCase
 
         $this->actingAs($employee)->post(route('reservations.cancel', $own), [
             'cancellation_reason' => 'Session moved',
-        ])->assertRedirect(route('reservations.index'));
+        ])->assertRedirect(route('reservations.mine'));
 
         $this->actingAs($employee)->post(route('reservations.cancel', $theirs), [
             'cancellation_reason' => 'Not mine',
@@ -300,8 +315,16 @@ class RoleFunctionAccessTest extends TestCase
             ->getJson(route('reservations.calendar.events', $range))
             ->assertOk()
             ->json();
-        $this->assertTrue(collect($employeeEvents)->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $mine->id));
-        $this->assertFalse(collect($employeeEvents)->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $staff->id));
+        $employeeEvents = collect($employeeEvents);
+        $mineEvent = $employeeEvents->first(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $mine->id);
+        $staffEvent = $employeeEvents->first(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $staff->id);
+        $this->assertNotNull($mineEvent);
+        $this->assertNotNull($staffEvent);
+        $this->assertTrue($mineEvent['extendedProps']['mine'] ?? false);
+        $this->assertNotEmpty($mineEvent['extendedProps']['url'] ?? null);
+        $this->assertFalse($staffEvent['extendedProps']['mine'] ?? true);
+        $this->assertArrayHasKey('url', $staffEvent['extendedProps']);
+        $this->assertNull($staffEvent['extendedProps']['url']);
 
         $adminEvents = $this->actingAs($admin)
             ->getJson(route('reservations.calendar.events', $range))

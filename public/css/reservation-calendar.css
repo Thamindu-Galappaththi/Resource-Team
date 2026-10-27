@@ -24,6 +24,17 @@
     display: none;
 }
 
+.reservation-calendar-page .fc-event.is-mine,
+.reservation-calendar-page .rc-day-item.is-mine,
+.reservation-calendar-page .rc-month-chip.is-mine {
+    box-shadow: inset 0 0 0 2px #0f172a;
+    font-weight: 800;
+}
+
+.reservation-calendar-page .rc-day-item.is-locked {
+    cursor: default;
+}
+
 .fc-dayGridMonth-view .fc-daygrid-day-frame.is-holiday-bank,
 .fc-dayGridMonth-view .fc-daygrid-day:hover .fc-daygrid-day-frame.is-holiday-bank {
     background: #eef4ff !important;

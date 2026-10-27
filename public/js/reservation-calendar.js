@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshButton = document.getElementById('refreshCalendarButton');
     const modal = document.getElementById('reservationModal');
     const canCreate = calendarElement.dataset.canCreate === '1';
+    const isSltEmployee = calendarElement.dataset.sltEmployee === '1';
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
     const swalFire = (options) => window.RMSwal.fire(options);
     const holidayImageBase = (window.RSVCal?.holidayImageBase || '/images/holidays').replace(/\/$/, '');
@@ -134,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         firstDay: 0,
         navLinks: true,
         editable: false,
-        selectable: canCreate,
+        selectable: canCreate && calendarElement.dataset.simple !== '1',
         selectMirror: true,
         selectAllow: (info) => info.view.type !== 'dayGridMonth',
         nowIndicator: true,
@@ -156,10 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
         slotLabelFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
         displayEventTime: true,
         events(fetchInfo, success, failure) {
-            if (!filters) {
-                failure(new Error('Calendar filters are missing.'));
-                return;
-            }
             const viewType = fetchInfo.view?.type || lastViewType;
             const start = Date.parse(fetchInfo.startStr);
             const end = Date.parse(fetchInfo.endStr);
@@ -190,6 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (node.tagName === 'TD') node.style.backgroundColor = colors.background;
             });
             info.el.title = `${details.resource || info.event.title}${details.status ? ` · ${details.status}` : ''}`.trim();
+            if (details.mine) {
+                info.el.classList.add('is-mine');
+            }
         },
         eventContent(info) {
             const details = info.event.extendedProps || {};
@@ -212,6 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
             return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(details.resource || info.event.title)}</span></div>` };
         },
+        navLinkDayClick(date, jsEvent) {
+            if (!isSltEmployee || !canCreate) {
+                return;
+            }
+            jsEvent.preventDefault();
+            goCreate(date);
+        },
         dateClick(info) {
             if (info.view.type !== 'dayGridMonth') return;
             const holiday = holidayOn(info.date);
@@ -224,13 +231,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 showHolidayDialog(holiday);
                 return;
             }
-            if (!items.length) return;
+            if (!items.length) {
+                if (canCreate) goCreate(info.date);
+                return;
+            }
             showDayEventList(info.date, holiday ? [holiday, ...items] : items);
         },
         eventClick(info) {
             if (info.event.extendedProps?.isHoliday) {
                 if (info.event.display === 'background') return;
                 showHolidayDialog(info.event);
+                return;
+            }
+            if (isSltEmployee && !info.event.extendedProps?.url && !info.event.extendedProps?.mine) {
                 return;
             }
             showReservationDetails(info.event);
@@ -366,9 +379,11 @@ document.addEventListener('DOMContentLoaded', () => {
             end: fetchInfo.endStr,
             _: String(Date.now()),
         });
-        new FormData(filters).forEach((value, key) => {
-            if (value && key !== 'year' && key !== 'month') params.set(key, value);
-        });
+        if (filters) {
+            new FormData(filters).forEach((value, key) => {
+                if (value && key !== 'year' && key !== 'month') params.set(key, value);
+            });
+        }
         fetch(`${calendarElement.dataset.eventsUrl}?${params}`, {
             headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             signal: eventsAbort.signal,
@@ -521,14 +536,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 : (event.end instanceof Date ? event.end : new Date(event.end));
             const time = formatStayTimes(start, end, details.duration, details.reservationType);
             const meta = [details.location, details.reference].filter(Boolean).join(' · ');
-            const badge = details.status
+            const badge = !isSltEmployee && details.status
                 ? statusBadge(details.statusValue || details.statusKey, details.status)
                 : '';
-            return `<button type="button" class="rc-day-item" data-index="${index}" style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
+            const canOpen = !isSltEmployee || Boolean(details.mine && details.url);
+            const tag = canOpen ? 'button' : 'div';
+            const extra = canOpen ? ` type="button" data-index="${index}"` : '';
+            return `<${tag} class="rc-day-item${details.mine ? ' is-mine' : ''}${canOpen ? '' : ' is-locked'}"${extra} style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
                 <span class="rc-day-item-title">${escapeHtml(details.resource || event.title)}</span>
                 <span class="rc-day-item-time">${escapeHtml(time)}</span>
-                <span class="rc-day-item-meta">${badge}${meta ? `<span>${escapeHtml(meta)}</span>` : ''}</span>
-            </button>`;
+                ${badge || meta ? `<span class="rc-day-item-meta">${badge}${meta ? `<span>${escapeHtml(meta)}</span>` : ''}</span>` : ''}
+            </${tag}>`;
         }).join('');
         const holidayRow = holiday
             ? `<div class="rc-day-holiday">${escapeHtml(holiday.title)}${holiday.extendedProps?.holidayTypeLabel ? ` · ${escapeHtml(holiday.extendedProps.holidayTypeLabel)}` : ''}</div>`
@@ -537,6 +555,8 @@ document.addEventListener('DOMContentLoaded', () => {
             title: formatDate(date instanceof Date ? date : new Date(date)),
             html: `<div class="rc-day-list">${holidayRow}${rows || '<p class="rc-day-empty">No reservations on this day.</p>'}</div>`,
             confirmButtonText: 'Close',
+            showCancelButton: false,
+            showDenyButton: false,
             width: 560,
             customClass: {
                 ...window.RMSwal.base.customClass,
@@ -544,7 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 htmlContainer: 'rc-day-list-wrap',
             },
             didOpen(popup) {
-                popup.querySelectorAll('.rc-day-item').forEach((button) => {
+                popup.querySelectorAll('.rc-day-item[data-index]').forEach((button) => {
                     button.addEventListener('click', () => {
                         const event = dayBookings[Number(button.dataset.index)];
                         if (window.Swal) window.Swal.close();
@@ -553,6 +573,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             },
         });
+    }
+
+    function goCreate(date) {
+        const url = new URL(calendarElement.dataset.createUrl, window.location.origin);
+        url.searchParams.set('date', localDateKey(date instanceof Date ? date : new Date(date)));
+        window.location.href = url.toString();
     }
 
     function showReservationDetails(event) {

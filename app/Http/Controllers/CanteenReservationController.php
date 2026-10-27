@@ -174,11 +174,11 @@ class CanteenReservationController extends Controller
         return view('canteen.reservations.index', compact('reservations', 'summary', 'requesters'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $this->authorize('create', CanteenReservation::class);
 
-        return view('canteen.reservations.create', $this->formLookups());
+        return view('canteen.reservations.create', $this->formLookups($request));
     }
 
     public function store(StoreCanteenReservationRequest $request): RedirectResponse
@@ -295,14 +295,19 @@ class CanteenReservationController extends Controller
             ]);
         });
 
-        return redirect()->route('canteen.index')->with('success', 'Reservation cancelled.');
+        return redirect()
+            ->route(auth()->user()?->hasRole('slt_employee') ? 'canteen.mine' : 'canteen.index')
+            ->with('success', 'Reservation cancelled.');
     }
 
-    private function formLookups(): array
+    private function formLookups(?Request $request = null): array
     {
+        $prefill = $request?->query('date');
+
         return [
             'mealTypes' => MealType::cases(),
             'locations' => Location::query()->ordered()->get(),
+            'prefillDate' => old('reservation_date', is_string($prefill) ? $prefill : null),
         ];
     }
 

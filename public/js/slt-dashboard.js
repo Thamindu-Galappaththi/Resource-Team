@@ -48,6 +48,83 @@
     });
 })();
 
+(function bindSltCalendar() {
+    const root = document.querySelector('.slt-cal');
+    const pop = document.getElementById('slt-cal-pop');
+    if (!root || !pop) {
+        return;
+    }
+
+    const titleEl = document.getElementById('slt-cal-pop-title');
+    const listEl = document.getElementById('slt-cal-pop-list');
+    const createEl = document.getElementById('slt-cal-pop-create');
+
+    function closePop() {
+        pop.hidden = true;
+    }
+
+    function openDay(cell) {
+        let items = [];
+        try {
+            items = JSON.parse(cell.dataset.items || '[]');
+        } catch (error) {
+            items = [];
+        }
+
+        if (!items.length) {
+            if (cell.dataset.create) {
+                window.location.href = cell.dataset.create;
+            }
+            return;
+        }
+
+        titleEl.textContent = cell.dataset.label || cell.dataset.date || '';
+        createEl.href = cell.dataset.create || '#';
+        listEl.replaceChildren();
+
+        items.forEach(function (item) {
+            const mine = Boolean(item.mine && item.href);
+            const node = document.createElement(mine ? 'a' : 'div');
+            node.className = 'slt-cal-pop__item slt-status--' + (item.tone || 'pending') + (mine ? ' is-mine' : '');
+            node.textContent = item.title || 'Reservation';
+            if (mine) {
+                node.href = item.href;
+            }
+            listEl.appendChild(node);
+        });
+
+        pop.hidden = false;
+    }
+
+    root.addEventListener('click', function (event) {
+        if (event.target.closest('.slt-cal__day, .slt-cal__event[href], .slt-cal__nav')) {
+            return;
+        }
+
+        const more = event.target.closest('[data-slt-more]');
+        const cell = event.target.closest('.slt-cal__cell:not(.is-empty)');
+        if (!cell) {
+            return;
+        }
+
+        event.preventDefault();
+        openDay(cell);
+        more?.blur();
+    });
+
+    pop.addEventListener('click', function (event) {
+        if (event.target === pop || event.target.closest('[data-slt-pop-close]')) {
+            closePop();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !pop.hidden) {
+            closePop();
+        }
+    });
+})();
+
 document.addEventListener('DOMContentLoaded', function () {
     const slides = Array.from(document.querySelectorAll('.slt-hub__slide'));
     const dotsWrap = document.querySelector('[data-slt-dots]');

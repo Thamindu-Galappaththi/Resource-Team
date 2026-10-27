@@ -125,17 +125,44 @@ class SltEmployeeDashboardTest extends TestCase
         $this->actingAs($employee)
             ->get(route('reservations.mine'))
             ->assertOk()
-            ->assertSee('Showing 1–4 of 12')
-            ->assertSee('id="slt-results"', false);
+            ->assertSee('Showing 1–10 of 12')
+            ->assertSee('id="slt-results"', false)
+            ->assertDontSee('slt-action--inline');
 
         $this->actingAs($employee)
             ->get(route('reservations.mine', ['page' => 2]), ['X-Requested-With' => 'XMLHttpRequest'])
             ->assertOk()
-            ->assertSee('Showing 5–8 of 12')
+            ->assertSee('Showing 11–12 of 12')
             ->assertSee('id="slt-results"', false)
             ->assertDontSee('My resource requests')
-            ->assertSee('Resource booking 5')
-            ->assertDontSee('Resource booking 1');
+            ->assertSee('Resource booking 11')
+            ->assertSee('Resource booking 12')
+            ->assertDontSee('>Resource booking 1<', false);
+    }
+
+    public function test_employees_cannot_open_staff_lists_or_see_list_buttons(): void
+    {
+        $employee = User::factory()->role('slt_employee')->create();
+
+        $this->actingAs($employee)->get(route('reservations.index'))->assertForbidden();
+        $this->actingAs($employee)->get(route('reservations.feed'))->assertForbidden();
+        $this->actingAs($employee)->get(route('hostel.index'))->assertForbidden();
+        $this->actingAs($employee)->get(route('canteen.index'))->assertForbidden();
+        $this->actingAs($employee)->get(route('canteen.dashboard'))->assertForbidden();
+        $this->actingAs($employee)->get(route('canteen.forecast', ['date' => now()->toDateString()]))->assertForbidden();
+
+        $this->actingAs($employee)
+            ->get(route('reservations.create'))
+            ->assertOk()
+            ->assertDontSee('Existing Reservations');
+        $this->actingAs($employee)
+            ->get(route('hostel.create'))
+            ->assertOk()
+            ->assertDontSee('Hostel Reservations');
+        $this->actingAs($employee)
+            ->get(route('canteen.create'))
+            ->assertOk()
+            ->assertDontSee('All reservations');
     }
 
     public function test_guests_cannot_open_my_requests(): void
@@ -184,17 +211,68 @@ class SltEmployeeDashboardTest extends TestCase
             'reservation_date' => now()->toDateString(),
         ]);
 
+        $other = User::factory()->role('slt_employee')->create();
+        Reservation::factory()->create([
+            'requester_id' => $other->id,
+            'type' => ReservationType::HOSTEL->value,
+            'title' => 'Other hostel stay',
+            'reservation_date' => now()->toDateString(),
+        ]);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $other->id,
+            'reservation_name' => 'Secret canteen title',
+            'reservation_date' => now()->toDateString(),
+        ]);
+
         $this->actingAs($employee)
             ->get(route('hostel.calendar'))
             ->assertOk()
             ->assertSee('Hostel reservation calendar')
-            ->assertSee('My hostel stay');
+            ->assertSee('Create Hostel Reservation')
+            ->assertDontSee('All locations')
+            ->assertSee(route('hostel.create', absolute: false));
+
+        $hostelMine = Reservation::query()->where('title', 'My hostel stay')->first();
+        $hostelOther = Reservation::query()->where('title', 'Other hostel stay')->first();
+        $range = [
+            'start' => now()->subDay()->toDateString(),
+            'end' => now()->addMonths(2)->toDateString(),
+        ];
+        $hostelEvents = collect($this->actingAs($employee)
+            ->getJson(route('hostel.calendar.events', $range))
+            ->assertOk()
+            ->json());
+        $mineHostel = $hostelEvents->first(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $hostelMine->id);
+        $otherHostel = $hostelEvents->first(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $hostelOther->id);
+        $this->assertNotNull($mineHostel);
+        $this->assertNotNull($otherHostel);
+        $this->assertSame('My hostel stay', $mineHostel['title']);
+        $this->assertNotEmpty($mineHostel['extendedProps']['url'] ?? null);
+        $this->assertEmpty($otherHostel['extendedProps']['url'] ?? null);
+        $this->assertNotSame('Other hostel stay', $otherHostel['title']);
 
         $this->actingAs($employee)
             ->get(route('canteen.calendar'))
             ->assertOk()
             ->assertSee('Canteen reservation calendar')
-            ->assertSee('Team lunch order');
+            ->assertSee('Create reservation')
+            ->assertDontSee('All locations')
+            ->assertSee(route('canteen.create', absolute: false));
+
+        $canteenMine = CanteenReservation::query()->where('reservation_name', 'Team lunch order')->first();
+        $canteenOther = CanteenReservation::query()->where('reservation_name', 'Secret canteen title')->first();
+        $canteenEvents = collect($this->actingAs($employee)
+            ->getJson(route('canteen.calendar.events', $range))
+            ->assertOk()
+            ->json());
+        $mineCanteen = $canteenEvents->first(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $canteenMine->id);
+        $otherCanteen = $canteenEvents->first(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $canteenOther->id);
+        $this->assertNotNull($mineCanteen);
+        $this->assertNotNull($otherCanteen);
+        $this->assertSame('Team lunch order', $mineCanteen['title']);
+        $this->assertNotEmpty($mineCanteen['extendedProps']['url'] ?? null);
+        $this->assertEmpty($otherCanteen['extendedProps']['url'] ?? null);
+        $this->assertNotSame('Secret canteen title', $otherCanteen['title']);
     }
 
     public function test_normal_calendar_hides_hostel_stays_for_slt_employees(): void
@@ -222,10 +300,14 @@ class SltEmployeeDashboardTest extends TestCase
         $this->assertStringContainsString('Lab session', $encoded);
         $this->assertStringNotContainsString('Guest wing stay', $encoded);
 
-        $this->actingAs($employee)
-            ->get(route('hostel.calendar'))
+        $hostelEvents = json_encode($this->actingAs($employee)
+            ->getJson(route('hostel.calendar.events', [
+                'start' => now()->subDay()->toDateString(),
+                'end' => now()->addMonths(2)->toDateString(),
+            ]))
             ->assertOk()
-            ->assertSee('Guest wing stay')
-            ->assertDontSee('Lab session');
+            ->json());
+        $this->assertStringContainsString('Guest wing stay', $hostelEvents);
+        $this->assertStringNotContainsString('Lab session', $hostelEvents);
     }
 }

@@ -88,14 +88,21 @@ class HostelReservationController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $this->authorize('createHostel', Reservation::class);
+
+        $prefill = $request->query('date');
+        $minCheckIn = now()->toDateString();
+        if (is_string($prefill) && $prefill < $minCheckIn) {
+            $prefill = $minCheckIn;
+        }
 
         return view('hostel.create', [
             'locations' => Location::query()->ordered()->get(),
             'roomTypes' => $this->roomTypes(),
-            'minCheckIn' => now()->toDateString(),
+            'minCheckIn' => $minCheckIn,
+            'prefillCheckIn' => old('check_in_date', $prefill),
         ]);
     }
 
@@ -154,7 +161,7 @@ class HostelReservationController extends Controller
         }
 
         return redirect()
-            ->route('hostel.index')
+            ->route($request->user()?->hasRole('slt_employee') ? 'hostel.mine' : 'hostel.index')
             ->with('success', 'Hostel reservation cancelled successfully.');
     }
 

@@ -95,7 +95,7 @@ class ReservationController extends Controller
         }
 
         return redirect()
-            ->route('reservations.index')
+            ->route($request->user()?->hasRole('slt_employee') ? 'reservations.mine' : 'reservations.index')
             ->with('success', 'Reservation cancelled successfully.');
     }
 
@@ -164,7 +164,7 @@ class ReservationController extends Controller
             ->with(['requester', 'location', 'items.resource.type.category'])
             ->where('status', '!=', ReservationStatus::DRAFT->value)
             ->whereHas('items', fn ($items) => $items->where('starts_at', '<', $rangeEnd)->where('ends_at', '>', $rangeStart));
-        $this->restrictToOwnUnlessStaff($baseQuery);
+        $this->restrictCalendarVisibility($baseQuery);
         $this->excludeHostelForSlt($baseQuery);
 
         $visibleReservations = (clone $baseQuery)->get();
@@ -317,25 +317,29 @@ class ReservationController extends Controller
                 ReservationStatus::DRAFT->value,
             ]);
 
-        $this->restrictToOwnUnlessStaff($query);
+        $this->restrictCalendarVisibility($query);
         $this->excludeHostelForSlt($query);
         $query->filter($filters);
 
-        $calendarReservations = $query->orderBy('start_time')->get()->map(function (Reservation $reservation) {
+        $isSlt = $request->user()?->hasRole('slt_employee');
+        $calendarReservations = $query->orderBy('start_time')->get()->map(function (Reservation $reservation) use ($isSlt) {
+            $mine = $this->ownsCalendarReservation($reservation);
+
             return [
                 'id' => $reservation->id,
-                'reference' => $reservation->reference,
+                'reference' => ($mine || ! $isSlt) ? $reservation->reference : null,
                 'title' => $reservation->title,
-                'purpose' => $reservation->purpose,
+                'purpose' => ($mine || ! $isSlt) ? $reservation->purpose : null,
                 'status' => $reservation->status,
                 'status_label' => $reservation->statusEnum()->label(),
                 'reservation_date' => $reservation->reservation_date?->toDateString(),
                 'start_time' => substr((string) $reservation->start_time, 0, 5),
                 'end_time' => substr((string) $reservation->end_time, 0, 5),
-                'requester' => $reservation->requester?->name,
+                'requester' => ($mine || ! $isSlt) ? $reservation->requester?->name : null,
                 'location' => $reservation->location?->name,
                 'resources' => $reservation->resourceNames(),
-                'url' => route('reservations.show', $reservation),
+                'mine' => $mine,
+                'url' => $mine || ! $isSlt ? $this->calendarReservationUrl($reservation) : null,
             ];
         });
 
@@ -529,6 +533,24 @@ class ReservationController extends Controller
         $query->visibleTo(auth()->user());
     }
 
+    private function restrictCalendarVisibility($query): void
+    {
+        if (auth()->user()?->hasRole('slt_employee')) {
+            return;
+        }
+
+        $this->restrictToOwnUnlessStaff($query);
+    }
+
+    private function ownsCalendarReservation(Reservation $reservation): bool
+    {
+        $user = request()->user();
+
+        return $user !== null
+            && ((int) $reservation->requester_id === (int) $user->id
+                || (int) $reservation->created_by_user_id === (int) $user->id);
+    }
+
     private function excludeHostelForSlt($query): void
     {
         if (auth()->user()?->hasRole('slt_employee')) {
@@ -621,6 +643,12 @@ class ReservationController extends Controller
             default => ['#d18b00', '#fff'],
         };
         $resourceName = $item->resource_name_snapshot ?: $item->resource?->name_model ?: '—';
+        $mine = $this->ownsCalendarReservation($reservation);
+        $isSlt = request()->user()?->hasRole('slt_employee');
+        $publicTitle = $reservation->location?->name ?: $resourceName;
+        $title = ($mine || ! $isSlt)
+            ? $reservation->reference.' · '.($reservation->title ?: $reservation->purpose)
+            : $publicTitle;
         $segments = [];
         $segmentStart = $start->copy();
 
@@ -638,29 +666,33 @@ class ReservationController extends Controller
 
                 $segments[] = [
                     'id' => $reservation->id.'-'.$item->id.'-'.$segmentStart->toDateString(),
-                    'title' => $reservation->reference.' · '.($reservation->title ?: $reservation->purpose),
+                    'title' => $title,
                     'start' => $visibleStart->toIso8601String(),
                     'end' => $visibleEnd->toIso8601String(),
                     'backgroundColor' => $conflict ? '#c0392b' : $color,
                     'borderColor' => $conflict ? '#a93226' : $color,
                     'textColor' => $textColor,
-                    'classNames' => $conflict ? ['reservation-conflict'] : [],
+                    'classNames' => array_values(array_filter([
+                        $conflict ? 'reservation-conflict' : null,
+                        $mine ? 'is-mine' : null,
+                    ])),
                     'extendedProps' => [
                         'reservationId' => $reservation->id,
-                        'reference' => $reservation->reference,
-                        'purpose' => $reservation->title ?: $reservation->purpose,
+                        'reference' => ($mine || ! $isSlt) ? $reservation->reference : null,
+                        'purpose' => ($mine || ! $isSlt) ? ($reservation->title ?: $reservation->purpose) : null,
                         'reservationStart' => $start->toIso8601String(),
                         'reservationEnd' => $end->toIso8601String(),
                         'resource' => $resourceName,
-                        'owner' => $reservation->requester?->name ?? 'Unknown',
+                        'owner' => ($mine || ! $isSlt) ? ($reservation->requester?->name ?? 'Unknown') : null,
                         'location' => $reservation->location?->name ?? '—',
                         'duration' => $duration,
                         'reservationType' => $reservation->type,
-                            'status' => $reservation->statusEnum()->label(),
-                            'statusKey' => $reservation->status,
-                            'statusValue' => $reservation->status,
-                            'conflict' => $conflict,
-                        'url' => $this->calendarReservationUrl($reservation),
+                        'status' => $reservation->statusEnum()->label(),
+                        'statusKey' => $reservation->status,
+                        'statusValue' => $reservation->status,
+                        'conflict' => $conflict,
+                        'mine' => $mine,
+                        'url' => ($mine || ! $isSlt) ? $this->calendarReservationUrl($reservation) : null,
                     ],
                 ];
             }

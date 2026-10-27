@@ -14,7 +14,9 @@
             <h1 class="rv-title">Create Reservation</h1>
             <p class="rv-subtitle mb-0">Select a resource, date, and time. Overlapping bookings are blocked automatically.</p>
         </div>
-        <a href="{{ route('reservations.index') }}" class="btn rv-back"><i class="ti ti-arrow-left me-1"></i>Existing Reservations</a>
+        @unless(auth()->user()?->hasRole('slt_employee'))
+            <a href="{{ route('reservations.index') }}" class="btn rv-back"><i class="ti ti-arrow-left me-1"></i>Existing Reservations</a>
+        @endunless
     </div>
 
     <div class="alert alert-info d-flex align-items-start gap-2" role="note">

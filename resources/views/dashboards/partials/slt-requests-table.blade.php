@@ -3,10 +3,6 @@
         <div class="slt-empty">
             <i class="ti ti-inbox"></i>
             <p>You have no requests here yet.</p>
-            <a class="slt-action slt-action--solid slt-action--inline" href="{{ $createUrl }}">
-                <i class="ti ti-plus"></i>
-                <span>{{ $createLabel }}</span>
-            </a>
         </div>
     @else
         <div class="slt-table-wrap">

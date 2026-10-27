@@ -27,15 +27,13 @@ class SltEmployeeRequestController extends Controller
             ->whereNotIn('type', [ReservationType::HOSTEL->value, ReservationType::CANTEEN->value])
             ->latest('reservation_date')
             ->latest('id')
-            ->paginate(4)
+            ->paginate(10)
             ->withQueryString();
 
         return $this->renderRequests($request, [
             'kind' => 'resource',
             'title' => 'My resource requests',
             'subtitle' => 'Reservations you submitted for halls, labs, and equipment.',
-            'createUrl' => route('reservations.create'),
-            'createLabel' => 'Create Reservation',
             'columns' => ['Reference', 'Request', 'Date', 'Details', 'Status'],
             'requests' => $this->mapPaginator($reservations, function (Reservation $reservation) {
                 $status = ReservationStatus::tryFrom((string) $reservation->status);
@@ -66,15 +64,13 @@ class SltEmployeeRequestController extends Controller
             ->where('type', ReservationType::HOSTEL->value)
             ->latest('reservation_date')
             ->latest('id')
-            ->paginate(4)
+            ->paginate(10)
             ->withQueryString();
 
         return $this->renderRequests($request, [
             'kind' => 'hostel',
             'title' => 'My hostel requests',
             'subtitle' => 'Hostel stays you requested for visitors and staff.',
-            'createUrl' => route('hostel.create'),
-            'createLabel' => 'Create Hostel Reservation',
             'columns' => ['Reference', 'Guest', 'Stay dates', 'Details', 'Status'],
             'requests' => $this->mapPaginator($reservations, function (Reservation $reservation) {
                 $status = ReservationStatus::tryFrom((string) $reservation->status);
@@ -102,15 +98,13 @@ class SltEmployeeRequestController extends Controller
             ->where('requested_by_user_id', $user->id)
             ->latest('reservation_date')
             ->latest('id')
-            ->paginate(4)
+            ->paginate(10)
             ->withQueryString();
 
         return $this->renderRequests($request, [
             'kind' => 'canteen',
             'title' => 'My canteen requests',
             'subtitle' => 'Meal and catering orders you submitted to the canteen.',
-            'createUrl' => route('canteen.create'),
-            'createLabel' => 'Create reservation',
             'columns' => ['Reference', 'Request', 'Date', 'Details', 'Status'],
             'requests' => $this->mapPaginator($reservations, function (CanteenReservation $reservation) {
                 $status = CanteenReservationStatus::tryFrom((string) $reservation->status);

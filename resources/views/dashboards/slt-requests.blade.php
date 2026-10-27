@@ -22,10 +22,6 @@
             </a>
             <h1>{{ $title }}</h1>
             <p class="slt-hub__sub">{{ $subtitle }}</p>
-            <a class="slt-action slt-action--solid slt-action--inline" href="{{ $createUrl }}">
-                <i class="ti ti-plus"></i>
-                <span>{{ $createLabel }}</span>
-            </a>
         </header>
 
         <section class="slt-requests" aria-label="{{ $title }}">
