@@ -80,11 +80,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!content) return;
 
         var item = content.closest('.nb-item');
-        var url = (item && (item.dataset.url || content.getAttribute('href'))) || '';
-        if (!item || !url) return;
+        if (!item) return;
 
-        event.preventDefault();
-        openNotification(item, url);
+        // Let the anchor perform normal browser navigation. Intercepting it and
+        // assigning window.location can fail when the dropdown or another page
+        // handler also processes the same click.
+        if (item.classList.contains('is-unread') && item.dataset.readUrl) {
+            requestJson(item.dataset.readUrl, 'POST').catch(function () {});
+        }
+
+        if (content.tagName !== 'A' && item.dataset.url) {
+            window.location.assign(item.dataset.url);
+        }
     });
 
     var feedInFlight = false;
@@ -233,13 +240,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function requestPushPermission() {
         if (!('Notification' in window) || Notification.permission !== 'default') return;
         Notification.requestPermission();
-    }
-
-    function openNotification(item, url) {
-        if (item.classList.contains('is-unread') && item.dataset.readUrl) {
-            requestJson(item.dataset.readUrl, 'POST').catch(function () {});
-        }
-        window.location.href = url;
     }
 
     function toggleReadState(button) {
