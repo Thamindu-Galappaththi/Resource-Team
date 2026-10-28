@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Models\User;
+use App\Models\Role;
 use App\Services\FacebookAuthService;
 use App\Services\GoogleAuthService;
 use App\Services\MicrosoftAuthService;
@@ -150,15 +151,34 @@ class AuthController extends Controller
             return $this->googleFailed('Could not complete Google sign-in. Please try again.');
         }
 
-        $user = User::query()
+        $user = User::withTrashed()
             ->whereRaw('LOWER(email) = ?', [$profile['email']])
             ->first();
 
         if (! $user) {
-            return $this->googleFailed('No account matches this Google email (' . $profile['email'] . '). Please contact an administrator.');
+            $role = Role::query()
+                ->where('slug', 'nebula_sms_user')
+                ->where('is_active', true)
+                ->first();
+
+            if (! $role) {
+                return $this->googleFailed('Google sign-in is temporarily unavailable. Please contact an administrator.');
+            }
+
+            $user = new User([
+                'name' => $profile['name'],
+                'email' => $profile['email'],
+                'password' => Str::random(64),
+                'role_id' => $role->id,
+                'user_role' => $role->slug,
+                'is_active' => true,
+                'slt_employee' => false,
+                'password_setup_at' => now(),
+            ]);
+            $user->forceFill(['email_verified_at' => now()])->save();
         }
 
-        if (! $user->is_active) {
+        if ($user->trashed() || ! $user->is_active) {
             return $this->googleFailed('Your account is inactive. Please contact an administrator.');
         }
 

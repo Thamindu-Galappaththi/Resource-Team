@@ -28,7 +28,7 @@ class GoogleAuthService
     }
 
     /**
-     * @return array{id: string, email: string, name: string}
+     * @return array{id: string, email: string, name: string, email_verified: bool}
      */
     public function userFromCode(string $code): array
     {
@@ -38,15 +38,21 @@ class GoogleAuthService
         $email = strtolower(trim((string) ($profile['email'] ?? '')));
         $name = trim((string) ($profile['name'] ?? ''));
         $id = trim((string) ($profile['sub'] ?? ''));
+        $emailVerified = filter_var($profile['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new RuntimeException('Google did not provide a valid email address for this account.');
         }
 
+        if (! $emailVerified) {
+            throw new RuntimeException('Google could not verify this email address. Please use a verified Google account.');
+        }
+
         return [
             'id' => $id,
             'email' => $email,
-            'name' => $name,
+            'name' => $name !== '' ? $name : strstr($email, '@', true),
+            'email_verified' => true,
         ];
     }
 
