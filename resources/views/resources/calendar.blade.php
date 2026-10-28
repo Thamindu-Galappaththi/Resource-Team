@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=39">
 @endpush
 
 @section('content')
@@ -178,5 +178,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/resource-calendar.js') }}?v=37"></script>
+<script src="{{ asset('js/resource-calendar.js') }}?v=38"></script>
 @endpush

@@ -31,7 +31,7 @@
     <!-- Global utilities -->
     <script src="{{ asset('js/global-utilities.js') }}"></script>
     <script src="{{ asset('js/action-lock.js') }}?v=2"></script>
-    <script src="{{ asset('js/notifications.js') }}?v=8"></script>
+    <script src="{{ asset('js/notifications.js') }}?v=9"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         body {
@@ -147,7 +147,7 @@
             <div class="footer-wrapper mt-auto">
                 <footer class="footer bg-dark text-center py-3">
                     <div class="container">
-                        <p class="mb-0 text-white">© {{ now()->year }} Nebula Institute of Technology. All rights reserved.</p>
+                        <p class="mb-0 text-white">© {{ now()->year }} Resource Reservation System · Nebula Institute of Technology. All rights reserved.</p>
                     </div>
                 </footer>
             </div>

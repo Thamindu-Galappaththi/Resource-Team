@@ -136,7 +136,7 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+                <div class="modal-body">
                 <section class="mb-4">
                     <h2 class="h5 mb-3">Employee details</h2>
                     <div class="row g-3">
@@ -192,7 +192,7 @@
             </div>
         </div>
     </div>
-</div>
+                    </div>
 
 <div class="modal fade um-modal cu-page" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel"
     aria-hidden="true">
