@@ -312,8 +312,6 @@ button.login-btn {
 }
 
 .ms-login-btn,
-.google-login-btn,
-.facebook-login-btn,
 .admin-login-btn {
     display: flex;
     align-items: center;
@@ -340,33 +338,7 @@ button.login-btn {
     background: #006cbe;
 }
 
-.google-login-btn {
-    background: #ffffff;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-}
-
-.login-choice--google:hover .google-login-btn,
-.login-choice--google:focus-visible .google-login-btn {
-    background: #f9fafb;
-    border-color: #9ca3af;
-}
-
-.facebook-login-btn {
-    background: #1877f2;
-    color: #ffffff;
-    box-shadow: 0 8px 18px rgba(24, 119, 242, 0.28);
-}
-
-.login-choice--facebook:hover .facebook-login-btn,
-.login-choice--facebook:focus-visible .facebook-login-btn {
-    background: #1565c0;
-}
-
-.ms-logo,
-.google-logo,
-.fb-logo {
+.ms-logo {
     width: 18px;
     height: 18px;
     flex: 0 0 18px;
@@ -404,6 +376,92 @@ button.login-btn {
     flex: 1 1 auto;
     height: 1px;
     background: #e5e7eb;
+}
+
+.login-or--subtle {
+    margin: 1.15rem 0 0.85rem;
+    font-size: 0.72rem;
+    color: #9ca3af;
+}
+
+.login-social-footer {
+    margin: 0.2rem 0 0.4rem;
+}
+
+.login-social-icons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    padding: 0.15rem 0 0.4rem;
+}
+
+.social-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+}
+
+.social-icon-btn:hover,
+.social-icon-btn:focus-visible {
+    transform: translateY(-2px);
+    outline: none;
+}
+
+.social-icon-btn--google {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.social-icon-btn--google:hover,
+.social-icon-btn--google:focus-visible {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.social-icon-btn--google .google-logo {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+}
+
+.social-icon-btn--facebook {
+    background: #1877f2;
+    color: #ffffff;
+    border: 1px solid #1877f2;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.28);
+}
+
+.social-icon-btn--facebook:hover,
+.social-icon-btn--facebook:focus-visible {
+    background: #166fe5;
+    box-shadow: 0 6px 18px rgba(24, 119, 242, 0.38);
+}
+
+.social-icon-btn--facebook .fb-logo {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .login-footer {
