@@ -135,6 +135,14 @@ class Reservation extends Model
         return in_array($this->status, ReservationStatus::cancellable(), true);
     }
 
+    public function canBeEdited(): bool
+    {
+        return in_array($this->status, [
+            ReservationStatus::PENDING_APPROVAL->value,
+            ReservationStatus::CHANGES_REQUESTED->value,
+        ], true);
+    }
+
     public function bookedItemStatusLabel($item = null): string
     {
         return $this->statusEnum()->label();

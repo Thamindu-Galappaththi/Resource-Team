@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             ReservationSeeder::class,
             HostelReservationSeeder::class,
             CanteenReservationSeeder::class,
+            SltEmployeeReservationSeeder::class,
             HumanResourceSeeder::class,
             LecturerResourceSeeder::class,
             LectureFeeSeeder::class,

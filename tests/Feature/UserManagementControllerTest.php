@@ -508,17 +508,19 @@ class UserManagementControllerTest extends TestCase
 
         $administrator = User::factory()->role('admin')->create();
         $pending = User::factory()->pendingPasswordSetup()->create([
+            'name' => 'Pending Setup User',
             'email' => 'pending@nebula.local',
         ]);
         $ready = User::factory()->create([
+            'name' => "Ready O'Keefe",
             'email' => 'ready@nebula.local',
         ]);
 
         $this->actingAs($administrator)
             ->get(route('user.management'))
             ->assertOk()
-            ->assertSee('Send password setup email to '.$pending->name, false)
-            ->assertSee('Password already set for '.$ready->name, false);
+            ->assertSee('Send password setup email to '.$pending->name)
+            ->assertSee('Password already set for '.$ready->name);
 
         $this->actingAs($administrator)
             ->postJson(route('users.resend-password-setup', $pending))

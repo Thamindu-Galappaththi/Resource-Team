@@ -314,6 +314,8 @@ class ReservationManagementTest extends TestCase
             ->assertSee('Reservation Calendar')
             ->assertSee('reservationCalendar')
             ->assertSee('id="refreshCalendarButton"', false)
+            ->assertSee('data-slt-employee="0"', false)
+            ->assertDontSee('is-slt-calendar', false)
             ->assertSee('fullcalendar@6.1.19', false)
             ->assertSee('js/reservation-calendar.js', false)
             ->assertSeeInOrder([

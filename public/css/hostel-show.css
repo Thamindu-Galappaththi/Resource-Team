@@ -182,7 +182,7 @@
 
 @media (max-width: 767.98px) {
     .hs-page .hs-header-actions { width: 100%; margin-left: 0; }
-    .hs-page .hs-back { width: 100%; }
+    .hs-page .hs-back { width: 100%; white-space: normal; }
     .hs-detail-row { grid-template-columns: 1fr; gap: 4px; }
     .hs-page .hs-table thead { display: none; }
     .hs-page .hs-table,

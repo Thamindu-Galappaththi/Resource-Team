@@ -89,6 +89,16 @@ class ReservationPolicy
         return $user->hasPermission('reservations.create');
     }
 
+    public function update(User $user, Reservation $reservation): bool
+    {
+        if (! $reservation->canBeEdited()) {
+            return false;
+        }
+
+        return $user->id === $reservation->requester_id
+            || $user->id === $reservation->created_by_user_id;
+    }
+
     public function cancel(User $user, Reservation $reservation): bool
     {
         if (! $reservation->canBeCancelled()) {

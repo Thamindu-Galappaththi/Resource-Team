@@ -65,11 +65,15 @@ document.addEventListener('DOMContentLoaded', () => {
         dateClick(info) {
             if (info.view.type !== 'dayGridMonth') return;
             const holiday = holidayOn(info.date);
+            const items = bookingsOn(info.date);
+            if (info.jsEvent?.target?.closest('.rc-month-more')) {
+                showDayEventList(info.date, holiday ? [holiday, ...items] : items);
+                return;
+            }
             if (info.jsEvent?.target?.closest('[data-holiday]')) {
                 if (holiday) showHolidayDialog(holiday);
                 return;
             }
-            const items = bookingsOn(info.date);
             if (!items.length && holiday) {
                 showHolidayDialog(holiday);
                 return;
@@ -813,7 +817,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `<span class="rc-month-chip" style="background:${colors.background};color:${colors.text}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
             }).join('');
             summary.hidden = false;
-            summary.innerHTML = `${holidayChip}<div class="rc-month-chips">${chips}</div>${extra > 0 ? `<span class="rc-month-more">+${extra} more</span>` : ''}`;
+            summary.innerHTML = `${holidayChip}<div class="rc-month-chips">${chips}</div>${extra > 0 ? `<span class="rc-month-more" role="button" tabindex="0">+${extra} more</span>` : ''}`;
+            const more = summary.querySelector('.rc-month-more');
+            if (!more) return;
+            const stop = (event) => event.stopPropagation();
+            more.addEventListener('pointerdown', stop);
+            more.addEventListener('mousedown', stop);
+            more.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                showDayEventList(date, holiday ? [holiday, ...items] : items);
+            });
         });
     }
 

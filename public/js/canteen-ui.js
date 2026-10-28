@@ -61,7 +61,7 @@ async function refreshPendingQueue(url) {
 document.addEventListener('pointerdown', (event) => {
     const button = event.target.closest('.cp-page .btn');
 
-    if (!button || button.disabled || button.closest('[data-cp-confirm], .cp-modal')) return;
+    if (!button || button.disabled || button.classList.contains('cu-dropdown-toggle') || button.closest('[data-cp-confirm], .cp-modal, [data-cu-select]')) return;
 
     const bounds = button.getBoundingClientRect();
     const diameter = Math.max(bounds.width, bounds.height) * 1.8;

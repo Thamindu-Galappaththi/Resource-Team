@@ -10,6 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshButton = document.getElementById('refreshCalendarButton');
     const modal = document.getElementById('reservationModal');
     const canCreate = calendarElement.dataset.canCreate === '1';
+    const isSltEmployee = calendarElement.dataset.sltEmployee === '1';
+    if (isSltEmployee) {
+        calendarElement.classList.add('is-slt-employee');
+        calendarElement.closest('.reservation-calendar-page')?.classList.add('is-slt-calendar');
+    }
     const isMobile = window.matchMedia('(max-width: 767.98px)').matches;
     const swalFire = (options) => window.RMSwal.fire(options);
     const holidayImageBase = (window.RSVCal?.holidayImageBase || '/images/holidays').replace(/\/$/, '');
@@ -45,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastStatsKey = '';
     let eventsRequest = 0;
     let eventsAbort = null;
+    let sltMorePop = null;
 
     const inputTimeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
     const partsFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -134,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         firstDay: 0,
         navLinks: true,
         editable: false,
-        selectable: canCreate,
+        selectable: canCreate && calendarElement.dataset.simple !== '1',
         selectMirror: true,
         selectAllow: (info) => info.view.type !== 'dayGridMonth',
         nowIndicator: true,
@@ -146,20 +152,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const date = info.date;
             const items = eventsFromMoreLink(info);
             const holiday = holidayOn(date);
+            if (isSltEmployee) {
+                showSltMorePopover(date, items, info.jsEvent?.currentTarget || info.jsEvent?.target);
+                return;
+            }
             showDayEventList(date, holiday ? [holiday, ...items] : items);
         },
         headerToolbar: isMobile
-            ? { left: 'prev,next', center: 'title', right: 'today' }
-            : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+            ? { left: 'prev,next', center: 'title', right: isSltEmployee ? 'refreshCalendar today' : 'today' }
+            : { left: 'prev,next today', center: 'title', right: isSltEmployee ? 'refreshCalendar dayGridMonth,timeGridWeek,timeGridDay,listWeek' : 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+        customButtons: isSltEmployee
+            ? {
+                refreshCalendar: {
+                    text: 'Refresh',
+                    hint: 'Refresh calendar',
+                    click() {
+                        refreshCalendar();
+                    },
+                },
+            }
+            : {},
         buttonText: { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'Agenda' },
         eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
         slotLabelFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short', hour12: true },
-        displayEventTime: true,
+        displayEventTime: !isSltEmployee,
         events(fetchInfo, success, failure) {
-            if (!filters) {
-                failure(new Error('Calendar filters are missing.'));
-                return;
-            }
             const viewType = fetchInfo.view?.type || lastViewType;
             const start = Date.parse(fetchInfo.startStr);
             const end = Date.parse(fetchInfo.endStr);
@@ -190,6 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (node.tagName === 'TD') node.style.backgroundColor = colors.background;
             });
             info.el.title = `${details.resource || info.event.title}${details.status ? ` · ${details.status}` : ''}`.trim();
+            if (details.mine) {
+                info.el.classList.add('is-mine');
+            }
         },
         eventContent(info) {
             const details = info.event.extendedProps || {};
@@ -199,7 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return { html: `<span class="rc-holiday-label" data-full-label="${escapeHtml(info.event.title)}">${escapeHtml(holidayTitle)}</span>` };
             }
             if (info.view.type === 'dayGridMonth') {
-                const fullLabel = `${info.timeText ? `${info.timeText} ` : ''}${details.resource || info.event.title}`.trim();
+                const fullLabel = isSltEmployee
+                    ? sltEventLabel(info.event)
+                    : `${info.timeText ? `${info.timeText} ` : ''}${details.resource || info.event.title}`.trim();
                 return { html: `<span class="rc-event-title" data-full-label="${escapeHtml(fullLabel)}">${escapeHtml(fullLabel)}</span>` };
             }
             const start = details.reservationStart || details.actualStart || info.event.start;
@@ -208,29 +230,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 start instanceof Date ? start : new Date(start),
                 end instanceof Date ? end : new Date(end),
             );
-            const time = timeLabel && timeLabel !== '—' ? `<span class="rc-event-time">${escapeHtml(timeLabel)}</span>` : '';
+            const time = !isSltEmployee && timeLabel && timeLabel !== '—'
+                ? `<span class="rc-event-time">${escapeHtml(timeLabel)}</span>`
+                : '';
             const chip = info.view.type.startsWith('dayGrid') ? ' is-chip' : '';
-            return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(details.resource || info.event.title)}</span></div>` };
+            const title = isSltEmployee ? sltEventLabel(info.event) : (details.resource || info.event.title);
+            return { html: `<div class="rc-event-inner${chip}">${time}<span class="rc-event-title">${escapeHtml(title)}</span></div>` };
+        },
+        navLinkDayClick(date, jsEvent) {
+            if (!isSltEmployee || !canCreate) {
+                return;
+            }
+            jsEvent.preventDefault();
+            goCreate(date);
         },
         dateClick(info) {
             if (info.view.type !== 'dayGridMonth') return;
+            const target = info.jsEvent?.target;
+            if (target?.closest('.rc-more-pop')) {
+                return;
+            }
             const holiday = holidayOn(info.date);
-            if (info.jsEvent?.target?.closest('[data-holiday]')) {
+            const items = bookingsOn(info.date);
+            const chip = target?.closest('.rc-month-chip[data-booking]');
+            if (chip) {
+                const booking = items[Number(chip.dataset.booking)];
+                if (isSltEmployee && booking) openSltBooking(booking);
+                return;
+            }
+            if (target?.closest('.rc-month-more')) {
+                return;
+            }
+            if (target?.closest('[data-holiday]')) {
                 if (holiday) showHolidayDialog(holiday);
                 return;
             }
-            const items = bookingsOn(info.date);
+            if (isSltEmployee) {
+                if (canCreate) goCreate(info.date);
+                return;
+            }
             if (!items.length && holiday) {
                 showHolidayDialog(holiday);
                 return;
             }
-            if (!items.length) return;
+            if (!items.length) {
+                if (canCreate) goCreate(info.date);
+                return;
+            }
             showDayEventList(info.date, holiday ? [holiday, ...items] : items);
         },
         eventClick(info) {
             if (info.event.extendedProps?.isHoliday) {
                 if (info.event.display === 'background') return;
+                if (info.jsEvent?.target?.closest('.rc-month-chip, .rc-month-more, .rc-more-pop')) {
+                    return;
+                }
                 showHolidayDialog(info.event);
+                return;
+            }
+            if (isSltEmployee) {
+                info.jsEvent?.preventDefault();
+                info.jsEvent?.stopPropagation();
+                openSltBooking(info.event);
                 return;
             }
             showReservationDetails(info.event);
@@ -249,7 +310,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (yearInput) yearInput.value = year;
             if (monthInput) monthInput.value = month;
             refreshStats(date, { force: false });
-            queueMicrotask(paintMonthCells);
+            closeSltMorePop();
+            queueMicrotask(() => {
+                decorateRefreshButton();
+                paintMonthCells();
+            });
         },
         eventsSet() {
             queueMicrotask(paintMonthCells);
@@ -257,6 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     calendar.render();
+    decorateRefreshButton();
 
     function hasFilters() {
         return filterIds.some((id) => Boolean(document.getElementById(id)?.value));
@@ -308,13 +374,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     refreshButton?.addEventListener('click', () => refreshCalendar());
 
+    function toolbarRefreshButton() {
+        return calendarElement.querySelector('.fc-refreshCalendar-button');
+    }
+
+    function decorateRefreshButton() {
+        const button = toolbarRefreshButton();
+        if (!button) return;
+        button.setAttribute('aria-label', 'Refresh calendar');
+        button.setAttribute('title', 'Refresh calendar');
+        button.type = 'button';
+    }
+
     function setCalendarLoading(isLoading) {
         if (loading) loading.hidden = !isLoading;
-        if (refreshButton) {
-            refreshButton.disabled = isLoading;
-            refreshButton.classList.toggle('is-loading', isLoading);
-            refreshButton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
-        }
+        [refreshButton, toolbarRefreshButton()].forEach((button) => {
+            if (!button) return;
+            button.disabled = isLoading;
+            button.classList.toggle('is-loading', isLoading);
+            button.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        });
     }
 
     function refreshCalendar() {
@@ -366,9 +445,11 @@ document.addEventListener('DOMContentLoaded', () => {
             end: fetchInfo.endStr,
             _: String(Date.now()),
         });
-        new FormData(filters).forEach((value, key) => {
-            if (value && key !== 'year' && key !== 'month') params.set(key, value);
-        });
+        if (filters) {
+            new FormData(filters).forEach((value, key) => {
+                if (value && key !== 'year' && key !== 'month') params.set(key, value);
+            });
+        }
         fetch(`${calendarElement.dataset.eventsUrl}?${params}`, {
             headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             signal: eventsAbort.signal,
@@ -430,9 +511,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }).filter((event) => event.title || event.extendedProps?.resource));
     }
 
+    function sltCalendarVisible(event) {
+        const status = event?.extendedProps?.statusValue || event?.extendedProps?.statusKey;
+        return ['approved', 'confirmed', 'in_progress', 'pending_approval', 'changes_requested', 'pending'].includes(status);
+    }
+
     function bookingsOn(date) {
         const key = dateKey(date);
-        return uniqueDayBookings(bookings.filter((event) => dateKey(event.start) === key));
+        return uniqueDayBookings(bookings.filter((event) => {
+            if (dateKey(event.start) !== key) return false;
+            return !isSltEmployee || sltCalendarVisible(event);
+        }));
     }
 
     function holidayOn(date) {
@@ -469,6 +558,197 @@ document.addEventListener('DOMContentLoaded', () => {
         return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '').toLowerCase();
     }
 
+    function sltStatusWord(status) {
+        if (['approved', 'confirmed', 'in_progress'].includes(status)) return 'Reserved';
+        if (['pending_approval', 'changes_requested', 'draft'].includes(status)) return 'Pending';
+        if (['cancelled', 'rejected', 'expired'].includes(status)) return 'Cancelled';
+        if (status === 'completed') return 'Completed';
+        return 'Reserved';
+    }
+
+    function sltEventLabel(event) {
+        const details = event?.extendedProps || {};
+        const status = sltStatusWord(details.statusValue || details.statusKey);
+        const resource = String(details.resource || event?.title || '').trim();
+        return resource ? `${status}(${resource})` : status;
+    }
+
+    function sltChipColors(event) {
+        const status = event?.extendedProps?.statusValue || event?.extendedProps?.statusKey;
+        if (['approved', 'confirmed', 'in_progress'].includes(status)) return { background: '#16845b', text: '#fff' };
+        if (['pending_approval', 'changes_requested', 'draft'].includes(status)) return { background: '#e0a100', text: '#fff' };
+        if (['cancelled', 'rejected', 'expired'].includes(status)) return { background: '#7b8493', text: '#fff' };
+        if (status === 'completed') return { background: '#4778d0', text: '#fff' };
+        return { background: '#16845b', text: '#fff' };
+    }
+
+    function monthChipLabel(event) {
+        return isSltEmployee
+            ? sltEventLabel(event)
+            : `${formatChipTime(event.start)} ${event.extendedProps?.resource || event.title}`.trim();
+    }
+
+    function monthChipColors(event) {
+        return isSltEmployee
+            ? sltChipColors(event)
+            : eventColors(event.extendedProps?.statusValue || event.extendedProps?.statusKey);
+    }
+
+    function openSltBooking(event) {
+        const details = event?.extendedProps || {};
+        if (details.mine) {
+            if (details.url) {
+                window.location.href = details.url;
+                return;
+            }
+            showReservationDetails(event);
+            return;
+        }
+        showPrivilegeNotice();
+    }
+
+    function showPrivilegeNotice() {
+        closeSltMorePop();
+        document.getElementById('rc-privilege-overlay')?.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'rc-privilege-overlay';
+        overlay.className = 'rc-privilege-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-label', 'Not enough privilege to view');
+        overlay.innerHTML = '<div class="rc-privilege-card"><p class="rc-privilege-card__title">Not enough privilege to view</p><div class="rc-privilege-card__line"></div></div>';
+        const close = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            overlay.remove();
+            document.removeEventListener('keydown', onKey);
+        };
+        const onKey = (event) => {
+            if (event.key === 'Escape') close(event);
+        };
+        overlay.addEventListener('click', close);
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(overlay);
+    }
+
+    function parseLocalDate(value) {
+        if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+        const [year, month, day] = String(value || '').slice(0, 10).split('-').map(Number);
+        return new Date(year || 1970, (month || 1) - 1, day || 1);
+    }
+
+    function formatMorePopoverDate(value) {
+        return parseLocalDate(value).toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+        });
+    }
+
+    function closeSltMorePop() {
+        sltMorePop?.remove();
+        sltMorePop = null;
+        document.removeEventListener('mousedown', onSltMoreOutside);
+        document.removeEventListener('keydown', onSltMoreKey);
+        window.removeEventListener('resize', closeSltMorePop);
+        window.removeEventListener('scroll', closeSltMorePop, true);
+    }
+
+    function onSltMoreOutside(event) {
+        if (sltMorePop && !sltMorePop.contains(event.target) && !event.target.closest('.rc-month-more')) {
+            closeSltMorePop();
+        }
+    }
+
+    function onSltMoreKey(event) {
+        if (event.key === 'Escape') closeSltMorePop();
+    }
+
+    function positionSltMorePop(pop, anchor) {
+        const rect = (anchor instanceof Element ? anchor : calendarElement).getBoundingClientRect();
+        const width = pop.offsetWidth;
+        const height = pop.offsetHeight;
+        let left = rect.left;
+        let top = rect.bottom + 6;
+        if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+        if (left < 8) left = 8;
+        if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 6);
+        pop.style.left = `${left}px`;
+        pop.style.top = `${top}px`;
+    }
+
+    function showSltMorePopover(date, items, anchor) {
+        closeSltMorePop();
+        const bookings = uniqueDayBookings(items.filter((event) => !event.extendedProps?.isHoliday));
+        if (!bookings.length) return;
+        const pop = document.createElement('div');
+        pop.className = 'rc-more-pop';
+        pop.setAttribute('role', 'dialog');
+        pop.setAttribute('aria-label', formatMorePopoverDate(date));
+        pop.innerHTML = `<div class="rc-more-pop__head">
+            <span class="rc-more-pop__title">${escapeHtml(formatMorePopoverDate(date))}</span>
+            <button type="button" class="rc-more-pop__close" aria-label="Close">&times;</button>
+        </div>
+        <div class="rc-more-pop__body">${bookings.map((event, index) => {
+            const colors = sltChipColors(event);
+            const label = sltEventLabel(event);
+            return `<button type="button" class="rc-more-pop__item${event.extendedProps?.mine ? ' is-mine' : ''}" data-index="${index}" style="background:${colors.background};color:${colors.text}" title="${escapeHtml(label)}">${escapeHtml(label)}</button>`;
+        }).join('')}</div>`;
+        document.body.appendChild(pop);
+        sltMorePop = pop;
+        pop.querySelector('.rc-more-pop__close')?.addEventListener('click', closeSltMorePop);
+        pop.querySelectorAll('.rc-more-pop__item').forEach((button) => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const booking = bookings[Number(button.dataset.index)];
+                if (booking) openSltBooking(booking);
+            });
+        });
+        positionSltMorePop(pop, anchor);
+        document.addEventListener('mousedown', onSltMoreOutside);
+        document.addEventListener('keydown', onSltMoreKey);
+        window.addEventListener('resize', closeSltMorePop);
+        window.addEventListener('scroll', closeSltMorePop, true);
+    }
+
+    function bindSltMonthActions(summary, date, preview, items) {
+        const stop = (event) => event.stopPropagation();
+        summary.querySelectorAll('.rc-month-chip[data-booking]').forEach((chip) => {
+            chip.addEventListener('pointerdown', stop);
+            chip.addEventListener('mousedown', stop);
+            chip.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const booking = preview[Number(chip.dataset.booking)];
+                if (booking) openSltBooking(booking);
+            });
+        });
+        summary.querySelectorAll('[data-holiday]').forEach((chip) => {
+            chip.addEventListener('pointerdown', stop);
+            chip.addEventListener('mousedown', stop);
+            chip.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const holiday = holidayOn(date);
+                if (holiday) showHolidayDialog(holiday);
+            });
+        });
+        const more = summary.querySelector('.rc-month-more');
+        if (!more) return;
+        more.addEventListener('pointerdown', stop);
+        more.addEventListener('mousedown', stop);
+        more.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const holiday = holidayOn(date);
+            if (isSltEmployee) {
+                showSltMorePopover(date, items, more);
+                return;
+            }
+            showDayEventList(date, holiday ? [holiday, ...items] : items);
+        });
+    }
+
     function paintMonthCells() {
         if (calendar.view.type !== 'dayGridMonth') return;
         calendarElement.querySelectorAll('.fc-daygrid-day').forEach((cell) => {
@@ -497,13 +777,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const holidayChip = holiday
                 ? `<span class="rc-month-holiday rc-holiday-${escapeHtml(kind)}" data-holiday="1" title="${escapeHtml(holiday.title)}">${escapeHtml(limitText(holiday.title, 22))}</span>`
                 : '';
-            const chips = preview.map((event) => {
-                const colors = eventColors(event.extendedProps?.statusValue || event.extendedProps?.statusKey);
-                const label = `${formatChipTime(event.start)} ${event.extendedProps?.resource || event.title}`.trim();
-                return `<span class="rc-month-chip" style="background:${colors.background};color:${colors.text}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+            const chips = preview.map((event, index) => {
+                const colors = monthChipColors(event);
+                const label = monthChipLabel(event);
+                const mine = event.extendedProps?.mine ? ' is-mine' : '';
+                const bookingAttr = isSltEmployee ? ` data-booking="${index}"` : '';
+                return `<span class="rc-month-chip${mine}"${bookingAttr} style="background:${colors.background};color:${colors.text}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
             }).join('');
             summary.hidden = false;
-            summary.innerHTML = `${holidayChip}<div class="rc-month-chips">${chips}</div>${extra > 0 ? `<span class="rc-month-more">+${extra} more</span>` : ''}`;
+            summary.innerHTML = `${holidayChip}<div class="rc-month-chips">${chips}${extra > 0 ? `<span class="rc-month-more" role="button" tabindex="0">+${extra} more</span>` : ''}</div>`;
+            bindSltMonthActions(summary, date, preview, items);
         });
     }
 
@@ -521,14 +804,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 : (event.end instanceof Date ? event.end : new Date(event.end));
             const time = formatStayTimes(start, end, details.duration, details.reservationType);
             const meta = [details.location, details.reference].filter(Boolean).join(' · ');
-            const badge = details.status
+            const badge = !isSltEmployee && details.status
                 ? statusBadge(details.statusValue || details.statusKey, details.status)
                 : '';
-            return `<button type="button" class="rc-day-item" data-index="${index}" style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
+            const canOpen = !isSltEmployee || Boolean(details.mine && details.url);
+            const tag = canOpen ? 'button' : 'div';
+            const extra = canOpen ? ` type="button" data-index="${index}"` : '';
+            return `<${tag} class="rc-day-item${details.mine ? ' is-mine' : ''}${canOpen ? '' : ' is-locked'}"${extra} style="border-left-color:${colors.border};background:${colors.background};color:${colors.text}">
                 <span class="rc-day-item-title">${escapeHtml(details.resource || event.title)}</span>
                 <span class="rc-day-item-time">${escapeHtml(time)}</span>
-                <span class="rc-day-item-meta">${badge}${meta ? `<span>${escapeHtml(meta)}</span>` : ''}</span>
-            </button>`;
+                ${badge || meta ? `<span class="rc-day-item-meta">${badge}${meta ? `<span>${escapeHtml(meta)}</span>` : ''}</span>` : ''}
+            </${tag}>`;
         }).join('');
         const holidayRow = holiday
             ? `<div class="rc-day-holiday">${escapeHtml(holiday.title)}${holiday.extendedProps?.holidayTypeLabel ? ` · ${escapeHtml(holiday.extendedProps.holidayTypeLabel)}` : ''}</div>`
@@ -537,6 +823,8 @@ document.addEventListener('DOMContentLoaded', () => {
             title: formatDate(date instanceof Date ? date : new Date(date)),
             html: `<div class="rc-day-list">${holidayRow}${rows || '<p class="rc-day-empty">No reservations on this day.</p>'}</div>`,
             confirmButtonText: 'Close',
+            showCancelButton: false,
+            showDenyButton: false,
             width: 560,
             customClass: {
                 ...window.RMSwal.base.customClass,
@@ -544,7 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 htmlContainer: 'rc-day-list-wrap',
             },
             didOpen(popup) {
-                popup.querySelectorAll('.rc-day-item').forEach((button) => {
+                popup.querySelectorAll('.rc-day-item[data-index]').forEach((button) => {
                     button.addEventListener('click', () => {
                         const event = dayBookings[Number(button.dataset.index)];
                         if (window.Swal) window.Swal.close();
@@ -553,6 +841,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             },
         });
+    }
+
+    function goCreate(date) {
+        const url = new URL(calendarElement.dataset.createUrl, window.location.origin);
+        url.searchParams.set('date', localDateKey(date instanceof Date ? date : new Date(date)));
+        window.location.href = url.toString();
     }
 
     function showReservationDetails(event) {

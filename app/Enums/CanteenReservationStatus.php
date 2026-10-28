@@ -26,6 +26,11 @@ enum CanteenReservationStatus: string
         return [self::APPROVED->value, self::CONFIRMED->value];
     }
 
+    public static function calendarActive(): array
+    {
+        return [self::PENDING->value, ...self::accepted()];
+    }
+
     public function label(): string
     {
         return $this === self::CONFIRMED ? 'Approved' : ucfirst($this->value);

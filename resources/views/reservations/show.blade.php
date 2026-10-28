@@ -3,7 +3,7 @@
 @section('title', 'Reservation '.$reservation->reference)
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/reservation-show.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/reservation-show.css') }}?v=2">
 @endpush
 
 @section('content')
@@ -21,7 +21,11 @@
         </div>
         <div class="rd-header-actions">
             <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
-            <a href="{{ route('reservations.index') }}" class="btn rd-back"><i class="ti ti-arrow-left me-1"></i>Back to list</a>
+            @if(auth()->user()?->hasRole('slt_employee'))
+                <a href="{{ route('reservations.mine') }}" class="btn rd-back"><i class="ti ti-arrow-left me-1"></i>Back to my resource requests</a>
+            @else
+                <a href="{{ route('reservations.index') }}" class="btn rd-back"><i class="ti ti-arrow-left me-1"></i>Back to list</a>
+            @endif
         </div>
     </div>
 
