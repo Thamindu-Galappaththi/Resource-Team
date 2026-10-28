@@ -250,7 +250,7 @@
 
 @media (max-width: 767.98px) {
     .hc-page .hc-header { flex-wrap: wrap; }
-    .hc-page .hc-back { width: 100%; justify-content: center; }
+    .hc-page .hc-back { width: 100%; justify-content: center; white-space: normal; }
     .hc-card { padding: 1rem 1rem 0; }
     .hc-actions { margin-left: -1rem; margin-right: -1rem; padding-left: 1rem; padding-right: 1rem; }
     .hc-submit { width: 100%; }

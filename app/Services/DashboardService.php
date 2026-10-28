@@ -59,6 +59,105 @@ class DashboardService
         ], $body);
     }
 
+    public function sltHub(User $user): array
+    {
+        $user->loadMissing('role');
+        $meta = config('rbac.dashboards.slt_employee', [
+            'title' => 'Resource Reservation System',
+            'subtitle' => 'Choose a reservation type to get started.',
+        ]);
+
+        $resources = Reservation::query()
+            ->where(function (Builder $query) use ($user) {
+                $query->where('requester_id', $user->id)->orWhere('created_by_user_id', $user->id);
+            })
+            ->whereNotIn('type', [ReservationType::HOSTEL->value, ReservationType::CANTEEN->value]);
+
+        $hostel = Reservation::query()
+            ->where(function (Builder $query) use ($user) {
+                $query->where('requester_id', $user->id)->orWhere('created_by_user_id', $user->id);
+            })
+            ->where('type', ReservationType::HOSTEL->value);
+
+        $canteen = CanteenReservation::query()->where('requested_by_user_id', $user->id);
+
+        return [
+            'user' => $user,
+            'role' => $user->role,
+            'title' => $meta['title'] ?? 'Resource Reservation System',
+            'subtitle' => $meta['subtitle'] ?? 'Choose a reservation type to get started.',
+            'as_of' => $this->now()->format('D, d M Y'),
+            'slides' => [
+                [
+                    'src' => asset('images/dashboard/slt-hub-bg.jpg'),
+                    'caption' => 'One workspace for every reservation',
+                ],
+                [
+                    'src' => asset('images/dashboard/slt-card-resource.jpg'),
+                    'caption' => 'Halls, labs and equipment',
+                ],
+                [
+                    'src' => asset('images/dashboard/slt-card-hostel.jpg'),
+                    'caption' => 'Hostel stays for guests and staff',
+                ],
+                [
+                    'src' => asset('images/dashboard/slt-card-canteen.jpg'),
+                    'caption' => 'Meals and catering for your team',
+                ],
+            ],
+            'cards' => [
+                [
+                    'key' => 'resource',
+                    'kicker' => 'Halls, labs & equipment',
+                    'title' => 'Normal reservation',
+                    'blurb' => 'Reserve institute rooms, labs, and equipment for training and events.',
+                    'image' => asset('images/dashboard/slt-card-resource.jpg'),
+                    'accent' => '#0b3d91',
+                    'href' => route('reservations.home'),
+                    'count' => (clone $resources)->count(),
+                    'pending' => (clone $resources)->where('status', ReservationStatus::PENDING_APPROVAL->value)->count(),
+                    'actions' => [
+                        ['key' => 'calendar', 'label' => 'Reservation Calendar', 'href' => route('reservations.calendar'), 'icon' => 'ti ti-calendar', 'variant' => 'ghost'],
+                        ['key' => 'create', 'label' => 'Create Reservation', 'href' => route('reservations.create'), 'icon' => 'ti ti-plus', 'variant' => 'solid'],
+                        ['key' => 'requests', 'label' => 'My requests', 'href' => route('reservations.mine'), 'icon' => 'ti ti-list', 'variant' => 'ghost'],
+                    ],
+                ],
+                [
+                    'key' => 'hostel',
+                    'kicker' => 'Guest stays',
+                    'title' => 'Hostel reservation',
+                    'blurb' => 'Request a hostel stay for visitors and staff accommodation.',
+                    'image' => asset('images/dashboard/slt-card-hostel.jpg'),
+                    'accent' => '#0f766e',
+                    'href' => route('hostel.home'),
+                    'count' => (clone $hostel)->count(),
+                    'pending' => (clone $hostel)->where('status', ReservationStatus::PENDING_APPROVAL->value)->count(),
+                    'actions' => [
+                        ['key' => 'calendar', 'label' => 'Reservation Calendar', 'href' => route('hostel.calendar'), 'icon' => 'ti ti-calendar', 'variant' => 'ghost'],
+                        ['key' => 'create', 'label' => 'Create Hostel Reservation', 'href' => route('hostel.create'), 'icon' => 'ti ti-plus', 'variant' => 'solid'],
+                        ['key' => 'requests', 'label' => 'My requests', 'href' => route('hostel.mine'), 'icon' => 'ti ti-list', 'variant' => 'ghost'],
+                    ],
+                ],
+                [
+                    'key' => 'canteen',
+                    'kicker' => 'Meals & catering',
+                    'title' => 'Canteen reservation',
+                    'blurb' => 'Order meals or event catering for your group from the canteen.',
+                    'image' => asset('images/dashboard/slt-card-canteen.jpg'),
+                    'accent' => '#c2410c',
+                    'href' => route('canteen.home'),
+                    'count' => (clone $canteen)->count(),
+                    'pending' => (clone $canteen)->where('status', CanteenReservationStatus::PENDING->value)->count(),
+                    'actions' => [
+                        ['key' => 'calendar', 'label' => 'Reservation Calendar', 'href' => route('canteen.calendar'), 'icon' => 'ti ti-calendar', 'variant' => 'ghost'],
+                        ['key' => 'create', 'label' => 'Create reservation', 'href' => route('canteen.create'), 'icon' => 'ti ti-plus', 'variant' => 'solid'],
+                        ['key' => 'requests', 'label' => 'My requests', 'href' => route('canteen.mine'), 'icon' => 'ti ti-list', 'variant' => 'ghost'],
+                    ],
+                ],
+            ],
+        ];
+    }
+
     private function developer(User $user): array
     {
         $reservations = Reservation::query();

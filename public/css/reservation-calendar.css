@@ -6,6 +6,17 @@
     gap: .75rem;
 }
 
+@media (max-width: 767.98px) {
+    .reservation-calendar-page .rc-header-create {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .reservation-calendar-page .rc-title {
+        font-size: clamp(1.25rem, 6vw, 1.7rem);
+    }
+}
+
 .reservation-calendar-page .rc-header-create {
     border-radius: .65rem;
     background: #fff;
@@ -24,8 +35,229 @@
     display: none;
 }
 
+.reservation-calendar-page .rc-filters[hidden] {
+    display: none !important;
+}
+
+.reservation-calendar-page .fc-event.is-mine,
+.reservation-calendar-page .rc-day-item.is-mine,
+.reservation-calendar-page .rc-month-chip.is-mine {
+    box-shadow: inset 0 0 0 2px #0f172a;
+    font-weight: 800;
+}
+
+.reservation-calendar-page .rc-day-item.is-locked {
+    cursor: default;
+}
+
 .fc-dayGridMonth-view .fc-daygrid-day-frame.is-holiday-bank,
 .fc-dayGridMonth-view .fc-daygrid-day:hover .fc-daygrid-day-frame.is-holiday-bank {
     background: #eef4ff !important;
     border-color: #9bb6e8 !important;
+}
+
+.is-slt-calendar .fc-dayGridMonth-view .fc-daygrid-day-frame {
+    height: auto;
+    min-height: 112px;
+    overflow: visible;
+}
+
+.is-slt-calendar .fc-dayGridMonth-view .rc-month-summary {
+    overflow: visible;
+}
+
+.is-slt-calendar .fc-dayGridMonth-view .rc-month-chips {
+    flex: 0 0 auto;
+    gap: 3px;
+}
+
+.is-slt-calendar .fc-dayGridMonth-view .rc-month-chip {
+    flex: 0 0 24px;
+    height: 24px;
+    line-height: 24px;
+    cursor: pointer;
+}
+
+.is-slt-calendar .fc-dayGridMonth-view .rc-month-more {
+    display: block;
+    margin: 0;
+    padding: 0;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.is-slt-calendar .fc-dayGridMonth-view .rc-month-chip.is-mine,
+.is-slt-calendar .rc-more-pop__item.is-mine {
+    box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.55);
+}
+
+.rc-privilege-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 28px 16px 16px;
+    background: rgba(32, 41, 54, 0.55);
+}
+
+.rc-privilege-card {
+    width: min(520px, 100%);
+    padding: 0.85rem 1.35rem 0.7rem;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28);
+}
+
+.rc-privilege-card__title {
+    margin: 0;
+    padding: 0 0 0.55rem;
+    font-size: 1.02rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: #64748b;
+    text-align: center;
+}
+
+.rc-privilege-card__line {
+    height: 1px;
+    background: #e5e7eb;
+}
+
+@media (max-width: 575.98px) {
+    .rc-privilege-overlay {
+        padding: 16px 12px;
+        align-items: center;
+    }
+
+    .rc-privilege-card {
+        padding: 0.75rem 1rem 0.6rem;
+    }
+
+    .rc-privilege-card__title {
+        font-size: 0.95rem;
+    }
+
+    .rc-more-pop {
+        width: min(228px, calc(100vw - 24px));
+    }
+}
+
+.rc-more-pop {
+    position: fixed;
+    z-index: 1080;
+    width: 228px;
+    max-height: min(360px, calc(100vh - 24px));
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #d8dee8;
+    border-radius: 6px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.16);
+}
+
+.rc-more-pop__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex: 0 0 auto;
+    padding: 8px 10px 7px;
+    border-bottom: 1px solid #e6ebf2;
+}
+
+.rc-more-pop__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #5b6575;
+    line-height: 1.2;
+}
+
+.rc-more-pop__close {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.rc-more-pop__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    overflow: auto;
+}
+
+.rc-more-pop__item {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 4px;
+    padding: 5px 8px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.25;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fc .fc-refreshCalendar-button {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    margin-right: 6px;
+    padding: 0 !important;
+    overflow: hidden !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    color: transparent !important;
+    white-space: nowrap;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #38bdf8, #1769c2) !important;
+    box-shadow: 0 6px 14px rgba(23, 105, 194, 0.32) !important;
+}
+
+.fc .fc-refreshCalendar-button::before {
+    content: "\eb13";
+    font-family: "tabler-icons" !important;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1;
+    color: #fff;
+    speak: none;
+}
+
+.fc .fc-refreshCalendar-button:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+
+.fc .fc-refreshCalendar-button.is-loading::before {
+    display: inline-block;
+    animation: rc-spin 0.8s linear infinite;
+}
+
+.fc .fc-refreshCalendar-button:disabled,
+.fc .fc-refreshCalendar-button.is-loading {
+    opacity: 0.8;
+    cursor: wait;
+}
+
+@keyframes rc-spin {
+    to { transform: rotate(360deg); }
 }

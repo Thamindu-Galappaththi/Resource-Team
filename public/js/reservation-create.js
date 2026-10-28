@@ -165,6 +165,9 @@
         params.set('reservation_date', date);
         params.set('start_time', start);
         params.set('end_time', end);
+        if (config.ignoreReservationId) {
+            params.set('ignore_reservation_id', config.ignoreReservationId);
+        }
 
         try {
             const response = await fetch(`${config.availabilityUrl}?${params.toString()}`, {

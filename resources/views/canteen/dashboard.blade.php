@@ -228,5 +228,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/canteen-ui.js') }}?v=4"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=5"></script>
 @endpush
