@@ -33,7 +33,7 @@
         </div>
         <div class="col-md-4">
             <label class="form-label" for="reservation_date">Service date <span class="text-danger">*</span></label>
-            <input id="reservation_date" type="date" class="form-control @error('reservation_date') is-invalid @enderror" name="reservation_date" value="{{ old('reservation_date', $reservation?->reservation_date?->toDateString() ?? now()->addDay()->toDateString()) }}" min="{{ now()->toDateString() }}" required>
+            <input id="reservation_date" type="date" class="form-control @error('reservation_date') is-invalid @enderror" name="reservation_date" value="{{ old('reservation_date', $reservation?->reservation_date?->toDateString() ?? $prefillDate ?? now()->addDay()->toDateString()) }}" min="{{ now()->toDateString() }}" required>
             @error('reservation_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-md-4">

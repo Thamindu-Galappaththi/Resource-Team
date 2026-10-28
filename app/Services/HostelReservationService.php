@@ -86,6 +86,75 @@ class HostelReservationService
         });
     }
 
+    public function updatePending(Reservation $reservation, array $payload, User $actor): Reservation
+    {
+        if ($reservation->type !== ReservationType::HOSTEL->value || ! $reservation->canBeEdited()) {
+            throw ValidationException::withMessages([
+                'reservation_name' => 'This hostel reservation can no longer be edited.',
+            ]);
+        }
+
+        $roomType = ResourceType::query()->with('category')->find($payload['room_type_id']);
+
+        if (! $roomType || $roomType->category?->name !== config('hostel.category_name', 'Hostel Room')) {
+            throw ValidationException::withMessages([
+                'room_type_id' => 'Select a valid hostel room category.',
+            ]);
+        }
+
+        [$startsAt, $endsAt] = $this->stayRange($payload['check_in_date'], $payload['check_out_date']);
+
+        return DB::transaction(function () use ($payload, $actor, $roomType, $startsAt, $endsAt, $reservation) {
+            $room = $this->firstAvailableRoom(
+                (int) $payload['room_type_id'],
+                (int) $payload['location_id'],
+                $startsAt,
+                $endsAt,
+                $reservation->id,
+            );
+
+            $reservation = $this->bookings->updatePending($reservation, [
+                'resource_ids' => [$room->id],
+                'location_id' => $payload['location_id'],
+                'title' => $payload['reservation_name'],
+                'purpose' => 'Hostel stay for '.$payload['guest_name'],
+                'attendee_count' => $payload['number_of_guests'],
+                'reservation_date' => $payload['check_in_date'],
+                'end_date' => $payload['check_out_date'],
+                'start_time' => config('hostel.check_in_time', '11:00'),
+                'end_time' => config('hostel.check_out_time', '24:00'),
+            ], $actor);
+
+            $stay = $reservation->hostelStay;
+            $stayPayload = [
+                'guest_name' => $payload['guest_name'],
+                'check_in_at' => $startsAt,
+                'check_out_at' => $endsAt,
+                'room_type_id' => $roomType->id,
+                'room_category_id' => $roomType->resource_category_id,
+                'number_of_guests' => $payload['number_of_guests'],
+                'special_requirements' => $payload['special_requirements'] ?? null,
+            ];
+
+            if (array_key_exists('guest_identity_number', $payload)) {
+                $stayPayload['guest_identity_type'] = filled($payload['guest_identity_number']) ? 'id_number' : null;
+                $stayPayload['guest_identity_encrypted'] = filled($payload['guest_identity_number'])
+                    ? Crypt::encryptString($payload['guest_identity_number'])
+                    : null;
+            }
+
+            if (array_key_exists('guest_phone', $payload)) {
+                $stayPayload['guest_phone_encrypted'] = filled($payload['guest_phone'])
+                    ? Crypt::encryptString($payload['guest_phone'])
+                    : null;
+            }
+
+            $stay?->update($stayPayload);
+
+            return $reservation->load(['hostelStay.roomType', 'items', 'location', 'requester']);
+        });
+    }
+
     public function cancel(Reservation $reservation, User $actor, string $reason): Reservation
     {
         return $this->bookings->cancel($reservation, $actor, $reason);
@@ -282,7 +351,7 @@ class HostelReservationService
         }
     }
 
-    public function firstAvailableRoom(int $roomTypeId, int $locationId, $startsAt, $endsAt): Resource
+    public function firstAvailableRoom(int $roomTypeId, int $locationId, $startsAt, $endsAt, ?int $ignoreReservationId = null): Resource
     {
         $rooms = Resource::query()
             ->hostelRooms()
@@ -299,7 +368,7 @@ class HostelReservationService
         }
 
         foreach ($rooms as $room) {
-            if (! $this->bookings->hasConflict([$room->id], $startsAt, $endsAt)) {
+            if (! $this->bookings->hasConflict([$room->id], $startsAt, $endsAt, $ignoreReservationId)) {
                 return $room;
             }
         }

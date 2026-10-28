@@ -62,4 +62,15 @@ enum ReservationStatus: string
             self::CHANGES_REQUESTED->value,
         ];
     }
+
+    public static function calendarActive(): array
+    {
+        return [
+            self::PENDING_APPROVAL->value,
+            self::CHANGES_REQUESTED->value,
+            self::APPROVED->value,
+            self::CONFIRMED->value,
+            self::IN_PROGRESS->value,
+        ];
+    }
 }

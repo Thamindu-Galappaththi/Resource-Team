@@ -191,7 +191,7 @@
     .rsv-detail .rd-header {
         padding: 1.1rem 1rem;
     }
-    .rsv-detail .rd-back { width: 100%; }
+    .rsv-detail .rd-back { width: 100%; white-space: normal; }
     .rd-detail-row { grid-template-columns: 1fr; gap: 4px; }
     .rd-card-body { padding: 1rem; }
     .rsv-detail .rd-table thead { display: none; }

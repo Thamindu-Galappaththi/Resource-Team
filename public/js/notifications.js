@@ -87,8 +87,9 @@ document.addEventListener('DOMContentLoaded', function () {
         openNotification(item, url);
     });
 
-    pollTimer = window.setInterval(pollFeed, 5000);
-    window.setTimeout(pollFeed, 1500);
+    var feedInFlight = false;
+    pollTimer = window.setInterval(pollFeed, 15000);
+    window.setTimeout(pollFeed, 4000);
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'visible') pollFeed();
     });
@@ -114,8 +115,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function pollFeed() {
-        if (!bell.dataset.feedUrl) return;
+        if (!bell.dataset.feedUrl || feedInFlight || document.visibilityState === 'hidden') return;
 
+        feedInFlight = true;
         fetch(bell.dataset.feedUrl, {
             headers: headers(),
             credentials: 'same-origin',
@@ -134,7 +136,9 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             updateUnreadCount(data.unread_count);
             fresh.forEach(announceArrival);
-        }).catch(function () {});
+        }).catch(function () {}).finally(function () {
+            feedInFlight = false;
+        });
     }
 
     function prependItem(notification) {

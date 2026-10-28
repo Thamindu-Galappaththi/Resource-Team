@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,6 +14,7 @@
     <link rel="stylesheet" href="{{ url('css/action-lock.css') }}?v=1">
     @yield('head')
 </head>
+
 <body>
     <canvas id="starfield" aria-hidden="true"></canvas>
     <main class="login-page login-shell">
@@ -21,17 +23,18 @@
     <footer class="login-footer">
         <div class="login-footer-accent" aria-hidden="true"></div>
         <p class="login-footer-brand">SLT Mobitel · Nebula Institute of Technology</p>
-        <p class="login-footer-meta">© {{ now()->year }} Resource Reservation. All rights reserved.</p>
+        <p class="login-footer-meta">© {{ now()->year }} Resource Reservation System. All rights reserved.</p>
     </footer>
 
     @php
-        $nebulaStars = json_decode(@file_get_contents(public_path('js/nebula-stars.json')) ?: '{}');
+    $nebulaStars = json_decode(@file_get_contents(public_path('js/nebula-stars.json')) ?: '{}');
     @endphp
     <script>
-        window.NEBULA_STARS = @json($nebulaStars);
+    window.NEBULA_STARS = @json($nebulaStars);
     </script>
     <script src="{{ url('js/action-lock.js') }}?v=2"></script>
     <script src="{{ url('js/login.js') }}?v={{ @filemtime(public_path('js/login.js')) ?: time() }}"></script>
     @yield('scripts')
 </body>
+
 </html>

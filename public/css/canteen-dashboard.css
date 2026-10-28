@@ -690,7 +690,7 @@
     .cd-actions {
         width: 100%;
         display: flex;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         align-items: stretch;
         justify-content: stretch;
         gap: 0.45rem;
