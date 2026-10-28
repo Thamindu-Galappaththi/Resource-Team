@@ -88,14 +88,21 @@ class HostelReservationController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $this->authorize('createHostel', Reservation::class);
+
+        $prefill = $request->query('date');
+        $minCheckIn = now()->toDateString();
+        if (is_string($prefill) && $prefill < $minCheckIn) {
+            $prefill = $minCheckIn;
+        }
 
         return view('hostel.create', [
             'locations' => Location::query()->ordered()->get(),
             'roomTypes' => $this->roomTypes(),
-            'minCheckIn' => now()->toDateString(),
+            'minCheckIn' => $minCheckIn,
+            'prefillCheckIn' => old('check_in_date', $prefill),
         ]);
     }
 
@@ -142,6 +149,51 @@ class HostelReservationController extends Controller
         return view('hostel.show', compact('reservation'));
     }
 
+    public function edit(Reservation $reservation): View
+    {
+        abort_unless($reservation->type === ReservationType::HOSTEL->value, 404);
+        $this->authorize('update', $reservation);
+        abort_unless($reservation->canBeEdited(), 403);
+
+        $reservation->load(['hostelStay.roomType', 'location']);
+        $stay = $reservation->hostelStay;
+        $tz = config('reservations.display_timezone', 'Asia/Colombo');
+        $checkOut = $stay?->check_out_at?->copy()->timezone($tz);
+        if ($checkOut && $checkOut->hour === 0 && $checkOut->minute === 0) {
+            $checkOut->subSecond();
+        }
+
+        return view('hostel.create', [
+            'reservation' => $reservation,
+            'locations' => Location::query()->ordered()->get(),
+            'roomTypes' => $this->roomTypes(),
+            'minCheckIn' => now()->toDateString(),
+            'prefillCheckIn' => old('check_in_date', $stay?->check_in_at?->timezone($tz)->toDateString()),
+            'prefillCheckOut' => old('check_out_date', $checkOut?->toDateString()),
+        ]);
+    }
+
+    public function update(StoreHostelReservationRequest $request, Reservation $reservation): RedirectResponse
+    {
+        abort_unless($reservation->type === ReservationType::HOSTEL->value, 404);
+        $this->authorize('update', $reservation);
+        abort_unless($reservation->canBeEdited(), 403);
+
+        try {
+            $reservation = $this->hostel->updatePending($reservation, $request->validated(), $request->user());
+        } catch (ReservationConflictException $exception) {
+            return back()->withInput()->withErrors([
+                'check_in_date' => $exception->getMessage(),
+            ]);
+        } catch (ValidationException $exception) {
+            return back()->withInput()->withErrors($exception->errors());
+        }
+
+        return redirect()
+            ->route('hostel.show', $reservation)
+            ->with('success', 'Hostel reservation updated successfully.');
+    }
+
     public function cancel(CancelReservationRequest $request, Reservation $reservation): RedirectResponse
     {
         abort_unless($reservation->type === ReservationType::HOSTEL->value, 404);
@@ -154,7 +206,7 @@ class HostelReservationController extends Controller
         }
 
         return redirect()
-            ->route('hostel.index')
+            ->route($request->user()?->hasRole('slt_employee') ? 'hostel.mine' : 'hostel.index')
             ->with('success', 'Hostel reservation cancelled successfully.');
     }
 

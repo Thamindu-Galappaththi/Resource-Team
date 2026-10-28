@@ -117,6 +117,35 @@ class NavigationAccessTest extends TestCase
             ->assertDontSee('hide-menu">Maintenance', false);
     }
 
+    public function test_slt_employee_sidebar_hides_staff_lists_and_shows_request_shortcuts(): void
+    {
+        $user = User::factory()->role('slt_employee')->create();
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('hide-menu">Dashboard', false)
+            ->assertDontSee('Reservation Calendar')
+            ->assertDontSee('Create Reservations')
+            ->assertDontSee('Create Hostel Reservation')
+            ->assertDontSee('Create Canteen Reservation')
+            ->assertDontSee('My requests')
+            ->assertDontSee('Existing Reservations')
+            ->assertDontSee('Hostel Reservations')
+            ->assertDontSee('Canteen Dashboard')
+            ->assertDontSee('Existing Canteen Reservations');
+
+        $this->actingAs($user)
+            ->get(route('hostel.home'))
+            ->assertOk()
+            ->assertSee('Reservation Calendar')
+            ->assertSee('Create Hostel Reservation')
+            ->assertSee('My requests')
+            ->assertDontSee('Create Reservation</span>', false)
+            ->assertDontSee('Create Canteen Reservation')
+            ->assertDontSee('Existing Reservations');
+    }
+
     public function test_canteen_sidebar_does_not_show_create_canteen_reservation(): void
     {
         $user = User::factory()->role('canteen')->create();

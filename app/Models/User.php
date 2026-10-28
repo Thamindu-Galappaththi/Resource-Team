@@ -20,6 +20,9 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable, SoftDeletes;
 
+    /** @var Collection<int, string>|null */
+    private ?Collection $normalizedRoleSlugs = null;
+
     protected $fillable = [
         'name',
         'service_id',
@@ -167,10 +170,7 @@ class User extends Authenticatable
 
     public function hasRole(string ...$roles): bool
     {
-        $assignedRoles = $this->roles()->pluck('slug')
-            ->push($this->roleSlug())
-            ->filter()
-            ->map(fn (string $slug) => RoleHelper::normalizeRole($slug));
+        $assignedRoles = $this->normalizedRoleSlugs();
 
         foreach ($roles as $role) {
             if ($assignedRoles->contains(RoleHelper::normalizeRole($role))) {
@@ -179,6 +179,26 @@ class User extends Authenticatable
         }
 
         return false;
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function normalizedRoleSlugs(): Collection
+    {
+        if ($this->normalizedRoleSlugs instanceof Collection) {
+            return $this->normalizedRoleSlugs;
+        }
+
+        $this->loadMissing('role', 'roles');
+
+        return $this->normalizedRoleSlugs = $this->roles
+            ->pluck('slug')
+            ->push($this->roleSlug())
+            ->filter()
+            ->map(fn (string $slug) => RoleHelper::normalizeRole((string) $slug))
+            ->unique()
+            ->values();
     }
 
     public function hasPermission(string $permission): bool

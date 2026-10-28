@@ -35,36 +35,36 @@
     @endif
     <div id="hr-flash" class="alert hr-auto-alert d-none" role="status"></div>
 
-    <div class="row g-3 mb-4">
+            <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
             <div class="hr-stat p-3 p-md-4" style="--stat-color:#1769c2;--stat-icon-bg:#e8f0fa">
                 <span class="hr-stat-icon"><i class="ti ti-bed"></i></span>
                 <div class="hr-stat-label mt-3">Total bookings</div>
                 <div class="hr-stat-number">{{ number_format($summary['total']) }}</div>
-            </div>
-        </div>
+                        </div>
+                    </div>
         <div class="col-6 col-lg-3">
             <div class="hr-stat p-3 p-md-4" style="--stat-color:#d97706;--stat-icon-bg:#fff4e5">
                 <span class="hr-stat-icon"><i class="ti ti-login"></i></span>
                 <div class="hr-stat-label mt-3">Check-ins today</div>
                 <div class="hr-stat-number">{{ number_format($summary['check_ins_today']) }}</div>
             </div>
-        </div>
+                        </div>
         <div class="col-6 col-lg-3">
             <div class="hr-stat p-3 p-md-4" style="--stat-color:#16a77a;--stat-icon-bg:#e7f6f0">
                 <span class="hr-stat-icon"><i class="ti ti-door-exit"></i></span>
                 <div class="hr-stat-label mt-3">Available rooms</div>
                 <div class="hr-stat-number">{{ number_format($summary['available_rooms']) }}</div>
-            </div>
-        </div>
+                        </div>
+                        </div>
         <div class="col-6 col-lg-3">
             <div class="hr-stat p-3 p-md-4" style="--stat-color:#dc3545;--stat-icon-bg:#fdecee">
                 <span class="hr-stat-icon"><i class="ti ti-clock-hour-4"></i></span>
                 <div class="hr-stat-label mt-3">Pending requests</div>
                 <div class="hr-stat-number">{{ number_format($summary['pending']) }}</div>
-            </div>
-        </div>
-    </div>
+                        </div>
+                        </div>
+                    </div>
 
     <form id="hr-filters" class="hr-filters" method="GET" action="{{ route('hostel.index') }}">
         <div class="hr-filter hr-f-search">
@@ -110,9 +110,9 @@
                 @else
                     <div class="table-responsive">
                         <table class="table hr-table align-middle mb-0">
-                            <caption class="visually-hidden">Hostel reservations</caption>
-                            <thead>
-                                <tr>
+                    <caption class="visually-hidden">Hostel reservations</caption>
+                    <thead>
+                        <tr>
                                     <th>Reservation ID</th>
                                     <th>Guest name</th>
                                     <th>Room category</th>
@@ -120,9 +120,9 @@
                                     <th>Check-out</th>
                                     <th>Status</th>
                                     <th class="text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                        </tr>
+                    </thead>
+                    <tbody>
                                 @foreach($reservations as $reservation)
                                     <tr>
                                         <td class="hr-ref" data-label="Reservation ID">{{ $reservation->reference }}</td>
@@ -143,11 +143,11 @@
                                                 <button type="button" class="btn btn-sm btn-outline-danger hr-icon-btn" @if($canManage) data-bs-toggle="modal" data-bs-target="#rejectModal-{{ $reservation->id }}" title="Reject" aria-label="Reject reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="Reject unavailable" @endif><i class="ti ti-x"></i></button>
                                                 <button type="button" class="btn btn-sm btn-outline-secondary hr-icon-btn" @if($canCancel) data-bs-toggle="modal" data-bs-target="#cancelModal-{{ $reservation->id }}" title="Cancel" aria-label="Cancel reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="Cancel unavailable" @endif><i class="ti ti-ban"></i></button>
                                             </span>
-                                        </td>
-                                    </tr>
+                            </td>
+                        </tr>
                                 @endforeach
-                            </tbody>
-                        </table>
+                    </tbody>
+                </table>
                     </div>
                     @if($reservations->hasPages())
                         <div class="hr-pager">

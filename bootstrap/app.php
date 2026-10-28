@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\DenySltEmployeeLists;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class,
             'permission' => EnsurePermission::class,
             'role' => EnsureRole::class,
+            'deny-slt-lists' => DenySltEmployeeLists::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
