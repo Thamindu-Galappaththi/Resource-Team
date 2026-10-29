@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
-use App\Models\User;
 use App\Services\MicrosoftAuthService;
+use App\Services\MicrosoftUserProvisioner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,8 +15,10 @@ use Throwable;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly MicrosoftAuthService $microsoft)
-    {
+    public function __construct(
+        private readonly MicrosoftAuthService $microsoft,
+        private readonly MicrosoftUserProvisioner $provisioner,
+    ) {
     }
 
     public function showLogin(): View
@@ -71,29 +73,13 @@ class AuthController extends Controller
         }
 
         try {
-            $profile = $this->microsoft->userFromCode($code);
+            $user = $this->provisioner->sync($this->microsoft->userFromCode($code));
         } catch (RuntimeException $exception) {
             return $this->microsoftFailed($exception->getMessage());
         } catch (Throwable $exception) {
             report($exception);
 
             return $this->microsoftFailed('Could not complete Microsoft sign-in. Please try again.');
-        }
-
-        $user = User::query()
-            ->whereRaw('LOWER(email) = ?', [$profile['email']])
-            ->first();
-
-        if (! $user) {
-            return $this->microsoftFailed('No SLT employee account matches this Microsoft login. Contact an administrator.');
-        }
-
-        if (! $user->is_active) {
-            return $this->microsoftFailed('Your account is inactive. Please contact an administrator.');
-        }
-
-        if (! $user->isSltEmployeeStaff()) {
-            return $this->microsoftFailed('Microsoft sign-in is only available for SLT employee staff.');
         }
 
         Auth::login($user);
