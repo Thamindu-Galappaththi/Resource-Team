@@ -174,13 +174,66 @@ class LoginTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_microsoft_login_creates_slt_employee_when_unknown(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('new.staff@slt.com.lk', 'New Staff', 'ms-user-new');
+
+        $this->assertDatabaseMissing('users', ['email' => 'new.staff@slt.com.lk']);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $user = User::query()->where('email', 'new.staff@slt.com.lk')->first();
+
+        $this->assertNotNull($user);
+        $this->assertSame('New Staff', $user->name);
+        $this->assertSame('ms-user-new', $user->microsoft_id);
+        $this->assertTrue($user->slt_employee);
+        $this->assertTrue($user->is_active);
+        $this->assertTrue($user->hasRole('slt_employee'));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_microsoft_login_updates_existing_slt_employee(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('staff@slt.lk', 'Updated Staff', 'ms-user-updated');
+
+        $user = User::factory()->role('slt_employee')->create([
+            'email' => 'staff@slt.lk',
+            'name' => 'Old Name',
+            'slt_employee' => true,
+            'microsoft_id' => null,
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $user->refresh();
+
+        $this->assertSame('Updated Staff', $user->name);
+        $this->assertSame('staff@slt.lk', $user->email);
+        $this->assertSame('ms-user-updated', $user->microsoft_id);
+        $this->assertTrue($user->slt_employee);
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_non_slt_user_cannot_login_with_microsoft(): void
     {
         $this->configureMicrosoft();
-        $this->fakeMicrosoftGraph('admin@nebula.local', 'Admin User');
+        $this->fakeMicrosoftGraph('admin@slt.lk', 'Admin User');
 
         User::factory()->role('admin')->create([
-            'email' => 'admin@nebula.local',
+            'email' => 'admin@slt.lk',
             'slt_employee' => false,
         ]);
 
@@ -193,12 +246,16 @@ class LoginTest extends TestCase
             ->assertSessionHasErrors('microsoft');
 
         $this->assertGuest();
+        $this->assertDatabaseHas('users', [
+            'email' => 'admin@slt.lk',
+            'user_role' => 'admin',
+        ]);
     }
 
-    public function test_unknown_microsoft_account_cannot_login(): void
+    public function test_non_slt_domain_cannot_login_with_microsoft(): void
     {
         $this->configureMicrosoft();
-        $this->fakeMicrosoftGraph('unknown@slt.lk', 'Unknown Staff');
+        $this->fakeMicrosoftGraph('person@gmail.com', 'Outside User');
 
         $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
             ->get(route('login.microsoft.callback', [
@@ -209,6 +266,7 @@ class LoginTest extends TestCase
             ->assertSessionHasErrors('microsoft');
 
         $this->assertGuest();
+        $this->assertDatabaseMissing('users', ['email' => 'person@gmail.com']);
     }
 
     public function test_inactive_slt_employee_cannot_login_with_microsoft(): void
@@ -239,10 +297,11 @@ class LoginTest extends TestCase
             'services.microsoft.client_secret' => 'test-secret',
             'services.microsoft.tenant' => 'organizations',
             'services.microsoft.redirect' => 'http://localhost/login/microsoft/callback',
+            'services.microsoft.allowed_domains' => ['slt.lk', 'slt.com.lk'],
         ]);
     }
 
-    private function fakeMicrosoftGraph(string $email, string $name): void
+    private function fakeMicrosoftGraph(string $email, string $name, string $microsoftId = 'ms-user-1'): void
     {
         Http::fake([
             'https://login.microsoftonline.com/*' => Http::response([
@@ -251,7 +310,7 @@ class LoginTest extends TestCase
                 'expires_in' => 3600,
             ]),
             'https://graph.microsoft.com/v1.0/me' => Http::response([
-                'id' => 'ms-user-1',
+                'id' => $microsoftId,
                 'displayName' => $name,
                 'mail' => $email,
                 'userPrincipalName' => $email,

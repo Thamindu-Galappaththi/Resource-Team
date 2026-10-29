@@ -29,6 +29,7 @@ class User extends Authenticatable
         'slt_employee',
         'nic',
         'email',
+        'microsoft_id',
         'phone',
         'location',
         'password',
