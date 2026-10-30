@@ -11,7 +11,9 @@ return new class extends Migration
         Schema::create('hostel_stay_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('reservation_id')->unique()->constrained('reservations')->restrictOnDelete();
+            $table->string('guest_title', 10)->nullable();
             $table->string('guest_name', 150);
+            $table->json('employee_ids')->nullable();
             $table->string('guest_identity_type', 30)->nullable();
             $table->text('guest_identity_encrypted')->nullable();
             $table->text('guest_phone_encrypted')->nullable();

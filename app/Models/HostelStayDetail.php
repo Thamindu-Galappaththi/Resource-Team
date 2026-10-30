@@ -10,9 +10,13 @@ class HostelStayDetail extends Model
 {
     use HasFactory;
 
+    public const GUEST_TITLES = ['Mr.', 'Mrs.', 'Ms.', 'Miss', 'Dr.', 'Prof.', 'Rev.'];
+
     protected $fillable = [
         'reservation_id',
+        'guest_title',
         'guest_name',
+        'employee_ids',
         'guest_identity_type',
         'guest_identity_encrypted',
         'guest_phone_encrypted',
@@ -27,9 +31,20 @@ class HostelStayDetail extends Model
     protected function casts(): array
     {
         return [
+            'employee_ids' => 'array',
             'check_in_at' => 'datetime',
             'check_out_at' => 'datetime',
         ];
+    }
+
+    public function displayGuestName(): string
+    {
+        return trim(($this->guest_title ? $this->guest_title.' ' : '').$this->guest_name);
+    }
+
+    public function employeeIdList(): string
+    {
+        return collect($this->employee_ids ?? [])->filter()->implode(', ');
     }
 
     public function reservation(): BelongsTo

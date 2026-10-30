@@ -206,7 +206,8 @@ class Reservation extends Model
                 ->orWhere('title', 'like', '%'.$search.'%')
                 ->orWhere('purpose', 'like', '%'.$search.'%')
                 ->orWhereHas('requester', fn (Builder $user) => $user->where('name', 'like', '%'.$search.'%'))
-                ->orWhereHas('hostelStay', fn (Builder $stay) => $stay->where('guest_name', 'like', '%'.$search.'%'))
+                ->orWhereHas('hostelStay', fn (Builder $stay) => $stay->where('guest_name', 'like', '%'.$search.'%')
+                    ->orWhere('employee_ids', 'like', '%'.$search.'%'))
                 ->orWhereHas('items', fn (Builder $item) => $item->where('resource_name_snapshot', 'like', '%'.$search.'%'));
         });
     }

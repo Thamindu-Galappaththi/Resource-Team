@@ -323,7 +323,7 @@ class SltEmployeeDashboardController extends Controller
         $mine = $this->ownsReservation($reservation, $user);
         $status = ReservationStatus::tryFrom((string) $reservation->status);
         $title = $mine
-            ? ($stay?->guest_name ?: ($reservation->title ?: 'Hostel stay'))
+            ? ($stay?->displayGuestName() ?: ($reservation->title ?: 'Hostel stay'))
             : ($stay?->roomType?->name ?? $reservation->location?->name ?? 'Hostel stay');
 
         if ($stay?->check_in_at && $stay->check_out_at) {

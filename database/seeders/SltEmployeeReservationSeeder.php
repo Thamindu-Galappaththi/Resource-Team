@@ -192,28 +192,19 @@ class SltEmployeeReservationSeeder extends Seeder
         string $label,
         int $count,
     ): void {
-        $categoryName = config('hostel.category_name', 'Hostel Room');
-        $single = ResourceType::query()
-            ->where('name', 'Single')
-            ->whereHas('category', fn ($query) => $query->where('name', $categoryName))
-            ->first();
-        $double = ResourceType::query()
-            ->where('name', 'Double')
-            ->whereHas('category', fn ($query) => $query->where('name', $categoryName))
-            ->first();
         $welisara = Location::query()->where('name', 'Welisara')->first();
         $moratuwa = Location::query()->where('name', 'Moratuwa')->first();
-        if (! $single || ! $double || ! $welisara || ! $moratuwa) {
+        if (! $welisara || ! $moratuwa || ! Resource::query()->hostelRooms()->exists()) {
             return;
         }
 
         $slots = [
-            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'guests' => 1],
-            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'guests' => 1],
-            ['room_type_id' => $double->id, 'location_id' => $welisara->id, 'guests' => 2],
-            ['room_type_id' => $single->id, 'location_id' => $moratuwa->id, 'guests' => 1],
-            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'guests' => 1],
-            ['room_type_id' => $double->id, 'location_id' => $welisara->id, 'guests' => 2],
+            ['location_id' => $welisara->id, 'guests' => 1],
+            ['location_id' => $welisara->id, 'guests' => 1],
+            ['location_id' => $welisara->id, 'guests' => 2],
+            ['location_id' => $moratuwa->id, 'guests' => 1],
+            ['location_id' => $welisara->id, 'guests' => 1],
+            ['location_id' => $welisara->id, 'guests' => 2],
         ];
 
         for ($index = 1; $index <= $count; $index++) {
@@ -226,7 +217,6 @@ class SltEmployeeReservationSeeder extends Seeder
                 'phone' => sprintf('+94 77 301 %02d%02d', (int) substr($date, 8, 2), $index),
                 'date' => $date,
                 'nights' => 1,
-                'room_type_id' => $slot['room_type_id'],
                 'location_id' => $slot['location_id'],
                 'guests' => $slot['guests'],
                 'requirements' => null,
@@ -375,29 +365,20 @@ class SltEmployeeReservationSeeder extends Seeder
     private function seedHostelBookings(User $employee, User $colleague, User $approver, $today): void
     {
         $service = app(HostelReservationService::class);
-        $categoryName = config('hostel.category_name', 'Hostel Room');
-        $single = ResourceType::query()
-            ->where('name', 'Single')
-            ->whereHas('category', fn ($query) => $query->where('name', $categoryName))
-            ->first();
-        $double = ResourceType::query()
-            ->where('name', 'Double')
-            ->whereHas('category', fn ($query) => $query->where('name', $categoryName))
-            ->first();
         $welisara = Location::query()->where('name', 'Welisara')->first();
         $moratuwa = Location::query()->where('name', 'Moratuwa')->first();
 
-        if (! $single || ! $double || ! $welisara || ! $moratuwa) {
+        if (! $welisara || ! $moratuwa || ! Resource::query()->hostelRooms()->exists()) {
             $this->command?->warn('Skipped hostel demo bookings: hostel rooms or locations are missing.');
 
             return;
         }
 
         $slots = [
-            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'guests' => 1],
-            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'guests' => 1],
-            ['room_type_id' => $double->id, 'location_id' => $welisara->id, 'guests' => 2],
-            ['room_type_id' => $single->id, 'location_id' => $moratuwa->id, 'guests' => 1],
+            ['location_id' => $welisara->id, 'guests' => 1],
+            ['location_id' => $welisara->id, 'guests' => 1],
+            ['location_id' => $welisara->id, 'guests' => 2],
+            ['location_id' => $moratuwa->id, 'guests' => 1],
         ];
         $outcomes = [null, ReservationStatus::APPROVED->value, ReservationStatus::APPROVED->value, null, ReservationStatus::CANCELLED->value];
         $rows = [];
@@ -411,7 +392,6 @@ class SltEmployeeReservationSeeder extends Seeder
                 'phone' => sprintf('+94 77 101 2%03d', $index),
                 'days' => 55 + ($index - 1) * 3,
                 'nights' => 2,
-                'room_type_id' => $slot['room_type_id'],
                 'location_id' => $slot['location_id'],
                 'guests' => $slot['guests'],
                 'after' => $outcomes[($index - 1) % count($outcomes)],
@@ -426,7 +406,6 @@ class SltEmployeeReservationSeeder extends Seeder
             'phone' => '+94 77 101 2015',
             'days' => 4,
             'nights' => 2,
-            'room_type_id' => $single->id,
             'location_id' => $welisara->id,
             'guests' => 1,
             'after' => ReservationStatus::APPROVED->value,
@@ -458,7 +437,7 @@ class SltEmployeeReservationSeeder extends Seeder
     }
 
     /**
-     * @param  array{owner: User, title: string, guest: string, phone: string, days: int, nights: int, room_type_id: int, location_id: int, guests: int, requirements: ?string}  $row
+     * @param  array{owner: User, title: string, guest: string, phone: string, days: int, nights: int, location_id: int, guests: int, requirements: ?string}  $row
      */
     private function firstOrCreateHostelBooking(HostelReservationService $service, array $row, $today): ?Reservation
     {
@@ -474,12 +453,18 @@ class SltEmployeeReservationSeeder extends Seeder
 
         try {
             return $service->create([
-                'reservation_name' => $row['title'],
+                'title' => $row['title'],
+                'guest_title' => 'Mr.',
                 'guest_name' => $row['guest'],
+                'employee_ids' => array_map(
+                    fn (int $guestNumber) => sprintf('SLT-%05d-%d', crc32($row['title']) % 100000, $guestNumber),
+                    range(1, $row['guests']),
+                ),
                 'guest_phone' => $row['phone'],
                 'check_in_date' => $checkIn->toDateString(),
+                'check_in_time' => '11:00',
                 'check_out_date' => $checkIn->copy()->addDays($row['nights'])->toDateString(),
-                'room_type_id' => $row['room_type_id'],
+                'check_out_time' => '10:00',
                 'location_id' => $row['location_id'],
                 'number_of_guests' => $row['guests'],
                 'special_requirements' => $row['requirements'],

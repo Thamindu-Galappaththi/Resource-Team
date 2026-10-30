@@ -21,7 +21,9 @@ class HostelStayDetailFactory extends Factory
 
         return [
             'reservation_id' => Reservation::factory(),
+            'guest_title' => 'Mr.',
             'guest_name' => fake()->name(),
+            'employee_ids' => [fake()->unique()->bothify('EMP-####')],
             'check_in_at' => $checkIn,
             'check_out_at' => $checkIn->copy()->addDays(2)->setTime(5, 30),
             'room_type_id' => ResourceType::factory(),

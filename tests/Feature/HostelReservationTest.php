@@ -43,10 +43,13 @@ class HostelReservationTest extends TestCase
 
         $this->actingAs($actor)
             ->post(route('hostel.store'), $this->payload($setup, [
-                'reservation_name' => 'Summer Internship 2026 Group',
+                'guest_title' => 'Mr.',
                 'guest_name' => 'Kasun Madushanka',
                 'guest_phone' => '+94 77 123 4567',
-                'guest_identity_number' => 'ID1234567',
+                'number_of_guests' => 2,
+                'employee_ids' => ['EMP-1001', 'EMP-1002'],
+                'check_in_time' => '14:00',
+                'check_out_time' => '10:30',
                 'special_requirements' => 'Ground floor if possible',
             ]))
             ->assertRedirect();
@@ -57,18 +60,21 @@ class HostelReservationTest extends TestCase
         $this->assertSame(ReservationType::HOSTEL->value, $reservation->type);
         $this->assertStringStartsWith('HST-'.now()->format('Y').'-', $reservation->reference);
         $this->assertSame(ReservationStatus::PENDING_APPROVAL->value, $reservation->status);
-        $this->assertSame('Summer Internship 2026 Group', $reservation->title);
+        $this->assertSame('Hostel stay for Mr. Kasun Madushanka', $reservation->title);
 
         $this->assertDatabaseHas('hostel_stay_details', [
             'reservation_id' => $reservation->id,
+            'guest_title' => 'Mr.',
             'guest_name' => 'Kasun Madushanka',
             'room_type_id' => $setup['type']->id,
-            'number_of_guests' => 1,
+            'number_of_guests' => 2,
             'special_requirements' => 'Ground floor if possible',
         ]);
         $stay = $reservation->hostelStay()->firstOrFail();
-        $this->assertSame('id_number', $stay->guest_identity_type);
-        $this->assertSame('ID1234567', Crypt::decryptString($stay->guest_identity_encrypted));
+        $tz = config('reservations.display_timezone', 'Asia/Colombo');
+        $this->assertSame(['EMP-1001', 'EMP-1002'], $stay->employee_ids);
+        $this->assertSame('14:00', $stay->check_in_at->timezone($tz)->format('H:i'));
+        $this->assertSame('10:30', $stay->check_out_at->timezone($tz)->format('H:i'));
         $this->assertSame('+94 77 123 4567', Crypt::decryptString($stay->guest_phone_encrypted));
         $this->assertDatabaseHas('reservation_items', [
             'reservation_id' => $reservation->id,
@@ -108,6 +114,57 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('hostel_stay_details', 1);
     }
 
+    public function test_each_guest_needs_an_employee_id(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'number_of_guests' => 4,
+                'employee_ids' => ['EMP-1', 'EMP-2'],
+            ]))
+            ->assertSessionHasErrors('employee_ids');
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'number_of_guests' => 2,
+                'employee_ids' => ['EMP-1', ''],
+            ]))
+            ->assertSessionHasErrors('employee_ids.1');
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'guest_title' => 'Sir',
+            ]))
+            ->assertSessionHasErrors('guest_title');
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_create_page_has_title_employee_ids_and_times_without_room_category(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $this->hostelRoom();
+
+        $this->actingAs($user)->get(route('hostel.create'))
+            ->assertOk()
+            ->assertSee('name="guest_title"', false)
+            ->assertSee('name="employee_ids[]"', false)
+            ->assertSee('name="check_in_time"', false)
+            ->assertSee('name="check_out_time"', false)
+            ->assertSee('011 2954 069')
+            ->assertSee('placeholder="010456"', false)
+            ->assertDontSee('name="reservation_name"', false)
+            ->assertDontSee('name="room_type_id"', false)
+            ->assertDontSee('name="guest_identity_number"', false)
+            ->assertDontSee('ext. 404')
+            ->assertDontSee('The system assigns a free room');
+    }
+
     public function test_next_guest_can_check_in_on_the_day_after_checkout(): void
     {
         $user = User::factory()->role('coordinator')->create();
@@ -132,7 +189,7 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 2);
     }
 
-    public function test_auto_assigns_next_free_room_of_the_same_category(): void
+    public function test_auto_assigns_next_free_room_at_the_location(): void
     {
         $user = User::factory()->role('coordinator')->create();
         $first = $this->hostelRoom('Single');
@@ -327,11 +384,11 @@ class HostelReservationTest extends TestCase
 
         $this->actingAs($actor)->post(route('hostel.store'), $this->payload($setup, [
             'guest_name' => 'Kasun Madushanka',
-            'reservation_name' => 'Internship stay',
+            'employee_ids' => ['EMP-7788'],
         ]));
         $this->actingAs($actor)->post(route('hostel.store'), $this->payload($setup, [
             'guest_name' => 'Amali Fernando',
-            'reservation_name' => 'Conference stay',
+            'employee_ids' => ['EMP-9911'],
             'check_in_date' => now()->addDays(10)->toDateString(),
             'check_out_date' => now()->addDays(12)->toDateString(),
         ]));
@@ -348,8 +405,14 @@ class HostelReservationTest extends TestCase
             ->get(route('hostel.index', ['search' => 'Kasun']))
             ->assertOk()
             ->assertSee('Kasun Madushanka')
+            ->assertSee('EMP-7788')
             ->assertDontSee('Amali Fernando')
             ->assertDontSee('Hall booking must not appear');
+
+        $this->get(route('hostel.index', ['search' => 'EMP-9911']))
+            ->assertOk()
+            ->assertSee('Amali Fernando')
+            ->assertDontSee('Kasun Madushanka');
     }
 
     public function test_pending_hostel_reservation_expires_at_checkin_and_releases_held_room(): void
@@ -459,20 +522,39 @@ class HostelReservationTest extends TestCase
         ]);
     }
 
-    public function test_create_page_lists_locations_in_campus_order(): void
+    public function test_create_page_lists_only_hostel_locations_in_campus_order(): void
     {
         $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
         Location::factory()->create(['name' => 'Peradeniya']);
-        Location::factory()->create(['name' => 'Welisara']);
-        Location::factory()->create(['name' => 'Moratuwa']);
+        $moratuwa = Location::factory()->create(['name' => 'Moratuwa']);
+        Resource::factory()->create([
+            'resource_type_id' => $setup['type']->id,
+            'location_id' => $moratuwa->id,
+            'name_model' => 'Moratuwa Single 101',
+            'status' => 'active',
+        ]);
 
         $html = $this->actingAs($user)->get(route('hostel.create'))->assertOk()->getContent();
-        $welisara = strpos($html, 'Welisara');
-        $moratuwa = strpos($html, 'Moratuwa');
-        $peradeniya = strpos($html, 'Peradeniya');
+        $welisaraAt = strpos($html, 'Welisara');
+        $moratuwaAt = strpos($html, 'Moratuwa');
 
-        $this->assertNotFalse($welisara);
-        $this->assertTrue($welisara < $moratuwa && $moratuwa < $peradeniya);
+        $this->assertNotFalse($welisaraAt);
+        $this->assertTrue($welisaraAt < $moratuwaAt);
+        $this->assertStringNotContainsString('Peradeniya', $html);
+    }
+
+    public function test_guest_phone_is_required(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '']))
+            ->assertSessionHasErrors('guest_phone');
+
+        $this->assertDatabaseCount('reservations', 0);
     }
 
     public function test_approved_stays_complete_at_checkout_through_pages_and_command(): void
@@ -542,9 +624,21 @@ class HostelReservationTest extends TestCase
             ->from(route('hostel.create'))
             ->post(route('hostel.store'), $this->payload($setup, [
                 'check_in_date' => $date,
+                'check_in_time' => '12:00',
                 'check_out_date' => $date,
+                'check_out_time' => '12:00',
             ]))
             ->assertSessionHasErrors('check_out_date');
+
+        $this->actingAs($user)
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'check_in_date' => $date,
+                'check_in_time' => '09:00',
+                'check_out_date' => $date,
+                'check_out_time' => '18:00',
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
     }
 
     /**
@@ -578,11 +672,14 @@ class HostelReservationTest extends TestCase
     private function payload(array $setup, array $overrides = []): array
     {
         return array_merge([
-            'reservation_name' => 'Hostel stay',
+            'guest_title' => 'Ms.',
             'guest_name' => 'Test Guest',
+            'guest_phone' => '+94 77 000 0000',
+            'employee_ids' => ['010456'],
             'check_in_date' => now()->addDay()->toDateString(),
+            'check_in_time' => '11:00',
             'check_out_date' => now()->addDays(3)->toDateString(),
-            'room_type_id' => $setup['type']->id,
+            'check_out_time' => '10:00',
             'location_id' => $setup['location']->id,
             'number_of_guests' => 1,
             'special_requirements' => null,

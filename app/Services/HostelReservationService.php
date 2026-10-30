@@ -10,7 +10,6 @@ use App\Models\HostelStayDetail;
 use App\Models\Reservation;
 use App\Models\ReservationStatusHistory;
 use App\Models\Resource;
-use App\Models\ResourceType;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +19,7 @@ use Illuminate\Validation\ValidationException;
  * Pattern for intern-owned modules (canteen, lecture, events):
  * 1. Reuse ReservationBookingService — never a second overlap engine.
  * 2. Set reservations.type and write a 1:1 details table (this file: hostel_stay_details).
- * 3. Book ordinary resources (here: category "Hostel Room"; form "room category" = ResourceType).
+ * 3. Book ordinary resources (here: any free room in category "Hostel Room" at the chosen location).
  * 4. Add Policy methods, FormRequest, Feature tests that prove reuse + RBAC.
  */
 class HostelReservationService
@@ -28,56 +27,47 @@ class HostelReservationService
     public function __construct(private readonly ReservationBookingService $bookings) {}
 
     /**
-     * @param  array{reservation_name:string,guest_name:string,check_in_date:string,check_out_date:string,room_type_id:int,location_id:int,number_of_guests:int,special_requirements?:string|null,requester_id?:int}  $payload
+     * @param  array{guest_title:string,guest_name:string,employee_ids:array<int,string>,check_in_date:string,check_in_time:string,check_out_date:string,check_out_time:string,location_id:int,number_of_guests:int,guest_phone?:string|null,special_requirements?:string|null,requester_id?:int,title?:string}  $payload
      */
     public function create(array $payload, User $actor): Reservation
     {
-        $roomType = ResourceType::query()->with('category')->find($payload['room_type_id']);
+        [$startsAt, $endsAt] = $this->stayRange(
+            $payload['check_in_date'],
+            $payload['check_in_time'],
+            $payload['check_out_date'],
+            $payload['check_out_time'],
+        );
 
-        if (! $roomType || $roomType->category?->name !== config('hostel.category_name', 'Hostel Room')) {
-            throw ValidationException::withMessages([
-                'room_type_id' => 'Select a valid hostel room category.',
-            ]);
-        }
-
-        [$startsAt, $endsAt] = $this->stayRange($payload['check_in_date'], $payload['check_out_date']);
-
-        return DB::transaction(function () use ($payload, $actor, $roomType, $startsAt, $endsAt) {
-            $room = $this->firstAvailableRoom(
-                (int) $payload['room_type_id'],
-                (int) $payload['location_id'],
-                $startsAt,
-                $endsAt,
-            );
+        return DB::transaction(function () use ($payload, $actor, $startsAt, $endsAt) {
+            $room = $this->firstAvailableRoom((int) $payload['location_id'], $startsAt, $endsAt);
+            $guest = $this->guestLabel($payload);
 
             $reservation = $this->bookings->create([
                 'resource_ids' => [$room->id],
                 'requester_id' => $payload['requester_id'] ?? $actor->id,
                 'location_id' => $payload['location_id'],
                 'type' => ReservationType::HOSTEL->value,
-                'title' => $payload['reservation_name'],
-                'purpose' => 'Hostel stay for '.$payload['guest_name'],
+                'title' => $payload['title'] ?? 'Hostel stay for '.$guest,
+                'purpose' => 'Hostel stay for '.$guest,
                 'attendee_count' => $payload['number_of_guests'],
                 'reservation_date' => $payload['check_in_date'],
                 'end_date' => $payload['check_out_date'],
-                'start_time' => config('hostel.check_in_time', '11:00'),
-                'end_time' => config('hostel.check_out_time', '24:00'),
+                'start_time' => $payload['check_in_time'],
+                'end_time' => $payload['check_out_time'],
             ], $actor);
 
             HostelStayDetail::query()->create([
                 'reservation_id' => $reservation->id,
+                'guest_title' => $payload['guest_title'],
                 'guest_name' => $payload['guest_name'],
-                'guest_identity_type' => filled($payload['guest_identity_number'] ?? null) ? 'id_number' : null,
-                'guest_identity_encrypted' => filled($payload['guest_identity_number'] ?? null)
-                    ? Crypt::encryptString($payload['guest_identity_number'])
-                    : null,
+                'employee_ids' => array_values($payload['employee_ids']),
                 'guest_phone_encrypted' => filled($payload['guest_phone'] ?? null)
                     ? Crypt::encryptString($payload['guest_phone'])
                     : null,
                 'check_in_at' => $startsAt,
                 'check_out_at' => $endsAt,
-                'room_type_id' => $roomType->id,
-                'room_category_id' => $roomType->resource_category_id,
+                'room_type_id' => $room->resource_type_id,
+                'room_category_id' => $room->type->resource_category_id,
                 'number_of_guests' => $payload['number_of_guests'],
                 'special_requirements' => $payload['special_requirements'] ?? null,
             ]);
@@ -90,58 +80,50 @@ class HostelReservationService
     {
         if ($reservation->type !== ReservationType::HOSTEL->value || ! $reservation->canBeEdited()) {
             throw ValidationException::withMessages([
-                'reservation_name' => 'This hostel reservation can no longer be edited.',
+                'guest_name' => 'This hostel reservation can no longer be edited.',
             ]);
         }
 
-        $roomType = ResourceType::query()->with('category')->find($payload['room_type_id']);
+        [$startsAt, $endsAt] = $this->stayRange(
+            $payload['check_in_date'],
+            $payload['check_in_time'],
+            $payload['check_out_date'],
+            $payload['check_out_time'],
+        );
 
-        if (! $roomType || $roomType->category?->name !== config('hostel.category_name', 'Hostel Room')) {
-            throw ValidationException::withMessages([
-                'room_type_id' => 'Select a valid hostel room category.',
-            ]);
-        }
-
-        [$startsAt, $endsAt] = $this->stayRange($payload['check_in_date'], $payload['check_out_date']);
-
-        return DB::transaction(function () use ($payload, $actor, $roomType, $startsAt, $endsAt, $reservation) {
+        return DB::transaction(function () use ($payload, $actor, $startsAt, $endsAt, $reservation) {
             $room = $this->firstAvailableRoom(
-                (int) $payload['room_type_id'],
                 (int) $payload['location_id'],
                 $startsAt,
                 $endsAt,
                 $reservation->id,
             );
+            $guest = $this->guestLabel($payload);
 
             $reservation = $this->bookings->updatePending($reservation, [
                 'resource_ids' => [$room->id],
                 'location_id' => $payload['location_id'],
-                'title' => $payload['reservation_name'],
-                'purpose' => 'Hostel stay for '.$payload['guest_name'],
+                'title' => $payload['title'] ?? 'Hostel stay for '.$guest,
+                'purpose' => 'Hostel stay for '.$guest,
                 'attendee_count' => $payload['number_of_guests'],
                 'reservation_date' => $payload['check_in_date'],
                 'end_date' => $payload['check_out_date'],
-                'start_time' => config('hostel.check_in_time', '11:00'),
-                'end_time' => config('hostel.check_out_time', '24:00'),
+                'start_time' => $payload['check_in_time'],
+                'end_time' => $payload['check_out_time'],
             ], $actor);
 
             $stay = $reservation->hostelStay;
             $stayPayload = [
+                'guest_title' => $payload['guest_title'],
                 'guest_name' => $payload['guest_name'],
+                'employee_ids' => array_values($payload['employee_ids']),
                 'check_in_at' => $startsAt,
                 'check_out_at' => $endsAt,
-                'room_type_id' => $roomType->id,
-                'room_category_id' => $roomType->resource_category_id,
+                'room_type_id' => $room->resource_type_id,
+                'room_category_id' => $room->type->resource_category_id,
                 'number_of_guests' => $payload['number_of_guests'],
                 'special_requirements' => $payload['special_requirements'] ?? null,
             ];
-
-            if (array_key_exists('guest_identity_number', $payload)) {
-                $stayPayload['guest_identity_type'] = filled($payload['guest_identity_number']) ? 'id_number' : null;
-                $stayPayload['guest_identity_encrypted'] = filled($payload['guest_identity_number'])
-                    ? Crypt::encryptString($payload['guest_identity_number'])
-                    : null;
-            }
 
             if (array_key_exists('guest_phone', $payload)) {
                 $stayPayload['guest_phone_encrypted'] = filled($payload['guest_phone'])
@@ -335,27 +317,30 @@ class HostelReservationService
         ]);
     }
 
-    public function stayRange(string $checkInDate, string $checkOutDate): array
+    public function stayRange(string $checkInDate, string $checkInTime, string $checkOutDate, string $checkOutTime): array
     {
         try {
-            return $this->bookings->utcDateTimeRange(
-                $checkInDate,
-                config('hostel.check_in_time', '11:00'),
-                $checkOutDate,
-                config('hostel.check_out_time', '24:00'),
-            );
+            [$startsAt, $endsAt] = $this->bookings->utcDateTimeRange($checkInDate, $checkInTime, $checkOutDate, $checkOutTime);
         } catch (ValidationException) {
             throw ValidationException::withMessages([
                 'check_out_date' => 'Check-out must be after check-in.',
             ]);
         }
+
+        if ($startsAt->lessThanOrEqualTo(now())) {
+            throw ValidationException::withMessages([
+                'check_in_time' => 'Check-in must be in the future.',
+            ]);
+        }
+
+        return [$startsAt, $endsAt];
     }
 
-    public function firstAvailableRoom(int $roomTypeId, int $locationId, $startsAt, $endsAt, ?int $ignoreReservationId = null): Resource
+    public function firstAvailableRoom(int $locationId, $startsAt, $endsAt, ?int $ignoreReservationId = null): Resource
     {
         $rooms = Resource::query()
             ->hostelRooms()
-            ->where('resource_type_id', $roomTypeId)
+            ->with('type')
             ->where('location_id', $locationId)
             ->orderBy('name_model')
             ->lockForUpdate()
@@ -363,7 +348,7 @@ class HostelReservationService
 
         if ($rooms->isEmpty()) {
             throw ValidationException::withMessages([
-                'room_type_id' => 'No rooms of this category exist at the selected location.',
+                'location_id' => 'No hostel rooms exist at the selected location.',
             ]);
         }
 
@@ -373,6 +358,11 @@ class HostelReservationService
             }
         }
 
-        throw new ReservationConflictException('No room is available for the selected category and dates.');
+        throw new ReservationConflictException('No room is available at this location for the selected dates.');
+    }
+
+    private function guestLabel(array $payload): string
+    {
+        return trim(($payload['guest_title'] ?? '').' '.$payload['guest_name']);
     }
 }

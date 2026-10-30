@@ -4,15 +4,18 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/hostel-create.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/hostel-create.css') }}?v=9">
 @endpush
 
 @section('content')
 @php
     $editing = $reservation ?? null;
     $stay = $editing?->hostelStay;
-    $selectedRoomType = $roomTypes->firstWhere('id', (int) old('room_type_id', $stay?->room_type_id));
     $selectedLocation = $locations->firstWhere('id', (int) old('location_id', $editing?->location_id));
+    $guestTitle = (string) old('guest_title', $stay?->guest_title ?? '');
+    $guestCount = max(1, min($maxGuests, (int) old('number_of_guests', $stay?->number_of_guests ?? 1)));
+    $employeeIds = old('employee_ids', $stay?->employee_ids ?? []);
+    $employeeIdError = $errors->first('employee_ids');
 @endphp
 <div class="container-fluid mt-4 hc-page">
     <div class="hc-header">
@@ -43,25 +46,42 @@
                 @endif
                 <h2 class="hc-section-title"><i class="ti ti-bed"></i> Booking details</h2>
                 <div class="row g-3 pb-1">
-                    <div class="col-12">
-                        <label for="reservation_name" class="form-label">Reservation name <span class="text-danger">*</span></label>
-                        <input type="text" id="reservation_name" name="reservation_name" class="form-control @error('reservation_name') is-invalid @enderror" value="{{ old('reservation_name', $editing?->title) }}" placeholder="e.g. Summer Internship 2026 Group" required>
-                        @error('reservation_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    <div class="col-12 col-sm-4 col-md-3">
+                        <label for="guest_title" class="form-label">Title <span class="text-danger">*</span></label>
+                        <x-rm-select id="guest_title" name="guest_title" class="{{ $errors->has('guest_title') ? 'is-invalid' : '' }}" placeholder="Select" :value="$guestTitle" :selected-label="$guestTitle !== '' ? $guestTitle : 'Select'" :required="true"
+                            :options="collect([['value' => '', 'label' => 'Select']])->concat(collect($guestTitles)->map(fn ($title) => ['value' => $title, 'label' => $title]))->all()" />
+                        @error('guest_title')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-sm-8 col-md-9">
                         <label for="guest_name" class="form-label">Guest name <span class="text-danger">*</span></label>
-                        <input type="text" id="guest_name" name="guest_name" class="form-control @error('guest_name') is-invalid @enderror" value="{{ old('guest_name', $stay?->guest_name) }}" placeholder="e.g. Guest Name" required>
+                        <input type="text" id="guest_name" name="guest_name" class="form-control @error('guest_name') is-invalid @enderror" value="{{ old('guest_name', $stay?->guest_name) }}" placeholder="e.g. Kasun Madushanka" required>
                         @error('guest_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12 col-md-6">
-                        <label for="guest_phone" class="form-label">Guest phone number</label>
-                        <input type="tel" id="guest_phone" name="guest_phone" class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone') }}" autocomplete="tel" placeholder="e.g. +94 77 123 4567">
+                        <label for="guest_phone" class="form-label">Guest phone number <span class="text-danger">*</span></label>
+                        <input type="tel" id="guest_phone" name="guest_phone" class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestPhone ?? '') }}" autocomplete="tel" placeholder="e.g. +94 77 123 4567" required>
                         @error('guest_phone')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+                    <div class="col-12 col-md-6">
+                        <label for="number_of_guests" class="form-label">Number of guests <span class="text-danger">*</span></label>
+                        <input type="number" id="number_of_guests" name="number_of_guests" class="form-control @error('number_of_guests') is-invalid @enderror" min="1" max="{{ $maxGuests }}" step="1" value="{{ $guestCount }}" required>
+                        @error('number_of_guests')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
                     <div class="col-12">
-                        <label for="guest_identity_number" class="form-label">Guest ID / passport number</label>
-                        <input type="text" id="guest_identity_number" name="guest_identity_number" class="form-control @error('guest_identity_number') is-invalid @enderror" value="{{ old('guest_identity_number') }}" autocomplete="off">
-                        @error('guest_identity_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <fieldset class="hc-employee-ids" id="hc-employee-ids" data-label="Employee ID" aria-describedby="hc-employee-ids-hint">
+                            <legend class="form-label mb-2">Employee IDs <span class="text-danger">*</span></legend>
+                            <p id="hc-employee-ids-hint" class="hc-hint mt-0 mb-2">Enter one employee ID for each guest.</p>
+                            <div class="row g-3" data-hc-employee-list>
+                                @for($i = 0; $i < $guestCount; $i++)
+                                    <div class="col-12 col-sm-6" data-hc-employee-row>
+                                        <label for="employee_id_{{ $i }}" class="form-label">Employee ID {{ $guestCount > 1 ? '(guest '.($i + 1).')' : '' }}</label>
+                                        <input type="text" id="employee_id_{{ $i }}" name="employee_ids[]" class="form-control @error('employee_ids.'.$i) is-invalid @enderror" value="{{ $employeeIds[$i] ?? '' }}" maxlength="50" autocomplete="off" placeholder="010456" required>
+                                        @error('employee_ids.'.$i)<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                    </div>
+                                @endfor
+                            </div>
+                            @if($employeeIdError)<div class="invalid-feedback d-block">{{ $employeeIdError }}</div>@endif
+                        </fieldset>
                     </div>
                     <div class="col-12 col-sm-6">
                         <label for="check_in_date" class="form-label">Check-in date <span class="text-danger">*</span></label>
@@ -69,29 +89,28 @@
                         @error('check_in_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12 col-sm-6">
+                        <label for="check_in_time" class="form-label">Check-in time <span class="text-danger">*</span></label>
+                        <input type="time" id="check_in_time" name="check_in_time" class="form-control @error('check_in_time') is-invalid @enderror" value="{{ old('check_in_time', $prefillCheckInTime ?? '') }}" required>
+                        @error('check_in_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-12 col-sm-6">
                         <label for="check_out_date" class="form-label">Check-out date <span class="text-danger">*</span></label>
-                        <input type="date" id="check_out_date" name="check_out_date" class="form-control @error('check_out_date') is-invalid @enderror" value="{{ old('check_out_date', $prefillCheckOut ?? '') }}" required>
+                        <input type="date" id="check_out_date" name="check_out_date" class="form-control @error('check_out_date') is-invalid @enderror" value="{{ old('check_out_date', $prefillCheckOut ?? '') }}" min="{{ $minCheckIn }}" required>
                         @error('check_out_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12 col-sm-6">
-                        <label for="room_type_id" class="form-label">Room category <span class="text-danger">*</span></label>
-                        <x-rm-select id="room_type_id" name="room_type_id" class="{{ $errors->has('room_type_id') ? 'is-invalid' : '' }}" placeholder="Select category" :value="(string) old('room_type_id', $stay?->room_type_id ?? '')" :selected-label="$selectedRoomType->name ?? 'Select category'" :required="true"
-                            :options="collect([['value' => '', 'label' => 'Select category']])->concat($roomTypes->map(fn ($type) => ['value' => (string) $type->id, 'label' => $type->name]))->all()" />
-                        @error('room_type_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        @if($roomTypes->isEmpty())
-                            <p class="hc-hint mb-0">Create a “Hostel Room” category and room types (Single, Double) under Create Resources first.</p>
-                        @endif
-                    </div>
-                    <div class="col-12 col-sm-6">
-                        <label for="number_of_guests" class="form-label">Number of guests <span class="text-danger">*</span></label>
-                        <input type="number" id="number_of_guests" name="number_of_guests" class="form-control @error('number_of_guests') is-invalid @enderror" min="1" step="1" value="{{ old('number_of_guests', $stay?->number_of_guests ?? 1) }}" required>
-                        @error('number_of_guests')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <label for="check_out_time" class="form-label">Check-out time <span class="text-danger">*</span></label>
+                        <input type="time" id="check_out_time" name="check_out_time" class="form-control @error('check_out_time') is-invalid @enderror" value="{{ old('check_out_time', $prefillCheckOutTime ?? '') }}" required>
+                        @error('check_out_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">
                         <label for="location_id" class="form-label">Hostel location <span class="text-danger">*</span></label>
                         <x-rm-select id="location_id" name="location_id" class="{{ $errors->has('location_id') ? 'is-invalid' : '' }}" placeholder="Select location" :value="(string) old('location_id', $editing?->location_id ?? '')" :selected-label="$selectedLocation->name ?? 'Select location'" :required="true"
                             :options="collect([['value' => '', 'label' => 'Select location']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
                         @error('location_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        @unless($hasRooms)
+                            <p class="hc-hint mb-0">Add rooms under the “Hostel Room” category in Create Resources first.</p>
+                        @endunless
                     </div>
                     <div class="col-12">
                         <label for="special_requirements" class="form-label">Special requirements</label>
@@ -100,10 +119,9 @@
                     </div>
                 </div>
                 <div class="hc-actions">
-                    <button type="submit" class="hc-submit" @disabled($roomTypes->isEmpty())>
+                    <button type="submit" class="hc-submit" @disabled(! $hasRooms)>
                         <i class="ti ti-circle-check me-1"></i>{{ $editing ? 'Update reservation' : 'Create reservation' }}
                     </button>
-                    <p class="hc-hint mb-0">The system assigns a free room of the selected category and blocks overlapping dates. Check-in {{ config('hostel.check_in_time') }}, check-out {{ config('hostel.check_out_time') }} (midnight at the end of the checkout date).</p>
                 </div>
             </form>
         </div>
@@ -124,7 +142,7 @@
                     <i class="ti ti-help" aria-hidden="true"></i>
                     <div>
                         <h3>Need help?</h3>
-                        <p>Contact the logistics desk at ext. 404 for group booking inquiries.</p>
+                        <p>Contact the logistics desk at <a href="tel:+94112954069">011 2954 069</a> for group booking inquiries.</p>
                     </div>
                 </div>
             </aside>
@@ -136,5 +154,5 @@
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/hostel-create.js') }}?v=1"></script>
+<script src="{{ asset('js/hostel-create.js') }}?v=3"></script>
 @endpush

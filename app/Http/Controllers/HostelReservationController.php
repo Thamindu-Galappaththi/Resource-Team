@@ -7,14 +7,15 @@ use App\Enums\ReservationType;
 use App\Exceptions\ReservationConflictException;
 use App\Http\Requests\CancelReservationRequest;
 use App\Http\Requests\StoreHostelReservationRequest;
+use App\Models\HostelStayDetail;
 use App\Models\Location;
 use App\Models\Reservation;
 use App\Models\Resource;
-use App\Models\ResourceType;
 use App\Services\HostelReservationService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -41,7 +42,6 @@ class HostelReservationController extends Controller
             ->search($request->input('search'))
             ->filter([
                 'status' => $request->input('status'),
-                'room_type_id' => $request->input('room_type_id'),
                 'check_in_from' => $request->input('check_in_from'),
                 'check_in_to' => $request->input('check_in_to'),
             ]);
@@ -76,7 +76,6 @@ class HostelReservationController extends Controller
                 'available_rooms' => $availableRooms,
                 'pending' => $pending,
             ],
-            'roomTypes' => $this->roomTypes(),
             'statuses' => [
                 ReservationStatus::PENDING_APPROVAL,
                 ReservationStatus::APPROVED,
@@ -98,9 +97,13 @@ class HostelReservationController extends Controller
             $prefill = $minCheckIn;
         }
 
+        $locations = $this->hostelLocations();
+
         return view('hostel.create', [
-            'locations' => Location::query()->ordered()->get(),
-            'roomTypes' => $this->roomTypes(),
+            'locations' => $locations,
+            'hasRooms' => $locations->isNotEmpty(),
+            'guestTitles' => HostelStayDetail::GUEST_TITLES,
+            'maxGuests' => StoreHostelReservationRequest::MAX_GUESTS,
             'minCheckIn' => $minCheckIn,
             'prefillCheckIn' => old('check_in_date', $prefill),
         ]);
@@ -155,21 +158,25 @@ class HostelReservationController extends Controller
         $this->authorize('update', $reservation);
         abort_unless($reservation->canBeEdited(), 403);
 
-        $reservation->load(['hostelStay.roomType', 'location']);
+        $reservation->load(['hostelStay', 'location']);
         $stay = $reservation->hostelStay;
-        $tz = config('reservations.display_timezone', 'Asia/Colombo');
+        $tz = $this->hostelStayTimezone();
+        $checkIn = $stay?->check_in_at?->copy()->timezone($tz);
         $checkOut = $stay?->check_out_at?->copy()->timezone($tz);
-        if ($checkOut && $checkOut->hour === 0 && $checkOut->minute === 0) {
-            $checkOut->subSecond();
-        }
+        $locations = $this->hostelLocations();
 
         return view('hostel.create', [
             'reservation' => $reservation,
-            'locations' => Location::query()->ordered()->get(),
-            'roomTypes' => $this->roomTypes(),
+            'locations' => $locations,
+            'hasRooms' => $locations->isNotEmpty(),
+            'guestPhone' => $stay?->guest_phone_encrypted ? Crypt::decryptString($stay->guest_phone_encrypted) : null,
+            'guestTitles' => HostelStayDetail::GUEST_TITLES,
+            'maxGuests' => StoreHostelReservationRequest::MAX_GUESTS,
             'minCheckIn' => now()->toDateString(),
-            'prefillCheckIn' => old('check_in_date', $stay?->check_in_at?->timezone($tz)->toDateString()),
+            'prefillCheckIn' => old('check_in_date', $checkIn?->toDateString()),
+            'prefillCheckInTime' => old('check_in_time', $checkIn?->format('H:i')),
             'prefillCheckOut' => old('check_out_date', $checkOut?->toDateString()),
+            'prefillCheckOutTime' => old('check_out_time', $checkOut?->format('H:i')),
         ]);
     }
 
@@ -237,11 +244,11 @@ class HostelReservationController extends Controller
             : 'Hostel reservation rejected.');
     }
 
-    private function roomTypes()
+    private function hostelLocations()
     {
-        return ResourceType::query()
-            ->whereHas('category', fn ($query) => $query->where('name', config('hostel.category_name', 'Hostel Room')))
-            ->orderBy('name')
+        return Location::query()
+            ->whereIn('id', Resource::query()->hostelRooms()->select('location_id'))
+            ->ordered()
             ->get();
     }
 

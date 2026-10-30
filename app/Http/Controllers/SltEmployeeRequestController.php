@@ -82,7 +82,7 @@ class SltEmployeeRequestController extends Controller
                 $stay = $reservation->hostelStay;
 
                 return [
-                    'title' => $stay?->guest_name ?: ($reservation->title ?: 'Hostel stay'),
+                    'title' => $stay?->displayGuestName() ?: ($reservation->title ?: 'Hostel stay'),
                     'reference' => $reservation->reference,
                     'when' => $this->hostelWhen($reservation),
                     'meta' => $stay?->roomType?->name ?? $reservation->location?->name,

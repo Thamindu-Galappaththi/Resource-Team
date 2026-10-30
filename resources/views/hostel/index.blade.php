@@ -10,8 +10,7 @@
 @section('content')
 @php
     $tz = config('reservations.display_timezone');
-    $hasFilters = collect(['search', 'check_in_from', 'check_in_to', 'room_type_id', 'status'])->contains(fn ($key) => filled(request($key)));
-    $selectedRoomType = $roomTypes->firstWhere('id', (int) request('room_type_id'));
+    $hasFilters = collect(['search', 'check_in_from', 'check_in_to', 'status'])->contains(fn ($key) => filled(request($key)));
     $selectedStatus = collect($statuses)->first(fn ($status) => $status->value === request('status'));
 @endphp
 <div class="container-fluid mt-4 hr-page">
@@ -71,7 +70,7 @@
             <label for="search">Search</label>
             <div class="input-group hr-search-group">
                 <span class="input-group-text"><i class="ti ti-search"></i></span>
-                <input type="text" id="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="ID or guest" autocomplete="off">
+                <input type="text" id="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="ID, guest, or employee ID" autocomplete="off">
             </div>
         </div>
         <div class="hr-filter">
@@ -81,11 +80,6 @@
         <div class="hr-filter">
             <label for="check_in_to">Check-in to</label>
             <input type="date" id="check_in_to" name="check_in_to" class="form-control" value="{{ request('check_in_to') }}">
-        </div>
-        <div class="hr-filter">
-            <label for="room_type_id">Room category</label>
-            <x-rm-select id="room_type_id" name="room_type_id" placeholder="All categories" :value="(string) request('room_type_id', '')" :selected-label="$selectedRoomType->name ?? 'All categories'"
-                :options="collect([['value' => '', 'label' => 'All categories']])->concat($roomTypes->map(fn ($type) => ['value' => (string) $type->id, 'label' => $type->name]))->all()" />
         </div>
         <div class="hr-filter">
             <label for="status">Status</label>
@@ -115,7 +109,7 @@
                         <tr>
                                     <th>Reservation ID</th>
                                     <th>Guest name</th>
-                                    <th>Room category</th>
+                                    <th>Employee IDs</th>
                                     <th>Check-in</th>
                                     <th>Check-out</th>
                                     <th>Status</th>
@@ -126,10 +120,10 @@
                                 @foreach($reservations as $reservation)
                                     <tr>
                                         <td class="hr-ref" data-label="Reservation ID">{{ $reservation->reference }}</td>
-                                        <td data-label="Guest name">{{ $reservation->hostelStay?->guest_name ?? '—' }}</td>
-                                        <td data-label="Room category">{{ $reservation->hostelStay?->roomType?->name ?? '—' }}</td>
-                                        <td data-label="Check-in">{{ $reservation->hostelStay?->check_in_at?->timezone($tz)->format('d M Y') ?: '—' }}</td>
-                                        <td data-label="Check-out">{{ $reservation->hostelStay?->check_out_at?->timezone($tz)->format('d M Y') ?: '—' }}</td>
+                                        <td data-label="Guest name">{{ $reservation->hostelStay?->displayGuestName() ?: '—' }}</td>
+                                        <td data-label="Employee IDs">{{ $reservation->hostelStay?->employeeIdList() ?: '—' }}</td>
+                                        <td data-label="Check-in">{{ $reservation->hostelStay?->check_in_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</td>
+                                        <td data-label="Check-out">{{ $reservation->hostelStay?->check_out_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</td>
                                         <td data-label="Status"><span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span></td>
                                         <td class="text-end hr-actions" data-label="Actions">
                                             @php
@@ -191,7 +185,7 @@
                         <span class="hr-modal-icon" aria-hidden="true"><i class="ti ti-bed"></i></span>
                         <div>
                             <h2 class="modal-title fs-5" id="viewModalTitle-{{ $reservation->id }}">{{ $reservation->reference }}</h2>
-                            <p class="hr-modal-sub mb-0">{{ $reservation->title }}</p>
+                            <p class="hr-modal-sub mb-0">{{ $reservation->hostelStay?->displayGuestName() ?: '—' }}</p>
                         </div>
                         <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
                         <button type="button" class="hr-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
@@ -201,9 +195,9 @@
                             <section class="col-lg-7" aria-labelledby="stayDetails-{{ $reservation->id }}">
                                 <h3 class="hr-section-title" id="stayDetails-{{ $reservation->id }}">Stay details</h3>
                                 <div class="hr-details">
-                                    <div class="hr-detail-row"><span class="hr-detail-label">Guest name</span><span class="hr-detail-value">{{ $reservation->hostelStay?->guest_name ?: '—' }}</span></div>
+                                    <div class="hr-detail-row"><span class="hr-detail-label">Guest name</span><span class="hr-detail-value">{{ $reservation->hostelStay?->displayGuestName() ?: '—' }}</span></div>
+                                    <div class="hr-detail-row"><span class="hr-detail-label">Employee IDs</span><span class="hr-detail-value">{{ $reservation->hostelStay?->employeeIdList() ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Room</span><span class="hr-detail-value">{{ $reservation->resourceNames() ?: '—' }}</span></div>
-                                    <div class="hr-detail-row"><span class="hr-detail-label">Room category</span><span class="hr-detail-value">{{ $reservation->hostelStay?->roomType?->name ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Location</span><span class="hr-detail-value">{{ $reservation->location?->name ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Check-in</span><span class="hr-detail-value">{{ $reservation->hostelStay?->check_in_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Check-out</span><span class="hr-detail-value">{{ $reservation->hostelStay?->check_out_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</span></div>
@@ -248,12 +242,12 @@
                         <span class="hr-modal-icon" aria-hidden="true"><i class="ti ti-circle-check"></i></span>
                         <div>
                             <h2 class="modal-title fs-5" id="approveModalTitle-{{ $reservation->id }}">Approve reservation?</h2>
-                            <p class="hr-modal-sub mb-0">{{ $reservation->reference }} · {{ $reservation->hostelStay?->guest_name }}</p>
+                            <p class="hr-modal-sub mb-0">{{ $reservation->reference }} · {{ $reservation->hostelStay?->displayGuestName() }}</p>
                         </div>
                         <button type="button" class="hr-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-0">Approving confirms the room for {{ $reservation->hostelStay?->check_in_at?->timezone($tz)->format('d M Y') }} to {{ $reservation->hostelStay?->check_out_at?->timezone($tz)->format('d M Y') }}.</p>
+                        <p class="mb-0">Approving confirms the room for {{ $reservation->hostelStay?->check_in_at?->timezone($tz)->format('d M Y H:i') }} to {{ $reservation->hostelStay?->check_out_at?->timezone($tz)->format('d M Y H:i') }}.</p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep pending</button>
@@ -271,7 +265,7 @@
                         <span class="hr-modal-icon" aria-hidden="true"><i class="ti ti-ban"></i></span>
                         <div>
                             <h2 class="modal-title fs-5" id="rejectModalTitle-{{ $reservation->id }}">Reject reservation?</h2>
-                            <p class="hr-modal-sub mb-0">{{ $reservation->reference }} · {{ $reservation->hostelStay?->guest_name }}</p>
+                            <p class="hr-modal-sub mb-0">{{ $reservation->reference }} · {{ $reservation->hostelStay?->displayGuestName() }}</p>
                         </div>
                         <button type="button" class="hr-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
                     </div>
@@ -319,5 +313,5 @@
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/hostel-index.js') }}?v=1"></script>
+<script src="{{ asset('js/hostel-index.js') }}?v=2"></script>
 @endpush
