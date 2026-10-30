@@ -71,6 +71,85 @@
         employeeList.replaceChildren(...Array.from({ length: count }, (_, index) => employeeRow(index, count, values[index])));
     }
 
+    const form = document.getElementById('hostel-booking-form');
+
+    function selectMessage(select) {
+        const label = form.querySelector(`label[for="${select.querySelector('input[type="hidden"]')?.id}"]`);
+        const name = (label?.textContent || 'an option').replace('*', '').trim().toLowerCase();
+        return `Please select ${name}.`;
+    }
+
+    function setSelectError(select, message) {
+        select.classList.toggle('is-invalid', Boolean(message));
+        select.querySelector('.cu-dropdown-toggle')?.classList.toggle('is-invalid', Boolean(message));
+        let note = select.parentElement.querySelector('.invalid-feedback');
+        if (!message) {
+            note?.remove();
+            return;
+        }
+        if (!note) {
+            note = document.createElement('div');
+            note.className = 'invalid-feedback d-block';
+            note.dataset.hcClientError = '';
+            select.insertAdjacentElement('afterend', note);
+        }
+        note.textContent = message;
+    }
+
+    function invalidFields() {
+        const invalid = [];
+        form.querySelectorAll('[data-cu-select], input:not([type="hidden"]), textarea, select').forEach((field) => {
+            if (field.matches('[data-cu-select]')) {
+                const required = field.querySelector('.cu-dropdown-toggle')?.getAttribute('aria-required') === 'true';
+                const empty = !(field.querySelector('input[type="hidden"]')?.value || '').trim();
+                setSelectError(field, required && empty ? selectMessage(field) : '');
+                if (required && empty) invalid.push(field);
+                return;
+            }
+            if (field.closest('[data-cu-select]') || field.disabled) return;
+            const ok = field.checkValidity();
+            field.classList.toggle('is-invalid', !ok);
+            if (!ok) invalid.push(field);
+        });
+        return invalid;
+    }
+
+    function revealField(field) {
+        field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const focusTarget = field.matches('[data-cu-select]') ? field.querySelector('.cu-dropdown-toggle') : field;
+        setTimeout(() => {
+            focusTarget?.focus({ preventScroll: true });
+            if (!field.matches('[data-cu-select]')) field.reportValidity();
+        }, 350);
+    }
+
+    if (form) {
+        form.noValidate = true;
+        form.addEventListener('submit', (event) => {
+            const invalid = invalidFields();
+            if (invalid.length === 0) return;
+            event.preventDefault();
+            revealField(invalid[0]);
+        });
+        form.addEventListener('input', (event) => {
+            if (event.target.classList?.contains('is-invalid') && event.target.checkValidity()) {
+                event.target.classList.remove('is-invalid');
+            }
+        });
+        form.addEventListener('change', (event) => {
+            const select = event.target.closest?.('[data-cu-select]');
+            if (select && event.target.value) setSelectError(select, '');
+        });
+
+        const serverError = form.querySelector('.is-invalid, .invalid-feedback.d-block');
+        if (serverError) {
+            const field = serverError.closest('[data-cu-select]')
+                || serverError.closest('[class*="col-"]')?.querySelector('[data-cu-select], input:not([type="hidden"]), textarea')
+                || serverError;
+            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
     checkIn?.addEventListener('change', syncCheckoutMin);
     guests?.addEventListener('input', syncEmployeeIds);
     guests?.addEventListener('change', syncEmployeeIds);
