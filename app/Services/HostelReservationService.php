@@ -66,13 +66,11 @@ class HostelReservationService
                     : null,
                 'check_in_at' => $startsAt,
                 'check_out_at' => $endsAt,
-                'room_type_id' => $room->resource_type_id,
-                'room_category_id' => $room->type->resource_category_id,
                 'number_of_guests' => $payload['number_of_guests'],
                 'special_requirements' => $payload['special_requirements'] ?? null,
             ]);
 
-            return $reservation->load(['hostelStay.roomType', 'items', 'location', 'requester']);
+            return $reservation->load(['hostelStay', 'items', 'location', 'requester']);
         });
     }
 
@@ -119,8 +117,6 @@ class HostelReservationService
                 'employee_ids' => array_values($payload['employee_ids']),
                 'check_in_at' => $startsAt,
                 'check_out_at' => $endsAt,
-                'room_type_id' => $room->resource_type_id,
-                'room_category_id' => $room->type->resource_category_id,
                 'number_of_guests' => $payload['number_of_guests'],
                 'special_requirements' => $payload['special_requirements'] ?? null,
             ];
@@ -133,7 +129,7 @@ class HostelReservationService
 
             $stay?->update($stayPayload);
 
-            return $reservation->load(['hostelStay.roomType', 'items', 'location', 'requester']);
+            return $reservation->load(['hostelStay', 'items', 'location', 'requester']);
         });
     }
 
@@ -161,7 +157,7 @@ class HostelReservationService
             if ($this->checkInHasPassed($reservation)) {
                 $this->expirePendingReservation($reservation);
 
-                return $reservation->load(['hostelStay.roomType', 'items', 'location', 'requester']);
+                return $reservation->load(['hostelStay', 'items', 'location', 'requester']);
             }
 
             $items = $reservation->items()->orderBy('resource_id')->lockForUpdate()->get();
@@ -200,7 +196,7 @@ class HostelReservationService
                 'created_at' => now(),
             ]);
 
-            return $reservation->load(['hostelStay.roomType', 'items', 'location', 'requester']);
+            return $reservation->load(['hostelStay', 'items', 'location', 'requester']);
         });
     }
 
@@ -340,7 +336,6 @@ class HostelReservationService
     {
         $rooms = Resource::query()
             ->hostelRooms()
-            ->with('type')
             ->where('location_id', $locationId)
             ->orderBy('name_model')
             ->lockForUpdate()

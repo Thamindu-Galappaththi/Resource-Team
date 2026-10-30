@@ -161,6 +161,11 @@ class Reservation extends Model
         return route('reservations.show', $this);
     }
 
+    public function hostelRoomTypeName(): ?string
+    {
+        return $this->items->first()?->resource?->type?->name;
+    }
+
     public function resourceNames(): string
     {
         return $this->items
@@ -238,10 +243,6 @@ class Reservation extends Model
             $query->whereHas('items.resource.type', function (Builder $type) use ($filters) {
                 $type->where('resource_category_id', $filters['resource_category_id']);
             });
-        }
-
-        if (($filters['room_type_id'] ?? null) !== null && $filters['room_type_id'] !== '') {
-            $query->whereHas('hostelStay', fn (Builder $stay) => $stay->where('room_type_id', $filters['room_type_id']));
         }
 
         if (($filters['check_in_from'] ?? null) !== null && $filters['check_in_from'] !== '') {

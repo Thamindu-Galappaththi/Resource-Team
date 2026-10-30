@@ -170,7 +170,7 @@ class SltEmployeeDashboardController extends Controller
         $events = [];
 
         $reservations = Reservation::query()
-            ->with(['hostelStay.roomType', 'location', 'requester'])
+            ->with(['hostelStay', 'items.resource.type', 'location', 'requester'])
             ->where('type', ReservationType::HOSTEL->value)
             ->where('status', '!=', ReservationStatus::DRAFT->value)
             ->when($user?->hasRole('slt_employee'), fn ($query) => $query->whereIn('status', ReservationStatus::calendarActive()))
@@ -324,7 +324,7 @@ class SltEmployeeDashboardController extends Controller
         $status = ReservationStatus::tryFrom((string) $reservation->status);
         $title = $mine
             ? ($stay?->displayGuestName() ?: ($reservation->title ?: 'Hostel stay'))
-            : ($stay?->roomType?->name ?? $reservation->location?->name ?? 'Hostel stay');
+            : ($reservation->hostelRoomTypeName() ?? $reservation->location?->name ?? 'Hostel stay');
 
         if ($stay?->check_in_at && $stay->check_out_at) {
             $start = $stay->check_in_at->copy()->timezone($timezone)->startOfDay();
@@ -343,7 +343,7 @@ class SltEmployeeDashboardController extends Controller
             start: $start,
             end: $end,
             allDay: true,
-            resource: $stay?->roomType?->name ?? $reservation->location?->name ?? $title,
+            resource: $reservation->hostelRoomTypeName() ?? $reservation->location?->name ?? $title,
             location: $reservation->location?->name ?? '—',
             status: $status?->label() ?? (string) $reservation->status,
             statusValue: (string) $reservation->status,

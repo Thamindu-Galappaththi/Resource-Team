@@ -33,7 +33,7 @@ class HostelReservationController extends Controller
 
         $query = Reservation::query()
             ->where('type', ReservationType::HOSTEL->value)
-            ->with(['requester', 'location', 'hostelStay.roomType', 'items.resource', 'statusHistory.actor'])
+            ->with(['requester', 'location', 'hostelStay', 'items.resource', 'statusHistory.actor'])
             ->latest('reservation_date');
 
         $this->restrictToOwnUnlessStaff($query);
@@ -145,7 +145,7 @@ class HostelReservationController extends Controller
             'createdBy',
             'location',
             'items.resource.type.category',
-            'hostelStay.roomType',
+            'hostelStay',
             'statusHistory.actor',
         ]);
 

@@ -14,19 +14,14 @@ return new class extends Migration
             $table->string('guest_title', 10)->nullable();
             $table->string('guest_name', 150);
             $table->json('employee_ids')->nullable();
-            $table->string('guest_identity_type', 30)->nullable();
-            $table->text('guest_identity_encrypted')->nullable();
             $table->text('guest_phone_encrypted')->nullable();
             $table->dateTime('check_in_at');
             $table->dateTime('check_out_at');
-            $table->foreignId('room_type_id')->constrained('resource_types')->restrictOnDelete();
-            $table->foreignId('room_category_id')->constrained('resource_categories')->restrictOnDelete();
             $table->unsignedInteger('number_of_guests')->default(1);
             $table->text('special_requirements')->nullable();
             $table->timestamps();
 
             $table->index(['check_in_at', 'check_out_at']);
-            $table->index('room_type_id');
         });
     }
 

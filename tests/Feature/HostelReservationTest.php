@@ -66,7 +66,6 @@ class HostelReservationTest extends TestCase
             'reservation_id' => $reservation->id,
             'guest_title' => 'Mr.',
             'guest_name' => 'Kasun Madushanka',
-            'room_type_id' => $setup['type']->id,
             'number_of_guests' => 2,
             'special_requirements' => 'Ground floor if possible',
         ]);
@@ -76,6 +75,9 @@ class HostelReservationTest extends TestCase
         $this->assertSame('14:00', $stay->check_in_at->timezone($tz)->format('H:i'));
         $this->assertSame('10:30', $stay->check_out_at->timezone($tz)->format('H:i'));
         $this->assertSame('+94 77 123 4567', Crypt::decryptString($stay->guest_phone_encrypted));
+        foreach (['room_type_id', 'room_category_id', 'guest_identity_type', 'guest_identity_encrypted'] as $removed) {
+            $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('hostel_stay_details', $removed));
+        }
         $this->assertDatabaseHas('reservation_items', [
             'reservation_id' => $reservation->id,
             'resource_id' => $setup['room']->id,

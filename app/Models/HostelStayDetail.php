@@ -17,13 +17,9 @@ class HostelStayDetail extends Model
         'guest_title',
         'guest_name',
         'employee_ids',
-        'guest_identity_type',
-        'guest_identity_encrypted',
         'guest_phone_encrypted',
         'check_in_at',
         'check_out_at',
-        'room_type_id',
-        'room_category_id',
         'number_of_guests',
         'special_requirements',
     ];
@@ -50,15 +46,5 @@ class HostelStayDetail extends Model
     public function reservation(): BelongsTo
     {
         return $this->belongsTo(Reservation::class);
-    }
-
-    public function roomType(): BelongsTo
-    {
-        return $this->belongsTo(ResourceType::class, 'room_type_id');
-    }
-
-    public function roomCategory(): BelongsTo
-    {
-        return $this->belongsTo(ResourceCategory::class, 'room_category_id');
     }
 }
