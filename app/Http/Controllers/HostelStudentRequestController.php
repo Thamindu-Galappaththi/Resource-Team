@@ -11,6 +11,7 @@ use App\Services\NotificationRecipients;
 use App\Services\SmsSender;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -19,9 +20,15 @@ class HostelStudentRequestController extends Controller
 {
     public function __construct(private readonly SmsSender $sms) {}
 
-    public function form(string $token): View
+    public function form(string $token): View|RedirectResponse|Response
     {
-        $this->linkOrFail($token);
+        $link = $this->resolveLink($token);
+        if (! $link) {
+            return $this->invalidLink();
+        }
+        if ($link->token !== $token) {
+            return redirect()->route('hostel.student-form', $link->token);
+        }
 
         return view('hostel.student-form', [
             'token' => $token,
@@ -29,9 +36,12 @@ class HostelStudentRequestController extends Controller
         ]);
     }
 
-    public function submit(StoreHostelStudentRequest $request, string $token): RedirectResponse
+    public function submit(StoreHostelStudentRequest $request, string $token): RedirectResponse|Response
     {
-        $this->linkOrFail($token);
+        $link = HostelRequestLink::query()->where('token', $token)->first();
+        if (! $link) {
+            return $this->invalidLink();
+        }
 
         $studentRequest = HostelStudentRequest::query()->create($request->safe()->except('website'));
 
@@ -42,9 +52,13 @@ class HostelStudentRequestController extends Controller
             ->with('student_request_reference', $studentRequest->reference);
     }
 
-    public function done(string $token): View|RedirectResponse
+    public function done(string $token): View|RedirectResponse|Response
     {
-        $this->linkOrFail($token);
+        $link = $this->resolveLink($token);
+        if (! $link) {
+            return $this->invalidLink();
+        }
+        $token = $link->token;
         $reference = session('student_request_reference');
 
         if (! $reference) {
@@ -151,8 +165,29 @@ class HostelStudentRequestController extends Controller
         return $text.' Help: 011 2954 069';
     }
 
-    private function linkOrFail(string $token): HostelRequestLink
+    /**
+     * Shared links often get extra characters pasted after them (for example from a WhatsApp
+     * message), so a value that starts with a real token still resolves to that link.
+     */
+    private function resolveLink(string $token): ?HostelRequestLink
     {
-        return HostelRequestLink::query()->where('token', $token)->firstOrFail();
+        $exact = HostelRequestLink::query()->where('token', $token)->first();
+        if ($exact) {
+            return $exact;
+        }
+
+        $clean = preg_replace('/[^A-Za-z0-9]/', '', $token) ?? '';
+        if (strlen($clean) < HostelRequestLink::TOKEN_LENGTH) {
+            return null;
+        }
+
+        return HostelRequestLink::query()
+            ->where('token', substr($clean, 0, HostelRequestLink::TOKEN_LENGTH))
+            ->first();
+    }
+
+    private function invalidLink(): Response
+    {
+        return response()->view('hostel.student-link-invalid', [], 404);
     }
 }

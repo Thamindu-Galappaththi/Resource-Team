@@ -87,8 +87,81 @@
     color: #34445b;
 }
 
-.hr-page a.hr-filter-clear { text-decoration: none; }
-.hr-page a.hr-filter-clear.disabled { opacity: .55; pointer-events: none; }
+#hsr-results.is-loading { opacity: .55; pointer-events: none; }
+
+.hr-page .hsr-search-group:focus-within {
+    border-color: #1769c2;
+    box-shadow: 0 0 0 2px rgba(23, 105, 194, .12);
+}
+
+.hsr-search-group { flex-wrap: nowrap; }
+
+.hsr-search-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    margin: auto .5rem auto 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #eef3ff;
+    color: #5b6b86;
+    font-size: .95rem;
+    transition: background .15s ease, color .15s ease;
+}
+
+.hsr-search-clear:hover,
+.hsr-search-clear:focus-visible {
+    background: #1769c2;
+    color: #fff;
+    outline: none;
+}
+
+.hsr-search-clear[hidden] { display: none; }
+
+.swal2-container.rm-swal-backdrop {
+    padding: 12px !important;
+    background: rgba(15, 32, 68, .58) !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.rm-swal {
+    display: flex !important;
+    flex-direction: column !important;
+    width: min(440px, 100%) !important;
+    padding: 0 0 1.1rem !important;
+    border: 1px solid #c9d6ee !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+    font-family: inherit !important;
+    background: linear-gradient(180deg, #f4f7ff 0%, #fff 110px) !important;
+    box-shadow: 0 24px 60px rgba(18, 58, 122, .28) !important;
+}
+
+.rm-swal-icon { margin: 1.4rem auto .2rem !important; }
+
+.rm-swal-title {
+    margin: 0 !important;
+    padding: .35rem 1.4rem .15rem !important;
+    color: #123a7a !important;
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+}
+
+.rm-swal-text {
+    margin: 0 !important;
+    padding: .35rem 1.4rem 0 !important;
+    color: #3d4f6b !important;
+    font-size: .92rem !important;
+}
+
+.rm-swal-actions { gap: .6rem !important; margin-top: 1rem !important; }
+.rm-swal-btn { min-width: 110px; border-radius: 9px !important; font-weight: 600 !important; }
+.rm-swal .swal2-timer-progress-bar { background: #1769c2 !important; }
 
 @media (max-width: 767.98px) {
     .hsr-link-row .hsr-btn { flex: 1 1 100%; }

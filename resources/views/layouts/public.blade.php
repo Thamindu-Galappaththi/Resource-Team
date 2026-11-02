@@ -9,13 +9,17 @@
     <link rel="shortcut icon" type="image/png" href="{{ asset('images/logos/favicon.jpg') }}">
     <link rel="stylesheet" href="{{ asset('css/icons/tabler-icons/tabler-icons.css') }}">
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/public-pages.css') }}?v=1" rel="stylesheet">
+    <link href="{{ asset('css/public-pages.css') }}?v=6" rel="stylesheet">
     @stack('styles')
 </head>
 
 <body class="pub-body">
     <header class="pub-brand">
-        <img src="{{ asset('images/logos/nebula.png') }}" alt="Nebula Institute of Technology" class="pub-logo">
+        <div class="pub-brand-bar">
+            <img src="{{ asset('images/logos/nebula.png') }}" alt="Nebula Institute of Technology" class="pub-logo">
+            <span class="pub-brand-divider" aria-hidden="true"></span>
+            <span class="pub-brand-tag"><i class="ti ti-building-community" aria-hidden="true"></i>Hostel Office</span>
+        </div>
     </header>
     <main class="pub-main">
         @yield('content')

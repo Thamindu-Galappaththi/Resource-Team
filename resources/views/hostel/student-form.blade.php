@@ -7,13 +7,22 @@
     $field = fn (string $name) => $errors->has($name) ? 'form-control is-invalid' : 'form-control';
 @endphp
 <div class="pub-card">
-    <div class="pub-card-head">
-        <i class="ti ti-bed" aria-hidden="true"></i>
-        <div>
-            <h1>Hostel Reservation Request</h1>
-            <p>Fill in your details. The hostel manager will review your request and send the decision to your phone by SMS.</p>
+    <section class="pub-hero" aria-labelledby="pub-hero-title">
+        <div class="pub-hero-art" aria-hidden="true">
+            <span class="pub-hero-ring"></span>
+            <i class="ti ti-school"></i>
         </div>
-    </div>
+        <div class="pub-hero-copy">
+            <span class="pub-hero-eyebrow">For Nebula students</span>
+            <h1 id="pub-hero-title">Need a place to stay? <span>Request your hostel room.</span></h1>
+            <p>Takes about 2 minutes. No login needed. We send the decision straight to your phone.</p>
+        </div>
+    </section>
+    <ol class="pub-steps" aria-label="How it works">
+        <li><span>1</span><div><strong>Fill the form</strong><small>Your details and stay dates</small></div></li>
+        <li><span>2</span><div><strong>Manager reviews</strong><small>Hostel office checks rooms</small></div></li>
+        <li><span>3</span><div><strong>Get an SMS</strong><small>Approved, rejected, or cancelled</small></div></li>
+    </ol>
     <div class="pub-card-body">
         @if($errors->any())
             <div class="alert alert-danger" role="alert">Please correct the highlighted fields and submit again.</div>

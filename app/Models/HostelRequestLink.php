@@ -8,6 +8,8 @@ use Illuminate\Support\Str;
 
 class HostelRequestLink extends Model
 {
+    public const TOKEN_LENGTH = 40;
+
     protected $fillable = ['token', 'created_by_user_id'];
 
     /**
@@ -21,7 +23,7 @@ class HostelRequestLink extends Model
     public static function firstOrGenerate(User $actor): self
     {
         return self::current() ?? self::query()->create([
-            'token' => Str::random(40),
+            'token' => Str::random(self::TOKEN_LENGTH),
             'created_by_user_id' => $actor->id,
         ]);
     }

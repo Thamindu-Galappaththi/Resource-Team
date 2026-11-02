@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/hostel-index.css') }}?v=6">
-<link rel="stylesheet" href="{{ asset('css/hostel-student-requests.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/hostel-student-requests.css') }}?v=3">
 @endpush
 
 @section('content')
@@ -63,19 +63,22 @@
                     <p class="mb-0">No link yet. Generate it once and share it with students.</p>
                     <form method="POST" action="{{ route('hostel.student-requests.link') }}">
                         @csrf
-                        <button type="submit" class="btn hsr-btn hsr-btn-copy"><i class="ti ti-link-plus me-1"></i>Generate link</button>
+                        <button type="submit" class="btn hsr-btn hsr-btn-copy"><i class="ti ti-link me-1"></i>Generate link</button>
                     </form>
                 </div>
             @endif
         </div>
     </section>
 
-    <form id="hsr-filters" class="hr-filters" method="GET" action="{{ route('hostel.student-requests.index') }}" data-action-lock="off">
+    <div id="hsr-flash" class="alert hr-auto-alert d-none" role="status"></div>
+
+    <form id="hsr-filters" class="hr-filters" method="GET" action="{{ route('hostel.student-requests.index') }}">
         <div class="hr-filter hr-f-search">
             <label for="search">Search</label>
-            <div class="input-group hr-search-group">
+            <div class="input-group hr-search-group hsr-search-group">
                 <span class="input-group-text"><i class="ti ti-search"></i></span>
                 <input type="text" id="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Reference, student, ID, phone, or town" autocomplete="off">
+                <button type="button" class="hsr-search-clear" id="hsr-search-clear" aria-label="Clear search" title="Clear search" @if(! filled(request('search'))) hidden @endif><i class="ti ti-x"></i></button>
             </div>
         </div>
         <div class="hr-filter">
@@ -84,12 +87,14 @@
                 :options="collect([['value' => '', 'label' => 'All statuses']])->concat(collect($statuses)->map(fn ($status) => ['value' => $status->value, 'label' => $status->label()]))->all()" />
         </div>
         <div class="hr-filter-actions">
-            <a href="{{ route('hostel.student-requests.index') }}" class="hr-filter-clear {{ $hasFilters ? '' : 'disabled' }}" @unless($hasFilters) aria-disabled="true" tabindex="-1" @endunless>Clear</a>
+            <button type="button" class="hr-filter-clear" id="hsr-clear" @disabled(! $hasFilters)>Clear</button>
         </div>
     </form>
 
     <div class="card border-0 hr-panel">
-        <div class="card-body">
+        <div class="card-body position-relative">
+            <div id="hsr-loading" class="hr-loading" hidden>Updating…</div>
+            <div id="hsr-results">
             @if($requests->isEmpty())
                 <div class="hr-empty">
                     <i class="ti ti-school d-block mb-2"></i>
@@ -147,17 +152,45 @@
                         </tbody>
                     </table>
                 </div>
-                @if($requests->hasPages())
-                    <div class="hr-pager">
-                        <p class="small text-muted mb-0">Showing {{ $requests->firstItem() }}–{{ $requests->lastItem() }} of {{ $requests->total() }}</p>
-                        {{ $requests->onEachSide(1)->links('pagination::bootstrap-5') }}
-                    </div>
-                @endif
+                <div class="hr-pager">
+                    <p class="small text-muted mb-0">Showing {{ $requests->firstItem() }}–{{ $requests->lastItem() }} of {{ $requests->total() }}</p>
+                    @if($requests->hasPages())
+                    <nav aria-label="Student requests pages">
+                        <ul class="pagination mb-0">
+                            <li class="page-item {{ $requests->onFirstPage() ? 'disabled' : '' }}">
+                                @if($requests->onFirstPage())
+                                    <span class="page-link" aria-hidden="true">‹</span>
+                                @else
+                                    <a class="page-link" href="{{ $requests->previousPageUrl() }}" aria-label="Previous page">‹</a>
+                                @endif
+                            </li>
+                            @foreach($requests->getUrlRange(max(1, $requests->currentPage() - 2), min($requests->lastPage(), $requests->currentPage() + 2)) as $page => $url)
+                                <li class="page-item {{ $page === $requests->currentPage() ? 'active' : '' }}">
+                                    @if($page === $requests->currentPage())
+                                        <span class="page-link" aria-current="page">{{ $page }}</span>
+                                    @else
+                                        <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                    @endif
+                                </li>
+                            @endforeach
+                            <li class="page-item {{ $requests->hasMorePages() ? '' : 'disabled' }}">
+                                @if($requests->hasMorePages())
+                                    <a class="page-link" href="{{ $requests->nextPageUrl() }}" aria-label="Next page">›</a>
+                                @else
+                                    <span class="page-link" aria-hidden="true">›</span>
+                                @endif
+                            </li>
+                        </ul>
+                    </nav>
+                    @endif
+                </div>
             @endif
+            </div>
         </div>
     </div>
 </div>
 
+<div id="hsr-modals">
 @foreach($requests as $studentRequest)
     <div class="modal fade hr-modal" id="hsrView-{{ $studentRequest->id }}" tabindex="-1" aria-labelledby="hsrViewTitle-{{ $studentRequest->id }}" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
@@ -197,6 +230,7 @@
         </div>
     </div>
 @endforeach
+</div>
 
 <div class="modal fade hr-modal" id="hsrDecision" tabindex="-1" aria-labelledby="hsrDecisionTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -226,7 +260,8 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/hostel-student-requests.js') }}?v=2"></script>
+<script src="{{ asset('js/hostel-student-requests.js') }}?v=4"></script>
 @endpush

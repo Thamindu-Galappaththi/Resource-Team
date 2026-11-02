@@ -248,7 +248,8 @@ Route::middleware(['auth', 'active'])->group(function () {
 
 // Public student hostel request form. The token comes from the share link that
 // hostel managers send to students, so no login is required.
-Route::prefix('hostel-request/{token}')->whereAlphaNumeric('token')->controller(HostelStudentRequestController::class)->group(function () {
+Route::get('/hostel-request', fn () => response()->view('hostel.student-link-invalid', [], 404))->middleware('throttle:60,1');
+Route::prefix('hostel-request/{token}')->where(['token' => '[^/]{1,200}'])->controller(HostelStudentRequestController::class)->group(function () {
     Route::get('/', 'form')->middleware('throttle:60,1')->name('hostel.student-form');
     Route::post('/', 'submit')->middleware('throttle:6,1')->name('hostel.student-form.submit');
     Route::get('/submitted', 'done')->middleware('throttle:60,1')->name('hostel.student-form.done');

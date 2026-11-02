@@ -70,7 +70,7 @@ class HostelStudentRequestTest extends TestCase
 
         $this->get(route('hostel.student-form', $link->token))
             ->assertOk()
-            ->assertSee('Hostel Reservation Request')
+            ->assertSee('Request your hostel room.')
             ->assertSee('name="student_id"', false)
             ->assertSee('name="emergency_contact_phone"', false);
 
@@ -110,7 +110,12 @@ class HostelStudentRequestTest extends TestCase
     {
         $link = $this->link();
 
-        $this->get(route('hostel.student-form', str_repeat('x', 40)))->assertNotFound();
+        $this->get(route('hostel.student-form', str_repeat('x', 40)))
+            ->assertNotFound()
+            ->assertSee('This link is not valid')
+            ->assertSee('011 2954 069');
+        $this->get(route('hostel.student-form', substr($link->token, 0, 30)))->assertNotFound();
+        $this->get('/hostel-request')->assertNotFound()->assertSee('This link is not valid');
         $this->post(route('hostel.student-form.submit', str_repeat('x', 40)), $this->payload())->assertNotFound();
 
         $this->from(route('hostel.student-form', $link->token))
@@ -126,6 +131,18 @@ class HostelStudentRequestTest extends TestCase
             ->assertSessionHasErrors('website');
 
         $this->assertSame(0, HostelStudentRequest::query()->count());
+    }
+
+    public function test_link_with_extra_characters_pasted_after_it_still_opens_the_form(): void
+    {
+        $link = $this->link();
+
+        foreach (['0565556567', '.', ')', '%20Thanks'] as $extra) {
+            $this->get('/hostel-request/'.$link->token.$extra)
+                ->assertRedirect(route('hostel.student-form', $link->token));
+        }
+
+        $this->get('/hostel-request/'.$link->token.'?ref=whatsapp')->assertOk()->assertSee('Request your hostel room.');
     }
 
     public function test_manager_decisions_send_sms_and_follow_allowed_steps(): void
@@ -180,6 +197,37 @@ class HostelStudentRequestTest extends TestCase
 
         $this->assertSame('failed', $studentRequest->fresh()->sms_status);
         $this->assertSame(HostelStudentRequestStatus::APPROVED, $studentRequest->fresh()->status);
+    }
+
+    public function test_list_paginates_newest_first_and_filters_by_status(): void
+    {
+        $manager = User::factory()->role('hostel_manager')->create();
+        foreach (range(1, 12) as $i) {
+            HostelStudentRequest::query()->create(array_merge($this->payload(), [
+                'student_name' => sprintf('Student %02d', $i),
+                'status' => $i === 1 ? HostelStudentRequestStatus::APPROVED : HostelStudentRequestStatus::PENDING,
+            ]));
+            $this->travel(1)->minutes();
+        }
+
+        $this->actingAs($manager)->get(route('hostel.student-requests.index'))
+            ->assertOk()
+            ->assertSee('Showing 1–10 of 12')
+            ->assertSeeInOrder(['Student 12', 'Student 11'])
+            ->assertSee('id="hsr-results"', false)
+            ->assertSee('page=2', false);
+
+        $this->get(route('hostel.student-requests.index', ['page' => 2]), ['X-Requested-With' => 'XMLHttpRequest'])
+            ->assertOk()
+            ->assertSee('Showing 11–12 of 12')
+            ->assertSee('Student 01');
+
+        $this->get(route('hostel.student-requests.index', ['status' => 'approved']))
+            ->assertOk()
+            ->assertSee('Showing 1–1 of 1')
+            ->assertDontSee('Student requests pages')
+            ->assertSee('Student 01')
+            ->assertDontSee('Student 02');
     }
 
     public function test_sidebar_shows_student_requests_for_managers_only(): void
