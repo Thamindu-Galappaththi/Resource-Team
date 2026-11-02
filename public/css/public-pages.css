@@ -1,0 +1,174 @@
+.pub-body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    color: #152238;
+    background: #0b1530 url('../images/backgrounds/nebula.jpg') center / cover fixed no-repeat;
+}
+
+.pub-brand {
+    display: flex;
+    justify-content: center;
+    padding: 1.4rem 1rem .6rem;
+}
+
+.pub-logo {
+    height: 52px;
+    padding: .45rem .9rem;
+    border-radius: .85rem;
+    background: #fff;
+    box-shadow: 0 10px 24px rgba(5, 15, 40, .35);
+}
+
+.pub-main {
+    flex: 1 0 auto;
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1rem 1rem 2rem;
+}
+
+.pub-card {
+    border: 1px solid #d5def0;
+    border-radius: 1.1rem;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(5, 15, 40, .35);
+}
+
+.pub-card-head {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    padding: 1.25rem 1.4rem;
+    color: #fff;
+    background: linear-gradient(120deg, #123a7a 0%, #1769c2 52%, #5b4fc9 100%);
+}
+
+.pub-card-head i {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .18);
+    font-size: 1.4rem;
+}
+
+.pub-card-head h1 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.25rem, 3vw, 1.6rem);
+    font-weight: 700;
+}
+
+.pub-card-head p { margin: .2rem 0 0; color: rgba(255, 255, 255, .85); font-size: .9rem; }
+
+.pub-card-body { padding: 1.3rem 1.4rem 1.4rem; }
+
+.pub-section {
+    margin: 0 0 .85rem;
+    padding-bottom: .45rem;
+    border-bottom: 1px solid #e4ecf8;
+    color: #14315e;
+    font-size: .95rem;
+    font-weight: 700;
+}
+
+.pub-section + .row { margin-bottom: 1.2rem; }
+
+.pub-card .form-label { color: #24324a; font-weight: 600; }
+
+.pub-card .form-control {
+    min-height: 48px;
+    border: 1px solid #cbd3da;
+    border-radius: .65rem;
+}
+
+.pub-card input[type="date"].form-control,
+.pub-card input[type="time"].form-control {
+    height: 48px;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 46px;
+}
+
+.pub-card .form-control:focus {
+    border-color: #1769c2;
+    box-shadow: 0 0 0 .2rem rgba(23, 105, 194, .15);
+}
+
+.pub-hint { margin: .35rem 0 0; color: #65738a; font-size: .8rem; }
+
+.pub-honeypot {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.pub-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    margin: 1.2rem -1.4rem -1.4rem;
+    padding: 1rem 1.4rem;
+    border-top: 1px solid #d5def0;
+    background: #eef3ff;
+}
+
+.pub-actions p { margin: 0; color: #65738a; font-size: .82rem; }
+
+.pub-actions a { color: #1769c2; font-weight: 700; text-decoration: none; white-space: nowrap; }
+
+.pub-submit {
+    min-height: 48px;
+    padding: .65rem 1.5rem;
+    border: 0;
+    border-radius: .65rem;
+    background: linear-gradient(180deg, #2a74d4, #1769c2);
+    color: #fff;
+    font-weight: 700;
+}
+
+.pub-submit:hover { filter: brightness(1.05); color: #fff; }
+
+.pub-done {
+    text-align: center;
+    padding: 2.2rem 1.4rem;
+}
+
+.pub-done i { font-size: 3.2rem; color: #16a77a; }
+
+.pub-done h1 { margin: .75rem 0 .4rem; color: #14315e; font-size: 1.5rem; font-weight: 700; }
+
+.pub-ref {
+    display: inline-block;
+    margin: .6rem 0 1rem;
+    padding: .5rem 1rem;
+    border-radius: .65rem;
+    background: #eef3ff;
+    color: #14315e;
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+}
+
+.pub-footer {
+    padding: 1rem;
+    color: rgba(255, 255, 255, .75);
+    font-size: .8rem;
+    text-align: center;
+}
+
+@media (max-width: 575.98px) {
+    .pub-card-body { padding: 1rem; }
+    .pub-actions { margin: 1rem -1rem -1rem; padding: 1rem; }
+    .pub-submit { width: 100%; }
+}

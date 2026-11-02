@@ -19,7 +19,10 @@
             <h1 class="hr-title">Hostel Reservations</h1>
             <p class="hr-subtitle mb-0">Manage student and guest accommodation across campus.</p>
         </div>
-        <div class="hr-header-actions">
+        <div class="hr-header-actions gap-2">
+            @if(auth()->user()?->hasPermission('hostel.manage'))
+                <a href="{{ route('hostel.student-requests.index') }}" class="btn hr-create-btn"><i class="ti ti-school me-1"></i>Student Requests</a>
+            @endif
             @can('createHostel', \App\Models\Reservation::class)
                 <a href="{{ route('hostel.create') }}" class="btn hr-create-btn"><i class="ti ti-plus me-1"></i>New Reservation</a>
             @endcan
