@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ReservationType;
+use App\Models\HostelStayDetail;
 use App\Models\Location;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
@@ -293,6 +294,48 @@ class ResourceManagementTest extends TestCase
             ->assertDontSee('61 hr', false);
     }
 
+    public function test_overlapping_hostel_stays_share_beds_without_calendar_conflicts(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        $hostel = Resource::factory()->create(['name_model' => 'Welisara Hostel', 'status' => 'active']);
+        $start = now('Asia/Colombo')->addDays(5)->setTime(11, 0, 0);
+
+        foreach (['female' => 2, 'male' => 1] as $group => $beds) {
+            $reservation = Reservation::factory()->create([
+                'requester_id' => $user->id,
+                'created_by_user_id' => $user->id,
+                'type' => ReservationType::HOSTEL->value,
+                'status' => 'confirmed',
+                'title' => 'Hostel stay '.$group,
+            ]);
+            HostelStayDetail::factory()->create(['reservation_id' => $reservation->id, 'bed_group' => $group, 'number_of_guests' => $beds]);
+            ReservationItem::factory()->create([
+                'reservation_id' => $reservation->id,
+                'resource_id' => $hostel->id,
+                'status' => 'confirmed',
+                'quantity' => $beds,
+                'starts_at' => $start->copy()->utc(),
+                'ends_at' => $start->copy()->addDays(2)->utc(),
+                'resource_name_snapshot' => 'Welisara Hostel',
+            ]);
+        }
+
+        $range = [
+            'start' => $start->copy()->subDay()->toIso8601String(),
+            'end' => $start->copy()->addDays(3)->toIso8601String(),
+        ];
+
+        foreach (['resources.calendar.events', 'reservations.calendar.events'] as $route) {
+            $events = collect($this->actingAs($user)->getJson(route($route, $range))->assertOk()->json());
+
+            $this->assertNotEmpty($events);
+            $this->assertFalse($events->contains(fn ($event) => $event['extendedProps']['conflict'] ?? false), $route);
+            $this->assertContains('Welisara Hostel · Ladies · 2 beds', $events->pluck('extendedProps.resource'));
+            $this->assertContains('Welisara Hostel · Male · 1 bed', $events->pluck('extendedProps.resource'));
+        }
+    }
+
     public function test_resource_calendar_shows_other_users_bookings_to_developer(): void
     {
         $this->seed(RolePermissionSeeder::class);
@@ -450,8 +493,142 @@ class ResourceManagementTest extends TestCase
     {
         $category = ResourceCategory::query()->create(['name' => 'Equipment']);
         $type = ResourceType::query()->create(['resource_category_id' => $category->id, 'name' => 'Projector']);
-        $location = Location::query()->create(['name' => 'Block A, Floor 2']);
+        $location = Location::query()->firstOrCreate(['name' => 'Welisara']);
 
         return [$category, $type, $location];
+    }
+
+    /**
+     * @return array{0: ResourceCategory, 1: ResourceType, 2: Location, 3: Location}
+     */
+    private function hostelLookups(): array
+    {
+        $category = ResourceCategory::query()->firstOrCreate(['name' => config('hostel.category_name')]);
+        $bed = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Bed']);
+
+        return [
+            $category,
+            $bed,
+            Location::query()->firstOrCreate(['name' => 'Welisara']),
+            Location::query()->firstOrCreate(['name' => 'Moratuwa']),
+        ];
+    }
+
+    public function test_resources_can_only_be_added_at_welisara_or_moratuwa(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        [$category, $type] = $this->resourceLookups();
+        $peradeniya = Location::query()->create(['name' => 'Peradeniya']);
+
+        $this->actingAs($user)->getJson(route('locations.index'))
+            ->assertOk()
+            ->assertJsonFragment(['name' => 'Welisara'])
+            ->assertJsonMissing(['name' => 'Peradeniya']);
+
+        $this->postJson('/resources', [
+            'category_id' => $category->id,
+            'resource_type_id' => $type->id,
+            'location_id' => $peradeniya->id,
+            'name_model' => 'Projector 09',
+            'status' => 'active',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['location_id' => 'Resources can only be added at Welisara or Moratuwa.']);
+    }
+
+    public function test_hostel_room_category_is_locked_and_only_has_the_bed_type(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        [$category] = $this->hostelLookups();
+
+        $this->actingAs($user)->getJson(route('resource-categories.index'))
+            ->assertOk()
+            ->assertJsonFragment(['name' => 'Hostel Room', 'is_locked' => true]);
+
+        $this->putJson(route('resource-categories.update', $category), ['category_name' => 'Rooms'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Hostel Room is a fixed category used for hostel reservations and cannot be changed or deleted.');
+        $this->deleteJson(route('resource-categories.destroy', $category))->assertUnprocessable();
+        $this->assertSame('Hostel Room', $category->fresh()->name);
+
+        $this->postJson(route('resource-types.store'), ['category_id' => $category->id, 'resource_type' => 'Double'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['resource_type' => 'Hostel Room has one fixed type (Bed). No other types can be added.']);
+        $this->assertSame(['Bed'], $category->types()->pluck('name')->all());
+    }
+
+    public function test_one_hostel_record_per_location_stores_every_bed_group(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        [$category, $bed, $welisara, $moratuwa] = $this->hostelLookups();
+        $base = [
+            'category_id' => $category->id,
+            'resource_type_id' => $bed->id,
+            'location_id' => $welisara->id,
+            'status' => 'active',
+        ];
+
+        $this->actingAs($user)->postJson('/resources', $base)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['bed_counts.permanent', 'bed_counts.female', 'bed_counts.male'])
+            ->assertJsonMissingValidationErrors('name_model');
+
+        $this->postJson('/resources', $base + ['bed_counts' => ['permanent' => 11, 'female' => 40, 'male' => 40]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('bed_counts.permanent');
+
+        $this->postJson('/resources', $base + ['bed_counts' => ['permanent' => 10, 'female' => 40, 'male' => 40]])
+            ->assertCreated()
+            ->assertJsonPath('name_model', 'Welisara Hostel')
+            ->assertJsonPath('bed_count', 90)
+            ->assertJsonPath('bed_counts.female', 40);
+
+        $this->postJson('/resources', $base + ['bed_counts' => ['permanent' => 1, 'female' => 1, 'male' => 1]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['location_id' => 'Welisara already has a hostel record. Edit that record to change its beds.']);
+
+        $hostel = Resource::query()->where('location_id', $welisara->id)->firstOrFail();
+        $this->putJson("/resources/{$hostel->id}", $base + ['bed_counts' => ['permanent' => 10, 'female' => 38, 'male' => 40]])
+            ->assertOk()->assertJsonPath('bed_count', 88);
+
+        $this->postJson('/resources', ['location_id' => $moratuwa->id, 'name_model' => 'Moratuwa Boarding', 'bed_counts' => ['permanent' => 10, 'female' => 40, 'male' => 40]] + $base)
+            ->assertCreated()->assertJsonPath('name_model', 'Moratuwa Boarding');
+
+        $this->assertSame(2, Resource::query()->hostelRooms()->count());
+    }
+
+    public function test_hostel_room_seeder_keeps_one_ninety_bed_record_per_location(): void
+    {
+        $this->seed([LocationSeeder::class, HostelRoomSeeder::class, HostelRoomSeeder::class]);
+
+        $hostels = Resource::query()->hostelRooms()->with('location')->get();
+        $this->assertSame(['Moratuwa Hostel', 'Welisara Hostel'], $hostels->pluck('name_model')->sort()->values()->all());
+        foreach ($hostels as $hostel) {
+            $this->assertSame(['permanent' => 10, 'female' => 40, 'male' => 40], $hostel->bed_counts);
+            $this->assertSame(90, $hostel->bed_count);
+        }
+
+        $this->assertSame(['Bed'], ResourceType::query()->whereHas('category', fn ($query) => $query->where('name', 'Hostel Room'))->pluck('name')->all());
+    }
+
+    public function test_hostel_manager_dashboard_shows_bus_style_bed_map(): void
+    {
+        $this->seed([RolePermissionSeeder::class, LocationSeeder::class, HostelRoomSeeder::class]);
+        $manager = User::factory()->role('hostel_manager')->create();
+
+        $html = $this->actingAs($manager)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Bed availability')
+            ->assertSee('id="hbm-date"', false)
+            ->assertSee('<strong>90</strong> of 90 beds free', false)
+            ->getContent();
+        $this->assertSame(180, substr_count($html, 'class="hbm-seat is-free"'));
+
+        $this->get(route('hostel.bed-map', ['date' => now()->addDay()->toDateString()]))
+            ->assertOk()
+            ->assertSee('id="hbm-body"', false)
+            ->assertSee('Bed L40: Available');
+        $this->get(route('hostel.bed-map', ['date' => 'bad']))->assertSessionHasErrors('date');
     }
 }

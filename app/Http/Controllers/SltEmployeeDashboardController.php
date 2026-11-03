@@ -170,7 +170,7 @@ class SltEmployeeDashboardController extends Controller
         $events = [];
 
         $reservations = Reservation::query()
-            ->with(['hostelStay', 'items.resource.type', 'location', 'requester'])
+            ->with(['hostelStay', 'location', 'requester', 'items.resource'])
             ->where('type', ReservationType::HOSTEL->value)
             ->where('status', '!=', ReservationStatus::DRAFT->value)
             ->when($user?->hasRole('slt_employee'), fn ($query) => $query->whereIn('status', ReservationStatus::calendarActive()))
@@ -322,9 +322,11 @@ class SltEmployeeDashboardController extends Controller
         $timezone = config('reservations.display_timezone', 'Asia/Colombo');
         $mine = $this->ownsReservation($reservation, $user);
         $status = ReservationStatus::tryFrom((string) $reservation->status);
+        $item = $reservation->items->first();
+        $beds = $item ? $reservation->hostelItemLabel($item) : null;
         $title = $mine
             ? ($stay?->displayGuestName() ?: ($reservation->title ?: 'Hostel stay'))
-            : ($reservation->hostelRoomTypeName() ?? $reservation->location?->name ?? 'Hostel stay');
+            : ($beds ?? $stay?->bedGroupLabel() ?? $reservation->location?->name ?? 'Hostel stay');
 
         if ($stay?->check_in_at && $stay->check_out_at) {
             $start = $stay->check_in_at->copy()->timezone($timezone)->startOfDay();
@@ -343,7 +345,7 @@ class SltEmployeeDashboardController extends Controller
             start: $start,
             end: $end,
             allDay: true,
-            resource: $reservation->hostelRoomTypeName() ?? $reservation->location?->name ?? $title,
+            resource: $beds ?? $stay?->bedGroupLabel() ?? $reservation->location?->name ?? $title,
             location: $reservation->location?->name ?? '—',
             status: $status?->label() ?? (string) $reservation->status,
             statusValue: (string) $reservation->status,

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->dateTime('check_in_at');
             $table->dateTime('check_out_at');
             $table->unsignedInteger('number_of_guests')->default(1);
+            $table->string('bed_group', 20)->nullable();
             $table->text('special_requirements')->nullable();
             $table->timestamps();
 

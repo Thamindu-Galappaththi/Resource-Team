@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/hostel-index.css') }}?v=6">
+<link rel="stylesheet" href="{{ asset('css/hostel-index.css') }}?v=7">
 @endpush
 
 @section('content')
@@ -55,8 +55,8 @@
         <div class="col-6 col-lg-3">
             <div class="hr-stat p-3 p-md-4" style="--stat-color:#16a77a;--stat-icon-bg:#e7f6f0">
                 <span class="hr-stat-icon"><i class="ti ti-door-exit"></i></span>
-                <div class="hr-stat-label mt-3">Available rooms</div>
-                <div class="hr-stat-number">{{ number_format($summary['available_rooms']) }}</div>
+                <div class="hr-stat-label mt-3">Free beds today</div>
+                <div class="hr-stat-number">{{ number_format($summary['available_beds']) }} <small class="hr-stat-of">/ {{ number_format($summary['total_beds']) }}</small></div>
                         </div>
                         </div>
         <div class="col-6 col-lg-3">
@@ -200,7 +200,8 @@
                                 <div class="hr-details">
                                     <div class="hr-detail-row"><span class="hr-detail-label">Guest name</span><span class="hr-detail-value">{{ $reservation->hostelStay?->displayGuestName() ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Employee IDs</span><span class="hr-detail-value">{{ $reservation->hostelStay?->employeeIdList() ?: '—' }}</span></div>
-                                    <div class="hr-detail-row"><span class="hr-detail-label">Room</span><span class="hr-detail-value">{{ $reservation->resourceNames() ?: '—' }}</span></div>
+                                    <div class="hr-detail-row"><span class="hr-detail-label">Bed group</span><span class="hr-detail-value">{{ $reservation->hostelStay?->bedGroupLabel() ?: '—' }}</span></div>
+                                    <div class="hr-detail-row"><span class="hr-detail-label">Beds</span><span class="hr-detail-value">{{ $reservation->bedAllocationLabel() ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Location</span><span class="hr-detail-value">{{ $reservation->location?->name ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Check-in</span><span class="hr-detail-value">{{ $reservation->hostelStay?->check_in_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Check-out</span><span class="hr-detail-value">{{ $reservation->hostelStay?->check_out_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</span></div>

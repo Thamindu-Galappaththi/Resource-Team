@@ -4,6 +4,9 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/dashboard-role.css') }}?v={{ @filemtime(public_path('css/dashboard-role.css')) ?: time() }}">
+@if(!empty($bedMap))
+<link rel="stylesheet" href="{{ asset('css/hostel-bed-map.css') }}?v=1">
+@endif
 @endpush
 
 @section('content')
@@ -55,6 +58,10 @@
                 </{{ $tag }}>
             @endforeach
         </section>
+    @endif
+
+    @if(!empty($bedMap))
+        @include('dashboards.partials.bed-map', ['bedMap' => $bedMap])
     @endif
 
     {{-- ── CHART + BREAKDOWN ──────────────────────────────── --}}
@@ -141,4 +148,7 @@
     echo json_encode(['chart' => $chart ?? ['points'=>[],'series'=>[]], 'breakdown' => $breakdown['items'] ?? []], JSON_HEX_TAG|JSON_UNESCAPED_UNICODE);
 @endphp</script>
 <script src="{{ asset('js/dashboard-charts.js') }}?v=6"></script>
+@if(!empty($bedMap))
+<script src="{{ asset('js/hostel-bed-map.js') }}?v=1"></script>
+@endif
 @endpush

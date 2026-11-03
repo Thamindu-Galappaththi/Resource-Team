@@ -83,7 +83,11 @@ class ReservationBookingService
                 }
             }
 
-            $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt);
+            // Shared-capacity bookings (hostel beds) arrive with per-room quantities already checked by the caller.
+            $quantities = $payload['quantities'] ?? [];
+            if ($quantities === []) {
+                $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt);
+            }
 
             $primary = $resources[$resourceIds->first()];
             $locationId = $payload['location_id'] ?? $primary->location_id;
@@ -114,7 +118,7 @@ class ReservationBookingService
                     'starts_at' => $startsAt,
                     'ends_at' => $endsAt,
                     'status' => ReservationItemStatus::HELD->value,
-                    'quantity' => 1,
+                    'quantity' => $quantities[$resourceId] ?? 1,
                     'resource_name_snapshot' => $resource->name_model,
                 ]);
             }
@@ -207,7 +211,10 @@ class ReservationBookingService
                 }
             }
 
-            $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt, $reservation->id);
+            $quantities = $payload['quantities'] ?? [];
+            if ($quantities === []) {
+                $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt, $reservation->id);
+            }
 
             $primary = $resources[$resourceIds->first()];
             $locationId = $payload['location_id'] ?? $primary->location_id;
@@ -235,7 +242,7 @@ class ReservationBookingService
                     'starts_at' => $startsAt,
                     'ends_at' => $endsAt,
                     'status' => ReservationItemStatus::HELD->value,
-                    'quantity' => 1,
+                    'quantity' => $quantities[$resourceId] ?? 1,
                     'resource_name_snapshot' => $resource->name_model,
                 ]);
             }

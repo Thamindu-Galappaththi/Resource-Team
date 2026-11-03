@@ -41,6 +41,7 @@ class StoreHostelReservationRequest extends FormRequest
             'check_out_time' => ['required', 'date_format:H:i'],
             'location_id' => ['required', 'integer', 'exists:locations,id'],
             'number_of_guests' => ['required', 'integer', 'min:1', 'max:'.self::MAX_GUESTS],
+            'bed_group' => ['required', 'string', Rule::in(array_keys(config('hostel.bed_groups', [])))],
             'employee_ids' => ['required', 'array'],
             'employee_ids.*' => ['required', 'string', 'max:50', 'distinct:ignore_case'],
             'special_requirements' => ['nullable', 'string', 'max:1000'],
@@ -77,6 +78,7 @@ class StoreHostelReservationRequest extends FormRequest
             'check_out_time' => 'check-out time',
             'location_id' => 'hostel location',
             'number_of_guests' => 'number of guests',
+            'bed_group' => 'bed group',
             'employee_ids' => 'employee IDs',
             'employee_ids.*' => 'employee ID',
         ];

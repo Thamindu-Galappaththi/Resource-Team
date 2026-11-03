@@ -35,10 +35,10 @@ class HostelReservationSeeder extends Seeder
 
         $service = app(HostelReservationService::class);
         $slots = [
-            ['location_id' => $welisara->id, 'number_of_guests' => 1],
-            ['location_id' => $welisara->id, 'number_of_guests' => 1],
-            ['location_id' => $welisara->id, 'number_of_guests' => 2],
-            ['location_id' => $moratuwa->id, 'number_of_guests' => 1],
+            ['location_id' => $welisara->id, 'number_of_guests' => 1, 'bed_group' => 'male'],
+            ['location_id' => $welisara->id, 'number_of_guests' => 1, 'bed_group' => 'female'],
+            ['location_id' => $welisara->id, 'number_of_guests' => 2, 'bed_group' => 'female'],
+            ['location_id' => $moratuwa->id, 'number_of_guests' => 1, 'bed_group' => 'permanent'],
         ];
         $outcomes = [
             null,
@@ -83,14 +83,18 @@ class HostelReservationSeeder extends Seeder
                 'check_out_time' => '10:00',
                 'location_id' => $slot['location_id'],
                 'number_of_guests' => $slot['number_of_guests'],
+                'bed_group' => $slot['bed_group'],
                 'special_requirements' => $requirements,
             ];
             $after = $outcomes[$index % count($outcomes)];
 
-            if (Reservation::query()
+            $existing = Reservation::query()
                 ->where('type', ReservationType::HOSTEL->value)
                 ->whereHas('hostelStay', fn ($query) => $query->where('guest_name', $guestName))
-                ->exists()) {
+                ->first();
+            if ($existing) {
+                $existing->hostelStay()->update(['bed_group' => $slot['bed_group']]);
+
                 continue;
             }
 

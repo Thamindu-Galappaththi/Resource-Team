@@ -11,6 +11,7 @@ use App\Models\HostelStayDetail;
 use App\Models\Location;
 use App\Models\Reservation;
 use App\Models\Resource;
+use App\Services\HostelBedCapacity;
 use App\Services\HostelReservationService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -62,18 +63,16 @@ class HostelReservationController extends Controller
 
         $pending = (clone $base)->where('status', ReservationStatus::PENDING_APPROVAL->value)->count();
 
-        $hostelRooms = Resource::query()->hostelRooms();
-        $occupiedIds = $this->occupiedRoomIds($todayStart, $todayEnd);
-        $availableRooms = $occupiedIds === []
-            ? (clone $hostelRooms)->count()
-            : (clone $hostelRooms)->whereNotIn('id', $occupiedIds)->count();
+        $totalBeds = (int) Resource::query()->hostelRooms()->sum('bed_count');
+        $bedsInUse = $this->bedsInUse($todayStart, $todayEnd);
 
         return view('hostel.index', [
             'reservations' => $reservations,
             'summary' => [
                 'total' => (clone $base)->count(),
                 'check_ins_today' => $checkInsToday,
-                'available_rooms' => $availableRooms,
+                'available_beds' => max(0, $totalBeds - $bedsInUse),
+                'total_beds' => $totalBeds,
                 'pending' => $pending,
             ],
             'statuses' => [
@@ -84,6 +83,19 @@ class HostelReservationController extends Controller
                 ReservationStatus::CANCELLED,
                 ReservationStatus::EXPIRED,
             ],
+        ]);
+    }
+
+    /** GET /hostel/bed-map?date=YYYY-MM-DD: bus-style bed availability fragment for the dashboard. */
+    public function bedMap(Request $request, HostelBedCapacity $beds): View
+    {
+        $this->authorize('viewAnyHostel', Reservation::class);
+        $data = $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+        $day = Carbon::parse($data['date'] ?? now($this->hostelStayTimezone())->toDateString(), $this->hostelStayTimezone());
+
+        return view('hostel.partials.bed-map', [
+            'date' => $day->toDateString(),
+            'locations' => $beds->bedMap($day),
         ]);
     }
 
@@ -103,6 +115,7 @@ class HostelReservationController extends Controller
             'locations' => $locations,
             'hasRooms' => $locations->isNotEmpty(),
             'guestTitles' => HostelStayDetail::GUEST_TITLES,
+            'bedGroups' => config('hostel.bed_groups', []),
             'maxGuests' => StoreHostelReservationRequest::MAX_GUESTS,
             'minCheckIn' => $minCheckIn,
             'prefillCheckIn' => old('check_in_date', $prefill),
@@ -117,7 +130,7 @@ class HostelReservationController extends Controller
             $reservation = $this->hostel->create($request->validated(), $request->user());
         } catch (ReservationConflictException $exception) {
             return back()->withInput()->withErrors([
-                'check_in_date' => $exception->getMessage(),
+                'bed_group' => $exception->getMessage(),
             ]);
         } catch (ValidationException $exception) {
             return back()->withInput()->withErrors($exception->errors());
@@ -171,6 +184,7 @@ class HostelReservationController extends Controller
             'hasRooms' => $locations->isNotEmpty(),
             'guestPhone' => $stay?->guest_phone_encrypted ? Crypt::decryptString($stay->guest_phone_encrypted) : null,
             'guestTitles' => HostelStayDetail::GUEST_TITLES,
+            'bedGroups' => config('hostel.bed_groups', []),
             'maxGuests' => StoreHostelReservationRequest::MAX_GUESTS,
             'minCheckIn' => now()->toDateString(),
             'prefillCheckIn' => old('check_in_date', $checkIn?->toDateString()),
@@ -190,7 +204,7 @@ class HostelReservationController extends Controller
             $reservation = $this->hostel->updatePending($reservation, $request->validated(), $request->user());
         } catch (ReservationConflictException $exception) {
             return back()->withInput()->withErrors([
-                'check_in_date' => $exception->getMessage(),
+                'bed_group' => $exception->getMessage(),
             ]);
         } catch (ValidationException $exception) {
             return back()->withInput()->withErrors($exception->errors());
@@ -247,7 +261,8 @@ class HostelReservationController extends Controller
     private function hostelLocations()
     {
         return Location::query()
-            ->whereIn('id', Resource::query()->hostelRooms()->select('location_id'))
+            ->forResources()
+            ->whereIn('id', Resource::query()->hostelRooms()->where('bed_count', '>', 0)->select('location_id'))
             ->ordered()
             ->get();
     }
@@ -266,15 +281,14 @@ class HostelReservationController extends Controller
         });
     }
 
-    private function occupiedRoomIds($todayStart, $todayEnd)
+    private function bedsInUse($todayStart, $todayEnd): int
     {
-        return \App\Models\ReservationItem::query()
+        return (int) round((float) \App\Models\ReservationItem::query()
             ->whereIn('status', ReservationStatus::blockingItemStatuses())
             ->where('starts_at', '<', $todayEnd)
             ->where('ends_at', '>', $todayStart)
             ->whereHas('resource', fn ($resource) => $resource->hostelRooms())
-            ->pluck('resource_id')
-            ->all();
+            ->sum('quantity'));
     }
 
     private function hostelStayTimezone(): string

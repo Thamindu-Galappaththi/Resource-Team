@@ -183,7 +183,7 @@ class ReservationController extends Controller
         $rangeStart = Carbon::parse($filters['start'])->utc();
         $rangeEnd = Carbon::parse($filters['end'])->utc();
         $baseQuery = Reservation::query()
-            ->with(['requester', 'location', 'items.resource.type.category'])
+            ->with(['requester', 'location', 'hostelStay', 'items.resource.type.category'])
             ->where('status', '!=', ReservationStatus::DRAFT->value)
             ->whereHas('items', fn ($items) => $items->where('starts_at', '<', $rangeEnd)->where('ends_at', '>', $rangeStart));
         $this->restrictCalendarVisibility($baseQuery);
@@ -192,7 +192,8 @@ class ReservationController extends Controller
 
         $visibleReservations = (clone $baseQuery)->get();
         $blockingStatuses = ReservationStatus::blockingItemStatuses();
-        $bookedItems = $visibleReservations->flatMap(fn (Reservation $reservation) =>
+        // Hostel stays share a location's beds; capacity per bed group is enforced when booking and approving.
+        $bookedItems = $visibleReservations->where('type', '!=', ReservationType::HOSTEL->value)->flatMap(fn (Reservation $reservation) =>
             $reservation->items
                 ->filter(fn ($item) => in_array($item->status, $blockingStatuses, true) && $item->starts_at && $item->ends_at)
                 ->map(fn ($item) => [
@@ -657,7 +658,7 @@ class ReservationController extends Controller
                 ->with('type:id,resource_category_id')
                 ->orderBy('name_model')
                 ->get(['id', 'name_model', 'location_id', 'resource_type_id']);
-            $locations = Location::query()->ordered()->get();
+            $locations = Location::query()->forResources()->ordered()->get();
             $statuses = collect(ReservationStatus::cases())
                 ->reject(fn (ReservationStatus $status) => in_array($status, $hiddenStatuses, true))
                 ->values();
@@ -758,7 +759,7 @@ class ReservationController extends Controller
             ]);
 
         return [
-            'locations' => Location::query()->ordered()->get(['id', 'name']),
+            'locations' => Location::query()->forResources()->ordered()->get(['id', 'name']),
             'categories' => ResourceCategory::query()->orderBy('name')->get(['id', 'name']),
             'resources' => $resources,
         ];
@@ -790,7 +791,9 @@ class ReservationController extends Controller
             ReservationStatus::COMPLETED->value => ['#4778d0', '#fff'],
             default => ['#d18b00', '#fff'],
         };
-        $resourceName = $item->resource_name_snapshot ?: $item->resource?->name_model ?: '—';
+        $resourceName = $reservation->type === ReservationType::HOSTEL->value
+            ? $reservation->hostelItemLabel($item)
+            : ($item->resource_name_snapshot ?: $item->resource?->name_model ?: '—');
         $mine = $this->ownsCalendarReservation($reservation);
         $isSlt = request()->user()?->hasRole('slt_employee');
         $publicTitle = $reservation->location?->name ?: $resourceName;

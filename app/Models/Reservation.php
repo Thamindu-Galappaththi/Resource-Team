@@ -161,9 +161,30 @@ class Reservation extends Model
         return route('reservations.show', $this);
     }
 
-    public function hostelRoomTypeName(): ?string
+    /** Calendar label for a hostel item, e.g. "Welisara Hostel · Ladies · 2 beds". */
+    public function hostelItemLabel(ReservationItem $item): string
     {
-        return $this->items->first()?->resource?->type?->name;
+        $name = $item->resource_name_snapshot ?: $item->resource?->name_model ?: 'Hostel';
+        if ($this->type !== \App\Enums\ReservationType::HOSTEL->value) {
+            return $name;
+        }
+        $beds = (int) round((float) $item->quantity);
+        $group = config('hostel.bed_groups.'.$this->hostelStay?->bed_group.'.short');
+
+        return implode(' · ', array_filter([$name, $group, $beds.' '.($beds === 1 ? 'bed' : 'beds')]));
+    }
+
+    /** Hostel rooms with the beds taken in each, e.g. "Welisara Ladies Room 01 (2 beds)". */
+    public function bedAllocationLabel(): string
+    {
+        return $this->items
+            ->filter(fn (ReservationItem $item) => filled($item->resource_name_snapshot))
+            ->map(function (ReservationItem $item) {
+                $beds = (int) round((float) $item->quantity);
+
+                return $item->resource_name_snapshot.' ('.$beds.' '.($beds === 1 ? 'bed' : 'beds').')';
+            })
+            ->implode(', ');
     }
 
     public function resourceNames(): string

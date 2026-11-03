@@ -10,8 +10,6 @@ use App\Models\CanteenReservation;
 use App\Models\Location;
 use App\Models\Reservation;
 use App\Models\Resource;
-use App\Models\ResourceCategory;
-use App\Models\ResourceType;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\HostelReservationService;
@@ -271,34 +269,7 @@ class SltEmployeeReservationSeeder extends Seeder
 
     private function ensureExtraHostelRooms(): void
     {
-        $category = ResourceCategory::query()->firstOrCreate(
-            ['name' => config('hostel.category_name', 'Hostel Room')]
-        );
-        $single = ResourceType::query()->firstOrCreate(
-            ['resource_category_id' => $category->id, 'name' => 'Single'],
-            ['description' => 'One occupant']
-        );
-        $double = ResourceType::query()->firstOrCreate(
-            ['resource_category_id' => $category->id, 'name' => 'Double'],
-            ['description' => 'Two occupants']
-        );
-        $welisara = Location::query()->firstOrCreate(['name' => 'Welisara']);
-
-        foreach ([
-            ['serial_number' => 'HR-WEL-S-103', 'name_model' => 'Welisara Single 103', 'type' => $single],
-            ['serial_number' => 'HR-WEL-S-104', 'name_model' => 'Welisara Single 104', 'type' => $single],
-            ['serial_number' => 'HR-WEL-D-202', 'name_model' => 'Welisara Double 202', 'type' => $double],
-        ] as $room) {
-            Resource::query()->firstOrCreate(
-                ['serial_number' => $room['serial_number']],
-                [
-                    'resource_type_id' => $room['type']->id,
-                    'location_id' => $welisara->id,
-                    'name_model' => $room['name_model'],
-                    'status' => 'active',
-                ]
-            );
-        }
+        $this->call(HostelRoomSeeder::class);
     }
 
     /**
@@ -446,6 +417,8 @@ class SltEmployeeReservationSeeder extends Seeder
             ->where('title', $row['title'])
             ->first();
         if ($existing) {
+            $existing->hostelStay()->update(['bed_group' => $this->bedGroupFor($row)]);
+
             return $existing;
         }
 
@@ -467,6 +440,7 @@ class SltEmployeeReservationSeeder extends Seeder
                 'check_out_time' => '10:00',
                 'location_id' => $row['location_id'],
                 'number_of_guests' => $row['guests'],
+                'bed_group' => $this->bedGroupFor($row),
                 'special_requirements' => $row['requirements'],
             ], $row['owner']);
         } catch (\Throwable $exception) {
@@ -474,6 +448,11 @@ class SltEmployeeReservationSeeder extends Seeder
 
             return null;
         }
+    }
+
+    private function bedGroupFor(array $row): string
+    {
+        return $row['guests'] > 1 ? 'female' : 'male';
     }
 
     private function seedCanteenBookings(User $employee, User $colleague, User $approver, $today): void

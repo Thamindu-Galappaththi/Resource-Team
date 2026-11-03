@@ -21,6 +21,7 @@ class HostelStayDetail extends Model
         'check_in_at',
         'check_out_at',
         'number_of_guests',
+        'bed_group',
         'special_requirements',
     ];
 
@@ -36,6 +37,11 @@ class HostelStayDetail extends Model
     public function displayGuestName(): string
     {
         return trim(($this->guest_title ? $this->guest_title.' ' : '').$this->guest_name);
+    }
+
+    public function bedGroupLabel(): ?string
+    {
+        return config('hostel.bed_groups.'.$this->bed_group.'.label');
     }
 
     public function employeeIdList(): string

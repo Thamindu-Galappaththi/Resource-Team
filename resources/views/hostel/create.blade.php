@@ -16,12 +16,13 @@
     $guestCount = max(1, min($maxGuests, (int) old('number_of_guests', $stay?->number_of_guests ?? 1)));
     $employeeIds = old('employee_ids', $stay?->employee_ids ?? []);
     $employeeIdError = $errors->first('employee_ids');
+    $bedGroup = (string) old('bed_group', $stay?->bed_group ?? '');
 @endphp
 <div class="container-fluid mt-4 hc-page">
     <div class="hc-header">
         <div>
             <h1 class="hc-title">{{ $editing ? 'Edit Hostel Reservation' : 'Create Hostel Reservation' }}</h1>
-            <p class="hc-subtitle mb-0">{{ $editing ? 'Update this stay request and keep it in the approval queue.' : 'Book a room, assign the stay dates, and send it for hostel approval.' }}</p>
+            <p class="hc-subtitle mb-0">{{ $editing ? 'Update this stay request and keep it in the approval queue.' : 'Book hostel beds for your guests and send the request for hostel approval.' }}</p>
         </div>
         @if(auth()->user()?->hasRole('slt_employee'))
             @if($editing)
@@ -103,14 +104,21 @@
                         <input type="time" id="check_out_time" name="check_out_time" class="form-control @error('check_out_time') is-invalid @enderror" value="{{ old('check_out_time', $prefillCheckOutTime ?? '') }}" required>
                         @error('check_out_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-12">
+                    <div class="col-12 col-md-6">
                         <label for="location_id" class="form-label">Hostel location <span class="text-danger">*</span></label>
                         <x-rm-select id="location_id" name="location_id" class="{{ $errors->has('location_id') ? 'is-invalid' : '' }}" placeholder="Select location" :value="(string) old('location_id', $editing?->location_id ?? '')" :selected-label="$selectedLocation->name ?? 'Select location'" :required="true"
                             :options="collect([['value' => '', 'label' => 'Select location']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
                         @error('location_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         @unless($hasRooms)
-                            <p class="hc-hint mb-0">Add rooms under the “Hostel Room” category in Create Resources first.</p>
+                            <p class="hc-hint mb-0">Add bed rooms under the “Hostel Room” category in Create Resources first.</p>
                         @endunless
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="bed_group" class="form-label">Bed group <span class="text-danger">*</span></label>
+                        <x-rm-select id="bed_group" name="bed_group" class="{{ $errors->has('bed_group') ? 'is-invalid' : '' }}" placeholder="Select bed group" :value="$bedGroup" :selected-label="$bedGroups[$bedGroup]['label'] ?? 'Select bed group'" :required="true"
+                            :options="collect([['value' => '', 'label' => 'Select bed group']])->concat(collect($bedGroups)->map(fn ($group, $key) => ['value' => $key, 'label' => $group['label']]))->values()->all()" />
+                        @error('bed_group')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <p class="hc-hint mb-0">One bed is reserved for each guest.</p>
                     </div>
                     <div class="col-12">
                         <label for="special_requirements" class="form-label">Special requirements</label>

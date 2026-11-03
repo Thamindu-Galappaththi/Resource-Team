@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function fillEditForm(resource, lookups) {
         editResourceTypes = lookups.types;
         window.RMSelect.setOptions('resourceCategorySelect', lookups.categories.map((item) => ({ value: item.id, label: item.name })), 'Select a category (e.g., IT Equipment)');
-        window.RMSelect.setOptions('resourceLocationSelect', lookups.locations.map((item) => ({ value: item.id, label: item.name })), 'Select a location (e.g., Block A, Floor 2)');
+        window.RMSelect.setOptions('resourceLocationSelect', lookups.locations.map((item) => ({ value: item.id, label: item.name })), 'Select a location (Welisara or Moratuwa)');
         clearEditErrors();
         const typeRecord = lookups.types.find((item) => String(item.id) === String(resource.resource_type_id));
         const categoryId = resource.type?.resource_category_id || typeRecord?.resource_category_id;
@@ -355,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('serialNumber').value = resource.serial_number || '';
         const ownerField = document.getElementById('resourceOwner');
         if (ownerField) ownerField.value = resource.resource_owner || '';
+        window.RMHostelFields?.fill(resource);
         fillReadonlyList('editFeaturesWrap', 'editFeaturesList', featureLines(resource));
         fillLinkedChoices(resource);
     }
@@ -441,13 +442,16 @@ document.addEventListener('DOMContentLoaded', () => {
             serial_number: document.getElementById('serialNumber').value.trim() || null,
             status: window.RMSelect.getValue('resourceStatusSelect'),
             linked_resource_ids: [...form.querySelectorAll('input[name="linked_resource_ids[]"]:checked')].map((input) => input.value),
+            ...(window.RMHostelFields?.payload() || {}),
         };
+        const hostel = window.RMHostelFields?.isHostel() || false;
         if (!payload.category_id) showFieldError('resourceCategorySelect', 'Select a category.');
         if (!payload.resource_type_id) showFieldError('resourceTypeSelect', 'Select a type.');
         if (!payload.location_id) showFieldError('resourceLocationSelect', 'Select a location.');
         if (!payload.status) showFieldError('resourceStatusSelect', 'Select a status.');
-        if (!payload.name_model) showFieldError('resourceNameModel', 'Enter a resource name/model.');
-        if (!payload.category_id || !payload.resource_type_id || !payload.location_id || !payload.status || !payload.name_model) {
+        if (!payload.name_model && !hostel) showFieldError('resourceNameModel', 'Enter a resource name/model.');
+        const bedsOk = window.RMHostelFields ? window.RMHostelFields.validate(showFieldError) : true;
+        if (!payload.category_id || !payload.resource_type_id || !payload.location_id || !payload.status || (!payload.name_model && !hostel) || !bedsOk) {
             return;
         }
 
@@ -466,6 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     serial_number: 'serialNumber',
                     resource_owner: 'resourceOwner',
                     status: 'resourceStatusSelect',
+                    ...(window.RMHostelFields?.errorFields() || {}),
                 });
                 await swalFire({ icon: 'error', title: 'Update failed', text: error.message });
             }
@@ -567,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearEditErrors() {
-        ['resourceCategorySelect', 'resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'resourceNameModel', 'serialNumber', 'resourceOwner']
+        ['resourceCategorySelect', 'resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'resourceNameModel', 'serialNumber', 'resourceOwner', ...(window.RMHostelFields?.fieldIds() || [])]
             .forEach(clearFieldError);
     }
 

@@ -5,11 +5,9 @@ namespace App\Services;
 use App\Enums\ReservationItemStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
-use App\Exceptions\ReservationConflictException;
 use App\Models\HostelStayDetail;
 use App\Models\Reservation;
 use App\Models\ReservationStatusHistory;
-use App\Models\Resource;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -19,15 +17,18 @@ use Illuminate\Validation\ValidationException;
  * Pattern for intern-owned modules (canteen, lecture, events):
  * 1. Reuse ReservationBookingService — never a second overlap engine.
  * 2. Set reservations.type and write a 1:1 details table (this file: hostel_stay_details).
- * 3. Book ordinary resources (here: any free room in category "Hostel Room" at the chosen location).
+ * 3. Book ordinary resources (here: the location's "Hostel Room / Bed" record, quantity = beds in the guest's bed group).
  * 4. Add Policy methods, FormRequest, Feature tests that prove reuse + RBAC.
  */
 class HostelReservationService
 {
-    public function __construct(private readonly ReservationBookingService $bookings) {}
+    public function __construct(
+        private readonly ReservationBookingService $bookings,
+        private readonly HostelBedCapacity $beds,
+    ) {}
 
     /**
-     * @param  array{guest_title:string,guest_name:string,employee_ids:array<int,string>,check_in_date:string,check_in_time:string,check_out_date:string,check_out_time:string,location_id:int,number_of_guests:int,guest_phone?:string|null,special_requirements?:string|null,requester_id?:int,title?:string}  $payload
+     * @param  array{guest_title:string,guest_name:string,employee_ids:array<int,string>,check_in_date:string,check_in_time:string,check_out_date:string,check_out_time:string,location_id:int,number_of_guests:int,bed_group:string,guest_phone?:string|null,special_requirements?:string|null,requester_id?:int,title?:string}  $payload
      */
     public function create(array $payload, User $actor): Reservation
     {
@@ -39,11 +40,18 @@ class HostelReservationService
         );
 
         return DB::transaction(function () use ($payload, $actor, $startsAt, $endsAt) {
-            $room = $this->firstAvailableRoom((int) $payload['location_id'], $startsAt, $endsAt);
+            $beds = $this->beds->allocate(
+                (int) $payload['location_id'],
+                $payload['bed_group'],
+                (int) $payload['number_of_guests'],
+                $startsAt,
+                $endsAt,
+            );
             $guest = $this->guestLabel($payload);
 
             $reservation = $this->bookings->create([
-                'resource_ids' => [$room->id],
+                'resource_ids' => array_keys($beds),
+                'quantities' => $beds,
                 'requester_id' => $payload['requester_id'] ?? $actor->id,
                 'location_id' => $payload['location_id'],
                 'type' => ReservationType::HOSTEL->value,
@@ -67,6 +75,7 @@ class HostelReservationService
                 'check_in_at' => $startsAt,
                 'check_out_at' => $endsAt,
                 'number_of_guests' => $payload['number_of_guests'],
+                'bed_group' => $payload['bed_group'],
                 'special_requirements' => $payload['special_requirements'] ?? null,
             ]);
 
@@ -90,8 +99,10 @@ class HostelReservationService
         );
 
         return DB::transaction(function () use ($payload, $actor, $startsAt, $endsAt, $reservation) {
-            $room = $this->firstAvailableRoom(
+            $beds = $this->beds->allocate(
                 (int) $payload['location_id'],
+                $payload['bed_group'],
+                (int) $payload['number_of_guests'],
                 $startsAt,
                 $endsAt,
                 $reservation->id,
@@ -99,7 +110,8 @@ class HostelReservationService
             $guest = $this->guestLabel($payload);
 
             $reservation = $this->bookings->updatePending($reservation, [
-                'resource_ids' => [$room->id],
+                'resource_ids' => array_keys($beds),
+                'quantities' => $beds,
                 'location_id' => $payload['location_id'],
                 'title' => $payload['title'] ?? 'Hostel stay for '.$guest,
                 'purpose' => 'Hostel stay for '.$guest,
@@ -118,6 +130,7 @@ class HostelReservationService
                 'check_in_at' => $startsAt,
                 'check_out_at' => $endsAt,
                 'number_of_guests' => $payload['number_of_guests'],
+                'bed_group' => $payload['bed_group'],
                 'special_requirements' => $payload['special_requirements'] ?? null,
             ];
 
@@ -162,15 +175,12 @@ class HostelReservationService
 
             $items = $reservation->items()->orderBy('resource_id')->lockForUpdate()->get();
             if ($status === ReservationStatus::APPROVED->value) {
-                foreach ($items as $item) {
-                    $this->bookings->lockResourcesAndAssertNoOverlap(
-                        [$item->resource_id],
-                        $item->starts_at,
-                        $item->ends_at,
-                        $reservation->id,
-                        [ReservationItemStatus::CONFIRMED->value],
-                    );
-                }
+                $this->beds->assertConfirmable(
+                    $items,
+                    $reservation->id,
+                    $reservation->hostelStay()->value('bed_group'),
+                    [ReservationItemStatus::CONFIRMED->value],
+                );
             }
 
             $from = $reservation->status;
@@ -330,30 +340,6 @@ class HostelReservationService
         }
 
         return [$startsAt, $endsAt];
-    }
-
-    public function firstAvailableRoom(int $locationId, $startsAt, $endsAt, ?int $ignoreReservationId = null): Resource
-    {
-        $rooms = Resource::query()
-            ->hostelRooms()
-            ->where('location_id', $locationId)
-            ->orderBy('name_model')
-            ->lockForUpdate()
-            ->get();
-
-        if ($rooms->isEmpty()) {
-            throw ValidationException::withMessages([
-                'location_id' => 'No hostel rooms exist at the selected location.',
-            ]);
-        }
-
-        foreach ($rooms as $room) {
-            if (! $this->bookings->hasConflict([$room->id], $startsAt, $endsAt, $ignoreReservationId)) {
-                return $room;
-            }
-        }
-
-        throw new ReservationConflictException('No room is available at this location for the selected dates.');
     }
 
     private function guestLabel(array $payload): string

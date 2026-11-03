@@ -7,6 +7,7 @@ use App\Models\Location;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
 use App\Models\ResourceType;
+use App\Services\HostelBedCapacity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,7 +23,7 @@ class ResourceController extends Controller
             'lookups' => $canManage ? [
                 'categories' => ResourceCategory::query()->orderBy('name')->get(['id', 'name']),
                 'types' => ResourceType::query()->orderBy('name')->get(['id', 'name', 'resource_category_id']),
-                'locations' => Location::query()->ordered()->get(['id', 'name']),
+                'locations' => Location::query()->forResources()->ordered()->get(['id', 'name']),
             ] : [
                 'categories' => [],
                 'types' => [],
@@ -90,16 +91,7 @@ class ResourceController extends Controller
      */
     public function store(StoreResourceRequest $request): JsonResponse
     {
-        $validated = $request->validated();
-
-        $resource = Resource::create([
-            'resource_type_id' => $validated['resource_type_id'],
-            'location_id' => $validated['location_id'],
-            'resource_owner' => $validated['resource_owner'] ?? null,
-            'name_model' => $validated['name_model'],
-            'serial_number' => $validated['serial_number'] ?? null,
-            'status' => $validated['status'],
-        ]);
+        $resource = Resource::create($this->attributesFrom($request));
 
         return response()->json(
             $resource->load(['type.category', 'location']),
@@ -111,14 +103,7 @@ class ResourceController extends Controller
     public function update(StoreResourceRequest $request, Resource $resource): JsonResponse
     {
         $validated = $request->validated();
-        $resource->update([
-            'resource_type_id' => $validated['resource_type_id'],
-            'location_id' => $validated['location_id'],
-            'resource_owner' => $validated['resource_owner'] ?? null,
-            'name_model' => $validated['name_model'],
-            'serial_number' => $validated['serial_number'] ?? null,
-            'status' => $validated['status'],
-        ]);
+        $resource->update($this->attributesFrom($request, $resource));
 
         $linkedIds = collect($validated['linked_resource_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
@@ -129,6 +114,34 @@ class ResourceController extends Controller
         $resource->linkedResources()->sync($linkedIds);
 
         return response()->json($resource->fresh()->load(['type.category', 'location', 'linkedResources']));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function attributesFrom(StoreResourceRequest $request, ?Resource $resource = null): array
+    {
+        $validated = $request->validated();
+        $hostel = $request->isHostel();
+        $name = $validated['name_model'] ?? null;
+        $counts = $hostel ? app(HostelBedCapacity::class)->normalizeCounts($validated['bed_counts'] ?? []) : null;
+
+        if ($hostel && ! filled($name)) {
+            $name = filled($resource?->name_model)
+                ? $resource->name_model
+                : Location::query()->find($validated['location_id'])?->name.' Hostel';
+        }
+
+        return [
+            'resource_type_id' => $validated['resource_type_id'],
+            'location_id' => $validated['location_id'],
+            'resource_owner' => $validated['resource_owner'] ?? null,
+            'name_model' => $name,
+            'serial_number' => $validated['serial_number'] ?? null,
+            'status' => $validated['status'],
+            'bed_counts' => $counts,
+            'bed_count' => $counts === null ? null : array_sum($counts),
+        ];
     }
 
     /**
