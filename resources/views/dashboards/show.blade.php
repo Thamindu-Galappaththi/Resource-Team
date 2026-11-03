@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/dashboard-role.css') }}?v={{ @filemtime(public_path('css/dashboard-role.css')) ?: time() }}">
 @if(!empty($bedMap))
-<link rel="stylesheet" href="{{ asset('css/hostel-bed-map.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/hostel-bed-map.css') }}?v=3">
 @endif
 @endpush
 

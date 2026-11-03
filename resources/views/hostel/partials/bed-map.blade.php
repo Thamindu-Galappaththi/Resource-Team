@@ -61,22 +61,6 @@
                                     </li>
                                 @endforeach
                             </ol>
-                            @if(! empty($group['bookings']))
-                                <ul class="hbm-bookings" role="list">
-                                    @foreach($group['bookings'] as $booking)
-                                        <li class="is-{{ $booking['state'] }}">
-                                            <span class="hbm-dot is-{{ $booking['state'] }}" aria-hidden="true"></span>
-                                            @if($booking['url'])
-                                                <a href="{{ $booking['url'] }}">{{ $booking['reference'] }}</a>
-                                            @else
-                                                <span>{{ $booking['reference'] }}</span>
-                                            @endif
-                                            <span class="hbm-booking-guest">{{ $booking['guest'] }}</span>
-                                            <span class="hbm-booking-meta">{{ $booking['beds'] }} {{ $booking['beds'] === 1 ? 'bed' : 'beds' }}{{ $booking['stay'] ? ' · '.$booking['stay'] : '' }}</span>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
                         @endif
                     </section>
                 @endforeach
