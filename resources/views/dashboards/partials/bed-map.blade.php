@@ -13,8 +13,14 @@
             <label class="hbm-date">
                 <span class="visually-hidden">Show beds for date</span>
                 <i class="ti ti-calendar" aria-hidden="true"></i>
-                <input type="date" id="hbm-date" value="{{ $bedMap['date'] }}" data-url="{{ $bedMap['url'] }}">
+                <input type="date" id="hbm-date" value="{{ $bedMap['date'] }}" data-url="{{ $bedMap['url'] }}" @if(! empty($bedMap['gateListUrl'])) data-pdf-url="{{ $bedMap['gateListUrl'] }}" @endif>
             </label>
+            @if(! empty($bedMap['gateListUrl']))
+                <a id="hbm-pdf" class="hbm-pdf" href="{{ $bedMap['gateListUrl'] }}?date={{ $bedMap['date'] }}">
+                    <i class="ti ti-download" aria-hidden="true"></i>
+                    Guest list PDF
+                </a>
+            @endif
         </div>
     </div>
     <div class="rd-panel__body position-relative">

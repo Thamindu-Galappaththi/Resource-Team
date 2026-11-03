@@ -104,6 +104,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/my-requests', [SltEmployeeRequestController::class, 'hostel'])->middleware('permission:hostel.index')->name('mine');
         Route::get('/student-requests', [HostelStudentRequestController::class, 'index'])->middleware('permission:hostel.manage')->name('student-requests.index');
         Route::get('/bed-map', 'bedMap')->middleware('permission:hostel.index')->name('bed-map');
+        Route::get('/gate-list', 'gateList')->middleware('permission:hostel.manage')->name('gate-list');
         Route::get('/{reservation}/edit', 'edit')->middleware('permission:hostel.create')->name('edit');
         Route::get('/{reservation}', 'show')->middleware('permission:hostel.index')->name('show');
     });

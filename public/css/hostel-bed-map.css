@@ -35,6 +35,22 @@
 .hbm-date input { border: 0; outline: 0; background: transparent; color: #14315e; font-weight: 600; }
 .hbm-date:focus-within { border-color: #1769c2; box-shadow: 0 0 0 2px rgba(23, 105, 194, .12); }
 
+.hbm-pdf {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    min-height: 40px;
+    padding: 0 .9rem;
+    border: 1px solid #1769c2;
+    border-radius: 9px;
+    background: #1769c2;
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+.hbm-pdf:hover { background: #1256a0; color: #fff; }
+
 .hbm-loading {
     position: absolute;
     inset: 0;

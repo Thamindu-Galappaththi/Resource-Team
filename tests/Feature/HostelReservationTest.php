@@ -720,9 +720,45 @@ class HostelReservationTest extends TestCase
             ->assertSessionHasNoErrors();
     }
 
-    /**
-     * @return array{location: Location, type: ResourceType, room: resource}
-     */
+    public function test_hostel_manager_can_download_today_guest_list_pdf_for_the_gate(): void
+    {
+        $this->travelTo(now(config('reservations.display_timezone', 'Asia/Colombo'))->startOfDay()->addHours(8));
+        $coordinator = User::factory()->role('coordinator')->create();
+        $manager = User::factory()->role('hostel_manager')->create();
+        $setup = $this->hostelRoom(['male' => 4]);
+        $today = now(config('reservations.display_timezone', 'Asia/Colombo'))->toDateString();
+
+        $this->actingAs($coordinator)
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'guest_title' => 'Mr.',
+                'guest_name' => 'Kasun Madushanka',
+                'guest_phone' => '+94 77 123 4567',
+                'employee_ids' => ['EMP-1001', 'EMP-1002'],
+                'number_of_guests' => 2,
+                'check_in_date' => $today,
+                'check_in_time' => '14:00',
+                'check_out_date' => now(config('reservations.display_timezone', 'Asia/Colombo'))->addDays(2)->toDateString(),
+                'special_requirements' => 'Ground floor if possible',
+            ]))
+            ->assertRedirect();
+
+        $reservation = Reservation::query()->firstOrFail();
+        $this->actingAs($manager)
+            ->post(route('hostel.approval', $reservation), ['status' => ReservationStatus::APPROVED->value])
+            ->assertRedirect();
+
+        $response = $this->actingAs($manager)
+            ->get(route('hostel.gate-list', ['date' => $today]));
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/pdf', (string) $response->headers->get('content-type'));
+        $this->assertStringContainsString('hostel-guest-list-'.$today.'.pdf', (string) $response->headers->get('content-disposition'));
+
+        $this->actingAs(User::factory()->role('slt_employee')->create())
+            ->get(route('hostel.gate-list'))
+            ->assertForbidden();
+    }
+
     /**
      * One hostel record per location; by default only one Male bed so overlaps are easy to test.
      *

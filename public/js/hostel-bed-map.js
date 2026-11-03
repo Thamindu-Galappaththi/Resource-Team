@@ -3,8 +3,17 @@
     if (!input) return;
     let request = null;
 
+    const syncPdf = () => {
+        const link = document.getElementById('hbm-pdf');
+        if (!link || !input.dataset.pdfUrl || !input.value) return;
+        const pdf = new URL(input.dataset.pdfUrl, window.location.origin);
+        pdf.searchParams.set('date', input.value);
+        link.href = pdf.toString();
+    };
+
     input.addEventListener('change', async () => {
         if (!input.value) return;
+        syncPdf();
         const url = new URL(input.dataset.url, window.location.origin);
         url.searchParams.set('date', input.value);
         const loading = document.getElementById('hbm-loading');

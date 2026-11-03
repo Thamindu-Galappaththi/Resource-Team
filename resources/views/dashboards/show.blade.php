@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/dashboard-role.css') }}?v={{ @filemtime(public_path('css/dashboard-role.css')) ?: time() }}">
 @if(!empty($bedMap))
-<link rel="stylesheet" href="{{ asset('css/hostel-bed-map.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/hostel-bed-map.css') }}?v=4">
 @endif
 @endpush
 
@@ -149,6 +149,6 @@
 @endphp</script>
 <script src="{{ asset('js/dashboard-charts.js') }}?v=6"></script>
 @if(!empty($bedMap))
-<script src="{{ asset('js/hostel-bed-map.js') }}?v=1"></script>
+<script src="{{ asset('js/hostel-bed-map.js') }}?v=2"></script>
 @endif
 @endpush

@@ -508,6 +508,7 @@ class DashboardService
             ],
             'actions' => $this->actions($user, [
                 ['Hostel bookings', 'ti ti-bed', 'hostel.index', 'hostel.index', 'primary'],
+                ['Today\'s guest list (PDF)', 'ti ti-download', 'hostel.manage', 'hostel.gate-list', 'outline'],
                 ['Calendar', 'ti ti-calendar', 'reservations.calendar', 'reservations.calendar', 'outline'],
             ]),
             'chart' => $this->reservationChart((clone $hostel), 'Hostel stays this week'),
@@ -532,6 +533,7 @@ class DashboardService
             'bedMap' => [
                 'date' => $today->toDateString(),
                 'url' => route('hostel.bed-map'),
+                'gateListUrl' => $user->hasPermission('hostel.manage') ? route('hostel.gate-list') : null,
                 'locations' => app(HostelBedCapacity::class)->bedMap($this->now()),
             ],
         ];

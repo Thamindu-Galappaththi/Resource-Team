@@ -783,6 +783,7 @@ class ResourceManagementTest extends TestCase
         $html = $this->actingAs($manager)->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Bed availability')
+            ->assertSee('Guest list PDF')
             ->assertSee('id="hbm-date"', false)
             ->assertSee('<strong>90</strong> of 90 beds free', false)
             ->getContent();

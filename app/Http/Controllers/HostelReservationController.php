@@ -14,9 +14,11 @@ use App\Models\Resource;
 use App\Services\HostelBedCapacity;
 use App\Services\HostelReservationService;
 use App\Services\ReservationDocumentStore;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -98,6 +100,77 @@ class HostelReservationController extends Controller
             'date' => $day->toDateString(),
             'locations' => $beds->bedMap($day),
         ]);
+    }
+
+    /** GET /hostel/gate-list?date=YYYY-MM-DD: approved guests staying that day, as a PDF for the gate security. */
+    public function gateList(Request $request): Response
+    {
+        $this->authorize('viewAnyHostel', Reservation::class);
+        abort_unless($request->user()->hasPermission('hostel.manage'), 403);
+
+        $data = $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+        $tz = $this->hostelStayTimezone();
+        $day = Carbon::parse($data['date'] ?? now($tz)->toDateString(), $tz)->startOfDay();
+        $dayStart = $day->copy()->utc();
+        $dayEnd = $day->copy()->addDay()->utc();
+
+        $rows = Reservation::query()
+            ->where('type', ReservationType::HOSTEL->value)
+            ->where('status', ReservationStatus::APPROVED->value)
+            ->whereHas('hostelStay', fn ($stay) => $stay->where('check_in_at', '<', $dayEnd)->where('check_out_at', '>', $dayStart))
+            ->with(['hostelStay', 'location', 'requester', 'items'])
+            ->get()
+            ->map(function (Reservation $reservation) use ($tz, $dayStart, $dayEnd) {
+                $stay = $reservation->hostelStay;
+                $checkIn = $stay->check_in_at->copy()->timezone($tz);
+                $checkOut = $stay->check_out_at->copy()->timezone($tz);
+                $phone = null;
+                if ($stay->guest_phone_encrypted) {
+                    try {
+                        $phone = Crypt::decryptString($stay->guest_phone_encrypted);
+                    } catch (\Throwable) {
+                        $phone = null;
+                    }
+                }
+
+                return [
+                    'reference' => $reservation->reference,
+                    'guest' => $stay->displayGuestName(),
+                    'employee_ids' => $stay->employeeIdList(),
+                    'phone' => $phone,
+                    'guests' => (int) $stay->number_of_guests,
+                    'beds' => (int) $reservation->items->sum('quantity'),
+                    'location' => $reservation->location?->name ?? '—',
+                    'bed_group' => $stay->bedGroupLabel() ?? '—',
+                    'check_in' => $checkIn,
+                    'check_out' => $checkOut,
+                    'today' => match (true) {
+                        $stay->check_in_at->gte($dayStart) && $stay->check_out_at->lte($dayEnd) => 'Arriving & leaving',
+                        $stay->check_in_at->gte($dayStart) => 'Arriving',
+                        $stay->check_out_at->lte($dayEnd) => 'Leaving',
+                        default => 'In stay',
+                    },
+                    'requester' => $reservation->requester?->name,
+                    'requirements' => $stay->special_requirements,
+                ];
+            })
+            ->sortBy([
+                fn ($a, $b) => array_search($a['location'], Location::CAMPUS_ORDER, true) <=> array_search($b['location'], Location::CAMPUS_ORDER, true),
+                fn ($a, $b) => $a['check_in'] <=> $b['check_in'],
+            ])
+            ->values();
+
+        $logo = public_path('images/logos/nebula.png');
+        $pdf = Pdf::loadView('hostel.pdf.gate-list', [
+            'day' => $day,
+            'rows' => $rows,
+            'groups' => $rows->groupBy('location'),
+            'generatedAt' => now($tz),
+            'generatedBy' => $request->user()->name,
+            'logo' => is_file($logo) ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logo)) : null,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('hostel-guest-list-'.$day->toDateString().'.pdf');
     }
 
     public function create(Request $request): View
