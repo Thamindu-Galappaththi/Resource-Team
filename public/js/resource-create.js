@@ -35,8 +35,17 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFieldError('resourceCategorySelect');
         refreshTypeSelectForCategory(event.target.value);
     });
-    ['resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'primaryResourceSelect', 'linkedResourceSelect'].forEach((id) => {
+    ['resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'primaryResourceSelect'].forEach((id) => {
         document.getElementById(id)?.addEventListener('change', () => clearFieldError(id));
+    });
+    const linkPicker = window.RMLinkPicker({
+        selectId: 'primaryResourceSelect',
+        listId: 'relatedResourcesList',
+        countId: 'relatedResourcesCount',
+        errorId: 'relatedResourcesError',
+        showUrl: (id) => `${config.resourceUrl}/${id}`,
+        resources: () => state.resources,
+        onReady: (ready) => { document.getElementById('saveLinksBtn').disabled = !ready; },
     });
     document.getElementById('existingCategoriesBody')?.addEventListener('click', onCategoryTableClick);
     document.getElementById('existingCategoriesPagination')?.addEventListener('click', onCategoryPaginationClick);
@@ -223,29 +232,36 @@ document.addEventListener('DOMContentLoaded', () => {
     async function submitLink(event) {
         event.preventDefault();
         clearFieldError('primaryResourceSelect');
-        clearFieldError('linkedResourceSelect');
-        const resourceId = window.RMSelect.getValue('primaryResourceSelect');
-        const linkedResourceId = window.RMSelect.getValue('linkedResourceSelect');
-        if (!resourceId) showFieldError('primaryResourceSelect', 'Select a main resource.');
-        if (!linkedResourceId) showFieldError('linkedResourceSelect', 'Select a related resource.');
-        if (!resourceId || !linkedResourceId) return;
-        if (resourceId === linkedResourceId) {
-            showFieldError('linkedResourceSelect', 'A resource cannot be linked to itself.');
+        linkPicker.clearError();
+        const resourceId = linkPicker.mainId();
+        if (!resourceId) {
+            showFieldError('primaryResourceSelect', 'Select a main resource.');
+            return;
+        }
+        const linkedIds = linkPicker.checkedIds();
+        if (!linkedIds.length && !linkPicker.hasSaved()) {
+            linkPicker.showError('Select at least one related resource.');
+            linkPicker.focus();
             return;
         }
 
         await runBusy(event.target, async () => {
             try {
-                await postJSON(config.linksUrl, { resource_id: resourceId, linked_resource_id: linkedResourceId });
-                window.RMSelect.setValue('primaryResourceSelect', '', 'Select a resource');
-                window.RMSelect.setValue('linkedResourceSelect', '', 'Select a resource to link');
-                await swalFire({ icon: 'success', title: 'Resources linked', text: 'The relationship was saved.' });
-            } catch (error) {
-                showRequestErrors(error, {
-                    resource_id: 'primaryResourceSelect',
-                    linked_resource_id: 'linkedResourceSelect',
+                await postJSON(config.linksUrl, { resource_id: resourceId, linked_resource_ids: linkedIds });
+                linkPicker.markSaved(linkedIds);
+                await swalFire({
+                    icon: 'success',
+                    title: 'Links saved',
+                    text: linkedIds.length
+                        ? `${linkedIds.length} related ${linkedIds.length === 1 ? 'resource is' : 'resources are'} now linked.`
+                        : 'All related resources were unlinked.',
                 });
-                await swalFire({ icon: 'error', title: 'Could not link resources', text: error.message });
+            } catch (error) {
+                showRequestErrors(error, { resource_id: 'primaryResourceSelect' });
+                const linkError = error.errors?.linked_resource_ids?.[0]
+                    || Object.entries(error.errors || {}).find(([key]) => key.startsWith('linked_resource_ids.'))?.[1]?.[0];
+                if (linkError) linkPicker.showError(linkError);
+                await swalFire({ icon: 'error', title: 'Could not save links', text: error.message });
             }
         });
     }
@@ -415,17 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshResourceSelects() {
-        const items = state.resources.filter((resource) => !window.RMHostelFields?.isHostelRecord(resource)).map((resource) => ({
-            value: resource.id,
-            label: `${resource.name_model}${resource.serial_number ? ` (${resource.serial_number})` : ''}`,
-        }));
-        ['primaryResourceSelect', 'linkedResourceSelect'].forEach((id) => {
-            const current = window.RMSelect.getValue(id);
-            const placeholder = window.RMSelect.wrapFor(id)?.dataset.placeholder || 'Select a resource';
-            window.RMSelect.setOptions(id, items, placeholder);
-            const selected = items.find((item) => String(item.value) === String(current));
-            if (selected) window.RMSelect.setValue(id, selected.value, selected.label);
-        });
+        linkPicker.setOptions();
     }
 
     function refreshLocationSelects() {

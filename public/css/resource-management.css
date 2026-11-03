@@ -433,6 +433,21 @@
     cursor: pointer;
 }
 .rm-linked-item input { margin: 0; flex-shrink: 0; accent-color: #1769c2; }
+.rm-link-section {
+    padding-top: 1rem;
+    border-top: 1px solid #e3e9f2;
+}
+.rm-link-title {
+    margin: 0 0 .75rem;
+    color: #14315e;
+    font-size: 15px;
+    font-weight: 750;
+}
+.rm-linked-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
 .rm-linked-item:has(input:checked) {
     border-color: #93c5fd;
     background: #eef5ff;

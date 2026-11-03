@@ -98,6 +98,20 @@ class Resource extends Model
     }
 
     /**
+     * Links work both ways, so this keeps exactly the given resources linked whichever side stored the row.
+     *
+     * @param  iterable<int|string>  $ids
+     */
+    public function syncLinks(iterable $ids): void
+    {
+        $ids = collect($ids)->map(fn ($id) => (int) $id)->reject(fn ($id) => $id === (int) $this->id)->unique()->values();
+        $incoming = $this->linkedFrom()->pluck('resources.id');
+
+        $this->linkedFrom()->detach($incoming->diff($ids)->values()->all());
+        $this->linkedResources()->sync($ids->diff($incoming)->values()->all());
+    }
+
+    /**
      * Lets you call $resource->category to get the parent category
      * WITHOUT storing a redundant category_id column, and without an
      * extra query per resource (Eloquent can eager-load this "through"

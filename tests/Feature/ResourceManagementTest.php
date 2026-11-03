@@ -599,6 +599,43 @@ class ResourceManagementTest extends TestCase
         $this->assertSame(2, Resource::query()->hostelRooms()->count());
     }
 
+    public function test_link_resources_saves_the_ticked_related_resources_both_ways(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        $welisara = Location::factory()->create(['name' => 'Welisara']);
+        $hall = Resource::factory()->create(['name_model' => 'Hall A', 'status' => 'active', 'location_id' => $welisara->id]);
+        [$projector, $speaker, $mic] = Resource::factory()->count(3)->create(['status' => 'active']);
+        $speaker->linkedResources()->attach($hall->id);
+
+        $this->actingAs($user)->getJson("/resources/{$hall->id}")
+            ->assertOk()
+            ->assertJsonPath('linked_resources.0.id', $speaker->id);
+
+        $this->postJson(route('resource-links.store'), ['resource_id' => $hall->id, 'linked_resource_ids' => [$projector->id, $mic->id]])
+            ->assertOk()
+            ->assertJsonPath('linked_resource_ids', [$projector->id, $mic->id]);
+
+        $linked = collect($this->getJson("/resources/{$hall->id}")->json('linked_resources'))->pluck('id')->sort()->values()->all();
+        $this->assertSame([$projector->id, $mic->id], $linked);
+        $this->assertDatabaseMissing('resource_links', ['resource_id' => $speaker->id, 'linked_resource_id' => $hall->id]);
+
+        $this->putJson("/resources/{$hall->id}", [
+            'category_id' => $hall->type->resource_category_id,
+            'resource_type_id' => $hall->resource_type_id,
+            'location_id' => $hall->location_id,
+            'name_model' => 'Hall A (renamed)',
+            'status' => 'active',
+        ])->assertOk()->assertJsonCount(2, 'linked_resources');
+
+        $this->postJson(route('resource-links.store'), ['resource_id' => $hall->id, 'linked_resource_ids' => []])->assertOk();
+        $this->assertDatabaseCount('resource_links', 0);
+
+        $this->postJson(route('resource-links.store'), ['resource_id' => $hall->id, 'linked_resource_ids' => [$hall->id]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('linked_resource_ids.0');
+    }
+
     public function test_hostel_records_are_never_linked_to_other_resources(): void
     {
         $this->seed(RolePermissionSeeder::class);
@@ -616,9 +653,9 @@ class ResourceManagementTest extends TestCase
         ]);
         $hostel->linkedResources()->attach($hall->id);
 
-        $this->actingAs($user)->postJson(route('resource-links.store'), ['resource_id' => $hall->id, 'linked_resource_id' => $hostel->id])
+        $this->actingAs($user)->postJson(route('resource-links.store'), ['resource_id' => $hall->id, 'linked_resource_ids' => [$projector->id, $hostel->id]])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['linked_resource_id' => 'Hostel records hold beds only and cannot be linked to other resources.']);
+            ->assertJsonValidationErrors(['linked_resource_ids' => 'Hostel records hold beds only and cannot be linked to other resources.']);
 
         $this->putJson("/resources/{$hostel->id}", [
             'category_id' => $category->id,

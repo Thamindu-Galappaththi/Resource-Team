@@ -14,6 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const swalFire = (options) => window.RMSwal.fire(options);
+    const linkPicker = document.getElementById('editMainResourceSelect') ? window.RMLinkPicker({
+        selectId: 'editMainResourceSelect',
+        listId: 'editLinkedList',
+        countId: 'editLinkedCount',
+        errorId: 'editLinkedError',
+        showUrl: (id) => config.showUrl.replace('__ID__', id),
+        resources: () => allResources,
+    }) : null;
 
     loadResources();
     document.getElementById('clearFiltersBtn')?.addEventListener('click', () => {
@@ -358,7 +366,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ownerField) ownerField.value = resource.resource_owner || '';
         window.RMHostelFields?.fill(resource);
         fillReadonlyList('editFeaturesWrap', 'editFeaturesList', featureLines(resource));
-        fillLinkedChoices(resource);
     }
 
     function fillReadonlyList(wrapId, listId, items) {
@@ -379,28 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function fillLinkedChoices(resource) {
-        const list = document.getElementById('editLinkedList');
-        if (!list) return;
-        const selected = new Set(linkedResources(resource).map((item) => String(item.id)));
-        const others = allResources.filter((item) => String(item.id) !== String(resource.id)
-            && item.status !== 'deleted'
-            && !window.RMHostelFields?.isHostelRecord(item));
-        list.replaceChildren();
-        if (!others.length) {
-            list.innerHTML = '<p class="text-muted small mb-0">No other resources are available to link.</p>';
-            return;
-        }
-        others.forEach((item) => {
-            const id = `edit-linked-${item.id}`;
-            const label = document.createElement('label');
-            label.className = 'rm-linked-item';
-            label.setAttribute('for', id);
-            label.innerHTML = `<input type="checkbox" id="${id}" name="linked_resource_ids[]" value="${item.id}" ${selected.has(String(item.id)) ? 'checked' : ''}><span>${escapeHtml(linkedLabel(item))}</span>`;
-            list.appendChild(label);
-        });
-    }
-
     async function editResource(id) {
         const modalElement = document.getElementById('editResourceModal');
         const form = document.getElementById('editResourceForm');
@@ -408,6 +393,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modalElement || !form) return;
 
         form.dataset.resourceId = id;
+        linkPicker?.clearError();
+        linkPicker?.setOptions(id);
         const cached = allResources.find((item) => String(item.id) === String(id));
         if (cached && lookupCache.categories.length) {
             fillEditForm(cached, lookupCache);
@@ -447,9 +434,9 @@ document.addEventListener('DOMContentLoaded', () => {
             ...(window.RMHostelFields?.payload() || {}),
         };
         const hostel = window.RMHostelFields?.isHostel() || false;
-        if (!hostel) {
-            payload.linked_resource_ids = [...form.querySelectorAll('input[name="linked_resource_ids[]"]:checked')].map((input) => input.value);
-        }
+        const mainId = hostel ? '' : linkPicker?.mainId();
+        const linkedIds = mainId ? linkPicker.checkedIds() : [];
+        const saveLinks = Boolean(mainId) && (linkedIds.length > 0 || linkPicker.hasSaved());
         if (!payload.category_id) showFieldError('resourceCategorySelect', 'Select a category.');
         if (!payload.resource_type_id) showFieldError('resourceTypeSelect', 'Select a type.');
         if (!payload.location_id) showFieldError('resourceLocationSelect', 'Select a location.');
@@ -463,9 +450,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const save = async () => {
             try {
                 await requestJSON(config.updateUrl.replace('__ID__', form.dataset.resourceId), 'PUT', payload);
-                bootstrap.Modal.getInstance(document.getElementById('editResourceModal'))?.hide();
-                await loadResources();
-                await swalFire({ icon: 'success', title: 'Resource updated', text: 'Changes were saved.', timer: 2500, showConfirmButton: false });
             } catch (error) {
                 showRequestErrors(error, {
                     category_id: 'resourceCategorySelect',
@@ -478,6 +462,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     ...(window.RMHostelFields?.errorFields() || {}),
                 });
                 await swalFire({ icon: 'error', title: 'Update failed', text: error.message });
+                return;
+            }
+
+            try {
+                if (saveLinks) {
+                    await requestJSON(config.linksUrl, 'POST', { resource_id: mainId, linked_resource_ids: linkedIds });
+                    linkPicker.markSaved(linkedIds);
+                }
+                bootstrap.Modal.getInstance(document.getElementById('editResourceModal'))?.hide();
+                await loadResources();
+                await swalFire({ icon: 'success', title: 'Resource updated', text: 'Changes were saved.', timer: 2500, showConfirmButton: false });
+            } catch (error) {
+                const linkError = error.errors?.linked_resource_ids?.[0]
+                    || Object.entries(error.errors || {}).find(([key]) => key.startsWith('linked_resource_ids.'))?.[1]?.[0];
+                linkPicker.showError(linkError || error.message);
+                await swalFire({ icon: 'error', title: 'Links not saved', text: `The resource details were saved, but the links were not: ${linkError || error.message}` });
             }
         };
         window.RMAction ? await window.RMAction.around(form, save) : await save();
