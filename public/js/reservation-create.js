@@ -45,9 +45,22 @@
     }
 
     function resourceLabel(resource) {
-        const serial = resource.serial_number ? ` (${resource.serial_number})` : '';
-        const location = resource.location_name ? ` — ${resource.location_name}` : '';
-        return `${resource.name_model}${serial}${location}`;
+        return resource.name_model || 'Resource';
+    }
+
+    function categoriesForLocation(locationId) {
+        if (!locationId) return [];
+        const seen = new Map();
+        (lookups.resources || []).forEach((resource) => {
+            if (String(resource.location_id) !== String(locationId) || !resource.category_id) return;
+            const id = String(resource.category_id);
+            if (seen.has(id)) return;
+            const name = resource.category_name
+                || (lookups.categories || []).find((category) => String(category.id) === id)?.name;
+            if (!name) return;
+            seen.set(id, { id: resource.category_id, name });
+        });
+        return [...seen.values()].sort((left, right) => left.name.localeCompare(right.name));
     }
 
     function filteredResources() {
@@ -61,6 +74,22 @@
         });
     }
 
+    function refreshCategories() {
+        const locationId = window.RMSelect.getValue('location_id');
+        const rows = categoriesForLocation(locationId);
+        const current = window.RMSelect.getValue('category_id') || config.prefillCategoryId || '';
+        window.RMSelect.setOptions(
+            'category_id',
+            rows.map((category) => ({ value: String(category.id), label: category.name })),
+            locationId ? 'Select a category' : 'Select a location first',
+            { disabled: !locationId }
+        );
+        const stillVisible = rows.find((row) => String(row.id) === String(current));
+        if (stillVisible) {
+            window.RMSelect.setValue('category_id', String(stillVisible.id), stillVisible.name);
+        }
+    }
+
     function selectedResourceIds() {
         const ids = [];
         if (resourceSelect.value) ids.push(resourceSelect.value);
@@ -71,10 +100,12 @@
     function refreshResources() {
         const rows = filteredResources();
         const current = resourceSelect.value || config.prefillResourceId || '';
+        const ready = Boolean(window.RMSelect.getValue('location_id') && window.RMSelect.getValue('category_id'));
         window.RMSelect.setOptions(
             'resource_id',
             rows.map((resource) => ({ value: String(resource.id), label: resourceLabel(resource) })),
-            'Select a resource'
+            ready ? 'Select a resource' : 'Select a location and category first',
+            { disabled: !ready }
         );
         const stillVisible = rows.find((row) => String(row.id) === String(current));
         if (stillVisible) {
@@ -193,9 +224,11 @@
         }
     }
 
-    ['location_id', 'category_id'].forEach((id) => {
-        document.getElementById(id)?.addEventListener('change', refreshResources);
+    document.getElementById('location_id')?.addEventListener('change', () => {
+        refreshCategories();
+        refreshResources();
     });
+    document.getElementById('category_id')?.addEventListener('change', refreshResources);
     resourceSelect.addEventListener('change', () => {
         renderLinked();
         checkAvailability();
@@ -246,8 +279,10 @@
         const location = (lookups.locations || []).find((row) => String(row.id) === String(config.prefillLocationId));
         if (location) window.RMSelect.setValue('location_id', String(location.id), location.name);
     }
+    refreshCategories();
     if (config.prefillCategoryId) {
-        const category = (lookups.categories || []).find((row) => String(row.id) === String(config.prefillCategoryId));
+        const category = categoriesForLocation(window.RMSelect.getValue('location_id'))
+            .find((row) => String(row.id) === String(config.prefillCategoryId));
         if (category) window.RMSelect.setValue('category_id', String(category.id), category.name);
     }
 

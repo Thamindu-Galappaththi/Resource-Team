@@ -14,9 +14,7 @@ window.RMLinkPicker = function ({ selectId, listId, countId, errorId, showUrl, r
     }
 
     function label(item) {
-        const serial = item.serial_number ? ` (${item.serial_number})` : '';
-        const location = item.location?.name ? ` — ${item.location.name}` : '';
-        return `${item.name_model || 'Resource'}${serial}${location}`;
+        return item.name_model || 'Resource';
     }
 
     function message(text) {
@@ -95,7 +93,7 @@ window.RMLinkPicker = function ({ selectId, listId, countId, errorId, showUrl, r
     function setOptions(selectedId = null) {
         const items = linkable().map((item) => ({
             value: item.id,
-            label: `${item.name_model}${item.serial_number ? ` (${item.serial_number})` : ''}`,
+            label: item.name_model,
         }));
         const current = selectedId ?? window.RMSelect.getValue(selectId);
         const placeholder = window.RMSelect.wrapFor(selectId)?.dataset.placeholder || 'Select a resource';

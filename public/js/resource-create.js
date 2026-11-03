@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             window.RMSelect.setValue('resourceCategorySelect', '', 'Select a category (e.g., IT Equipment)');
             refreshTypeSelectForCategory('');
-            window.RMSelect.setValue('resourceLocationSelect', '', 'Select a location (Welisara or Moratuwa)');
+            window.RMSelect.setValue('resourceLocationSelect', '', 'Select a location (Welisara, Moratuwa or Peradeniya)');
             window.RMSelect.setValue('resourceStatusSelect', '', 'Select status (e.g., Available, Under Maintenance)');
             document.getElementById('resourceNameModel').value = '';
             document.getElementById('serialNumber').value = '';
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function refreshLocationSelects() {
         const items = state.locations.map((location) => ({ value: location.id, label: location.name }));
         const current = window.RMSelect.getValue('resourceLocationSelect');
-        window.RMSelect.setOptions('resourceLocationSelect', items, 'Select a location (Welisara or Moratuwa)');
+        window.RMSelect.setOptions('resourceLocationSelect', items, 'Select a location (Welisara, Moratuwa or Peradeniya)');
         const selected = items.find((item) => String(item.value) === String(current));
         if (selected) window.RMSelect.setValue('resourceLocationSelect', selected.value, selected.label);
     }

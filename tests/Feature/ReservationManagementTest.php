@@ -390,7 +390,7 @@ class ReservationManagementTest extends TestCase
 
         $response->assertOk();
         $this->assertSame(
-            ['Welisara', 'Moratuwa'],
+            ['Welisara', 'Moratuwa', 'Peradeniya'],
             collect($response->json('locations'))->pluck('name')->all()
         );
     }

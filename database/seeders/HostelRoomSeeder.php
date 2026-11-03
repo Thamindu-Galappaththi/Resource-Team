@@ -34,7 +34,7 @@ class HostelRoomSeeder extends Seeder
 
             $this->convertLegacyTypes($category, $bed);
 
-            foreach (config('resources.locations', []) as $name) {
+            foreach (config('hostel.locations', ['Welisara', 'Moratuwa']) as $name) {
                 $location = Location::query()->firstOrCreate(['name' => $name]);
                 $hostel = $this->hostelFor($bed, $location);
                 $this->mergeOtherRooms($category, $location, $hostel);

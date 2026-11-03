@@ -3,7 +3,7 @@
 @section('title', 'Create Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=26">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=27">
 @endpush
 
 @section('content')
@@ -228,6 +228,6 @@
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/resource-hostel-fields.js') }}?v=3"></script>
-<script src="{{ asset('js/resource-link-picker.js') }}?v=1"></script>
-<script src="{{ asset('js/resource-create.js') }}?v=17"></script>
+<script src="{{ asset('js/resource-link-picker.js') }}?v=2"></script>
+<script src="{{ asset('js/resource-create.js') }}?v=18"></script>
 @endpush

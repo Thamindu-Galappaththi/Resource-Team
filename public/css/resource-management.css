@@ -414,6 +414,32 @@
 .rm-detail-row:nth-child(odd) { background: #eef3ff; }
 .rm-detail-label { color: #5b6b86; font-size: 13px; font-weight: 700; }
 .rm-detail-value { color: #14315e; font-size: 14px; font-weight: 700; word-break: break-word; white-space: normal; }
+.rm-name {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rm-link-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.rm-link-tags li {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #1769c2;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.25;
+}
 .rm-linked-list {
     display: grid;
     gap: 8px;

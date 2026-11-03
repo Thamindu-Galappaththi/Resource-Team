@@ -81,9 +81,9 @@ class SltEmployeeReservationSeeder extends Seeder
     {
         $bookings = app(ReservationBookingService::class);
         $serials = [
-            'LH-WEL-B-002', 'MR-WEL-101', 'LT-WEL-001', 'LAB-WEL-03', 'PJ-WEL-001',
-            'LH-WEL-A-001', 'MR-MOR-201', 'LT-PER-001', 'PJ-MOR-001', 'LH-MOR-A-001',
-            'LT-WEL-002',
+            'WEL-LR-01', 'WEL-AUD-MAIN', 'WEL-CLAB-01', 'WEL-LAB-ELN', 'WEL-PLAY',
+            'WEL-LR-02', 'MOR-AUD', 'MOR-MAUD-01', 'MOR-LAB-NGN', 'PER-AUD',
+            'PER-CLAB-01',
         ];
         $purposes = ['Team briefing', 'Project sync', 'Site visit', 'Hands-on training', 'Department review'];
         $outcomes = [null, ReservationStatus::APPROVED->value, ReservationStatus::APPROVED->value, null, ReservationStatus::CANCELLED->value];
@@ -103,8 +103,8 @@ class SltEmployeeReservationSeeder extends Seeder
             ];
         }
 
-        $rows[] = ['owner' => $colleague, 'serial' => 'LH-WEL-A-001', 'days' => 1, 'start' => '14:00', 'end' => '16:00', 'title' => 'SLT Demo: Colleague Hall A', 'purpose' => 'Other team workshop', 'after' => ReservationStatus::APPROVED->value];
-        $rows[] = ['owner' => $colleague, 'serial' => 'LT-WEL-002', 'days' => 2, 'start' => '14:00', 'end' => '16:00', 'title' => 'SLT Demo: Colleague laptop', 'purpose' => 'Field work', 'after' => null];
+        $rows[] = ['owner' => $colleague, 'serial' => 'WEL-AUD-MAIN', 'days' => 1, 'start' => '14:00', 'end' => '16:00', 'title' => 'SLT Demo: Colleague Hall A', 'purpose' => 'Other team workshop', 'after' => ReservationStatus::APPROVED->value];
+        $rows[] = ['owner' => $colleague, 'serial' => 'WEL-LR-03', 'days' => 2, 'start' => '14:00', 'end' => '16:00', 'title' => 'SLT Demo: Colleague laptop', 'purpose' => 'Field work', 'after' => null];
 
         foreach ($rows as $row) {
             $this->seedNamedResource($bookings, $row, $today);
@@ -126,9 +126,9 @@ class SltEmployeeReservationSeeder extends Seeder
         $this->ensureExtraHostelRooms();
 
         $resourceStacks = [
-            ['date' => '2026-11-19', 'serials' => ['LH-WEL-B-002', 'MR-WEL-101', 'LT-WEL-001', 'LAB-WEL-03', 'PJ-WEL-001', 'LH-WEL-A-001']],
-            ['date' => '2026-11-08', 'serials' => ['LT-PER-001', 'PJ-MOR-001']],
-            ['date' => '2026-12-25', 'serials' => ['MR-MOR-201', 'LT-WEL-002']],
+            ['date' => '2026-11-19', 'serials' => ['WEL-LR-01', 'WEL-AUD-MAIN', 'WEL-CLAB-01', 'WEL-LAB-EEC', 'WEL-PLAY', 'WEL-LR-02']],
+            ['date' => '2026-11-08', 'serials' => ['MOR-AUD', 'PER-AUD']],
+            ['date' => '2026-12-25', 'serials' => ['MOR-MAUD-01', 'PER-CLS']],
         ];
 
         foreach ($resourceStacks as $stack) {

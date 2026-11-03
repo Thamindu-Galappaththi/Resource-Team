@@ -473,6 +473,13 @@ class ResourceManagementTest extends TestCase
         $this->seed([LocationSeeder::class, HostelRoomSeeder::class, ResourceSeeder::class]);
 
         $this->assertGreaterThanOrEqual(11, Resource::query()->count());
+        $this->assertTrue(Resource::query()->where('name_model', 'Main Auditorium')->whereHas('location', fn ($q) => $q->where('name', 'Welisara'))->exists());
+        $this->assertTrue(Resource::query()->where('name_model', 'Auditorium')->whereHas('location', fn ($q) => $q->where('name', 'Peradeniya'))->exists());
+        $this->assertSame(3, Resource::query()->where('name_model', 'Whiteboard with marker pens')->count());
+        $this->assertSame(3, Resource::query()->where('name_model', 'Internet with Wi-Fi')->count());
+        $lab = Resource::query()->where('serial_number', 'WEL-LAB-EEC')->first();
+        $this->assertNotNull($lab);
+        $this->assertCount(4, $lab->linkedResources);
     }
 
     public function test_reservation_seeder_creates_calendar_bookings(): void
@@ -514,25 +521,35 @@ class ResourceManagementTest extends TestCase
         ];
     }
 
-    public function test_resources_can_only_be_added_at_welisara_or_moratuwa(): void
+    public function test_resources_can_be_added_at_welisara_moratuwa_or_peradeniya(): void
     {
-        $this->seed(RolePermissionSeeder::class);
+        $this->seed([RolePermissionSeeder::class, LocationSeeder::class]);
         $user = User::factory()->role('admin')->create();
         [$category, $type] = $this->resourceLookups();
-        $peradeniya = Location::query()->create(['name' => 'Peradeniya']);
+        $peradeniya = Location::query()->firstOrCreate(['name' => 'Peradeniya']);
+        $colombo = Location::query()->create(['name' => 'Colombo']);
 
         $this->actingAs($user)->getJson(route('locations.index'))
             ->assertOk()
             ->assertJsonFragment(['name' => 'Welisara'])
-            ->assertJsonMissing(['name' => 'Peradeniya']);
+            ->assertJsonFragment(['name' => 'Peradeniya'])
+            ->assertJsonMissing(['name' => 'Colombo']);
+
+        $this->postJson('/resources', [
+            'category_id' => $category->id,
+            'resource_type_id' => $type->id,
+            'location_id' => $colombo->id,
+            'name_model' => 'Projector 09',
+            'status' => 'active',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['location_id' => 'Resources can only be added at Welisara, Moratuwa or Peradeniya.']);
 
         $this->postJson('/resources', [
             'category_id' => $category->id,
             'resource_type_id' => $type->id,
             'location_id' => $peradeniya->id,
-            'name_model' => 'Projector 09',
+            'name_model' => 'Peradeniya Classroom',
             'status' => 'active',
-        ])->assertUnprocessable()->assertJsonValidationErrors(['location_id' => 'Resources can only be added at Welisara or Moratuwa.']);
+        ])->assertCreated()->assertJsonPath('name_model', 'Peradeniya Classroom');
     }
 
     public function test_hostel_room_category_is_locked_and_only_has_the_bed_type(): void

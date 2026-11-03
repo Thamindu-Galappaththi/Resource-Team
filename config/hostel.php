@@ -2,6 +2,7 @@
 
 return [
     'category_name' => 'Hostel Room',
+    'locations' => ['Welisara', 'Moratuwa'],
     'reference_prefix' => 'HST',
 
     // The Hostel Room category has exactly one resource type.

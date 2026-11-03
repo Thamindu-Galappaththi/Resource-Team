@@ -172,7 +172,7 @@ class HostelBedCapacity
 
         $hostels = Resource::query()
             ->hostelRooms()
-            ->whereHas('location', fn ($query) => $query->whereIn('name', config('resources.locations', [])))
+            ->whereHas('location', fn ($query) => $query->whereIn('name', config('hostel.locations', ['Welisara', 'Moratuwa'])))
             ->with('location')
             ->get()
             ->sortBy(fn (Resource $hostel) => array_search($hostel->location?->name, Location::CAMPUS_ORDER, true))

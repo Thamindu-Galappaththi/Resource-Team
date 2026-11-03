@@ -19,8 +19,8 @@
     <div class="col-md-6 mb-3">
         <label class="form-label">Location <span class="text-danger">*</span></label>
         <x-rm-select id="resourceLocationSelect" name="location_id" class="location-select" required
-            placeholder="Select a location (Welisara or Moratuwa)"
-            :options="[['value' => '', 'label' => 'Select a location (Welisara or Moratuwa)']]" />
+            placeholder="Select a location (Welisara, Moratuwa or Peradeniya)"
+            :options="[['value' => '', 'label' => 'Select a location (Welisara, Moratuwa or Peradeniya)']]" />
         <div class="invalid-feedback" id="resourceLocationError"></div>
     </div>
     <div class="col-md-6 mb-3">
@@ -71,7 +71,8 @@
 
 <div class="mb-3">
     <label for="resourceNameModel" class="form-label">Resource Name / Model <span class="text-danger" data-name-required>*</span><span class="text-muted d-none" data-name-optional>(Optional for hostel)</span></label>
-    <input type="text" class="form-control" id="resourceNameModel" name="name_model" placeholder="e.g., Computer Lab 03" required>
+    <input type="text" class="form-control" id="resourceNameModel" name="name_model" maxlength="120" placeholder="e.g., Computer Lab 03" required>
+    <div class="form-text">Maximum 120 characters.</div>
     <div class="invalid-feedback" id="resourceNameError"></div>
 </div>
 

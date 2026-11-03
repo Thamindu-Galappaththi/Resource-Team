@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.dataset.resourceId = resource.id;
         row.innerHTML = `
             <td>
-                <div class="fw-semibold">${escapeHtml(resource.name_model)}</div>
+                <div class="fw-semibold rm-name" title="${escapeHtml(resource.name_model)}">${escapeHtml(resource.name_model)}</div>
                 <div class="text-muted small">ID: ${escapeHtml(resource.id)}</div>
             </td>
             <td>${escapeHtml(resource.type?.category?.name ?? '—')}</td>
@@ -272,9 +272,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function linkedLabel(item) {
-        const serial = item.serial_number ? ` (${item.serial_number})` : '';
-        const location = item.location?.name ? ` — ${item.location.name}` : '';
-        return `${item.name_model || 'Resource'}${serial}${location}`;
+        return item.name_model || 'Resource';
+    }
+
+    function linkedTagsHtml(resource) {
+        const items = linkedResources(resource);
+        if (!items.length) return '—';
+        return `<ul class="rm-link-tags">${items.map((item) => `<li>${escapeHtml(linkedLabel(item))}</li>`).join('')}</ul>`;
     }
 
     function featureLines(resource) {
@@ -293,22 +297,21 @@ document.addEventListener('DOMContentLoaded', () => {
     async function viewResource(id) {
         try {
             const resource = await loadResource(id);
-            const linked = linkedResources(resource).map((item) => linkedLabel(item)).join('\n') || '—';
             const features = featureLines(resource).join('\n') || '—';
             const hostel = Boolean(resource.type?.category?.is_locked);
             const details = [
-                ['Name / Model', resource.name_model],
-                ['Serial number', resource.serial_number],
-                ['Category', resource.type?.category?.name],
-                ['Type', resource.type?.name],
-                ['Location', resource.location?.name],
-                ['Resource Owner', resource.resource_owner],
-                ['Status', statusLabel(resource.status)],
-                ['Features', features],
+                ['Name / Model', escapeHtml(resource.name_model || '—')],
+                ['Serial number', escapeHtml(resource.serial_number || '—')],
+                ['Category', escapeHtml(resource.type?.category?.name || '—')],
+                ['Type', escapeHtml(resource.type?.name || '—')],
+                ['Location', escapeHtml(resource.location?.name || '—')],
+                ['Resource Owner', escapeHtml(resource.resource_owner || '—')],
+                ['Status', escapeHtml(statusLabel(resource.status) || '—')],
+                ['Features', escapeHtml(features).replaceAll('\n', '<br>')],
             ];
-            if (!hostel) details.push(['Linked resources', linked]);
+            if (!hostel) details.push(['Linked resources', linkedTagsHtml(resource)]);
             const html = `<div class="rm-details">${details.map(([label, value]) =>
-                `<div class="rm-detail-row"><span class="rm-detail-label">${escapeHtml(label)}</span><span class="rm-detail-value">${escapeHtml(value || '—').replaceAll('\n', '<br>')}</span></div>`
+                `<div class="rm-detail-row"><span class="rm-detail-label">${escapeHtml(label)}</span><span class="rm-detail-value">${value}</span></div>`
             ).join('')}</div>`;
             await swalFire({
                 title: 'Resource details',
@@ -341,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function fillEditForm(resource, lookups) {
         editResourceTypes = lookups.types;
         window.RMSelect.setOptions('resourceCategorySelect', lookups.categories.map((item) => ({ value: item.id, label: item.name })), 'Select a category (e.g., IT Equipment)');
-        window.RMSelect.setOptions('resourceLocationSelect', lookups.locations.map((item) => ({ value: item.id, label: item.name })), 'Select a location (Welisara or Moratuwa)');
+        window.RMSelect.setOptions('resourceLocationSelect', lookups.locations.map((item) => ({ value: item.id, label: item.name })), 'Select a location (Welisara, Moratuwa or Peradeniya)');
         clearEditErrors();
         const typeRecord = lookups.types.find((item) => String(item.id) === String(resource.resource_type_id));
         const categoryId = resource.type?.resource_category_id || typeRecord?.resource_category_id;

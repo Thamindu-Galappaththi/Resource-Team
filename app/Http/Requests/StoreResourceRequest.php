@@ -58,7 +58,7 @@ class StoreResourceRequest extends FormRequest
             'linked_resource_ids' => ['nullable', 'array'],
             'linked_resource_ids.*' => ['integer', 'distinct', 'exists:resources,id'],
 
-            'name_model' => [$hostel ? 'nullable' : 'required', 'string', 'max:255'],
+            'name_model' => [$hostel ? 'nullable' : 'required', 'string', 'max:120'],
 
             // Optional serials are normalized to null before validation.
             'serial_number' => [
@@ -179,7 +179,21 @@ class StoreResourceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'location_id.exists' => 'Resources can only be added at '.implode(' or ', config('resources.locations', [])).'.',
+            'location_id.exists' => 'Resources can only be added at '.$this->campusList().'.',
         ];
+    }
+
+    private function campusList(): string
+    {
+        $names = array_values(config('resources.locations', []));
+        if ($names === []) {
+            return 'an allowed campus';
+        }
+        if (count($names) === 1) {
+            return $names[0];
+        }
+        $last = array_pop($names);
+
+        return implode(', ', $names).' or '.$last;
     }
 }

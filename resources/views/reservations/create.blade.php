@@ -63,8 +63,8 @@
                     <div class="col-md-4">
                         <label class="form-label" for="category_id">Resource category <span class="text-danger">*</span></label>
                         <x-rm-select id="category_id" name="category_id" class="{{ $errors->has('category_id') ? 'is-invalid' : '' }}"
-                            placeholder="Select a category" :required="true" :value="(string) ($prefillCategoryId ?? '')"
-                            :options="collect([['value' => '', 'label' => 'Select a category']])->concat($lookups['categories']->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
+                            placeholder="Select a location first" :required="true" :value="(string) ($prefillCategoryId ?? '')"
+                            :options="[['value' => '', 'label' => 'Select a location first']]" />
                         @error('category_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
@@ -165,6 +165,6 @@ window.RVCreate = {
     ignoreReservationId: @json(isset($reservation) ? $reservation->id : null),
 };
 </script>
-<script src="{{ asset('js/reservation-create.js') }}?v=5"></script>
+<script src="{{ asset('js/reservation-create.js') }}?v=7"></script>
 <script src="{{ asset('js/special-approval.js') }}?v=1"></script>
 @endpush
