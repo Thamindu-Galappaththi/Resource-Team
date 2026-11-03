@@ -241,7 +241,7 @@ class ResourcePaymentTest extends TestCase
             'extra_hour_rate' => 6700, 'tax_percent' => 5, 'effective_from' => '2028-01-01',
         ])->assertSessionHasNoErrors();
         $this->assertFalse($rate->fresh()->is_active);
-        $this->get(route('payments.rates.index'))
+        $this->get(route('payments.rates.index', ['catalog_status' => 'all']))
             ->assertOk()
             ->assertSee('title="Activate"', false)
             ->assertSee('ti-circle-check', false)
@@ -260,7 +260,11 @@ class ResourcePaymentTest extends TestCase
         $requester = User::factory()->create(['user_type' => 'student']);
         $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00', $requester);
 
-        $this->actingAs($finance)->post(route('payments.discounts.store'), ['customer_category' => 'student', 'discount_percent' => 20])->assertSessionHasNoErrors();
+        $this->actingAs($finance)->from(route('payments.rates.index'))
+            ->post(route('payments.discounts.store'), ['customer_category' => 'student', 'discount_percent' => 20])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('rr_tab', 'discounts')
+            ->assertRedirect(route('payments.rates.index').'#rr-discounts');
         $this->actingAs($finance)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
             ->assertOk()->assertJsonPath('discount_percent', 20)->assertJsonPath('discount', 1000)->assertJsonPath('total', 4000);
 
@@ -367,22 +371,28 @@ class ResourcePaymentTest extends TestCase
             ]);
         }
 
-        $this->actingAs($finance)->get(route('payments.rates.index'))
+        $this->actingAs($finance)->get(route('payments.rates.index', ['catalog_status' => 'all']))
             ->assertOk()
             ->assertSee('catalog_page=2', false)
             ->assertSee('Showing 1–10 of 13')
+            ->assertSee('id="rr-clear-filters"', false)
             ->assertDontSee('>Edit</button>', false)
             ->assertDontSee('>Deactivate</button>', false)
             ->assertSee('title="Edit"', false)
             ->assertSee('title="Activate"', false);
 
-        $this->get(route('payments.rates.index', ['catalog_page' => 2]))
+        $this->get(route('payments.rates.index', ['catalog_page' => 2, 'catalog_status' => 'all']))
             ->assertOk()
             ->assertSee('Showing 11–13 of 13');
 
-        $this->get(route('payments.rates.index', ['section' => 'rate_catalog', 'catalog_page' => 2]), [
+        $this->get(route('payments.rates.index', ['section' => 'rate_catalog', 'catalog_page' => 2, 'catalog_status' => 'all']), [
             'X-Requested-With' => 'XMLHttpRequest',
         ])->assertOk()->assertSee('Showing 11–13 of 13')->assertDontSee('Customer category discounts');
+
+        $this->get(route('payments.rates.index', ['catalog_status' => 'inactive']))
+            ->assertOk()
+            ->assertSee('Showing 1–5 of 5')
+            ->assertSee('title="Activate"', false);
     }
 
     public function test_history_when_uses_sri_lanka_time(): void

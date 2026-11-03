@@ -36,6 +36,11 @@ class ResourceRateController extends Controller
         $types = ResourceType::query()->with('category')->orderBy('name')->get();
         $resources = Resource::query()->with('type')->orderBy('name_model')->get();
         $catalogSearch = trim((string) $request->query('catalog_search', ''));
+        $catalogType = trim((string) $request->query('catalog_type', ''));
+        $catalogStatus = (string) $request->query('catalog_status', 'active');
+        if (! in_array($catalogStatus, ['active', 'inactive', 'all'], true)) {
+            $catalogStatus = 'active';
+        }
         $catalogQuery = ResourceRate::query()->with(['resourceType.category', 'resource'])->latest('id');
         if ($catalogSearch !== '') {
             $catalogQuery->where(function ($query) use ($catalogSearch) {
@@ -43,11 +48,19 @@ class ResourceRateController extends Controller
                     ->orWhereHas('resource', fn ($resource) => $resource->where('name_model', 'like', '%'.$catalogSearch.'%'));
             });
         }
+        if ($catalogType !== '' && ctype_digit($catalogType)) {
+            $catalogQuery->where('resource_type_id', (int) $catalogType);
+        }
+        if ($catalogStatus !== 'all') {
+            $catalogQuery->where('is_active', $catalogStatus === 'active');
+        }
         $rates = $catalogQuery->paginate(10, ['*'], 'catalog_page')->withQueryString()->fragment('rr-rate-catalog');
 
         $data = [
             'rates' => $rates,
             'catalogSearch' => $catalogSearch,
+            'catalogType' => $catalogType,
+            'catalogStatus' => $catalogStatus,
             'rateCount' => ResourceRate::query()->count(),
             'activeRateCount' => ResourceRate::query()->where('is_active', true)->count(),
             'activeDiscountCount' => ResourcePaymentDiscountRule::query()->where('is_active', true)->count(),
@@ -133,7 +146,7 @@ class ResourceRateController extends Controller
         return $this->finished($request, 'Resource rate activated.');
     }
 
-    public function storeDiscount(Request $request): RedirectResponse
+    public function storeDiscount(Request $request): RedirectResponse|JsonResponse
     {
         $request->merge(['customer_category' => strtolower(trim((string) $request->input('customer_category')))]);
         $data = $request->validate([
@@ -147,10 +160,10 @@ class ResourceRateController extends Controller
             $this->auditDiscount($request, $rule, 'created', null, $rule->only(['customer_category', 'discount_percent', 'is_active']));
         });
 
-        return back()->with('success', 'Customer category discount saved.');
+        return $this->finished($request, 'Customer category discount saved.', 'discounts');
     }
 
-    public function updateDiscount(Request $request, ResourcePaymentDiscountRule $rule): RedirectResponse
+    public function updateDiscount(Request $request, ResourcePaymentDiscountRule $rule): RedirectResponse|JsonResponse
     {
         $request->merge(['customer_category' => strtolower(trim((string) $request->input('customer_category')))]);
         $data = $request->validate([
@@ -165,7 +178,7 @@ class ResourceRateController extends Controller
             $this->auditDiscount($request, $rule, 'updated', $old, $rule->fresh()->only(array_keys($old)));
         });
 
-        return back()->with('success', 'Customer category discount updated.');
+        return $this->finished($request, 'Customer category discount updated.', 'discounts');
     }
 
     public function deactivateDiscount(Request $request, ResourcePaymentDiscountRule $rule): RedirectResponse|JsonResponse
@@ -176,7 +189,7 @@ class ResourceRateController extends Controller
             $this->auditDiscount($request, $rule, 'deactivated', $old, $rule->fresh()->only(array_keys($old)));
         });
 
-        return $this->finished($request, 'Customer category discount deactivated.');
+        return $this->finished($request, 'Customer category discount deactivated.', 'discounts');
     }
 
     public function activateDiscount(Request $request, ResourcePaymentDiscountRule $rule): RedirectResponse|JsonResponse
@@ -187,16 +200,22 @@ class ResourceRateController extends Controller
             $this->auditDiscount($request, $rule, 'activated', $old, $rule->fresh()->only(array_keys($old)));
         });
 
-        return $this->finished($request, 'Customer category discount activated.');
+        return $this->finished($request, 'Customer category discount activated.', 'discounts');
     }
 
-    private function finished(Request $request, string $message): RedirectResponse|JsonResponse
+    private function finished(Request $request, string $message, string $tab = 'rates'): RedirectResponse|JsonResponse
     {
         if ($request->expectsJson()) {
             return response()->json(['ok' => true, 'message' => $message]);
         }
 
-        return back()->with('success', $message);
+        $fragment = match ($tab) {
+            'discounts' => 'rr-discounts',
+            'history' => 'rr-history',
+            default => 'rr-rates',
+        };
+
+        return back()->with('success', $message)->with('rr_tab', $tab)->withFragment($fragment);
     }
 
     private function validatedRate(Request $request): array

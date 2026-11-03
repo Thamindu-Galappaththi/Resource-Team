@@ -48,6 +48,8 @@
         }[section] || null;
     }
 
+    const sectionRequests = {};
+
     function loadSection(section, href) {
         const targetId = sectionTarget(section);
         const target = targetId ? document.getElementById(targetId) : null;
@@ -55,6 +57,7 @@
             window.location.href = href;
             return;
         }
+        const requestId = (sectionRequests[section] = (sectionRequests[section] || 0) + 1);
         const url = new URL(href, window.location.origin);
         url.searchParams.set('section', section);
         target.classList.add('is-loading');
@@ -66,20 +69,32 @@
             }
             return response.text();
         }).then((html) => {
+            if (sectionRequests[section] !== requestId) {
+                return;
+            }
             target.innerHTML = html;
             history.replaceState({}, '', href);
         }).catch(() => {
+            if (sectionRequests[section] !== requestId) {
+                return;
+            }
             window.location.href = href;
         }).finally(() => {
-            target.classList.remove('is-loading');
+            if (sectionRequests[section] === requestId) {
+                target.classList.remove('is-loading');
+            }
         });
     }
 
     const searchForm = page.querySelector('[data-rr-catalog-search]');
     const search = document.getElementById('rr-rate-search');
+    const typeFilter = document.getElementById('rr-type-filter');
+    const statusFilter = document.getElementById('rr-status-filter');
+    const clearFilters = document.getElementById('rr-clear-filters');
     let searchTimer = null;
+    let clearingFilters = false;
 
-    function catalogSearchUrl() {
+    function catalogFilterUrl() {
         const url = new URL(window.location.href);
         url.searchParams.delete('section');
         const query = search ? search.value.trim() : '';
@@ -88,21 +103,157 @@
         } else {
             url.searchParams.delete('catalog_search');
         }
+        const type = typeFilter && window.RMSelect ? window.RMSelect.getValue('rr-type-filter') : '';
+        if (type) {
+            url.searchParams.set('catalog_type', type);
+        } else {
+            url.searchParams.delete('catalog_type');
+        }
+        const status = statusFilter && window.RMSelect ? window.RMSelect.getValue('rr-status-filter') : 'active';
+        if (status && status !== 'active') {
+            url.searchParams.set('catalog_status', status);
+        } else {
+            url.searchParams.delete('catalog_status');
+        }
         url.searchParams.delete('catalog_page');
-        url.hash = 'rr-rate-catalog';
+        url.hash = 'rr-rates';
         return url.toString();
+    }
+
+    function catalogHasFilters() {
+        const query = search ? search.value.trim() : '';
+        const type = typeFilter && window.RMSelect ? window.RMSelect.getValue('rr-type-filter') : '';
+        const status = statusFilter && window.RMSelect ? window.RMSelect.getValue('rr-status-filter') : 'active';
+        return Boolean(query || type || (status && status !== 'active'));
+    }
+
+    function toggleClear() {
+        if (clearFilters) {
+            clearFilters.disabled = !catalogHasFilters();
+        }
     }
 
     if (searchForm && search) {
         searchForm.addEventListener('submit', (event) => {
             event.preventDefault();
-            loadSection('rate_catalog', catalogSearchUrl());
+            loadSection('rate_catalog', catalogFilterUrl());
         });
         search.addEventListener('input', () => {
+            toggleClear();
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => loadSection('rate_catalog', catalogSearchUrl()), 350);
+            searchTimer = setTimeout(() => loadSection('rate_catalog', catalogFilterUrl()), 350);
         });
     }
+    [typeFilter, statusFilter].forEach((filter) => {
+        filter?.addEventListener('change', () => {
+            if (clearingFilters) {
+                return;
+            }
+            toggleClear();
+            loadSection('rate_catalog', catalogFilterUrl());
+        });
+    });
+    clearFilters?.addEventListener('click', () => {
+        if (clearFilters.disabled) {
+            return;
+        }
+        clearingFilters = true;
+        clearTimeout(searchTimer);
+        if (search) {
+            search.value = '';
+        }
+        window.RMSelect?.setValue('rr-type-filter', '', 'All types');
+        window.RMSelect?.setValue('rr-status-filter', 'active', 'Active');
+        clearingFilters = false;
+        toggleClear();
+        loadSection('rate_catalog', catalogFilterUrl());
+    });
+    toggleClear();
+
+    function showTab(section) {
+        page.querySelectorAll('.rr-tabs a').forEach((item) => {
+            const on = item.getAttribute('href') === section;
+            item.classList.toggle('is-active', on);
+            if (on) {
+                item.setAttribute('aria-current', 'page');
+            } else {
+                item.removeAttribute('aria-current');
+            }
+        });
+        page.querySelectorAll('.rr-catalog-panel, .rr-management, .rr-stats').forEach((item) => {
+            item.hidden = true;
+        });
+        if (section === '#rr-rates') {
+            page.querySelectorAll('.rr-catalog-panel, #rr-add-rate, .rr-stats').forEach((item) => {
+                item.hidden = false;
+            });
+        } else if (section === '#rr-discounts') {
+            const discounts = page.querySelector('#rr-discounts');
+            if (discounts) {
+                discounts.hidden = false;
+            }
+        } else {
+            page.querySelectorAll('#rr-history, #rr-rate-history-panel').forEach((item) => {
+                item.hidden = false;
+            });
+        }
+    }
+
+    function requestedTab() {
+        const hash = window.location.hash;
+        if (hash === '#rr-discounts') {
+            return '#rr-discounts';
+        }
+        if (hash === '#rr-history' || hash === '#rr-discount-history' || hash === '#rr-rate-history') {
+            return '#rr-history';
+        }
+        if (page.dataset.rrTab === 'discounts') {
+            return '#rr-discounts';
+        }
+        if (page.dataset.rrTab === 'history') {
+            return '#rr-history';
+        }
+        return '#rr-rates';
+    }
+
+    page.querySelectorAll('.rr-tabs a').forEach((tab) => tab.addEventListener('click', (event) => {
+        const section = tab.getAttribute('href');
+        if (!page.querySelector(section)) {
+            return;
+        }
+        event.preventDefault();
+        showTab(section);
+        const url = new URL(window.location.href);
+        url.hash = section;
+        history.replaceState({}, '', url);
+    }));
+    showTab(requestedTab());
+
+    page.querySelector('.rr-export-btn')?.addEventListener('click', () => {
+        const table = document.getElementById('rr-rate-table');
+        if (!table) {
+            return;
+        }
+        const rows = [...table.querySelectorAll('tr')].filter((row) => !row.hidden && !row.classList.contains('rr-empty-row'));
+        if (rows.length <= 1) {
+            return;
+        }
+        const csv = rows.map((row) => [...row.querySelectorAll('th, td')].slice(0, 7).map((cell) => {
+            const clone = cell.cloneNode(true);
+            clone.querySelectorAll('button, form, .rr-actions').forEach((node) => node.remove());
+            return `"${clone.textContent.trim().replace(/"/g, '""')}"`;
+        }).join(',')).join('\r\n');
+        const link = document.createElement('a');
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = 'resource-rates.csv';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
 
     function constraintFields(form) {
         return form.querySelectorAll('[data-rr-required]:not([data-cu-select]), [data-rr-pattern]');
@@ -274,7 +425,7 @@
         alert.className = `alert alert-${type} rsv-auto-alert`;
         alert.setAttribute('role', type === 'danger' ? 'alert' : 'status');
         alert.textContent = message;
-        page.querySelector('.rsv-header')?.insertAdjacentElement('afterend', alert);
+        (page.querySelector('.rr-page-heading') || page.querySelector('.rsv-header'))?.insertAdjacentElement('afterend', alert);
         setTimeout(() => {
             alert.style.transition = 'opacity .3s ease';
             alert.style.opacity = '0';
