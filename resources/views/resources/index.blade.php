@@ -134,7 +134,7 @@
                                 <label class="form-label">Category / type features</label>
                                 <div id="editFeaturesList" class="rm-linked-list"></div>
                             </div>
-                            <div class="mb-0" id="editLinkedWrap">
+                            <div class="mb-0" id="editLinkedWrap" data-hide-for-hostel>
                                 <label class="form-label">Link resources</label>
                                 <div id="editLinkedList" class="rm-linked-list"></div>
                                 <p class="text-muted small mb-0 mt-2">Select related inventory items to keep with this resource.</p>
@@ -170,6 +170,6 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-hostel-fields.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-index.js') }}?v=16"></script>
+<script src="{{ asset('js/resource-hostel-fields.js') }}?v=3"></script>
+<script src="{{ asset('js/resource-index.js') }}?v=18"></script>
 @endpush

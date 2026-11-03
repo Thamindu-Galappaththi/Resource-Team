@@ -10,6 +10,7 @@ use App\Models\ResourceType;
 use App\Services\HostelBedCapacity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ResourceController extends Controller
@@ -105,13 +106,14 @@ class ResourceController extends Controller
         $validated = $request->validated();
         $resource->update($this->attributesFrom($request, $resource));
 
-        $linkedIds = collect($validated['linked_resource_ids'] ?? [])
+        $linkedIds = $request->isHostel() ? [] : collect($validated['linked_resource_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->reject(fn ($id) => $id === (int) $resource->id)
             ->unique()
             ->values()
             ->all();
-        $resource->linkedResources()->sync($linkedIds);
+        $hostelIds = Resource::query()->whereIn('id', $linkedIds)->whereNotNull('bed_counts')->pluck('id')->all();
+        $resource->linkedResources()->sync(array_values(array_diff($linkedIds, $hostelIds)));
 
         return response()->json($resource->fresh()->load(['type.category', 'location', 'linkedResources']));
     }
@@ -156,6 +158,12 @@ class ResourceController extends Controller
         ]);
 
         $resource = Resource::findOrFail($validated['resource_id']);
+        $hostel = Resource::query()->whereIn('id', [$resource->id, $validated['linked_resource_id']])->whereNotNull('bed_counts')->first();
+        if ($hostel) {
+            throw ValidationException::withMessages([
+                $hostel->is($resource) ? 'resource_id' : 'linked_resource_id' => 'Hostel records hold beds only and cannot be linked to other resources.',
+            ]);
+        }
         $resource->linkedResources()->syncWithoutDetaching([$validated['linked_resource_id']]);
 
         return response()->json([

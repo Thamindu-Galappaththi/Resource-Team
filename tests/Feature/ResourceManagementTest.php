@@ -589,13 +589,54 @@ class ResourceManagementTest extends TestCase
             ->assertJsonValidationErrors(['location_id' => 'Welisara already has a hostel record. Edit that record to change its beds.']);
 
         $hostel = Resource::query()->where('location_id', $welisara->id)->firstOrFail();
-        $this->putJson("/resources/{$hostel->id}", $base + ['bed_counts' => ['permanent' => 10, 'female' => 38, 'male' => 40]])
-            ->assertOk()->assertJsonPath('bed_count', 88);
+        $other = Resource::factory()->create(['location_id' => $welisara->id, 'status' => 'active']);
+        $this->putJson("/resources/{$hostel->id}", $base + ['bed_counts' => ['permanent' => 10, 'female' => 38, 'male' => 40], 'linked_resource_ids' => [$other->id]])
+            ->assertOk()->assertJsonPath('bed_count', 88)->assertJsonPath('linked_resources', []);
 
         $this->postJson('/resources', ['location_id' => $moratuwa->id, 'name_model' => 'Moratuwa Boarding', 'bed_counts' => ['permanent' => 10, 'female' => 40, 'male' => 40]] + $base)
             ->assertCreated()->assertJsonPath('name_model', 'Moratuwa Boarding');
 
         $this->assertSame(2, Resource::query()->hostelRooms()->count());
+    }
+
+    public function test_hostel_records_are_never_linked_to_other_resources(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        [$category, $bed, $welisara] = $this->hostelLookups();
+        $hall = Resource::factory()->create(['name_model' => 'Hall A', 'status' => 'active']);
+        $projector = Resource::factory()->create(['name_model' => 'Projector', 'status' => 'active']);
+        $hostel = Resource::factory()->create([
+            'resource_type_id' => $bed->id,
+            'location_id' => $welisara->id,
+            'name_model' => 'Welisara Hostel',
+            'status' => 'active',
+            'bed_counts' => ['permanent' => 10, 'female' => 40, 'male' => 40],
+            'bed_count' => 90,
+        ]);
+        $hostel->linkedResources()->attach($hall->id);
+
+        $this->actingAs($user)->postJson(route('resource-links.store'), ['resource_id' => $hall->id, 'linked_resource_id' => $hostel->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['linked_resource_id' => 'Hostel records hold beds only and cannot be linked to other resources.']);
+
+        $this->putJson("/resources/{$hostel->id}", [
+            'category_id' => $category->id,
+            'resource_type_id' => $bed->id,
+            'location_id' => $welisara->id,
+            'status' => 'active',
+            'bed_counts' => ['permanent' => 10, 'female' => 40, 'male' => 40],
+            'linked_resource_ids' => [$hall->id],
+        ])->assertOk()->assertJsonCount(0, 'linked_resources');
+
+        $this->putJson("/resources/{$hall->id}", [
+            'category_id' => $hall->type->resource_category_id,
+            'resource_type_id' => $hall->resource_type_id,
+            'location_id' => $welisara->id,
+            'name_model' => 'Hall A',
+            'status' => 'active',
+            'linked_resource_ids' => [$hostel->id, $projector->id],
+        ])->assertOk()->assertJsonPath('linked_resources.0.id', $projector->id)->assertJsonCount(1, 'linked_resources');
     }
 
     public function test_hostel_beds_can_grow_but_not_drop_below_upcoming_bookings(): void

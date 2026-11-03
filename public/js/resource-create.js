@@ -415,7 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshResourceSelects() {
-        const items = state.resources.map((resource) => ({
+        const items = state.resources.filter((resource) => !window.RMHostelFields?.isHostelRecord(resource)).map((resource) => ({
             value: resource.id,
             label: `${resource.name_model}${resource.serial_number ? ` (${resource.serial_number})` : ''}`,
         }));

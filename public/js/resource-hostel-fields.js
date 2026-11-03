@@ -27,6 +27,7 @@ window.RMHostelFields = (function () {
         if (!section) return;
         const on = isHostel();
         section.hidden = !on;
+        document.querySelectorAll('[data-hide-for-hostel]').forEach((element) => { element.hidden = on; });
         inputs().forEach((input) => { input.required = on; });
         const name = nameInput();
         const label = name?.closest('.mb-3')?.querySelector('label');
@@ -84,6 +85,11 @@ window.RMHostelFields = (function () {
         return inputs().map((input) => input.id);
     }
 
+    /** Hostel records hold beds only, so they are never offered as linked resources. */
+    function isHostelRecord(resource) {
+        return Boolean(resource?.bed_counts);
+    }
+
     document.addEventListener('change', (event) => {
         if (['resourceCategorySelect', 'resourceTypeSelect'].includes(event.target?.id)) sync();
     });
@@ -91,5 +97,5 @@ window.RMHostelFields = (function () {
         if (event.target?.matches?.('[data-bed-group]')) updateTotal();
     });
 
-    return { isHostel, sync, payload, validate, fill, reset, errorFields, fieldIds };
+    return { isHostel, isHostelRecord, sync, payload, validate, fill, reset, errorFields, fieldIds };
 })();

@@ -92,6 +92,11 @@ class HostelRoomSeeder extends Seeder
             ->where('resource_name_snapshot', '!=', $hostel->name_model)
             ->update(['resource_name_snapshot' => $hostel->name_model, 'updated_at' => now()]);
 
+        DB::table('resource_links')
+            ->where('resource_id', $hostel->id)
+            ->orWhere('linked_resource_id', $hostel->id)
+            ->delete();
+
         $others = Resource::query()
             ->where('location_id', $location->id)
             ->whereKeyNot($hostel->id)

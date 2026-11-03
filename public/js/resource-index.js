@@ -287,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const resource = await loadResource(id);
             const linked = linkedResources(resource).map((item) => linkedLabel(item)).join('\n') || '—';
             const features = featureLines(resource).join('\n') || '—';
+            const hostel = Boolean(resource.type?.category?.is_locked);
             const details = [
                 ['Name / Model', resource.name_model],
                 ['Serial number', resource.serial_number],
@@ -296,8 +297,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 ['Resource Owner', resource.resource_owner],
                 ['Status', statusLabel(resource.status)],
                 ['Features', features],
-                ['Linked resources', linked],
             ];
+            if (!hostel) details.push(['Linked resources', linked]);
             const html = `<div class="rm-details">${details.map(([label, value]) =>
                 `<div class="rm-detail-row"><span class="rm-detail-label">${escapeHtml(label)}</span><span class="rm-detail-value">${escapeHtml(value || '—').replaceAll('\n', '<br>')}</span></div>`
             ).join('')}</div>`;
@@ -382,7 +383,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = document.getElementById('editLinkedList');
         if (!list) return;
         const selected = new Set(linkedResources(resource).map((item) => String(item.id)));
-        const others = allResources.filter((item) => String(item.id) !== String(resource.id) && item.status !== 'deleted');
+        const others = allResources.filter((item) => String(item.id) !== String(resource.id)
+            && item.status !== 'deleted'
+            && !window.RMHostelFields?.isHostelRecord(item));
         list.replaceChildren();
         if (!others.length) {
             list.innerHTML = '<p class="text-muted small mb-0">No other resources are available to link.</p>';
@@ -441,10 +444,12 @@ document.addEventListener('DOMContentLoaded', () => {
             name_model: document.getElementById('resourceNameModel').value.trim(),
             serial_number: document.getElementById('serialNumber').value.trim() || null,
             status: window.RMSelect.getValue('resourceStatusSelect'),
-            linked_resource_ids: [...form.querySelectorAll('input[name="linked_resource_ids[]"]:checked')].map((input) => input.value),
             ...(window.RMHostelFields?.payload() || {}),
         };
         const hostel = window.RMHostelFields?.isHostel() || false;
+        if (!hostel) {
+            payload.linked_resource_ids = [...form.querySelectorAll('input[name="linked_resource_ids[]"]:checked')].map((input) => input.value);
+        }
         if (!payload.category_id) showFieldError('resourceCategorySelect', 'Select a category.');
         if (!payload.resource_type_id) showFieldError('resourceTypeSelect', 'Select a type.');
         if (!payload.location_id) showFieldError('resourceLocationSelect', 'Select a location.');
