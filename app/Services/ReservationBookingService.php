@@ -20,6 +20,7 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
 class ReservationBookingService
@@ -135,17 +136,20 @@ class ReservationBookingService
                 $actor
             );
 
-            $approverPermission = match (true) {
-                $reservation->special_approval => 'approvals.special',
-                $reservation->type === ReservationType::HOSTEL->value => 'hostel.manage',
-                default => 'approvals.index',
-            };
-
-            NotificationRecipients::notify(
-                $approverPermission,
-                new NewReservationPending($reservation),
-                except: [$actor->id, $reservation->requester_id]
-            );
+            $except = [$actor->id, $reservation->requester_id];
+            if ($reservation->special_approval) {
+                $approvers = NotificationRecipients::withPermission('approvals.special', $except)
+                    ->filter(fn (User $user) => $user->canSpecialApprove($reservation));
+                if ($approvers->isNotEmpty()) {
+                    Notification::send($approvers, new NewReservationPending($reservation));
+                }
+            } else {
+                NotificationRecipients::notify(
+                    $reservation->type === ReservationType::HOSTEL->value ? 'hostel.manage' : 'approvals.index',
+                    new NewReservationPending($reservation),
+                    except: $except
+                );
+            }
 
             return $reservation;
         });

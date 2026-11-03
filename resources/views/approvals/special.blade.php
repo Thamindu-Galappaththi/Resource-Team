@@ -24,10 +24,24 @@
     <div class="rsv-header">
         <div>
             <h1 class="rsv-title">Special approvals</h1>
-            <p class="rsv-subtitle mb-0">Requests sent for special approval are listed first, with their supporting documents. You can also override any other pending reservation; the reason is stored in its history.</p>
+            @php
+                [$scopeItems, $scopeItem] = match ($specialScope ?? 'all') {
+                    'hostel' => ['Hostel stays', 'hostel stay'],
+                    'standard' => ['Resource bookings', 'resource booking'],
+                    default => ['Resource bookings and hostel stays', 'reservation'],
+                };
+            @endphp
+            <p class="rsv-subtitle mb-0">
+                {{ $scopeItems }} sent for special approval are listed first, with their supporting documents.
+                You can also override any other pending {{ $scopeItem }}; the reason is stored in its history.
+            </p>
         </div>
         <div class="rsv-header-actions">
-            <a href="{{ route('approvals.index') }}" class="btn rsv-header-btn rsv-calendar-btn"><i class="ti ti-arrow-left me-1"></i>All approvals</a>
+            @if(auth()->user()->hasPermission('approvals.index'))
+                <a href="{{ route('approvals.index') }}" class="btn rsv-header-btn rsv-calendar-btn"><i class="ti ti-arrow-left me-1"></i>All approvals</a>
+            @elseif(auth()->user()->hasPermission('hostel.index'))
+                <a href="{{ route('hostel.index') }}" class="btn rsv-header-btn rsv-calendar-btn"><i class="ti ti-arrow-left me-1"></i>Hostel reservations</a>
+            @endif
         </div>
     </div>
 

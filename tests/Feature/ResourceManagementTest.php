@@ -742,6 +742,39 @@ class ResourceManagementTest extends TestCase
         $this->assertSame(['Bed'], ResourceType::query()->whereHas('category', fn ($query) => $query->where('name', 'Hostel Room'))->pluck('name')->all());
     }
 
+    public function test_bed_map_colours_booked_and_pending_beds_with_their_booking(): void
+    {
+        $this->seed([RolePermissionSeeder::class, LocationSeeder::class, HostelRoomSeeder::class]);
+        $manager = User::factory()->role('hostel_manager')->create();
+        $hostel = Resource::query()->hostelRooms()->whereHas('location', fn ($q) => $q->where('name', 'Welisara'))->firstOrFail();
+        $start = now()->startOfDay()->subHours(2);
+
+        foreach ([['confirmed', 2, 'BOOKED-GUEST'], ['held', 1, 'PENDING-GUEST']] as [$status, $beds, $guest]) {
+            $reservation = Reservation::factory()->create([
+                'type' => ReservationType::HOSTEL->value,
+                'status' => $status === 'confirmed' ? 'approved' : 'pending_approval',
+            ]);
+            HostelStayDetail::factory()->create(['reservation_id' => $reservation->id, 'bed_group' => 'male', 'guest_name' => $guest, 'number_of_guests' => $beds]);
+            ReservationItem::factory()->create([
+                'reservation_id' => $reservation->id,
+                'resource_id' => $hostel->id,
+                'status' => $status,
+                'quantity' => $beds,
+                'starts_at' => $start,
+                'ends_at' => $start->copy()->addDays(2),
+            ]);
+        }
+
+        $html = $this->actingAs($manager)->get(route('hostel.bed-map', ['date' => now()->toDateString()]))->assertOk()->getContent();
+
+        $this->assertSame(2, substr_count($html, 'hbm-seat is-booked'));
+        $this->assertSame(1, substr_count($html, 'hbm-seat is-pending'));
+        $this->assertStringContainsString('M1 · Booked · ', $html);
+        $this->assertStringContainsString('BOOKED-GUEST', $html);
+        $this->assertStringContainsString('M3 · Pending approval · ', $html);
+        $this->assertStringContainsString('<span class="hbm-count is-booked">2 booked</span>', $html);
+    }
+
     public function test_hostel_manager_dashboard_shows_bus_style_bed_map(): void
     {
         $this->seed([RolePermissionSeeder::class, LocationSeeder::class, HostelRoomSeeder::class]);
@@ -758,7 +791,7 @@ class ResourceManagementTest extends TestCase
         $this->get(route('hostel.bed-map', ['date' => now()->addDay()->toDateString()]))
             ->assertOk()
             ->assertSee('id="hbm-body"', false)
-            ->assertSee('Bed L40: Available');
+            ->assertSee('Bed L40 · Available');
         $this->get(route('hostel.bed-map', ['date' => 'bad']))->assertSessionHasErrors('date');
     }
 }

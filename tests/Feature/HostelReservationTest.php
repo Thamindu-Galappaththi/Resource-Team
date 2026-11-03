@@ -6,6 +6,7 @@ use App\Enums\ReservationItemStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Models\Location;
+use App\Models\Permission;
 use App\Models\Reservation;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
@@ -273,11 +274,29 @@ class HostelReservationTest extends TestCase
             ->assertSessionHasErrors(['status' => 'This stay was sent for special approval, so it is decided in Special approvals.']);
         $this->assertSame(ReservationStatus::PENDING_APPROVAL->value, $reservation->fresh()->status);
 
+        $specialPermission = Permission::query()->where('slug', 'approvals.special')->value('id');
+        $owner = User::factory()->role('resource_owner')->create();
+        $owner->extraPermissions()->attach($specialPermission);
+        $this->actingAs($owner->refresh())->getJson(route('approvals.special.feed'))
+            ->assertOk()
+            ->assertJsonPath('summary.special', 0);
+        $this->post(route('approvals.special-decision', $reservation), ['decision' => 'approve', 'comment' => 'Not my area'])
+            ->assertForbidden();
+
         $this->actingAs($admin)->getJson(route('approvals.special.feed'))
+            ->assertOk()
+            ->assertJsonPath('summary.special', 1)
+            ->assertJsonPath('pending.0.reference', $reservation->reference);
+
+        $manager->extraPermissions()->attach(Permission::query()->where('slug', 'approvals.special')->value('id'));
+        $manager->refresh();
+
+        $this->actingAs($manager)->getJson(route('approvals.special.feed'))
             ->assertOk()
             ->assertJsonPath('summary.special', 1)
             ->assertJsonPath('pending.0.special', true)
             ->assertJsonPath('pending.0.documents.0.name', 'letter.pdf');
+        $this->get($reservation->documents->first()->downloadUrl())->assertOk();
 
         $this->post(route('approvals.special-decision', $reservation), ['decision' => 'approve', 'comment' => 'Approved as an exception'])
             ->assertRedirect(route('approvals.special'));

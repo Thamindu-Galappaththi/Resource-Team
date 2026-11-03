@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ReservationStatus;
+use App\Models\Permission;
 use App\Models\Reservation;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
@@ -69,6 +70,15 @@ class SpecialApprovalReservationTest extends TestCase
         $document = $reservation->documents->first();
         $this->get($document->downloadUrl())->assertOk();
         $this->actingAs($outsider)->get($document->downloadUrl())->assertForbidden();
+
+        $hostelManager = User::factory()->role('hostel_manager')->create();
+        $hostelManager->extraPermissions()->attach(Permission::query()->where('slug', 'approvals.special')->value('id'));
+        $this->actingAs($hostelManager->refresh())->getJson(route('approvals.special.feed'))
+            ->assertOk()
+            ->assertJsonPath('summary.special', 0)
+            ->assertJsonPath('summary.pending', 0);
+        $this->post(route('approvals.special-decision', $reservation), ['decision' => 'approve', 'comment' => 'Hostel only'])
+            ->assertForbidden();
 
         $this->actingAs($special)
             ->post(route('approvals.special-decision', $reservation), ['decision' => 'approve', 'comment' => 'Exception approved'])

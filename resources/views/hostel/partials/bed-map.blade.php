@@ -1,5 +1,6 @@
 @php
     $prefixes = ['permanent' => 'P', 'female' => 'L', 'male' => 'M'];
+    $stateLabels = ['booked' => 'Booked', 'pending' => 'Pending approval', 'free' => 'Available'];
 @endphp
 <div class="hbm-body" id="hbm-body" data-date="{{ $date }}">
     @forelse($locations as $location)
@@ -13,27 +14,69 @@
             </header>
             <div class="hbm-groups">
                 @foreach($location['groups'] as $group)
-                    @php $prefix = $prefixes[$group['key']] ?? strtoupper(substr($group['key'], 0, 1)); @endphp
+                    @php
+                        $prefix = $prefixes[$group['key']] ?? strtoupper(substr($group['key'], 0, 1));
+                        $seats = [];
+                        foreach ($group['bookings'] ?? [] as $booking) {
+                            for ($b = 0; $b < $booking['beds'] && count($seats) < $group['capacity']; $b++) {
+                                $seats[] = ['state' => $booking['state'], 'booking' => $booking];
+                            }
+                        }
+                        while (count($seats) < $group['capacity']) {
+                            $seats[] = ['state' => 'free', 'booking' => null];
+                        }
+                    @endphp
                     <section class="hbm-group" aria-label="{{ $location['location'] }} {{ $group['label'] }} beds">
                         <div class="hbm-group-head">
                             <span class="hbm-group-name">{{ $group['label'] }}</span>
-                            <span class="hbm-group-count">{{ $group['available'] }} free · {{ $group['pending'] }} pending · {{ $group['occupied'] }} booked</span>
+                            <span class="hbm-group-count">
+                                <span class="hbm-count is-booked">{{ $group['occupied'] }} booked</span>
+                                <span class="hbm-count is-pending">{{ $group['pending'] }} pending</span>
+                                <span class="hbm-count is-free">{{ $group['available'] }} free</span>
+                            </span>
                         </div>
                         @if($group['capacity'] === 0)
                             <p class="hbm-none">No beds set up.</p>
                         @else
                             <ol class="hbm-seats" role="list">
-                                @for($i = 1; $i <= $group['capacity']; $i++)
+                                @foreach($seats as $index => $seat)
                                     @php
-                                        $state = $i <= $group['occupied'] ? 'booked' : ($i <= $group['occupied'] + $group['pending'] ? 'pending' : 'free');
-                                        $stateLabel = ['booked' => 'Booked', 'pending' => 'Pending approval', 'free' => 'Available'][$state];
+                                        $code = $prefix.($index + 1);
+                                        $booking = $seat['booking'];
+                                        $title = $code.' · '.$stateLabels[$seat['state']]
+                                            .($booking ? ' · '.$booking['reference'].($booking['guest'] ? ' · '.$booking['guest'] : '').($booking['stay'] ? ' · '.$booking['stay'] : '') : '');
                                     @endphp
-                                    <li class="hbm-seat is-{{ $state }}" title="{{ $prefix }}{{ $i }} · {{ $stateLabel }}" aria-label="Bed {{ $prefix }}{{ $i }}: {{ $stateLabel }}">
-                                        <i class="ti ti-bed" aria-hidden="true"></i>
-                                        <span>{{ $prefix }}{{ $i }}</span>
+                                    <li class="hbm-seat is-{{ $seat['state'] }}" title="{{ $title }}">
+                                        @if($booking && $booking['url'])
+                                            <a href="{{ $booking['url'] }}" class="hbm-seat-link" aria-label="Bed {{ $title }}">
+                                                <i class="ti ti-bed" aria-hidden="true"></i>
+                                                <span>{{ $code }}</span>
+                                            </a>
+                                        @else
+                                            <span class="hbm-seat-link" aria-label="Bed {{ $title }}">
+                                                <i class="ti ti-bed" aria-hidden="true"></i>
+                                                <span>{{ $code }}</span>
+                                            </span>
+                                        @endif
                                     </li>
-                                @endfor
+                                @endforeach
                             </ol>
+                            @if(! empty($group['bookings']))
+                                <ul class="hbm-bookings" role="list">
+                                    @foreach($group['bookings'] as $booking)
+                                        <li class="is-{{ $booking['state'] }}">
+                                            <span class="hbm-dot is-{{ $booking['state'] }}" aria-hidden="true"></span>
+                                            @if($booking['url'])
+                                                <a href="{{ $booking['url'] }}">{{ $booking['reference'] }}</a>
+                                            @else
+                                                <span>{{ $booking['reference'] }}</span>
+                                            @endif
+                                            <span class="hbm-booking-guest">{{ $booking['guest'] }}</span>
+                                            <span class="hbm-booking-meta">{{ $booking['beds'] }} {{ $booking['beds'] === 1 ? 'bed' : 'beds' }}{{ $booking['stay'] ? ' · '.$booking['stay'] : '' }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
                         @endif
                     </section>
                 @endforeach

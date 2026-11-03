@@ -19,7 +19,7 @@ class ReservationDocumentController extends Controller
         $user = $request->user();
         $ability = $reservation->type === ReservationType::HOSTEL->value ? 'viewHostel' : 'view';
         abort_unless(
-            $user->hasPermission('approvals.special') || Gate::forUser($user)->allows($ability, $reservation),
+            $user->canSpecialApprove($reservation) || Gate::forUser($user)->allows($ability, $reservation),
             403,
         );
 

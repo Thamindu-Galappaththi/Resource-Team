@@ -229,6 +229,15 @@ class Reservation extends Model
         });
     }
 
+    public function scopeForSpecialApprover(Builder $query, User $user): Builder
+    {
+        return match ($user->specialApprovalScope()) {
+            'all' => $query,
+            'hostel' => $query->where('type', ReservationType::HOSTEL->value),
+            default => $query->where('type', '!=', ReservationType::HOSTEL->value),
+        };
+    }
+
     public function scopeSearch(Builder $query, ?string $search): Builder
     {
         if (! filled($search)) {

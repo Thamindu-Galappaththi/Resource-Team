@@ -178,14 +178,43 @@ class HostelBedCapacity
             ->sortBy(fn (Resource $hostel) => array_search($hostel->location?->name, Location::CAMPUS_ORDER, true))
             ->values();
 
-        return $hostels->map(function (Resource $hostel) use ($start, $end) {
-            $groups = collect($this->groups())->map(function (array $settings, string $key) use ($hostel, $start, $end) {
-                $capacity = $hostel->bedsFor($key);
-                $occupied = min($capacity, $this->bookedBeds($hostel->id, $key, $start, $end, null, [ReservationItemStatus::CONFIRMED->value]));
-                $pending = min($capacity - $occupied, $this->bookedBeds($hostel->id, $key, $start, $end, null, [
+        $tz = config('reservations.display_timezone', 'Asia/Colombo');
+
+        return $hostels->map(function (Resource $hostel) use ($start, $end, $tz) {
+            $items = ReservationItem::query()
+                ->where('resource_id', $hostel->id)
+                ->whereIn('status', [
+                    ReservationItemStatus::CONFIRMED->value,
                     ReservationItemStatus::HELD->value,
                     ReservationItemStatus::REQUESTED->value,
-                ]));
+                ])
+                ->where('starts_at', '<', $end)
+                ->where('ends_at', '>', $start)
+                ->with('reservation.hostelStay')
+                ->orderBy('starts_at')
+                ->get()
+                ->groupBy(fn (ReservationItem $item) => $item->reservation?->hostelStay?->bed_group);
+
+            $groups = collect($this->groups())->map(function (array $settings, string $key) use ($hostel, $items, $tz) {
+                $capacity = $hostel->bedsFor($key);
+                $bookings = collect($items->get($key, []))
+                    ->map(function (ReservationItem $item) use ($tz) {
+                        $reservation = $item->reservation;
+                        $stay = $reservation?->hostelStay;
+
+                        return [
+                            'state' => $item->status === ReservationItemStatus::CONFIRMED->value ? 'booked' : 'pending',
+                            'beds' => (int) round((float) $item->quantity),
+                            'reference' => $reservation?->reference,
+                            'guest' => $stay?->displayGuestName() ?: $reservation?->title,
+                            'stay' => trim(($stay?->check_in_at?->copy()->timezone($tz)->format('d M') ?? '').' – '.($stay?->check_out_at?->copy()->timezone($tz)->format('d M') ?? ''), ' –'),
+                            'url' => $reservation ? route('hostel.show', $reservation) : null,
+                        ];
+                    })
+                    ->sortBy(fn (array $booking) => $booking['state'] === 'booked' ? 0 : 1)
+                    ->values();
+                $occupied = min($capacity, $bookings->where('state', 'booked')->sum('beds'));
+                $pending = min($capacity - $occupied, $bookings->where('state', 'pending')->sum('beds'));
 
                 return [
                     'key' => $key,
@@ -195,6 +224,7 @@ class HostelBedCapacity
                     'occupied' => $occupied,
                     'pending' => $pending,
                     'available' => max(0, $capacity - $occupied - $pending),
+                    'bookings' => $bookings->all(),
                 ];
             })->values()->all();
 
