@@ -13,6 +13,7 @@ use App\Models\Reservation;
 use App\Models\Resource;
 use App\Services\HostelBedCapacity;
 use App\Services\HostelReservationService;
+use App\Services\ReservationDocumentStore;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -122,7 +123,7 @@ class HostelReservationController extends Controller
         ]);
     }
 
-    public function store(StoreHostelReservationRequest $request): RedirectResponse
+    public function store(StoreHostelReservationRequest $request, ReservationDocumentStore $documents): RedirectResponse
     {
         $this->authorize('createHostel', Reservation::class);
 
@@ -136,9 +137,13 @@ class HostelReservationController extends Controller
             return back()->withInput()->withErrors($exception->errors());
         }
 
+        $documents->attach($reservation, $request->file('special_documents'), $request->user());
+
         return redirect()
             ->route('hostel.show', $reservation)
-            ->with('success', 'Hostel reservation submitted successfully and sent for approval.');
+            ->with('success', $reservation->special_approval
+                ? 'Hostel reservation submitted successfully and sent for special approval.'
+                : 'Hostel reservation submitted successfully and sent for approval.');
     }
 
     public function show(Reservation $reservation): View
@@ -160,6 +165,7 @@ class HostelReservationController extends Controller
             'items.resource.type.category',
             'hostelStay',
             'statusHistory.actor',
+            'documents',
         ]);
 
         return view('hostel.show', compact('reservation'));
@@ -171,7 +177,7 @@ class HostelReservationController extends Controller
         $this->authorize('update', $reservation);
         abort_unless($reservation->canBeEdited(), 403);
 
-        $reservation->load(['hostelStay', 'location']);
+        $reservation->load(['hostelStay', 'location', 'documents']);
         $stay = $reservation->hostelStay;
         $tz = $this->hostelStayTimezone();
         $checkIn = $stay?->check_in_at?->copy()->timezone($tz);
@@ -194,7 +200,7 @@ class HostelReservationController extends Controller
         ]);
     }
 
-    public function update(StoreHostelReservationRequest $request, Reservation $reservation): RedirectResponse
+    public function update(StoreHostelReservationRequest $request, Reservation $reservation, ReservationDocumentStore $documents): RedirectResponse
     {
         abort_unless($reservation->type === ReservationType::HOSTEL->value, 404);
         $this->authorize('update', $reservation);
@@ -209,6 +215,8 @@ class HostelReservationController extends Controller
         } catch (ValidationException $exception) {
             return back()->withInput()->withErrors($exception->errors());
         }
+
+        $documents->attach($reservation, $request->file('special_documents'), $request->user());
 
         return redirect()
             ->route('hostel.show', $reservation)
@@ -234,6 +242,9 @@ class HostelReservationController extends Controller
     public function updateApproval(Request $request, Reservation $reservation): RedirectResponse
     {
         abort_unless($reservation->type === ReservationType::HOSTEL->value, 404);
+        if ($reservation->special_approval) {
+            return back()->withErrors(['status' => 'This stay was sent for special approval, so it is decided in Special approvals.']);
+        }
         $this->authorize('manageHostel', $reservation);
 
         $data = $request->validate([

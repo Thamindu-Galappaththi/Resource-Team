@@ -19,8 +19,10 @@ use Database\Seeders\LocationSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class HostelReservationTest extends TestCase
@@ -242,6 +244,48 @@ class HostelReservationTest extends TestCase
         ])))->assertSessionHasErrors(['bed_group' => 'No Permanent resident (4 years) beds are set up at this location.']);
 
         $this->assertDatabaseCount('reservations', 3);
+    }
+
+    public function test_special_hostel_request_skips_the_hostel_manager_and_is_decided_in_special_approvals(): void
+    {
+        Storage::fake('local');
+        $coordinator = User::factory()->role('coordinator')->create();
+        $manager = User::factory()->role('hostel_manager')->create();
+        $admin = User::factory()->role('admin')->create();
+        $setup = $this->hostelRoom(['male' => 2]);
+
+        $this->actingAs($coordinator)
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'guest_name' => 'Visiting Lecturer',
+                'special_approval' => '1',
+                'special_documents' => [UploadedFile::fake()->create('letter.pdf', 120, 'application/pdf')],
+            ]))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Hostel reservation submitted successfully and sent for special approval.');
+
+        $reservation = Reservation::query()->with('documents')->firstOrFail();
+        $this->assertTrue($reservation->special_approval);
+        $this->assertCount(1, $reservation->documents);
+        Storage::disk('local')->assertExists($reservation->documents->first()->path);
+
+        $this->actingAs($manager)
+            ->post(route('hostel.approval', $reservation), ['status' => ReservationStatus::APPROVED->value])
+            ->assertSessionHasErrors(['status' => 'This stay was sent for special approval, so it is decided in Special approvals.']);
+        $this->assertSame(ReservationStatus::PENDING_APPROVAL->value, $reservation->fresh()->status);
+
+        $this->actingAs($admin)->getJson(route('approvals.special.feed'))
+            ->assertOk()
+            ->assertJsonPath('summary.special', 1)
+            ->assertJsonPath('pending.0.special', true)
+            ->assertJsonPath('pending.0.documents.0.name', 'letter.pdf');
+
+        $this->post(route('approvals.special-decision', $reservation), ['decision' => 'approve', 'comment' => 'Approved as an exception'])
+            ->assertRedirect(route('approvals.special'));
+
+        $reservation->refresh();
+        $this->assertSame(ReservationStatus::APPROVED->value, $reservation->status);
+        $this->assertSame(ReservationItemStatus::CONFIRMED->value, $reservation->items()->value('status'));
+        $this->assertTrue($reservation->statusHistory()->whereJsonContains('context->action', 'special_override')->exists());
     }
 
     public function test_hostel_manager_cannot_create_but_can_view_and_cancel(): void

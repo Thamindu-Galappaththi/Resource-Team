@@ -11,6 +11,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PasswordSetupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\ReservationDocumentController;
 use App\Http\Controllers\SltEmployeeDashboardController;
 use App\Http\Controllers\SltEmployeeRequestController;
 use App\Http\Controllers\ResourceCalendarController;
@@ -69,6 +70,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/availability', 'availability')->middleware('permission:reservations.create')->name('availability');
         Route::get('/my-requests', [SltEmployeeRequestController::class, 'resources'])->middleware('permission:reservations.index')->name('mine');
         Route::get('/{reservation}/edit', 'edit')->middleware('permission:reservations.create')->name('edit');
+        Route::get('/{reservation}/documents/{document}', [ReservationDocumentController::class, 'show'])->name('documents.show');
         Route::get('/{reservation}', 'show')->middleware('permission:reservations.index')->name('show');
     });
 

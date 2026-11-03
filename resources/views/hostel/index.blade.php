@@ -127,7 +127,12 @@
                                         <td data-label="Employee IDs">{{ $reservation->hostelStay?->employeeIdList() ?: '—' }}</td>
                                         <td data-label="Check-in">{{ $reservation->hostelStay?->check_in_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</td>
                                         <td data-label="Check-out">{{ $reservation->hostelStay?->check_out_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</td>
-                                        <td data-label="Status"><span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span></td>
+                                        <td data-label="Status">
+                                            <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
+                                            @if($reservation->special_approval && $reservation->status === \App\Enums\ReservationStatus::PENDING_APPROVAL->value)
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle d-block mt-1" title="Decided in Special approvals"><i class="ti ti-shield-lock me-1"></i>Special approval</span>
+                                            @endif
+                                        </td>
                                         <td class="text-end hr-actions" data-label="Actions">
                                             @php
                                                 $canView = auth()->user()?->can('viewHostel', $reservation) ?? false;
@@ -136,7 +141,7 @@
                                             @endphp
                                             <span class="hr-action-group">
                                                 <button type="button" class="btn btn-sm btn-outline-secondary hr-icon-btn" @if($canView) data-bs-toggle="modal" data-bs-target="#viewModal-{{ $reservation->id }}" title="View" aria-label="View reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="View unavailable" @endif><i class="ti ti-eye"></i></button>
-                                                <button type="button" class="btn btn-sm btn-outline-success hr-icon-btn" @if($canManage) data-bs-toggle="modal" data-bs-target="#approveModal-{{ $reservation->id }}" title="Approve" aria-label="Approve reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="Approve unavailable" @endif><i class="ti ti-check"></i></button>
+                                                <button type="button" class="btn btn-sm btn-outline-success hr-icon-btn" @if($canManage) data-bs-toggle="modal" data-bs-target="#approveModal-{{ $reservation->id }}" title="Approve" aria-label="Approve reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="{{ $reservation->special_approval ? 'Decided in Special approvals' : 'Approve unavailable' }}" @endif><i class="ti ti-check"></i></button>
                                                 <button type="button" class="btn btn-sm btn-outline-danger hr-icon-btn" @if($canManage) data-bs-toggle="modal" data-bs-target="#rejectModal-{{ $reservation->id }}" title="Reject" aria-label="Reject reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="Reject unavailable" @endif><i class="ti ti-x"></i></button>
                                                 <button type="button" class="btn btn-sm btn-outline-secondary hr-icon-btn" @if($canCancel) data-bs-toggle="modal" data-bs-target="#cancelModal-{{ $reservation->id }}" title="Cancel" aria-label="Cancel reservation {{ $reservation->reference }}" @else disabled aria-disabled="true" title="Cancel unavailable" @endif><i class="ti ti-ban"></i></button>
                                             </span>

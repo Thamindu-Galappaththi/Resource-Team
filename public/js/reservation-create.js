@@ -40,6 +40,10 @@
         flash.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+
     function resourceLabel(resource) {
         const serial = resource.serial_number ? ` (${resource.serial_number})` : '';
         const location = resource.location_name ? ` — ${resource.location_name}` : '';
@@ -96,18 +100,21 @@
             .map((id) => (lookups.resources || []).find((row) => String(row.id) === id))
             .filter(Boolean);
 
+        linkedWrap.hidden = false;
+        const hint = document.getElementById('linkedHint');
         if (!linkedResources.length && !extraResources.length) {
-            linkedWrap.hidden = true;
+            linkedBox.innerHTML = '<p class="rv-hint mb-0">This resource has no linked resources.</p>';
+            if (hint) hint.hidden = true;
             return;
         }
 
-        linkedWrap.hidden = false;
+        if (hint) hint.hidden = false;
         [...linkedResources, ...extraResources].forEach((linked) => {
             const id = `linked-${linked.id}`;
             const checked = (config.prefillResourceIds || []).map(String).includes(String(linked.id)) ? ' checked' : '';
             linkedBox.insertAdjacentHTML('beforeend', `<label class="rv-linked-item" for="${id}">
                 <input class="form-check-input" type="checkbox" name="resource_ids[]" value="${linked.id}" id="${id}"${checked}>
-                <span>${linked.name_model}${linked.serial_number ? ` (${linked.serial_number})` : ''}</span>
+                <span>${escapeHtml(resourceLabel(linked))}</span>
             </label>`);
         });
         linkedBox.querySelectorAll('input').forEach((el) => el.addEventListener('change', checkAvailability));
@@ -217,6 +224,14 @@
             event.preventDefault();
             showFlash('Select a resource.');
             document.getElementById('resource_id')?.closest('.cu-select')?.classList.add('is-invalid');
+            return;
+        }
+        const title = document.getElementById('title');
+        if (title && !title.value.trim()) {
+            event.preventDefault();
+            title.classList.add('is-invalid');
+            title.focus();
+            showFlash('Enter a reservation name.');
             return;
         }
         if (submitBtn.disabled || !slotAvailable) {

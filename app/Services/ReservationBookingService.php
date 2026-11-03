@@ -102,6 +102,8 @@ class ReservationBookingService
                 'title' => $title,
                 'description' => $payload['description'] ?? null,
                 'purpose' => $purpose,
+                'lecturer_name' => $payload['lecturer_name'] ?? null,
+                'special_approval' => (bool) ($payload['special_approval'] ?? false),
                 'attendee_count' => $payload['attendee_count'] ?? null,
                 'reservation_date' => $payload['reservation_date'],
                 'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),
@@ -133,9 +135,11 @@ class ReservationBookingService
                 $actor
             );
 
-            $approverPermission = $reservation->type === ReservationType::HOSTEL->value
-                ? 'hostel.manage'
-                : 'approvals.index';
+            $approverPermission = match (true) {
+                $reservation->special_approval => 'approvals.special',
+                $reservation->type === ReservationType::HOSTEL->value => 'hostel.manage',
+                default => 'approvals.index',
+            };
 
             NotificationRecipients::notify(
                 $approverPermission,
@@ -226,6 +230,8 @@ class ReservationBookingService
                 'title' => $title,
                 'description' => $payload['description'] ?? $reservation->description,
                 'purpose' => $purpose,
+                'lecturer_name' => array_key_exists('lecturer_name', $payload) ? $payload['lecturer_name'] : $reservation->lecturer_name,
+                'special_approval' => array_key_exists('special_approval', $payload) ? (bool) $payload['special_approval'] : $reservation->special_approval,
                 'attendee_count' => $payload['attendee_count'] ?? null,
                 'reservation_date' => $payload['reservation_date'],
                 'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),

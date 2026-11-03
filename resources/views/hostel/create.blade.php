@@ -5,6 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/hostel-create.css') }}?v=9">
+<link rel="stylesheet" href="{{ asset('css/special-approval.css') }}?v=1">
 @endpush
 
 @section('content')
@@ -40,7 +41,7 @@
 
     <div class="row g-4 align-items-start">
         <div class="col-12 col-lg-8">
-            <form method="POST" action="{{ $editing ? route('hostel.update', $editing) : route('hostel.store') }}" id="hostel-booking-form" class="hc-card">
+            <form method="POST" action="{{ $editing ? route('hostel.update', $editing) : route('hostel.store') }}" id="hostel-booking-form" class="hc-card" enctype="multipart/form-data">
                 @csrf
                 @if($editing)
                     @method('PUT')
@@ -125,6 +126,9 @@
                         <textarea id="special_requirements" name="special_requirements" rows="4" class="form-control @error('special_requirements') is-invalid @enderror" placeholder="Mention any medical needs, accessibility requirements, or preference for floor level...">{{ old('special_requirements', $stay?->special_requirements) }}</textarea>
                         @error('special_requirements')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+                    <div class="col-12">
+                        @include('reservations.partials.special-approval', ['reservation' => $editing])
+                    </div>
                 </div>
                 <div class="hc-actions">
                     <button type="submit" class="hc-submit" @disabled(! $hasRooms)>
@@ -163,4 +167,5 @@
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
 <script src="{{ asset('js/hostel-create.js') }}?v=4"></script>
+<script src="{{ asset('js/special-approval.js') }}?v=1"></script>
 @endpush

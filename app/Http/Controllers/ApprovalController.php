@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Enums\ReservationItemStatus;
 use App\Enums\ReservationStatus;
+use App\Enums\ReservationType;
+use App\Exceptions\ReservationConflictException;
 use App\Models\Location;
 use App\Models\Reservation;
 use App\Models\ReservationStatusHistory;
 use App\Models\ResourceCategory;
 use App\Models\User;
 use App\Notifications\ReservationDecision;
+use App\Services\HostelReservationService;
 use App\Services\NotificationRecipients;
 use App\Services\ReservationBookingService;
 use Illuminate\Http\JsonResponse;
@@ -18,11 +21,15 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ApprovalController extends Controller
 {
-    public function __construct(private readonly ReservationBookingService $bookings) {}
+    public function __construct(
+        private readonly ReservationBookingService $bookings,
+        private readonly HostelReservationService $hostel,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -139,6 +146,10 @@ class ApprovalController extends Controller
             default => ReservationStatus::CHANGES_REQUESTED,
         };
 
+        if ($reservation->type === ReservationType::HOSTEL->value) {
+            return $this->applyHostelDecision($request, $reservation, $status, $data['comment'], $specialOverride);
+        }
+
         DB::transaction(function () use ($reservation, $request, $data, $status, $specialOverride) {
             $locked = Reservation::query()->whereKey($reservation->id)->lockForUpdate()->firstOrFail();
             abort_unless($locked->status === ReservationStatus::PENDING_APPROVAL->value, 409, 'This reservation has already been reviewed.');
@@ -168,6 +179,41 @@ class ApprovalController extends Controller
         return redirect()->route($specialOverride ? 'approvals.special' : 'approvals.index')->with('success', 'Reservation '.$reservation->reference.' '.$status->label().'.');
     }
 
+    /** Hostel stays share beds, so approvals run through the hostel service's bed checks. */
+    private function applyHostelDecision(Request $request, Reservation $reservation, ReservationStatus $status, string $comment, bool $specialOverride): RedirectResponse
+    {
+        $route = $specialOverride ? 'approvals.special' : 'approvals.index';
+        if ($status === ReservationStatus::CHANGES_REQUESTED) {
+            return redirect()->route($route)->withErrors(['decision' => 'Hostel reservations can only be approved or rejected.']);
+        }
+
+        try {
+            $updated = $this->hostel->updateApproval(
+                $reservation,
+                $request->user(),
+                $status->value,
+                $comment,
+                $specialOverride ? ['action' => 'special_override'] : null,
+            );
+        } catch (ReservationConflictException $exception) {
+            return redirect()->route($route)->withErrors(['decision' => 'Not enough beds are left for these dates.']);
+        } catch (ValidationException $exception) {
+            return redirect()->route($route)->withErrors($exception->errors());
+        }
+
+        if ($updated->status === ReservationStatus::EXPIRED->value) {
+            return redirect()->route($route)->withErrors(['decision' => 'This stay expired at check-in, so the held beds were released.']);
+        }
+
+        NotificationRecipients::notifyOther(
+            $updated->requester,
+            new ReservationDecision($updated, $request->user(), $comment),
+            $request->user()
+        );
+
+        return redirect()->route($route)->with('success', 'Reservation '.$updated->reference.' '.$status->label().'.');
+    }
+
     private function specialViewData(Request $request): array
     {
         $payload = $this->specialPayload($request);
@@ -185,16 +231,20 @@ class ApprovalController extends Controller
     private function specialPayload(Request $request): array
     {
         $filters = $this->listFilters($request);
-        $relations = ['requester', 'location', 'items.resource.type.category', 'statusHistory.actor'];
+        $relations = ['requester', 'location', 'items.resource.type.category', 'statusHistory.actor', 'documents'];
 
-        $pending = $this->applyListFilters(
+        $pendingQuery = $this->applyListFilters(
             Reservation::query()
                 ->whereNull('approval_archived_at')
                 ->where('status', ReservationStatus::PENDING_APPROVAL->value),
             $filters,
             withStatus: false,
-        )
+        );
+        $specialRequests = (clone $pendingQuery)->where('special_approval', true)->count();
+
+        $pending = $pendingQuery
             ->with($relations)
+            ->orderByDesc('special_approval')
             ->orderBy('reservation_date')
             ->orderBy('start_time')
             ->paginate(10, ['*'], 'pending_page')
@@ -206,7 +256,7 @@ class ApprovalController extends Controller
             ->whereHas('reservation', function ($query) use ($filters) {
                 $this->applyListFilters($query, $filters, withStatus: true);
             })
-            ->with(['reservation.requester', 'reservation.location', 'reservation.items.resource.type.category', 'actor'])
+            ->with(['reservation.requester', 'reservation.location', 'reservation.items.resource.type.category', 'reservation.documents', 'actor'])
             ->latest('created_at')
             ->paginate(10, ['*'], 'history_page')
             ->withQueryString()
@@ -234,6 +284,7 @@ class ApprovalController extends Controller
             })->values(),
             'summary' => [
                 'pending' => $pending->total(),
+                'special' => $specialRequests,
                 'history' => $history->total(),
             ],
             'pending_pager' => $this->pagerPayload($pending),
@@ -267,7 +318,7 @@ class ApprovalController extends Controller
         $user = $request->user();
         $filters = $this->listFilters($request);
         $base = $this->visibleQuery($user);
-        $relations = ['requester', 'location', 'items.resource.type.category', 'statusHistory.actor'];
+        $relations = ['requester', 'location', 'items.resource.type.category', 'statusHistory.actor', 'documents'];
 
         $pending = $this->applyListFilters(
             (clone $base)->where('status', ReservationStatus::PENDING_APPROVAL->value),
@@ -338,7 +389,16 @@ class ApprovalController extends Controller
             'status_badge' => $status->badgeClass(),
             'submitted' => $reservation->submitted_at?->timezone(config('reservations.display_timezone', 'Asia/Colombo'))->format('d M Y, H:i') ?? '—',
             'comment' => $latest?->reason,
-            'url' => route('reservations.show', $reservation),
+            'lecturer' => $reservation->lecturer_name,
+            'special' => (bool) $reservation->special_approval,
+            'documents' => $reservation->documents->map(fn ($document) => [
+                'name' => $document->original_name,
+                'size' => $document->sizeLabel(),
+                'url' => $document->downloadUrl(),
+            ])->values(),
+            'url' => $reservation->type === ReservationType::HOSTEL->value
+                ? route('hostel.show', $reservation)
+                : route('reservations.show', $reservation),
             'decision_url' => route('approvals.decision', $reservation),
             'archive_url' => route('approvals.archive', $reservation),
             'pending' => $reservation->status === ReservationStatus::PENDING_APPROVAL->value,
@@ -388,7 +448,9 @@ class ApprovalController extends Controller
     {
         abort_unless($user->hasPermission('approvals.index'), 403);
 
-        return Reservation::query()->whereNull('approval_archived_at');
+        return Reservation::query()
+            ->whereNull('approval_archived_at')
+            ->where('special_approval', false);
     }
 
     private function authorizeApprover(User $user): void

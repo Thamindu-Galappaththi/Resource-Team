@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\SpecialApprovalFields;
 use App\Models\HostelStayDetail;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -9,6 +10,8 @@ use Illuminate\Validation\Validator;
 
 class StoreHostelReservationRequest extends FormRequest
 {
+    use SpecialApprovalFields;
+
     public const MAX_GUESTS = 20;
 
     public function authorize(): bool
@@ -18,6 +21,7 @@ class StoreHostelReservationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $this->prepareSpecialApproval();
         $ids = $this->input('employee_ids');
         if (is_array($ids)) {
             $this->merge([
@@ -45,7 +49,12 @@ class StoreHostelReservationRequest extends FormRequest
             'employee_ids' => ['required', 'array'],
             'employee_ids.*' => ['required', 'string', 'max:50', 'distinct:ignore_case'],
             'special_requirements' => ['nullable', 'string', 'max:1000'],
-        ];
+        ] + $this->specialApprovalRules();
+    }
+
+    public function messages(): array
+    {
+        return $this->specialApprovalMessages();
     }
 
     public function after(): array
@@ -81,6 +90,6 @@ class StoreHostelReservationRequest extends FormRequest
             'bed_group' => 'bed group',
             'employee_ids' => 'employee IDs',
             'employee_ids.*' => 'employee ID',
-        ];
+        ] + $this->specialApprovalAttributes();
     }
 }

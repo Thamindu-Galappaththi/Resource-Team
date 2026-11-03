@@ -58,6 +58,7 @@ class HostelReservationService
                 'title' => $payload['title'] ?? 'Hostel stay for '.$guest,
                 'purpose' => 'Hostel stay for '.$guest,
                 'attendee_count' => $payload['number_of_guests'],
+                'special_approval' => (bool) ($payload['special_approval'] ?? false),
                 'reservation_date' => $payload['check_in_date'],
                 'end_date' => $payload['check_out_date'],
                 'start_time' => $payload['check_in_time'],
@@ -120,7 +121,7 @@ class HostelReservationService
                 'end_date' => $payload['check_out_date'],
                 'start_time' => $payload['check_in_time'],
                 'end_time' => $payload['check_out_time'],
-            ], $actor);
+            ] + (array_key_exists('special_approval', $payload) ? ['special_approval' => (bool) $payload['special_approval']] : []), $actor);
 
             $stay = $reservation->hostelStay;
             $stayPayload = [
@@ -151,7 +152,10 @@ class HostelReservationService
         return $this->bookings->cancel($reservation, $actor, $reason);
     }
 
-    public function updateApproval(Reservation $reservation, User $actor, string $status, ?string $reason = null): Reservation
+    /**
+     * @param  array<string, mixed>|null  $context
+     */
+    public function updateApproval(Reservation $reservation, User $actor, string $status, ?string $reason = null, ?array $context = null): Reservation
     {
         if (! in_array($status, [ReservationStatus::APPROVED->value, ReservationStatus::REJECTED->value], true)) {
             throw ValidationException::withMessages([
@@ -159,7 +163,7 @@ class HostelReservationService
             ]);
         }
 
-        return DB::transaction(function () use ($reservation, $actor, $status, $reason) {
+        return DB::transaction(function () use ($reservation, $actor, $status, $reason, $context) {
             $reservation = Reservation::query()->whereKey($reservation->id)->lockForUpdate()->firstOrFail();
             if ($reservation->status !== ReservationStatus::PENDING_APPROVAL->value) {
                 throw ValidationException::withMessages([
@@ -203,6 +207,7 @@ class HostelReservationService
                 'to_status' => $status,
                 'actor_id' => $actor->id,
                 'reason' => $reason,
+                'context' => $context,
                 'created_at' => now(),
             ]);
 

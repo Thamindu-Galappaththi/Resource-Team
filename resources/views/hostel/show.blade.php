@@ -51,6 +51,7 @@
                         <div class="hs-detail-row"><span class="hs-detail-label">Requester</span><span class="hs-detail-value">{{ $reservation->requester?->name ?: '—' }}</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Created by</span><span class="hs-detail-value">{{ $reservation->createdBy?->name ?: '—' }}</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Requirements</span><span class="hs-detail-value">{{ $reservation->hostelStay?->special_requirements ?: '—' }}</span></div>
+                        @include('reservations.partials.special-summary', ['prefix' => 'hs'])
                         @if($reservation->cancellation_reason)
                             <div class="hs-detail-row"><span class="hs-detail-label">Cancel reason</span><span class="hs-detail-value">{{ $reservation->cancellation_reason }}</span></div>
                         @endif

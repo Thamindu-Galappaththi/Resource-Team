@@ -5,7 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=11">
+<link rel="stylesheet" href="{{ asset('css/approvals-index.css') }}?v=12">
 @endpush
 
 @section('content')
@@ -24,7 +24,7 @@
     <div class="rsv-header">
         <div>
             <h1 class="rsv-title">Special approvals</h1>
-            <p class="rsv-subtitle mb-0">Override any pending reservation. The reason is stored in the reservation history.</p>
+            <p class="rsv-subtitle mb-0">Requests sent for special approval are listed first, with their supporting documents. You can also override any other pending reservation; the reason is stored in its history.</p>
         </div>
         <div class="rsv-header-actions">
             <a href="{{ route('approvals.index') }}" class="btn rsv-header-btn rsv-calendar-btn"><i class="ti ti-arrow-left me-1"></i>All approvals</a>
@@ -39,6 +39,11 @@
     @endif
 
     <div class="ap-stats">
+        <div class="rsv-stat p-3" style="--stat-color:#c2410c;--stat-icon-bg:#ffedd5">
+            <span class="rsv-stat-icon"><i class="ti ti-file-certificate"></i></span>
+            <div class="rsv-stat-label mt-3">Special requests</div>
+            <div class="rsv-stat-number" id="ap-stat-special">{{ number_format($payload['summary']['special'] ?? 0) }}</div>
+        </div>
         <div class="rsv-stat p-3" style="--stat-color:#d97706;--stat-icon-bg:#fff4e5">
             <span class="rsv-stat-icon"><i class="ti ti-shield-lock"></i></span>
             <div class="rsv-stat-label mt-3">Waiting for override</div>
@@ -188,5 +193,5 @@
         payload: @json($payload),
     };
 </script>
-<script src="{{ asset('js/approvals-index.js') }}?v=12"></script>
+<script src="{{ asset('js/approvals-index.js') }}?v=13"></script>
 @endpush

@@ -26,6 +26,8 @@ class Reservation extends Model
         'title',
         'description',
         'purpose',
+        'lecturer_name',
+        'special_approval',
         'attendee_count',
         'reservation_date',
         'start_time',
@@ -47,7 +49,13 @@ class Reservation extends Model
             'approved_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'approval_archived_at' => 'datetime',
+            'special_approval' => 'boolean',
         ];
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(ReservationDocument::class)->orderBy('id');
     }
 
     protected static function booted(): void

@@ -423,6 +423,7 @@ class ReservationManagementTest extends TestCase
             'reservation_date' => now()->addDay()->toDateString(),
             'start_time' => '09:00',
             'end_time' => '12:00',
+            'title' => 'Networking training',
             'purpose' => 'Training session',
             'attendee_count' => 10,
         ], $overrides);
