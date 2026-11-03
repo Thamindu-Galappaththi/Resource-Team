@@ -59,7 +59,7 @@ class HostelRoomSeeder extends Seeder
 
     private function hostelFor(ResourceType $bed, Location $location): Resource
     {
-        $defaults = collect(config('hostel.bed_groups', []))->map(fn (array $group) => (int) $group['capacity'])->all();
+        $defaults = collect(config('hostel.bed_groups', []))->map(fn (array $group) => (int) $group['default'])->all();
         $hostel = Resource::query()
             ->where('resource_type_id', $bed->id)
             ->where('location_id', $location->id)

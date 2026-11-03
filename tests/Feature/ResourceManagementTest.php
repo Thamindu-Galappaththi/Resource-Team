@@ -574,7 +574,7 @@ class ResourceManagementTest extends TestCase
             ->assertJsonValidationErrors(['bed_counts.permanent', 'bed_counts.female', 'bed_counts.male'])
             ->assertJsonMissingValidationErrors('name_model');
 
-        $this->postJson('/resources', $base + ['bed_counts' => ['permanent' => 11, 'female' => 40, 'male' => 40]])
+        $this->postJson('/resources', $base + ['bed_counts' => ['permanent' => 1001, 'female' => 40, 'male' => 40]])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('bed_counts.permanent');
 
@@ -596,6 +596,58 @@ class ResourceManagementTest extends TestCase
             ->assertCreated()->assertJsonPath('name_model', 'Moratuwa Boarding');
 
         $this->assertSame(2, Resource::query()->hostelRooms()->count());
+    }
+
+    public function test_hostel_beds_can_grow_but_not_drop_below_upcoming_bookings(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $user = User::factory()->role('admin')->create();
+        [$category, $bed, $welisara] = $this->hostelLookups();
+        $base = [
+            'category_id' => $category->id,
+            'resource_type_id' => $bed->id,
+            'location_id' => $welisara->id,
+            'status' => 'active',
+        ];
+        $hostel = Resource::factory()->create([
+            'resource_type_id' => $bed->id,
+            'location_id' => $welisara->id,
+            'name_model' => 'Welisara Hostel',
+            'status' => 'active',
+            'bed_counts' => ['permanent' => 10, 'female' => 40, 'male' => 40],
+            'bed_count' => 90,
+        ]);
+
+        $this->actingAs($user)->putJson("/resources/{$hostel->id}", $base + ['bed_counts' => ['permanent' => 12, 'female' => 60, 'male' => 45]])
+            ->assertOk()
+            ->assertJsonPath('bed_count', 117)
+            ->assertJsonPath('bed_counts.female', 60);
+
+        $start = now()->addDays(3);
+        foreach ([3, 2] as $index => $beds) {
+            $reservation = Reservation::factory()->create([
+                'type' => ReservationType::HOSTEL->value,
+                'status' => 'confirmed',
+                'title' => 'Ladies stay '.$index,
+            ]);
+            HostelStayDetail::factory()->create(['reservation_id' => $reservation->id, 'bed_group' => 'female', 'number_of_guests' => $beds]);
+            ReservationItem::factory()->create([
+                'reservation_id' => $reservation->id,
+                'resource_id' => $hostel->id,
+                'status' => 'confirmed',
+                'quantity' => $beds,
+                'starts_at' => $start->copy()->addDays($index),
+                'ends_at' => $start->copy()->addDays($index + 2),
+            ]);
+        }
+
+        $this->putJson("/resources/{$hostel->id}", $base + ['bed_counts' => ['permanent' => 0, 'female' => 4, 'male' => 1]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['bed_counts.female' => '5 Ladies beds are already booked on upcoming dates. Keep at least that many.'])
+            ->assertJsonMissingValidationErrors(['bed_counts.permanent', 'bed_counts.male']);
+
+        $this->putJson("/resources/{$hostel->id}", $base + ['bed_counts' => ['permanent' => 0, 'female' => 5, 'male' => 1]])
+            ->assertOk()->assertJsonPath('bed_count', 6);
     }
 
     public function test_hostel_room_seeder_keeps_one_ninety_bed_record_per_location(): void

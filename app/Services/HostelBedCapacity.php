@@ -21,21 +21,52 @@ use Illuminate\Validation\ValidationException;
 class HostelBedCapacity
 {
     /**
-     * @return array<string, array{label:string, short:string, capacity:int}>
+     * @return array<string, array{label:string, short:string, default:int}>
      */
     public function groups(): array
     {
         return config('hostel.bed_groups', []);
     }
 
-    public function groupCapacity(string $group): int
+    /** @return array<string, int> */
+    public function defaultCounts(): array
     {
-        return (int) ($this->groups()[$group]['capacity'] ?? 0);
+        return array_map(fn (array $group) => (int) $group['default'], $this->groups());
     }
 
-    public function locationCapacity(): int
+    public function maxPerGroup(): int
     {
-        return array_sum(array_column($this->groups(), 'capacity'));
+        return (int) config('hostel.max_beds_per_group', 1000);
+    }
+
+    /**
+     * Most beds a group has booked at once from $from onward (pending and approved stays).
+     */
+    public function peakBookedBeds(int $resourceId, string $group, CarbonInterface $from): int
+    {
+        $changes = [];
+        ReservationItem::query()
+            ->where('resource_id', $resourceId)
+            ->whereIn('status', ReservationStatus::blockingItemStatuses())
+            ->where('ends_at', '>', $from)
+            ->whereHas('reservation.hostelStay', fn ($stay) => $stay->where('bed_group', $group))
+            ->get(['starts_at', 'ends_at', 'quantity'])
+            ->each(function (ReservationItem $item) use (&$changes, $from) {
+                $beds = (int) round((float) $item->quantity);
+                $start = max($item->starts_at->getTimestamp(), $from->getTimestamp());
+                $changes[] = [$start, $beds];
+                $changes[] = [$item->ends_at->getTimestamp(), -$beds];
+            });
+
+        usort($changes, fn ($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
+        $current = 0;
+        $peak = 0;
+        foreach ($changes as [, $delta]) {
+            $current += $delta;
+            $peak = max($peak, $current);
+        }
+
+        return $peak;
     }
 
     /**

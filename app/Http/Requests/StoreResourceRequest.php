@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Location;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
+use App\Services\HostelBedCapacity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -80,8 +81,9 @@ class StoreResourceRequest extends FormRequest
     private function bedRules(): array
     {
         $rules = ['bed_counts' => ['required', 'array']];
-        foreach (config('hostel.bed_groups', []) as $key => $group) {
-            $rules["bed_counts.{$key}"] = ['required', 'integer', 'min:0', 'max:'.(int) $group['capacity']];
+        $max = app(HostelBedCapacity::class)->maxPerGroup();
+        foreach (array_keys(config('hostel.bed_groups', [])) as $key) {
+            $rules["bed_counts.{$key}"] = ['required', 'integer', 'min:0', 'max:'.$max];
         }
 
         return $rules;
@@ -109,8 +111,29 @@ class StoreResourceRequest extends FormRequest
                 if (! $validator->errors()->has('bed_counts') && array_sum(array_map('intval', $counts)) < 1) {
                     $validator->errors()->add('bed_counts', 'Add at least one bed.');
                 }
+
+                if ($resource instanceof Resource) {
+                    $this->assertBedsCoverBookings($validator, $resource, $counts);
+                }
             },
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $counts
+     */
+    private function assertBedsCoverBookings(Validator $validator, Resource $resource, array $counts): void
+    {
+        $beds = app(HostelBedCapacity::class);
+        foreach ($beds->groups() as $key => $group) {
+            if ($validator->errors()->has("bed_counts.{$key}")) {
+                continue;
+            }
+            $booked = $beds->peakBookedBeds($resource->id, $key, now());
+            if ((int) ($counts[$key] ?? 0) < $booked) {
+                $validator->errors()->add("bed_counts.{$key}", "{$booked} {$group['label']} ".($booked === 1 ? 'bed is' : 'beds are').' already booked on upcoming dates. Keep at least that many.');
+            }
+        }
     }
 
     public function isHostel(): bool
