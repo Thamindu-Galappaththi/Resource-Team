@@ -16,10 +16,15 @@ class UpdatePasswordRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
-            'current_password' => ['required', 'current_password'],
+        $rules = [
             'password' => ['required', 'confirmed', Password::min(8)],
         ];
+
+        if ($this->user()?->hasSetPassword()) {
+            $rules['current_password'] = ['required', 'current_password'];
+        }
+
+        return $rules;
     }
 
     protected function getRedirectUrl(): string

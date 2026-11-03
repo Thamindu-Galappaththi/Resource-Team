@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
+use RuntimeException;
 use Throwable;
 
 class FacebookAuthService
@@ -22,6 +23,7 @@ class FacebookAuthService
             'state' => $state,
             'scope' => 'email,public_profile',
             'response_type' => 'code',
+            'auth_type' => 'rerequest',
         ]);
     }
 
@@ -32,6 +34,7 @@ class FacebookAuthService
     {
         $token = $this->accessToken($code);
         $profile = $this->fetchProfile($token);
+        \Illuminate\Support\Facades\Log::info('Facebook OAuth profile data:', $profile);
 
         $email = strtolower(trim((string) ($profile['email'] ?? '')));
         $name = trim((string) ($profile['name'] ?? ''));
@@ -44,7 +47,7 @@ class FacebookAuthService
         return [
             'id' => $id,
             'email' => $email,
-            'name' => $name,
+            'name' => $name !== '' ? $name : strstr($email, '@', true),
         ];
     }
 

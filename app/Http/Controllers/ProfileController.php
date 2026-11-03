@@ -63,9 +63,10 @@ class ProfileController extends Controller
     {
         $password = $request->validated('password');
 
-        $request->user()->update([
+        $request->user()->forceFill([
             'password' => $password,
-        ]);
+            'password_setup_at' => now(),
+        ])->save();
 
         auth()->logoutOtherDevices($password);
         $request->session()->regenerate();

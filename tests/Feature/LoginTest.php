@@ -338,6 +338,70 @@ class LoginTest extends TestCase
         $this->assertNotNull(session('facebook_oauth_state'));
     }
 
+    public function test_facebook_login_creates_sms_user_when_unknown(): void
+    {
+        $this->configureFacebook();
+        $this->fakeFacebookGraph('external.user@example.com', 'External User', 'fb-user-new');
+
+        $this->assertDatabaseMissing('users', ['email' => 'external.user@example.com']);
+
+        $this->withSession(['facebook_oauth_state' => 'oauth-state'])
+            ->get(route('login.facebook.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $user = User::query()->where('email', 'external.user@example.com')->first();
+
+        $this->assertNotNull($user);
+        $this->assertSame('External User', $user->name);
+        $this->assertSame('nebula_sms_user', $user->user_role);
+        $this->assertTrue($user->is_active);
+        $this->assertFalse($user->slt_employee);
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_facebook_login_logs_in_existing_user(): void
+    {
+        $this->configureFacebook();
+        $this->fakeFacebookGraph('existing@example.com', 'Existing User');
+
+        $user = User::factory()->role('nebula_sms_user')->create([
+            'email' => 'existing@example.com',
+            'name' => 'Existing User',
+        ]);
+
+        $this->withSession(['facebook_oauth_state' => 'oauth-state'])
+            ->get(route('login.facebook.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_inactive_user_cannot_login_with_facebook(): void
+    {
+        $this->configureFacebook();
+        $this->fakeFacebookGraph('inactive@example.com', 'Inactive User');
+
+        User::factory()->role('nebula_sms_user')->inactive()->create([
+            'email' => 'inactive@example.com',
+        ]);
+
+        $this->withSession(['facebook_oauth_state' => 'oauth-state'])
+            ->get(route('login.facebook.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('facebook');
+
+        $this->assertGuest();
+    }
+
     private function configureMicrosoft(): void
     {
         config([
@@ -380,6 +444,21 @@ class LoginTest extends TestCase
                 'displayName' => $name,
                 'mail' => $email,
                 'userPrincipalName' => $email,
+            ]),
+        ]);
+    }
+
+    private function fakeFacebookGraph(string $email, string $name, string $facebookId = 'fb-user-1'): void
+    {
+        Http::fake([
+            'https://graph.facebook.com/v19.0/oauth/access_token*' => Http::response([
+                'access_token' => 'fb-token',
+                'token_type' => 'bearer',
+            ]),
+            'https://graph.facebook.com/v19.0/me*' => Http::response([
+                'id' => $facebookId,
+                'name' => $name,
+                'email' => $email,
             ]),
         ]);
     }

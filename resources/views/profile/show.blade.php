@@ -13,7 +13,7 @@
         <h1>{{ $tab === 'security' ? 'Security' : 'My Profile' }}</h1>
         <p class="rs-profile-lead">
             @if($tab === 'security')
-                Change your password here. Contact details stay on the Profile tab.
+                {{ $user->hasSetPassword() ? 'Change your password here. Contact details stay on the Profile tab.' : 'Set your account password here. Contact details stay on the Profile tab.' }}
             @else
                 Update the details used on reservations. Password changes are on the Security tab.
             @endif
@@ -118,12 +118,19 @@
                     </form>
                 </section>
             @else
+                @php $hasSetPassword = $user->hasSetPassword(); @endphp
                 <section class="rs-profile-card" id="password">
-                    <h2>Change password</h2>
-                    <p class="hint">Confirm your current password, then set a new one. Other signed-in devices will be signed out.</p>
+                    <h2>{{ $hasSetPassword ? 'Change password' : 'Set a password' }}</h2>
+                    <p class="hint">
+                        @if($hasSetPassword)
+                            Confirm your current password, then set a new one. Other signed-in devices will be signed out.
+                        @else
+                            You signed in with a social account (Google or Facebook). Set a password to also sign in directly using your email.
+                        @endif
+                    </p>
 
                     @if(session('status') === 'password-updated')
-                        <div class="rs-alert rs-alert-ok" role="status">Your password was changed.</div>
+                        <div class="rs-alert rs-alert-ok" role="status">{{ $hasSetPassword ? 'Your password was changed.' : 'Your password has been set.' }}</div>
                     @endif
 
                     @if($errors->updatePassword->any())
@@ -135,13 +142,15 @@
                         @method('PUT')
 
                         <div class="row g-3">
-                            <div class="col-12">
-                                <label for="current_password" class="form-label">Current password</label>
-                                <div class="rs-password-wrap">
-                                    <input id="current_password" name="current_password" type="password" class="form-control @error('current_password', 'updatePassword') is-invalid @enderror" autocomplete="current-password" required>
-                                    <button type="button" data-password-toggle="current_password" aria-label="Show password"><i class="ti ti-eye"></i></button>
+                            @if($hasSetPassword)
+                                <div class="col-12">
+                                    <label for="current_password" class="form-label">Current password</label>
+                                    <div class="rs-password-wrap">
+                                        <input id="current_password" name="current_password" type="password" class="form-control @error('current_password', 'updatePassword') is-invalid @enderror" autocomplete="current-password" required>
+                                        <button type="button" data-password-toggle="current_password" aria-label="Show password"><i class="ti ti-eye"></i></button>
+                                    </div>
                                 </div>
-                            </div>
+                            @endif
                             <div class="col-md-6">
                                 <label for="password" class="form-label">New password</label>
                                 <div class="rs-password-wrap">
@@ -165,7 +174,7 @@
                         </ul>
 
                         <div class="rs-profile-actions">
-                            <button type="submit" class="rs-btn">Update password</button>
+                            <button type="submit" class="rs-btn">{{ $hasSetPassword ? 'Update password' : 'Set password' }}</button>
                         </div>
                     </form>
                 </section>

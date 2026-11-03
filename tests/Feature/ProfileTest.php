@@ -123,6 +123,35 @@ class ProfileTest extends TestCase
         $this->assertTrue(Hash::check('new-secret1', $user->fresh()->password));
     }
 
+    public function test_user_without_set_password_sees_set_password_form_without_current_password(): void
+    {
+        $user = User::factory()->role('nebula_sms_user')->pendingPasswordSetup()->create();
+
+        $this->actingAs($user)
+            ->get(route('user.profile', ['tab' => 'security']))
+            ->assertOk()
+            ->assertSee('Set a password')
+            ->assertDontSee('Current password')
+            ->assertSee('Set password');
+    }
+
+    public function test_user_without_set_password_can_set_password_without_current_password(): void
+    {
+        $user = User::factory()->role('nebula_sms_user')->pendingPasswordSetup()->create();
+
+        $this->actingAs($user)
+            ->put(route('user.profile.password'), [
+                'password' => 'new-secret1',
+                'password_confirmation' => 'new-secret1',
+            ])
+            ->assertRedirect(route('user.profile', ['tab' => 'security']))
+            ->assertSessionHas('status', 'password-updated');
+
+        $user->refresh();
+        $this->assertTrue(Hash::check('new-secret1', $user->password));
+        $this->assertTrue($user->hasSetPassword());
+    }
+
     public function test_user_can_upload_a_profile_photo(): void
     {
         Storage::fake('public');
