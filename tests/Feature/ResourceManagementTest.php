@@ -613,6 +613,11 @@ class ResourceManagementTest extends TestCase
         $this->postJson('/resources', ['location_id' => $moratuwa->id, 'name_model' => 'Moratuwa Boarding', 'bed_counts' => ['permanent' => 10, 'female' => 40, 'male' => 40]] + $base)
             ->assertCreated()->assertJsonPath('name_model', 'Moratuwa Boarding');
 
+        $peradeniya = Location::query()->firstOrCreate(['name' => 'Peradeniya']);
+        $this->postJson('/resources', ['location_id' => $peradeniya->id, 'bed_counts' => ['permanent' => 10, 'female' => 40, 'male' => 40]] + $base)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['location_id' => 'Peradeniya has no hostel. Hostels can only be added at Welisara or Moratuwa.']);
+
         $this->assertSame(2, Resource::query()->hostelRooms()->count());
     }
 

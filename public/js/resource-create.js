@@ -435,11 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshLocationSelects() {
-        const items = state.locations.map((location) => ({ value: location.id, label: location.name }));
-        const current = window.RMSelect.getValue('resourceLocationSelect');
-        window.RMSelect.setOptions('resourceLocationSelect', items, 'Select a location (Welisara, Moratuwa or Peradeniya)');
-        const selected = items.find((item) => String(item.value) === String(current));
-        if (selected) window.RMSelect.setValue('resourceLocationSelect', selected.value, selected.label);
+        window.RMHostelFields.setLocations(state.locations);
     }
 
     function renderCategoryFeatures(categoryId) {

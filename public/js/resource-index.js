@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function fillEditForm(resource, lookups) {
         editResourceTypes = lookups.types;
         window.RMSelect.setOptions('resourceCategorySelect', lookups.categories.map((item) => ({ value: item.id, label: item.name })), 'Select a category (e.g., IT Equipment)');
-        window.RMSelect.setOptions('resourceLocationSelect', lookups.locations.map((item) => ({ value: item.id, label: item.name })), 'Select a location (Welisara, Moratuwa or Peradeniya)');
+        window.RMHostelFields?.setLocations(lookups.locations);
         clearEditErrors();
         const typeRecord = lookups.types.find((item) => String(item.id) === String(resource.resource_type_id));
         const categoryId = resource.type?.resource_category_id || typeRecord?.resource_category_id;

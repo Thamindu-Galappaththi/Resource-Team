@@ -45,6 +45,7 @@
 @endphp
 <section class="rm-hostel-beds mb-3" id="hostelBedFields" hidden
     data-hostel-category="{{ config('hostel.category_name') }}"
+    data-hostel-locations="{{ implode('|', config('hostel.locations', [])) }}"
     data-bed-type="{{ config('hostel.bed_type_name', 'Bed') }}">
     <div class="rm-hostel-head">
         <span class="rm-hostel-icon" aria-hidden="true"><i class="ti ti-bed"></i></span>
