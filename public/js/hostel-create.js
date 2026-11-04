@@ -249,12 +249,30 @@
     }
 
     if (form) {
+        let isSubmitting = false;
         form.noValidate = true;
         form.addEventListener('submit', (event) => {
+            if (isSubmitting) {
+                event.preventDefault();
+                return false;
+            }
             const invalid = invalidFields();
-            if (invalid.length === 0) return;
-            event.preventDefault();
-            revealField(invalid[0]);
+            if (invalid.length > 0) {
+                event.preventDefault();
+                revealField(invalid[0]);
+                return;
+            }
+            isSubmitting = true;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.style.pointerEvents = 'none';
+                submitBtn.classList.add('disabled');
+                const isEditing = submitBtn.textContent.includes('Update');
+                submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${isEditing ? 'Updating reservation...' : 'Creating reservation...'}`;
+                setTimeout(() => {
+                    submitBtn.disabled = true;
+                }, 0);
+            }
         });
         form.addEventListener('input', (event) => {
             if (event.target.classList?.contains('is-invalid') && event.target.checkValidity()) {

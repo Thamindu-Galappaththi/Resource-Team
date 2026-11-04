@@ -302,6 +302,34 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 0);
     }
 
+    public function test_repeated_submission_does_not_create_duplicate_reservations(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+        $payload = $this->payload($setup, [
+            'guest_name' => 'Duplicate Test Guest',
+            'number_of_guests' => 1,
+            'employee_ids' => ['DUP-001'],
+        ]);
+
+        // First submit creates the reservation
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $payload)
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('reservations', 1);
+        $firstReservation = Reservation::query()->firstOrFail();
+
+        // Repeated submit immediately after does not create a duplicate
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $payload)
+            ->assertRedirect(route('hostel.show', $firstReservation));
+
+        $this->assertDatabaseCount('reservations', 1);
+    }
+
     public function test_special_hostel_request_skips_the_hostel_manager_and_is_decided_in_special_approvals(): void
     {
         Storage::fake('local');

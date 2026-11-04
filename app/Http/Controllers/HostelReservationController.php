@@ -201,8 +201,32 @@ class HostelReservationController extends Controller
     {
         $this->authorize('createHostel', Reservation::class);
 
+        $user = $request->user();
+        $payload = $request->validated();
+
+        $recentDuplicate = Reservation::query()
+            ->where('type', ReservationType::HOSTEL->value)
+            ->where(function ($q) use ($user) {
+                $q->where('created_by_user_id', $user->id)
+                    ->orWhere('requester_id', $user->id);
+            })
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->where('location_id', $payload['location_id'])
+            ->whereHas('hostelStay', function ($stay) use ($payload) {
+                $stay->where('guest_name', $payload['guest_name'])
+                    ->where('bed_group', $payload['bed_group'])
+                    ->where('number_of_guests', (int) $payload['number_of_guests']);
+            })
+            ->first();
+
+        if ($recentDuplicate) {
+            return redirect()
+                ->route('hostel.show', $recentDuplicate)
+                ->with('info', 'Your reservation was already created.');
+        }
+
         try {
-            $reservation = $this->hostel->create($request->validated(), $request->user());
+            $reservation = $this->hostel->create($payload, $user);
         } catch (ReservationConflictException $exception) {
             return back()->withInput()->withErrors([
                 'number_of_guests' => $exception->getMessage(),
