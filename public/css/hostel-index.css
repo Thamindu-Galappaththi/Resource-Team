@@ -84,6 +84,7 @@
 }
 .hr-stat-label { color: #4f555b; font-size: .92rem; }
 .hr-stat-number { font-size: 1.85rem; font-weight: 700; line-height: 1.05; color: var(--stat-color); }
+.hr-stat-of { color: #65738a; font-size: .95rem; font-weight: 600; }
 
 .hr-filters {
     position: relative;

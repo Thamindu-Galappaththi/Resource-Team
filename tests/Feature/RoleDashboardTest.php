@@ -130,10 +130,12 @@ class RoleDashboardTest extends TestCase
         $this->actingAs($manager)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Rooms ready')
+            ->assertSee('Beds ready')
             ->assertSee('Check-ins today')
             ->assertSee('Guest wing stay')
             ->assertSee('Hostel bookings')
+            ->assertSee('Today\'s guest list (PDF)')
+            ->assertSee('Guest list PDF')
             ->assertDontSee('New reservation');
     }
 

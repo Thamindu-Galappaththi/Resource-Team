@@ -17,6 +17,7 @@
         $canHostelIndex = $user->hasPermission('hostel.index') && ! $isSltEmployee;
         $canHostelCreate = $user->hasPermission('hostel.create');
         $canSltHostelRequests = $isSltEmployee && $user->hasPermission('hostel.index');
+        $canHostelStudentRequests = $user->hasPermission('hostel.manage') && ! $isSltEmployee;
         $canCanteenDashboard = $user->hasPermission('canteen.view') && ! $isSltEmployee;
         $canCanteenCreate = $user->hasPermission('canteen.create');
         $canCanteenIndex = $user->hasPermission('canteen.index') && ! $isSltEmployee;
@@ -250,7 +251,7 @@
                 @endif
             @endif
 
-            @if($canHostelIndex || $canHostelCreate || $canSltHostelRequests)
+            @if($canHostelIndex || $canHostelCreate || $canSltHostelRequests || $canHostelStudentRequests)
                 <li class="nav-small-cap">
                     <span class="nav-small-cap-text">HOSTEL</span>
                 </li>
@@ -269,6 +270,15 @@
                         <a class="sidebar-link {{ request()->routeIs('hostel.create', 'hostel.edit') ? 'active' : '' }}" href="{{ route('hostel.create') }}">
                             <span><i class="ti ti-bed"></i></span>
                             <span class="hide-menu">Create Hostel Reservation</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canHostelStudentRequests)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('hostel.student-requests.*') ? 'active' : '' }}" href="{{ route('hostel.student-requests.index') }}">
+                            <span><i class="ti ti-school"></i></span>
+                            <span class="hide-menu">Student Requests</span>
                         </a>
                     </li>
                 @endif

@@ -3,7 +3,7 @@
 @section('title', 'Create Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=22">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=27">
 @endpush
 
 @section('content')
@@ -133,13 +133,16 @@
                                 <div class="invalid-feedback"></div>
                                 </div>
                                 <div class="mb-3">
-                                <label class="form-label">Related resource <span class="text-danger">*</span></label>
-                                <x-rm-select id="linkedResourceSelect" name="linked_resource_id" class="resource-select dropup" required
-                                    placeholder="Select a resource to link"
-                                    :options="[['value' => '', 'label' => 'Select a resource to link']]" />
-                                <div class="invalid-feedback"></div>
+                                <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                    <label class="form-label mb-0" for="relatedResourcesList">Related resources</label>
+                                    <span class="text-muted small" id="relatedResourcesCount" hidden></span>
                                 </div>
-                            <button type="submit" class="btn btn-primary">Link resources</button>
+                                <div id="relatedResourcesList" class="rm-linked-list rm-linked-scroll" tabindex="-1">
+                                    <p class="text-muted small mb-0">Select a main resource to see its related resources.</p>
+                                </div>
+                                <div class="invalid-feedback" id="relatedResourcesError"></div>
+                                </div>
+                            <button type="submit" class="btn btn-primary" id="saveLinksBtn" disabled>Save links</button>
                         </form>
                     </section>
                 </div>
@@ -224,5 +227,7 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-create.js') }}?v=12"></script>
+<script src="{{ asset('js/resource-hostel-fields.js') }}?v=3"></script>
+<script src="{{ asset('js/resource-link-picker.js') }}?v=2"></script>
+<script src="{{ asset('js/resource-create.js') }}?v=18"></script>
 @endpush

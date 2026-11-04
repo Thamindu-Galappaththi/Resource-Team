@@ -1,6 +1,8 @@
 (function () {
     const checkIn = document.getElementById('check_in_date');
     const checkOut = document.getElementById('check_out_date');
+    const guests = document.getElementById('number_of_guests');
+    const employeeList = document.querySelector('[data-hc-employee-list]');
 
     function dismissAlert(alert, delay = 5000) {
         if (!alert || alert.classList.contains('d-none')) return;
@@ -20,27 +22,138 @@
         }, delay);
     }
 
-    function nextDay(value) {
-        if (!value) return '';
-        const date = new Date(`${value}T00:00:00`);
-        if (Number.isNaN(date.getTime())) return '';
-        date.setDate(date.getDate() + 1);
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${date.getFullYear()}-${month}-${day}`;
+    function syncCheckoutMin() {
+        if (!checkIn || !checkOut || !checkIn.value) return;
+        checkOut.min = checkIn.value;
+        if (checkOut.value && checkOut.value < checkIn.value) {
+            checkOut.value = checkIn.value;
+        }
     }
 
-    function syncCheckoutMin() {
-        if (!checkIn || !checkOut) return;
-        const min = nextDay(checkIn.value);
-        if (!min) return;
-        checkOut.min = min;
-        if (checkOut.value && checkOut.value <= checkIn.value) {
-            checkOut.value = min;
+    function employeeRow(index, total, value) {
+        const col = document.createElement('div');
+        col.className = 'col-12 col-sm-6';
+        col.dataset.hcEmployeeRow = '';
+
+        const label = document.createElement('label');
+        label.className = 'form-label';
+        label.htmlFor = `employee_id_${index}`;
+        label.textContent = total > 1 ? `Employee ID (guest ${index + 1})` : 'Employee ID';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `employee_id_${index}`;
+        input.name = 'employee_ids[]';
+        input.className = 'form-control';
+        input.maxLength = 50;
+        input.autocomplete = 'off';
+        input.placeholder = '010456';
+        input.required = true;
+        input.value = value || '';
+
+        col.append(label, input);
+        return col;
+    }
+
+    function syncEmployeeIds() {
+        if (!guests || !employeeList) return;
+        const max = Number(guests.max) || 20;
+        const count = Math.min(max, Math.max(1, Number.parseInt(guests.value, 10) || 1));
+        const rows = [...employeeList.querySelectorAll('[data-hc-employee-row]')];
+        const values = rows.map((row) => row.querySelector('input')?.value || '');
+        if (rows.length === count) {
+            rows.forEach((row, index) => {
+                const label = row.querySelector('label');
+                if (label) label.textContent = count > 1 ? `Employee ID (guest ${index + 1})` : 'Employee ID';
+            });
+            return;
+        }
+        employeeList.replaceChildren(...Array.from({ length: count }, (_, index) => employeeRow(index, count, values[index])));
+    }
+
+    const form = document.getElementById('hostel-booking-form');
+
+    function selectMessage(select) {
+        const label = form.querySelector(`label[for="${select.querySelector('input[type="hidden"]')?.id}"]`);
+        const name = (label?.textContent || 'an option').replace('*', '').trim().toLowerCase();
+        return `Please select ${name}.`;
+    }
+
+    function setSelectError(select, message) {
+        select.classList.toggle('is-invalid', Boolean(message));
+        select.querySelector('.cu-dropdown-toggle')?.classList.toggle('is-invalid', Boolean(message));
+        let note = select.parentElement.querySelector('.invalid-feedback');
+        if (!message) {
+            note?.remove();
+            return;
+        }
+        if (!note) {
+            note = document.createElement('div');
+            note.className = 'invalid-feedback d-block';
+            note.dataset.hcClientError = '';
+            select.insertAdjacentElement('afterend', note);
+        }
+        note.textContent = message;
+    }
+
+    function invalidFields() {
+        const invalid = [];
+        form.querySelectorAll('[data-cu-select], input:not([type="hidden"]), textarea, select').forEach((field) => {
+            if (field.matches('[data-cu-select]')) {
+                const required = field.querySelector('.cu-dropdown-toggle')?.getAttribute('aria-required') === 'true';
+                const empty = !(field.querySelector('input[type="hidden"]')?.value || '').trim();
+                setSelectError(field, required && empty ? selectMessage(field) : '');
+                if (required && empty) invalid.push(field);
+                return;
+            }
+            if (field.closest('[data-cu-select]') || field.disabled) return;
+            const ok = field.checkValidity();
+            field.classList.toggle('is-invalid', !ok);
+            if (!ok) invalid.push(field);
+        });
+        return invalid;
+    }
+
+    function revealField(field) {
+        field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const focusTarget = field.matches('[data-cu-select]') ? field.querySelector('.cu-dropdown-toggle') : field;
+        setTimeout(() => {
+            focusTarget?.focus({ preventScroll: true });
+            if (!field.matches('[data-cu-select]')) field.reportValidity();
+        }, 350);
+    }
+
+    if (form) {
+        form.noValidate = true;
+        form.addEventListener('submit', (event) => {
+            const invalid = invalidFields();
+            if (invalid.length === 0) return;
+            event.preventDefault();
+            revealField(invalid[0]);
+        });
+        form.addEventListener('input', (event) => {
+            if (event.target.classList?.contains('is-invalid') && event.target.checkValidity()) {
+                event.target.classList.remove('is-invalid');
+            }
+        });
+        form.addEventListener('change', (event) => {
+            const select = event.target.closest?.('[data-cu-select]');
+            if (select && event.target.value) setSelectError(select, '');
+        });
+
+        const serverError = form.querySelector('.is-invalid, .invalid-feedback.d-block');
+        if (serverError) {
+            const field = serverError.closest('[data-cu-select]')
+                || serverError.closest('[class*="col-"]')?.querySelector('[data-cu-select], input:not([type="hidden"]), textarea')
+                || serverError;
+            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
 
     checkIn?.addEventListener('change', syncCheckoutMin);
+    guests?.addEventListener('input', syncEmployeeIds);
+    guests?.addEventListener('change', syncEmployeeIds);
     syncCheckoutMin();
+    syncEmployeeIds();
     document.querySelectorAll('.hc-auto-alert').forEach((alert) => dismissAlert(alert));
 })();

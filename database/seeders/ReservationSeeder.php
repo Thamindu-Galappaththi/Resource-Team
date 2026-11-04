@@ -21,12 +21,12 @@ class ReservationSeeder extends Seeder
         $today = now($service->timezone());
 
         $bookings = [
-            ['serial' => 'LH-WEL-A-001', 'days' => 0, 'start' => '10:00', 'end' => '12:00', 'title' => 'CCNA Batch 12 Practical', 'purpose' => 'Lab session'],
-            ['serial' => 'MR-WEL-101', 'days' => 0, 'start' => '14:00', 'end' => '16:00', 'title' => 'Staff coordination meeting', 'purpose' => 'Weekly standup'],
-            ['serial' => 'LT-WEL-001', 'days' => 1, 'start' => '09:00', 'end' => '11:00', 'title' => 'Field visit laptop booking', 'purpose' => 'Site visit'],
-            ['serial' => 'PJ-WEL-001', 'days' => 2, 'start' => '13:00', 'end' => '15:00', 'title' => 'Orientation projector', 'purpose' => 'New intake briefing'],
-            ['serial' => 'LAB-WEL-03', 'days' => 3, 'start' => '09:00', 'end' => '12:00', 'title' => 'Programming workshop', 'purpose' => 'Hands-on training'],
-            ['serial' => 'LH-WEL-B-002', 'days' => 5, 'start' => '09:00', 'end' => '12:00', 'title' => 'Guest lecture', 'purpose' => 'Industry talk'],
+            ['serial' => 'WEL-AUD-MAIN', 'days' => 0, 'start' => '10:00', 'end' => '12:00', 'title' => 'Orientation in Main Auditorium', 'purpose' => 'New intake briefing'],
+            ['serial' => 'WEL-LR-01', 'days' => 0, 'start' => '14:00', 'end' => '16:00', 'title' => 'CCNA Batch 12 lecture', 'purpose' => 'Classroom session'],
+            ['serial' => 'WEL-CLAB-01', 'days' => 1, 'start' => '09:00', 'end' => '12:00', 'title' => 'Programming workshop', 'purpose' => 'Hands-on training'],
+            ['serial' => 'WEL-LAB-EEC', 'days' => 2, 'start' => '13:00', 'end' => '16:00', 'title' => 'Control lab practical', 'purpose' => 'Lab session'],
+            ['serial' => 'MOR-AUD', 'days' => 3, 'start' => '09:00', 'end' => '12:00', 'title' => 'Moratuwa guest lecture', 'purpose' => 'Industry talk'],
+            ['serial' => 'PER-AUD', 'days' => 5, 'start' => '09:00', 'end' => '12:00', 'title' => 'Peradeniya staff briefing', 'purpose' => 'Campus meeting'],
         ];
 
         foreach ($bookings as $booking) {

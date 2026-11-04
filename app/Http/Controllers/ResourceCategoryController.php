@@ -81,6 +81,10 @@ class ResourceCategoryController extends Controller
 
     public function update(Request $request, ResourceCategory $category): JsonResponse
     {
+        if ($category->isLocked()) {
+            return $this->lockedResponse($category);
+        }
+
         $validated = $request->validate([
             'category_name' => ['required', 'string', 'max:255', Rule::unique('resource_categories', 'name')->ignore($category->id)],
             'features' => ['nullable', 'array'],
@@ -133,8 +137,19 @@ class ResourceCategoryController extends Controller
 
     public function destroy(ResourceCategory $category): JsonResponse
     {
+        if ($category->isLocked()) {
+            return $this->lockedResponse($category);
+        }
+
         $category->delete();
 
         return response()->json(['message' => 'Category soft deleted.']);
+    }
+
+    private function lockedResponse(ResourceCategory $category): JsonResponse
+    {
+        return response()->json([
+            'message' => "{$category->name} is a fixed category used for hostel reservations and cannot be changed or deleted.",
+        ], 422);
     }
 }

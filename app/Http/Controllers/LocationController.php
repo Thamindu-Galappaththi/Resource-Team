@@ -20,7 +20,7 @@ class LocationController extends Controller
      */
     public function index(): JsonResponse
     {
-        $locations = Location::query()->ordered()->get();
+        $locations = Location::query()->forResources()->ordered()->get();
 
         return response()->json($locations);
     }

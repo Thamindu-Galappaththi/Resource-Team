@@ -477,7 +477,7 @@ class ReportService
     private function buildHostel(Carbon $from, Carbon $to, ?int $locId): array
     {
         $stays = HostelStayDetail::query()
-            ->with(['reservation.location', 'roomType', 'roomCategory'])
+            ->with(['reservation.location'])
             ->whereHas('reservation', function (Builder $q) use ($from, $to, $locId) {
                 $q->whereDate('reservation_date', '>=', $from->toDateString())
                     ->whereDate('reservation_date', '<=', $to->toDateString())
@@ -495,7 +495,7 @@ class ReportService
             ->average();
 
         // By room category
-        $byCategory = $stays->groupBy(fn ($s) => $s->roomCategory?->name ?? 'Unspecified')
+        $byCategory = $stays->groupBy(fn ($s) => $s->bedGroupLabel() ?? 'Unspecified')
             ->map(fn ($group, $name) => [
                 'category'    => $name,
                 'total_stays' => $group->count(),

@@ -1,6 +1,6 @@
 (function () {
     const form = document.getElementById('hr-filters');
-    const placeholders = { room_type_id: 'All categories', status: 'All statuses' };
+    const placeholders = { status: 'All statuses' };
 
     function dismissAlert(alert, delay = 5000) {
         if (!alert || alert.classList.contains('d-none')) return;
@@ -31,7 +31,7 @@
 
     function currentParams() {
         const params = {};
-        ['search', 'check_in_from', 'check_in_to', 'room_type_id', 'status'].forEach((id) => {
+        ['search', 'check_in_from', 'check_in_to', 'status'].forEach((id) => {
             const value = (document.getElementById(id)?.value || '').trim();
             if (value) params[id] = value;
         });
@@ -120,7 +120,7 @@
         toggleClear();
     });
 
-    ['check_in_from', 'check_in_to', 'room_type_id', 'status'].forEach((id) => {
+    ['check_in_from', 'check_in_to', 'status'].forEach((id) => {
         document.getElementById(id)?.addEventListener('change', () => {
             toggleClear();
             refresh(filterUrl());

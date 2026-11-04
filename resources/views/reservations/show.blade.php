@@ -42,7 +42,11 @@
                 <h2 class="rd-section-title"><i class="ti ti-calendar-event"></i> Reservation details</h2>
                 <div class="rd-card-body">
                     <div class="rd-details">
+                        <div class="rd-detail-row"><span class="rd-detail-label">Reservation name</span><span class="rd-detail-value">{{ $reservation->title ?: '—' }}</span></div>
                         <div class="rd-detail-row"><span class="rd-detail-label">Purpose</span><span class="rd-detail-value">{{ $reservation->purpose ?: '—' }}</span></div>
+                        @if($reservation->lecturer_name)
+                            <div class="rd-detail-row"><span class="rd-detail-label">Lecturer</span><span class="rd-detail-value">{{ $reservation->lecturer_name }}</span></div>
+                        @endif
                         <div class="rd-detail-row"><span class="rd-detail-label">Requester</span><span class="rd-detail-value">{{ $reservation->requester?->name ?: '—' }}</span></div>
                         <div class="rd-detail-row"><span class="rd-detail-label">Created by</span><span class="rd-detail-value">{{ $reservation->createdBy?->name ?: '—' }}</span></div>
                         <div class="rd-detail-row"><span class="rd-detail-label">Location</span><span class="rd-detail-value">{{ $reservation->location?->name ?: '—' }}</span></div>
@@ -50,6 +54,7 @@
                         <div class="rd-detail-row"><span class="rd-detail-label">Time</span><span class="rd-detail-value">{{ $start && $end ? $start.'–'.$end : '—' }}</span></div>
                         <div class="rd-detail-row"><span class="rd-detail-label">Attendees</span><span class="rd-detail-value">{{ $reservation->attendee_count ?? '—' }}</span></div>
                         <div class="rd-detail-row"><span class="rd-detail-label">Resources</span><span class="rd-detail-value">{{ $reservation->resourceNames() ?: '—' }}</span></div>
+                        @include('reservations.partials.special-summary', ['prefix' => 'rd'])
                         @if($reservation->cancellation_reason)
                             <div class="rd-detail-row"><span class="rd-detail-label">Cancel reason</span><span class="rd-detail-value">{{ $reservation->cancellation_reason }}</span></div>
                         @endif

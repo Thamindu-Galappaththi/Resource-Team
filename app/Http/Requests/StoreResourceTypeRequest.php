@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\ResourceCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreResourceTypeRequest extends FormRequest
 {
@@ -49,6 +51,24 @@ class StoreResourceTypeRequest extends FormRequest
                 ),
             ],
             'features.*.value' => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                $category = ResourceCategory::query()->find($this->input('category_id'));
+                if (! $category?->isLocked() || $validator->errors()->has('category_id')) {
+                    return;
+                }
+                $bed = (string) config('hostel.bed_type_name', 'Bed');
+                if ($category->types()->exists()) {
+                    $validator->errors()->add('resource_type', "{$category->name} has one fixed type ({$bed}). No other types can be added.");
+                } elseif (strcasecmp(trim((string) $this->input('resource_type')), $bed) !== 0) {
+                    $validator->errors()->add('resource_type', "{$category->name} can only use the {$bed} type.");
+                }
+            },
         ];
     }
 

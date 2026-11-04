@@ -5,6 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-create.css') }}?v=8">
+<link rel="stylesheet" href="{{ asset('css/special-approval.css') }}?v=1">
 @endpush
 
 @section('content')
@@ -40,7 +41,7 @@
     @endif
     <div id="rv-flash" class="alert rv-auto-alert d-none" role="status"></div>
 
-    <form method="POST" action="{{ isset($reservation) ? route('reservations.update', $reservation) : route('reservations.store') }}" id="reservationForm">
+    <form method="POST" action="{{ isset($reservation) ? route('reservations.update', $reservation) : route('reservations.store') }}" id="reservationForm" enctype="multipart/form-data">
         @csrf
         @if(isset($reservation))
             @method('PUT')
@@ -62,8 +63,8 @@
                     <div class="col-md-4">
                         <label class="form-label" for="category_id">Resource category <span class="text-danger">*</span></label>
                         <x-rm-select id="category_id" name="category_id" class="{{ $errors->has('category_id') ? 'is-invalid' : '' }}"
-                            placeholder="Select a category" :required="true" :value="(string) ($prefillCategoryId ?? '')"
-                            :options="collect([['value' => '', 'label' => 'Select a category']])->concat($lookups['categories']->map(fn ($category) => ['value' => (string) $category->id, 'label' => $category->name]))->all()" />
+                            placeholder="Select a location first" :required="true" :value="(string) ($prefillCategoryId ?? '')"
+                            :options="[['value' => '', 'label' => 'Select a location first']]" />
                         @error('category_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
@@ -74,9 +75,9 @@
                         @error('resource_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12" id="linkedWrap" hidden>
-                        <label class="form-label">Additional resources</label>
+                        <label class="form-label">Linked resources</label>
                         <div id="linkedResources" class="rv-linked"></div>
-                        <p class="rv-hint mb-0 mt-2">Selected extras are booked in the same slot and checked together.</p>
+                        <p class="rv-hint mb-0 mt-2" id="linkedHint">Tick the linked resources you also need. They are booked in the same slot and checked together.</p>
                     </div>
                 </div>
             </div>
@@ -114,6 +115,16 @@
             <div class="rv-block">
                 <h3 class="rv-block-title"><i class="ti ti-notes"></i> Details</h3>
                 <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="title">Reservation name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control @error('title') is-invalid @enderror" id="title" name="title" value="{{ old('title', $reservation->title ?? '') }}" maxlength="180" placeholder="e.g. Networking training" required>
+                        @error('title')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="lecturer_name">Lecturer name <span class="text-muted">(optional)</span></label>
+                        <input type="text" class="form-control @error('lecturer_name') is-invalid @enderror" id="lecturer_name" name="lecturer_name" value="{{ old('lecturer_name', $reservation->lecturer_name ?? '') }}" maxlength="150" placeholder="e.g. Mr. Kasun Perera">
+                        @error('lecturer_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
                     <div class="col-md-8">
                         <label class="form-label" for="purpose">Purpose of Reservation <span class="text-danger">*</span></label>
                         <input type="text" class="form-control @error('purpose') is-invalid @enderror" id="purpose" name="purpose" value="{{ old('purpose', $reservation->purpose ?? '') }}" maxlength="500" placeholder="e.g. CCNA Batch 12 practical lab" required>
@@ -124,6 +135,11 @@
                         <input type="number" min="1" class="form-control" id="attendee_count" name="attendee_count" value="{{ old('attendee_count', $reservation->attendee_count ?? '') }}">
                     </div>
                 </div>
+            </div>
+
+            <div class="rv-block">
+                <h3 class="rv-block-title"><i class="ti ti-shield-lock"></i> Approval</h3>
+                @include('reservations.partials.special-approval', ['reservation' => $reservation ?? null])
             </div>
 
             <div class="rv-actions">
@@ -149,5 +165,6 @@ window.RVCreate = {
     ignoreReservationId: @json(isset($reservation) ? $reservation->id : null),
 };
 </script>
-<script src="{{ asset('js/reservation-create.js') }}?v=4"></script>
+<script src="{{ asset('js/reservation-create.js') }}?v=7"></script>
+<script src="{{ asset('js/special-approval.js') }}?v=1"></script>
 @endpush

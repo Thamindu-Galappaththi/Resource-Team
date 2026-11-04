@@ -20,6 +20,7 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
 class ReservationBookingService
@@ -83,7 +84,11 @@ class ReservationBookingService
                 }
             }
 
-            $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt);
+            // Shared-capacity bookings (hostel beds) arrive with per-room quantities already checked by the caller.
+            $quantities = $payload['quantities'] ?? [];
+            if ($quantities === []) {
+                $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt);
+            }
 
             $primary = $resources[$resourceIds->first()];
             $locationId = $payload['location_id'] ?? $primary->location_id;
@@ -98,6 +103,8 @@ class ReservationBookingService
                 'title' => $title,
                 'description' => $payload['description'] ?? null,
                 'purpose' => $purpose,
+                'lecturer_name' => $payload['lecturer_name'] ?? null,
+                'special_approval' => (bool) ($payload['special_approval'] ?? false),
                 'attendee_count' => $payload['attendee_count'] ?? null,
                 'reservation_date' => $payload['reservation_date'],
                 'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),
@@ -114,7 +121,7 @@ class ReservationBookingService
                     'starts_at' => $startsAt,
                     'ends_at' => $endsAt,
                     'status' => ReservationItemStatus::HELD->value,
-                    'quantity' => 1,
+                    'quantity' => $quantities[$resourceId] ?? 1,
                     'resource_name_snapshot' => $resource->name_model,
                 ]);
             }
@@ -129,15 +136,20 @@ class ReservationBookingService
                 $actor
             );
 
-            $approverPermission = $reservation->type === ReservationType::HOSTEL->value
-                ? 'hostel.manage'
-                : 'approvals.index';
-
-            NotificationRecipients::notify(
-                $approverPermission,
-                new NewReservationPending($reservation),
-                except: [$actor->id, $reservation->requester_id]
-            );
+            $except = [$actor->id, $reservation->requester_id];
+            if ($reservation->special_approval) {
+                $approvers = NotificationRecipients::withPermission('approvals.special', $except)
+                    ->filter(fn (User $user) => $user->canSpecialApprove($reservation));
+                if ($approvers->isNotEmpty()) {
+                    Notification::send($approvers, new NewReservationPending($reservation));
+                }
+            } else {
+                NotificationRecipients::notify(
+                    $reservation->type === ReservationType::HOSTEL->value ? 'hostel.manage' : 'approvals.index',
+                    new NewReservationPending($reservation),
+                    except: $except
+                );
+            }
 
             return $reservation;
         });
@@ -207,7 +219,10 @@ class ReservationBookingService
                 }
             }
 
-            $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt, $reservation->id);
+            $quantities = $payload['quantities'] ?? [];
+            if ($quantities === []) {
+                $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt, $reservation->id);
+            }
 
             $primary = $resources[$resourceIds->first()];
             $locationId = $payload['location_id'] ?? $primary->location_id;
@@ -219,6 +234,8 @@ class ReservationBookingService
                 'title' => $title,
                 'description' => $payload['description'] ?? $reservation->description,
                 'purpose' => $purpose,
+                'lecturer_name' => array_key_exists('lecturer_name', $payload) ? $payload['lecturer_name'] : $reservation->lecturer_name,
+                'special_approval' => array_key_exists('special_approval', $payload) ? (bool) $payload['special_approval'] : $reservation->special_approval,
                 'attendee_count' => $payload['attendee_count'] ?? null,
                 'reservation_date' => $payload['reservation_date'],
                 'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),
@@ -235,7 +252,7 @@ class ReservationBookingService
                     'starts_at' => $startsAt,
                     'ends_at' => $endsAt,
                     'status' => ReservationItemStatus::HELD->value,
-                    'quantity' => 1,
+                    'quantity' => $quantities[$resourceId] ?? 1,
                     'resource_name_snapshot' => $resource->name_model,
                 ]);
             }
