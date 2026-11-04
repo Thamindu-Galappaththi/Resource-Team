@@ -38,7 +38,7 @@ class StoreHostelReservationRequest extends FormRequest
         return [
             'guest_title' => ['required', Rule::in(HostelStayDetail::GUEST_TITLES)],
             'guest_name' => ['required', 'string', 'max:150'],
-            'guest_phone' => ['required', 'string', 'max:40'],
+            'guest_phone' => ['required', 'string', 'max:40', 'not_regex:/[a-zA-Z]/'],
             'check_in_date' => ['required', 'date', 'after_or_equal:today'],
             'check_in_time' => ['required', 'date_format:H:i'],
             'check_out_date' => ['required', 'date', 'after_or_equal:check_in_date'],
@@ -54,7 +54,9 @@ class StoreHostelReservationRequest extends FormRequest
 
     public function messages(): array
     {
-        return $this->specialApprovalMessages();
+        return [
+            'guest_phone.not_regex' => 'The guest phone number cannot contain letters.',
+        ] + $this->specialApprovalMessages();
     }
 
     public function after(): array

@@ -3,6 +3,7 @@
     const checkOut = document.getElementById('check_out_date');
     const guests = document.getElementById('number_of_guests');
     const employeeList = document.querySelector('[data-hc-employee-list]');
+    const guestPhone = document.getElementById('guest_phone');
 
     function dismissAlert(alert, delay = 5000) {
         if (!alert || alert.classList.contains('d-none')) return;
@@ -96,9 +97,45 @@
         note.textContent = message;
     }
 
+    function setFieldClientError(field, message) {
+        if (!field) return;
+        field.classList.toggle('is-invalid', Boolean(message));
+        let note = field.parentElement?.querySelector('.invalid-feedback');
+        if (!message) {
+            if (note && note.dataset.hcClientError !== undefined) {
+                note.remove();
+            }
+            field.setCustomValidity('');
+            return;
+        }
+        field.setCustomValidity(message);
+        if (!note) {
+            note = document.createElement('div');
+            note.className = 'invalid-feedback d-block';
+            note.dataset.hcClientError = '';
+            field.insertAdjacentElement('afterend', note);
+        }
+        note.textContent = message;
+    }
+
+    function validateGuestPhone() {
+        if (!guestPhone) return true;
+        const value = guestPhone.value.trim();
+        if (value && /[a-zA-Z]/.test(value)) {
+            setFieldClientError(guestPhone, 'The phone number cannot contain letters.');
+            return false;
+        }
+        setFieldClientError(guestPhone, '');
+        return true;
+    }
+
     function invalidFields() {
         const invalid = [];
+        if (guestPhone && !validateGuestPhone()) {
+            invalid.push(guestPhone);
+        }
         form.querySelectorAll('[data-cu-select], input:not([type="hidden"]), textarea, select').forEach((field) => {
+            if (field === guestPhone) return;
             if (field.matches('[data-cu-select]')) {
                 const required = field.querySelector('.cu-dropdown-toggle')?.getAttribute('aria-required') === 'true';
                 const empty = !(field.querySelector('input[type="hidden"]')?.value || '').trim();
@@ -153,6 +190,8 @@
     checkIn?.addEventListener('change', syncCheckoutMin);
     guests?.addEventListener('input', syncEmployeeIds);
     guests?.addEventListener('change', syncEmployeeIds);
+    guestPhone?.addEventListener('input', validateGuestPhone);
+    guestPhone?.addEventListener('change', validateGuestPhone);
     syncCheckoutMin();
     syncEmployeeIds();
     document.querySelectorAll('.hc-auto-alert').forEach((alert) => dismissAlert(alert));
