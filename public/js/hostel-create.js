@@ -125,6 +125,10 @@
             setFieldClientError(guestPhone, '');
             return true;
         }
+        if (raw.includes('-')) {
+            setFieldClientError(guestPhone, 'The phone number cannot contain a negative sign.');
+            return false;
+        }
         if (/[a-zA-Z]/.test(raw)) {
             setFieldClientError(guestPhone, 'The phone number cannot contain letters.');
             return false;

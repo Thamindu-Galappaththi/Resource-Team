@@ -61,7 +61,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="guest_phone" class="form-label">Guest phone number <span class="text-danger">*</span></label>
-                        <input type="tel" id="guest_phone" name="guest_phone" pattern="[^a-zA-Z]+" title="The phone number cannot contain letters." class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestPhone ?? '') }}" autocomplete="tel" placeholder="e.g. +94 77 123 4567" required>
+                        <input type="tel" id="guest_phone" name="guest_phone" pattern="[^\-a-zA-Z]+" title="The phone number cannot contain letters or negative signs." class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestPhone ?? '') }}" autocomplete="tel" placeholder="e.g. +94 77 123 4567" required>
                         @error('guest_phone')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12 col-md-6">
@@ -166,6 +166,6 @@
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/hostel-create.js') }}?v=6"></script>
+<script src="{{ asset('js/hostel-create.js') }}?v=7"></script>
 <script src="{{ asset('js/special-approval.js') }}?v=1"></script>
 @endpush

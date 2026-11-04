@@ -649,6 +649,19 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 0);
     }
 
+    public function test_guest_phone_rejects_negative_sign(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '-0771234567']))
+            ->assertSessionHasErrors(['guest_phone' => 'The guest phone number cannot contain a negative sign.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
     public function test_guest_phone_rejects_incomplete_number(): void
     {
         $user = User::factory()->role('coordinator')->create();
