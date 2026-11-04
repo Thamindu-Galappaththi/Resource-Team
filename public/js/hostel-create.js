@@ -168,6 +168,11 @@
             return true;
         }
 
+        if (val.startsWith('-')) {
+            setFieldClientError(input, 'The employee ID cannot be a negative value.');
+            return false;
+        }
+
         if (/[@#$%^&*!~+=<>[\]{}|;:",?]/.test(val) || !/^[a-zA-Z0-9][a-zA-Z0-9\-\/]*$/.test(val)) {
             setFieldClientError(input, 'The employee ID cannot contain special characters.');
             return false;
