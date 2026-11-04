@@ -371,23 +371,30 @@ class ResourcePaymentTest extends TestCase
             ]);
         }
 
+        $total = ResourceRate::query()->count();
+        $perPage = 10;
+        $lastPage = (int) ceil($total / $perPage);
+        $lastFrom = (($lastPage - 1) * $perPage) + 1;
+        $firstLabel = "Showing 1–{$perPage} of {$total}";
+        $lastLabel = "Showing {$lastFrom}–{$total} of {$total}";
+
         $this->actingAs($finance)->get(route('payments.rates.index', ['catalog_status' => 'all']))
             ->assertOk()
             ->assertSee('catalog_page=2', false)
-            ->assertSee('Showing 1–10 of 13')
+            ->assertSee($firstLabel)
             ->assertSee('id="rr-clear-filters"', false)
             ->assertDontSee('>Edit</button>', false)
             ->assertDontSee('>Deactivate</button>', false)
             ->assertSee('title="Edit"', false)
             ->assertSee('title="Activate"', false);
 
-        $this->get(route('payments.rates.index', ['catalog_page' => 2, 'catalog_status' => 'all']))
+        $this->get(route('payments.rates.index', ['catalog_page' => $lastPage, 'catalog_status' => 'all']))
             ->assertOk()
-            ->assertSee('Showing 11–13 of 13');
+            ->assertSee($lastLabel);
 
-        $this->get(route('payments.rates.index', ['section' => 'rate_catalog', 'catalog_page' => 2, 'catalog_status' => 'all']), [
+        $this->get(route('payments.rates.index', ['section' => 'rate_catalog', 'catalog_page' => $lastPage, 'catalog_status' => 'all']), [
             'X-Requested-With' => 'XMLHttpRequest',
-        ])->assertOk()->assertSee('Showing 11–13 of 13')->assertDontSee('Customer category discounts');
+        ])->assertOk()->assertSee($lastLabel)->assertDontSee('Customer category discounts');
 
         $this->get(route('payments.rates.index', ['catalog_status' => 'inactive']))
             ->assertOk()
