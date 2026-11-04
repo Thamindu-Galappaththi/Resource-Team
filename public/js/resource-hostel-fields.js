@@ -8,6 +8,40 @@ window.RMHostelFields = (function () {
         return (wrap?.querySelector('.js-select-label')?.textContent || '').trim().toLowerCase();
     }
 
+    let locations = [];
+    const allLocationsPlaceholder = 'Select a location (Welisara, Moratuwa or Peradeniya)';
+
+    function hostelLocationNames() {
+        return (box()?.dataset.hostelLocations || '').split('|').map((name) => name.trim()).filter(Boolean);
+    }
+
+    function isHostelCategory() {
+        const section = box();
+        if (!section || !window.RMSelect?.getValue('resourceCategorySelect')) return false;
+        return selectedLabel('resourceCategorySelect') === (section.dataset.hostelCategory || '').trim().toLowerCase();
+    }
+
+    /** Only campuses that run a hostel are offered while the Hostel Room category is selected. */
+    function renderLocations() {
+        if (!window.RMSelect || !document.getElementById('resourceLocationSelect')) return;
+        const names = hostelLocationNames();
+        const allowed = names.map((name) => name.toLowerCase());
+        const hostel = isHostelCategory() && allowed.length > 0;
+        const items = locations
+            .filter((location) => !hostel || allowed.includes(String(location.name || '').toLowerCase()))
+            .map((location) => ({ value: String(location.id), label: location.name }));
+        window.RMSelect.setOptions(
+            'resourceLocationSelect',
+            items,
+            hostel ? `Select a hostel location (${names.join(' or ')})` : allLocationsPlaceholder
+        );
+    }
+
+    function setLocations(list) {
+        locations = Array.isArray(list) ? list : [];
+        renderLocations();
+    }
+
     /** Hostel beds apply once the Hostel Room category and its Bed type are both chosen. */
     function isHostel() {
         const section = box();
@@ -91,11 +125,12 @@ window.RMHostelFields = (function () {
     }
 
     document.addEventListener('change', (event) => {
+        if (event.target?.id === 'resourceCategorySelect') renderLocations();
         if (['resourceCategorySelect', 'resourceTypeSelect'].includes(event.target?.id)) sync();
     });
     document.addEventListener('input', (event) => {
         if (event.target?.matches?.('[data-bed-group]')) updateTotal();
     });
 
-    return { isHostel, isHostelRecord, sync, payload, validate, fill, reset, errorFields, fieldIds };
+    return { isHostel, isHostelRecord, sync, payload, validate, fill, reset, errorFields, fieldIds, setLocations, renderLocations };
 })();

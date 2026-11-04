@@ -96,6 +96,13 @@ class StoreResourceRequest extends FormRequest
                 if (! $this->isHostel() || $validator->errors()->has('location_id')) {
                     return;
                 }
+                $hostelCampuses = config('hostel.locations', []);
+                $campus = Location::query()->find($this->input('location_id'))?->name;
+                if (! in_array($campus, $hostelCampuses, true)) {
+                    $validator->errors()->add('location_id', "{$campus} has no hostel. Hostels can only be added at ".implode(' or ', $hostelCampuses).'.');
+
+                    return;
+                }
                 $resource = $this->route('resource');
                 $duplicate = Resource::query()
                     ->hostelBedInventory()
