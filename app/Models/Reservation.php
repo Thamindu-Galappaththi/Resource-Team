@@ -123,6 +123,11 @@ class Reservation extends Model
         return $this->hasMany(ReservationItem::class);
     }
 
+    public function resourcePaymentInvoice(): HasOne
+    {
+        return $this->hasOne(ResourcePaymentInvoice::class);
+    }
+
     public function hostelStay(): HasOne
     {
         return $this->hasOne(HostelStayDetail::class);

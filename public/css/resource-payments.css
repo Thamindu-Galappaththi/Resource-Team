@@ -5,6 +5,13 @@
     color: #132033;
     min-width: 0;
 }
+.rp-dashboard-hero { margin: 0 0 1.25rem; }
+.rp-dashboard-hero .rd-hero__sub { max-width: 46rem; }
+.rp-dashboard-hero .rd-hero__actions { flex-shrink: 0; }
+@media (max-width: 767.98px) {
+    .rp-dashboard-hero .rd-hero__actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+    .rp-dashboard-hero .rd-btn { justify-content: center; }
+}
 .rp-steps {
     display: flex;
     align-items: center;
@@ -27,6 +34,7 @@
 .rp-steps li.is-current { color: #123a7a; }
 .rp-steps li.is-current span, .rp-steps li.is-complete span { background: #1769c2; color: #fff; }
 .rp-steps li.is-complete { color: #087354; }
+.rp-steps.has-skipped-step { gap: .45rem; }
 
 .rp-heading {
     display: flex;
@@ -729,6 +737,30 @@
 .rp-print-button { border: 1px solid #1769c2; background: #fff; color: #1769c2; }
 .rp-invoice-foot { padding: 0 .7rem .75rem; background: #f8faff; color: #8995a3; font-size: .6rem; text-align: center; }
 .rp-invoice-foot i { margin-right: .15rem; }
+.rp-steps li.is-skipped { display: none; }
+.rp-usage-disclosure > summary { cursor: pointer; list-style: none; user-select: none; }
+.rp-usage-disclosure > summary::-webkit-details-marker { display: none; }
+.rp-usage-chevron { margin-left: auto; color: rgba(255,255,255,.85); transition: transform .2s ease; }
+.rp-usage-disclosure[open] .rp-usage-chevron { transform: rotate(180deg); }
+.rp-optional-badge { display: inline-flex; margin-left: .35rem; padding: .13rem .42rem; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; background: rgba(255,255,255,.15); color: #fff; font-size: .57rem; font-weight: 700; vertical-align: .12rem; }
+.rp-usage-content { animation: rp-usage-open .2s ease both; }
+@keyframes rp-usage-open { from { opacity: .3; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.rp-status.is-paid { background: #e4f6ee; color: #087354; }
+.rp-status.is-unpaid { background: #fff3d7; color: #946414; }
+.rp-mark-paid-button { display: flex; height: 41px; align-items: center; justify-content: center; gap: .4rem; border: 1px solid #087354; border-radius: 9px; background: #087354; color: #fff; font-size: .72rem; font-weight: 800; }
+.rp-mark-paid-button:hover:not(:disabled) { background: #066347; }
+.rp-mark-paid-button:disabled { cursor: not-allowed; opacity: .48; }
+.rp-mark-paid-button[hidden], .rp-confirm-usage[hidden] { display: none !important; }
+.swal-field-label { display: block; margin: 0 0 .35rem; color: #34445b; font-size: .82rem; font-weight: 700; text-align: left; }
+.swal2-html-container .form-select, .swal2-html-container .form-control { min-height: 40px; border: 1px solid #cfd8e5; border-radius: 9px; padding: .5rem .7rem; color: #18263a; font-size: .9rem; }
+.rp-payment-placeholder { display: flex; align-items: flex-start; gap: .8rem; padding: 1.2rem; }
+.rp-payment-placeholder .rp-title-icon { border-color: #cfe0f4; background: #eaf2ff; color: #1769c2; }
+.rp-payment-placeholder h2 { margin: 0; color: #17263c; font-size: 1rem; }
+.rp-payment-placeholder p { margin: .3rem 0 0; color: #65738a; font-size: .85rem; }
+
+@media (prefers-reduced-motion: reduce) {
+    .rp-usage-chevron, .rp-usage-content { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
 
 @media (max-width: 991.98px) {
     .rp-page.rsv-page .rsv-header {
@@ -782,6 +814,7 @@
         padding: .7rem .55rem;
         overflow: visible;
     }
+    .rp-steps.has-skipped-step { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .rp-steps li {
         flex-direction: column;
         justify-content: flex-start;

@@ -359,6 +359,12 @@
                         </a>
                     </li>
                 @endif
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ request()->routeIs('payments.history*') ? 'active' : '' }}" href="{{ route('payments.history') }}">
+                        <span><i class="ti ti-table"></i></span>
+                        <span class="hide-menu">View Payments</span>
+                    </a>
+                </li>
             @endif
 
             @if($canReports)

@@ -47,7 +47,10 @@ class ResourceReservationFeeCalculator
             $quantity = max(1, (float) ($item->quantity ?? 1));
             $scheduledHours = $this->itemHours($item->starts_at, $item->ends_at, $reservation);
             $actualHours = round($scheduledHours + $extraHours, 2, PHP_ROUND_HALF_UP);
-            $billableExtraHours = round(max(0, $actualHours - (float) $rate->base_duration_hours), 2, PHP_ROUND_HALF_UP);
+            $unroundedExtraHours = max(0, $actualHours - (float) $rate->base_duration_hours);
+            $billableExtraHours = $unroundedExtraHours > 0
+                ? ceil(round($unroundedExtraHours * 2, 8)) / 2
+                : 0.0;
             $lineBaseMinor = $this->toMinor($rate->base_fee * $quantity);
             $lineRateMinor = $this->toMinor($rate->extra_hour_rate * $quantity);
             $lineExtraMinor = (int) round($lineRateMinor * $billableExtraHours, 0, PHP_ROUND_HALF_UP);
@@ -58,10 +61,13 @@ class ResourceReservationFeeCalculator
             $baseDuration = max($baseDuration, (float) $rate->base_duration_hours);
             $lines[] = [
                 'resource' => $item->resource_name_snapshot ?: $resource->name_model,
+                'quantity' => $quantity,
                 'base_fee' => $this->toMajor($lineBaseMinor),
+                'base_unit_fee' => $this->toMajor($this->toMinor($rate->base_fee)),
                 'base_duration_hours' => (float) $rate->base_duration_hours,
                 'extra_hours' => $billableExtraHours,
                 'extra_hourly_rate' => $this->toMajor($lineRateMinor),
+                'extra_hourly_unit_rate' => $this->toMajor($this->toMinor($rate->extra_hour_rate)),
                 'extra_hour_fee' => $this->toMajor($lineExtraMinor),
                 'subtotal_minor' => $lineBaseMinor + $lineExtraMinor,
                 'tax_percent' => (float) $rate->tax_percent,
