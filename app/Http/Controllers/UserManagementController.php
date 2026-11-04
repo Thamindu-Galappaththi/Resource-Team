@@ -42,7 +42,8 @@ class UserManagementController extends Controller
             ->with($with)
             ->when($filters['search'] ?? null, function ($query, string $search) {
                 $query->where(function ($userQuery) use ($search) {
-                    $userQuery->where('name', 'like', "%{$search}%")
+                    $userQuery->where('id', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%")
                         ->orWhere('nic', 'like', "%{$search}%")
                         ->orWhere('service_id', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%");

@@ -38,7 +38,7 @@ class StoreHostelReservationRequest extends FormRequest
         return [
             'guest_title' => ['required', Rule::in(HostelStayDetail::GUEST_TITLES)],
             'guest_name' => ['required', 'string', 'max:150'],
-            'guest_phone' => ['required', 'string', 'max:40'],
+            'guest_phone' => ['required', 'string', 'max:40', 'not_regex:/[a-zA-Z]/'],
             'check_in_date' => ['required', 'date', 'after_or_equal:today'],
             'check_in_time' => ['required', 'date_format:H:i'],
             'check_out_date' => ['required', 'date', 'after_or_equal:check_in_date'],
@@ -47,14 +47,32 @@ class StoreHostelReservationRequest extends FormRequest
             'number_of_guests' => ['required', 'integer', 'min:1', 'max:'.self::MAX_GUESTS],
             'bed_group' => ['required', 'string', Rule::in(array_keys(config('hostel.bed_groups', [])))],
             'employee_ids' => ['required', 'array'],
-            'employee_ids.*' => ['required', 'string', 'max:50', 'distinct:ignore_case'],
+            'employee_ids.*' => [
+                'required',
+                'string',
+                'max:50',
+                'distinct:ignore_case',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $val = trim((string) $value);
+                    if (str_starts_with($val, '-')) {
+                        $fail('The employee ID cannot be a negative value.');
+
+                        return;
+                    }
+                    if (! preg_match('/^[a-zA-Z0-9][a-zA-Z0-9\-\/]*$/', $val)) {
+                        $fail('The employee ID cannot contain special characters.');
+                    }
+                },
+            ],
             'special_requirements' => ['nullable', 'string', 'max:1000'],
         ] + $this->specialApprovalRules();
     }
 
     public function messages(): array
     {
-        return $this->specialApprovalMessages();
+        return [
+            'guest_phone.not_regex' => 'The guest phone number cannot contain letters.',
+        ] + $this->specialApprovalMessages();
     }
 
     public function after(): array
@@ -70,6 +88,37 @@ class StoreHostelReservationRequest extends FormRequest
                             ? 'Enter the employee ID for the guest.'
                             : "Enter {$guests} employee IDs, one for each guest."
                     );
+                }
+
+                $locationId = (int) $this->input('location_id');
+                $group = (string) $this->input('bed_group');
+                if ($locationId > 0 && $group !== '' && $guests > 0) {
+                    $hostel = app(\App\Services\HostelBedCapacity::class)->hostelAt($locationId);
+                    $capacity = $hostel?->bedsFor($group) ?? 0;
+                    if ($capacity > 0 && $guests > $capacity) {
+                        $validator->errors()->add(
+                            'number_of_guests',
+                            "The number of guests exceeds the room capacity of {$capacity}."
+                        );
+                    }
+                }
+
+                $phone = (string) $this->input('guest_phone');
+                if ($phone !== '') {
+                    if (str_contains($phone, '-')) {
+                        $validator->errors()->add('guest_phone', 'The guest phone number cannot contain a negative sign.');
+                    } elseif (!preg_match('/[a-zA-Z]/', $phone)) {
+                        $trimmed = trim($phone);
+                        $digits = preg_replace('/\D/', '', $trimmed);
+                        $isPlus94 = str_starts_with($trimmed, '+94') || (str_starts_with($digits, '94') && strlen($digits) > 10);
+                        $effectiveDigits = $isPlus94 ? (string) preg_replace('/^94/', '', $digits) : $digits;
+
+                        if (strlen($effectiveDigits) < ($isPlus94 ? 9 : 10)) {
+                            $validator->errors()->add('guest_phone', 'The guest phone number is incomplete.');
+                        } elseif (strlen($effectiveDigits) > ($isPlus94 ? 9 : 10)) {
+                            $validator->errors()->add('guest_phone', 'The guest phone number cannot be more than 10 digits.');
+                        }
+                    }
                 }
             },
         ];

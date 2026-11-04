@@ -152,6 +152,38 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 0);
     }
 
+    public function test_employee_id_rejects_special_characters(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'number_of_guests' => 1,
+                'employee_ids' => ['@#'],
+            ]))
+            ->assertSessionHasErrors(['employee_ids.0' => 'The employee ID cannot contain special characters.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_employee_id_rejects_negative_value(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'number_of_guests' => 1,
+                'employee_ids' => ['-12345'],
+            ]))
+            ->assertSessionHasErrors(['employee_ids.0' => 'The employee ID cannot be a negative value.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
     public function test_create_page_has_title_employee_ids_and_times_without_room_category(): void
     {
         $user = User::factory()->role('coordinator')->create();
@@ -245,6 +277,57 @@ class HostelReservationTest extends TestCase
         ])))->assertSessionHasErrors(['bed_group' => 'No Permanent resident (4 years) beds are set up at this location.']);
 
         $this->assertDatabaseCount('reservations', 3);
+    }
+
+    public function test_guest_count_exceeding_room_capacity_is_rejected(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+        $setup['room']->update([
+            'bed_counts' => ['female' => 5, 'male' => 5, 'permanent' => 0],
+            'bed_count' => 10,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'bed_group' => 'female',
+                'number_of_guests' => 8,
+                'employee_ids' => ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8'],
+            ]))
+            ->assertSessionHasErrors([
+                'number_of_guests' => 'The number of guests exceeds the room capacity of 5.',
+            ]);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_repeated_submission_does_not_create_duplicate_reservations(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+        $payload = $this->payload($setup, [
+            'guest_name' => 'Duplicate Test Guest',
+            'number_of_guests' => 1,
+            'employee_ids' => ['DUP-001'],
+        ]);
+
+        // First submit creates the reservation
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $payload)
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('reservations', 1);
+        $firstReservation = Reservation::query()->firstOrFail();
+
+        // Repeated submit immediately after does not create a duplicate
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $payload)
+            ->assertRedirect(route('hostel.show', $firstReservation));
+
+        $this->assertDatabaseCount('reservations', 1);
     }
 
     public function test_special_hostel_request_skips_the_hostel_manager_and_is_decided_in_special_approvals(): void
@@ -634,6 +717,72 @@ class HostelReservationTest extends TestCase
             ->assertSessionHasErrors('guest_phone');
 
         $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_guest_phone_rejects_alphabetic_characters(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => 'abcdef']))
+            ->assertSessionHasErrors(['guest_phone' => 'The guest phone number cannot contain letters.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_guest_phone_rejects_negative_sign(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '-0771234567']))
+            ->assertSessionHasErrors(['guest_phone' => 'The guest phone number cannot contain a negative sign.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_guest_phone_rejects_incomplete_number(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '07712']))
+            ->assertSessionHasErrors(['guest_phone' => 'The guest phone number is incomplete.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_guest_phone_rejects_more_than_ten_digits(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '07712345678']))
+            ->assertSessionHasErrors(['guest_phone' => 'The guest phone number cannot be more than 10 digits.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_guest_phone_accepts_ten_digit_local_number(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '0771234567']))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('reservations', 1);
     }
 
     public function test_approved_stays_complete_at_checkout_through_pages_and_command(): void

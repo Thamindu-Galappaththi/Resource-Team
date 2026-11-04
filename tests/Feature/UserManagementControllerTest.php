@@ -369,6 +369,21 @@ class UserManagementControllerTest extends TestCase
             ->assertDontSee('Control access, roles, and profiles');
     }
 
+    public function test_user_list_can_be_filtered_by_user_id(): void
+    {
+        $administrator = User::factory()->role('admin')->create(['name' => 'Access Admin', 'nic' => '999999999999']);
+        $targetUser = User::factory()->create(['name' => 'Specific Target User', 'nic' => '111111111111', 'email' => 'target@example.com']);
+        $otherUser = User::factory()->create(['name' => 'Completely Different Person', 'nic' => '888888888888', 'email' => 'other@example.com']);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management', ['search' => (string) $targetUser->id, 'partial' => 1]), [
+                'X-Requested-With' => 'XMLHttpRequest',
+            ])
+            ->assertOk()
+            ->assertSee('Specific Target User')
+            ->assertDontSee('Completely Different Person');
+    }
+
     public function test_user_list_keeps_long_names_inside_the_table_cell(): void
     {
         $administrator = User::factory()->role('admin')->create();

@@ -3,6 +3,7 @@
     const checkOut = document.getElementById('check_out_date');
     const guests = document.getElementById('number_of_guests');
     const employeeList = document.querySelector('[data-hc-employee-list]');
+    const guestPhone = document.getElementById('guest_phone');
 
     function dismissAlert(alert, delay = 5000) {
         if (!alert || alert.classList.contains('d-none')) return;
@@ -48,6 +49,8 @@
         input.maxLength = 50;
         input.autocomplete = 'off';
         input.placeholder = '010456';
+        input.pattern = '[a-zA-Z0-9][a-zA-Z0-9\\-\\/]*';
+        input.title = 'The employee ID cannot contain special characters.';
         input.required = true;
         input.value = value || '';
 
@@ -96,9 +99,131 @@
         note.textContent = message;
     }
 
+    function setFieldClientError(field, message) {
+        if (!field) return;
+        field.classList.toggle('is-invalid', Boolean(message));
+        let note = field.parentElement?.querySelector('.invalid-feedback');
+        if (!message) {
+            if (note && note.dataset.hcClientError !== undefined) {
+                note.remove();
+            }
+            field.setCustomValidity('');
+            return;
+        }
+        field.setCustomValidity(message);
+        if (!note) {
+            note = document.createElement('div');
+            note.className = 'invalid-feedback d-block';
+            note.dataset.hcClientError = '';
+            field.insertAdjacentElement('afterend', note);
+        }
+        note.textContent = message;
+    }
+
+    function validateGuestPhone(isSubmitting = false) {
+        if (!guestPhone) return true;
+        const raw = guestPhone.value.trim();
+        if (!raw) {
+            setFieldClientError(guestPhone, '');
+            return true;
+        }
+        if (raw.includes('-')) {
+            setFieldClientError(guestPhone, 'The phone number cannot contain a negative sign.');
+            return false;
+        }
+        if (/[a-zA-Z]/.test(raw)) {
+            setFieldClientError(guestPhone, 'The phone number cannot contain letters.');
+            return false;
+        }
+
+        const digits = raw.replace(/\D/g, '');
+        const isPlus94 = raw.startsWith('+94') || (digits.startsWith('94') && digits.length > 10);
+        const effectiveDigits = isPlus94 ? digits.replace(/^94/, '') : digits;
+        const requiredDigits = isPlus94 ? 9 : 10;
+
+        if (effectiveDigits.length < requiredDigits) {
+            const hasError = guestPhone.parentElement?.querySelector('.invalid-feedback[data-hc-client-error]');
+            if (isSubmitting || hasError) {
+                setFieldClientError(guestPhone, 'The phone number is incomplete.');
+                return false;
+            }
+            setFieldClientError(guestPhone, '');
+            return true;
+        }
+
+        if (effectiveDigits.length > requiredDigits) {
+            setFieldClientError(guestPhone, 'The phone number cannot be more than 10 digits.');
+            return false;
+        }
+
+        setFieldClientError(guestPhone, '');
+        return true;
+    }
+
+    function validateEmployeeIdInput(input) {
+        if (!input) return true;
+        const val = input.value.trim();
+        if (!val) {
+            setFieldClientError(input, '');
+            return true;
+        }
+
+        if (val.startsWith('-')) {
+            setFieldClientError(input, 'The employee ID cannot be a negative value.');
+            return false;
+        }
+
+        if (/[@#$%^&*!~+=<>[\]{}|;:",?]/.test(val) || !/^[a-zA-Z0-9][a-zA-Z0-9\-\/]*$/.test(val)) {
+            setFieldClientError(input, 'The employee ID cannot contain special characters.');
+            return false;
+        }
+
+        setFieldClientError(input, '');
+        return true;
+    }
+
+    function getSelectedCapacity() {
+        const locationInput = document.getElementById('location_id') || form?.querySelector('input[name="location_id"]');
+        const bedGroupInput = document.getElementById('bed_group') || form?.querySelector('input[name="bed_group"]');
+        const locationId = locationInput?.value;
+        const bedGroup = bedGroupInput?.value;
+        if (!locationId || !bedGroup || !window.hostelCapacities) return null;
+        const locationCounts = window.hostelCapacities[String(locationId)];
+        if (!locationCounts || locationCounts[bedGroup] === undefined) return null;
+        return Number(locationCounts[bedGroup]);
+    }
+
+    function validateGuestCount() {
+        if (!guests) return true;
+        const count = Number.parseInt(guests.value, 10);
+        if (Number.isNaN(count) || count < 1) {
+            setFieldClientError(guests, 'Please enter a valid number of guests.');
+            return false;
+        }
+        const capacity = getSelectedCapacity();
+        if (capacity !== null && count > capacity) {
+            setFieldClientError(guests, `The number of guests exceeds the room capacity of ${capacity}.`);
+            return false;
+        }
+        setFieldClientError(guests, '');
+        return true;
+    }
+
     function invalidFields() {
         const invalid = [];
+        if (guestPhone && !validateGuestPhone(true)) {
+            invalid.push(guestPhone);
+        }
+        if (guests && !validateGuestCount()) {
+            invalid.push(guests);
+        }
+        form.querySelectorAll('input[name="employee_ids[]"]').forEach((input) => {
+            if (!validateEmployeeIdInput(input)) {
+                invalid.push(input);
+            }
+        });
         form.querySelectorAll('[data-cu-select], input:not([type="hidden"]), textarea, select').forEach((field) => {
+            if (field === guestPhone || field.name === 'employee_ids[]' || field === guests) return;
             if (field.matches('[data-cu-select]')) {
                 const required = field.querySelector('.cu-dropdown-toggle')?.getAttribute('aria-required') === 'true';
                 const empty = !(field.querySelector('input[type="hidden"]')?.value || '').trim();
@@ -124,12 +249,30 @@
     }
 
     if (form) {
+        let isSubmitting = false;
         form.noValidate = true;
         form.addEventListener('submit', (event) => {
+            if (isSubmitting) {
+                event.preventDefault();
+                return false;
+            }
             const invalid = invalidFields();
-            if (invalid.length === 0) return;
-            event.preventDefault();
-            revealField(invalid[0]);
+            if (invalid.length > 0) {
+                event.preventDefault();
+                revealField(invalid[0]);
+                return;
+            }
+            isSubmitting = true;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.style.pointerEvents = 'none';
+                submitBtn.classList.add('disabled');
+                const isEditing = submitBtn.textContent.includes('Update');
+                submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${isEditing ? 'Updating reservation...' : 'Creating reservation...'}`;
+                setTimeout(() => {
+                    submitBtn.disabled = true;
+                }, 0);
+            }
         });
         form.addEventListener('input', (event) => {
             if (event.target.classList?.contains('is-invalid') && event.target.checkValidity()) {
@@ -139,6 +282,9 @@
         form.addEventListener('change', (event) => {
             const select = event.target.closest?.('[data-cu-select]');
             if (select && event.target.value) setSelectError(select, '');
+            if (['location_id', 'bed_group'].includes(event.target.id) || event.target.name === 'location_id' || event.target.name === 'bed_group') {
+                validateGuestCount();
+            }
         });
 
         const serverError = form.querySelector('.is-invalid, .invalid-feedback.d-block');
@@ -150,9 +296,27 @@
         }
     }
 
+    employeeList?.addEventListener('input', (event) => {
+        if (event.target?.name === 'employee_ids[]') validateEmployeeIdInput(event.target);
+    });
+    employeeList?.addEventListener('change', (event) => {
+        if (event.target?.name === 'employee_ids[]') validateEmployeeIdInput(event.target);
+    });
+    employeeList?.addEventListener('blur', (event) => {
+        if (event.target?.name === 'employee_ids[]') validateEmployeeIdInput(event.target);
+    }, true);
     checkIn?.addEventListener('change', syncCheckoutMin);
-    guests?.addEventListener('input', syncEmployeeIds);
-    guests?.addEventListener('change', syncEmployeeIds);
+    guests?.addEventListener('input', () => {
+        syncEmployeeIds();
+        validateGuestCount();
+    });
+    guests?.addEventListener('change', () => {
+        syncEmployeeIds();
+        validateGuestCount();
+    });
+    guestPhone?.addEventListener('input', () => validateGuestPhone(false));
+    guestPhone?.addEventListener('change', () => validateGuestPhone(true));
+    guestPhone?.addEventListener('blur', () => validateGuestPhone(true));
     syncCheckoutMin();
     syncEmployeeIds();
     document.querySelectorAll('.hc-auto-alert').forEach((alert) => dismissAlert(alert));

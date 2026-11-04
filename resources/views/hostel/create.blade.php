@@ -61,7 +61,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="guest_phone" class="form-label">Guest phone number <span class="text-danger">*</span></label>
-                        <input type="tel" id="guest_phone" name="guest_phone" class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestPhone ?? '') }}" autocomplete="tel" placeholder="e.g. +94 77 123 4567" required>
+                        <input type="tel" id="guest_phone" name="guest_phone" pattern="[^\-a-zA-Z]+" title="The phone number cannot contain letters or negative signs." class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestPhone ?? '') }}" autocomplete="tel" placeholder="e.g. +94 77 123 4567" required>
                         @error('guest_phone')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12 col-md-6">
@@ -77,7 +77,7 @@
                                 @for($i = 0; $i < $guestCount; $i++)
                                     <div class="col-12 col-sm-6" data-hc-employee-row>
                                         <label for="employee_id_{{ $i }}" class="form-label">Employee ID {{ $guestCount > 1 ? '(guest '.($i + 1).')' : '' }}</label>
-                                        <input type="text" id="employee_id_{{ $i }}" name="employee_ids[]" class="form-control @error('employee_ids.'.$i) is-invalid @enderror" value="{{ $employeeIds[$i] ?? '' }}" maxlength="50" autocomplete="off" placeholder="010456" required>
+                                        <input type="text" id="employee_id_{{ $i }}" name="employee_ids[]" pattern="[a-zA-Z0-9][a-zA-Z0-9\-\/]*" title="The employee ID cannot contain special characters." class="form-control @error('employee_ids.'.$i) is-invalid @enderror" value="{{ $employeeIds[$i] ?? '' }}" maxlength="50" autocomplete="off" placeholder="010456" required>
                                         @error('employee_ids.'.$i)<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                                     </div>
                                 @endfor
@@ -164,8 +164,11 @@
 @endsection
 
 @push('scripts')
+<script>
+    window.hostelCapacities = @json($hostelCapacities ?? []);
+</script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/hostel-create.js') }}?v=4"></script>
+<script src="{{ asset('js/hostel-create.js') }}?v=11"></script>
 <script src="{{ asset('js/special-approval.js') }}?v=1"></script>
 @endpush

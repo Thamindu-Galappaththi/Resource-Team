@@ -193,6 +193,7 @@ class HostelReservationController extends Controller
             'maxGuests' => StoreHostelReservationRequest::MAX_GUESTS,
             'minCheckIn' => $minCheckIn,
             'prefillCheckIn' => old('check_in_date', $prefill),
+            'hostelCapacities' => $this->hostelCapacities(),
         ]);
     }
 
@@ -200,10 +201,39 @@ class HostelReservationController extends Controller
     {
         $this->authorize('createHostel', Reservation::class);
 
+        $user = $request->user();
+        $payload = $request->validated();
+
+        $recentDuplicate = Reservation::query()
+            ->where('type', ReservationType::HOSTEL->value)
+            ->where(function ($q) use ($user) {
+                $q->where('created_by_user_id', $user->id)
+                    ->orWhere('requester_id', $user->id);
+            })
+            ->where('status', '!=', ReservationStatus::CANCELLED->value)
+            ->whereDoesntHave('items', function ($items) {
+                $items->where('status', 'cancelled');
+            })
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->where('location_id', $payload['location_id'])
+            ->whereHas('hostelStay', function ($stay) use ($payload) {
+                $stay->where('guest_name', $payload['guest_name'])
+                    ->where('bed_group', $payload['bed_group'])
+                    ->where('number_of_guests', (int) $payload['number_of_guests']);
+            })
+            ->first();
+
+        if ($recentDuplicate) {
+            return redirect()
+                ->route('hostel.show', $recentDuplicate)
+                ->with('info', 'Your reservation was already created.');
+        }
+
         try {
-            $reservation = $this->hostel->create($request->validated(), $request->user());
+            $reservation = $this->hostel->create($payload, $user);
         } catch (ReservationConflictException $exception) {
             return back()->withInput()->withErrors([
+                'number_of_guests' => $exception->getMessage(),
                 'bed_group' => $exception->getMessage(),
             ]);
         } catch (ValidationException $exception) {
@@ -270,6 +300,7 @@ class HostelReservationController extends Controller
             'prefillCheckInTime' => old('check_in_time', $checkIn?->format('H:i')),
             'prefillCheckOut' => old('check_out_date', $checkOut?->toDateString()),
             'prefillCheckOutTime' => old('check_out_time', $checkOut?->format('H:i')),
+            'hostelCapacities' => $this->hostelCapacities(),
         ]);
     }
 
@@ -283,6 +314,7 @@ class HostelReservationController extends Controller
             $reservation = $this->hostel->updatePending($reservation, $request->validated(), $request->user());
         } catch (ReservationConflictException $exception) {
             return back()->withInput()->withErrors([
+                'number_of_guests' => $exception->getMessage(),
                 'bed_group' => $exception->getMessage(),
             ]);
         } catch (ValidationException $exception) {
@@ -349,6 +381,15 @@ class HostelReservationController extends Controller
             ->whereIn('id', Resource::query()->hostelRooms()->where('bed_count', '>', 0)->select('location_id'))
             ->ordered()
             ->get();
+    }
+
+    private function hostelCapacities(): array
+    {
+        return Resource::query()
+            ->hostelRooms()
+            ->get(['id', 'location_id', 'bed_counts'])
+            ->mapWithKeys(fn (Resource $h) => [(string) $h->location_id => $h->bed_counts ?? []])
+            ->all();
     }
 
     private function restrictToOwnUnlessStaff($query): void
