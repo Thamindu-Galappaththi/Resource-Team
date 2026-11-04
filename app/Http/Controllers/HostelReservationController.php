@@ -210,6 +210,10 @@ class HostelReservationController extends Controller
                 $q->where('created_by_user_id', $user->id)
                     ->orWhere('requester_id', $user->id);
             })
+            ->where('status', '!=', ReservationStatus::CANCELLED->value)
+            ->whereDoesntHave('items', function ($items) {
+                $items->where('status', 'cancelled');
+            })
             ->where('created_at', '>=', now()->subSeconds(10))
             ->where('location_id', $payload['location_id'])
             ->whereHas('hostelStay', function ($stay) use ($payload) {
