@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\CanteenReservationController;
+use App\Http\Controllers\MealMenuController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HostelReservationController;
 use App\Http\Controllers\HostelStudentRequestController;
@@ -121,6 +122,14 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/reservations/my-requests', [SltEmployeeRequestController::class, 'canteen'])->middleware('permission:canteen.index')->name('mine');
         Route::get('/reservations/{reservation}', 'show')->middleware('permission:canteen.index')->name('show');
         Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
+    });
+
+    Route::prefix('canteen/menus')->name('canteen.menus.')->controller(MealMenuController::class)->group(function () {
+        Route::get('/', 'index')->middleware('permission:canteen.create')->name('index');
+        Route::post('/', 'store')->middleware('permission:canteen.create')->name('store');
+        Route::get('/{menu}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
+        Route::put('/{menu}', 'update')->middleware('permission:canteen.create')->name('update');
+        Route::delete('/{menu}', 'destroy')->middleware('permission:canteen.create')->name('destroy');
     });
 
     Route::prefix('payments')->name('payments.')->group(function () {
