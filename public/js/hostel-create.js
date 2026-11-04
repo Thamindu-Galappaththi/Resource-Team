@@ -49,6 +49,8 @@
         input.maxLength = 50;
         input.autocomplete = 'off';
         input.placeholder = '010456';
+        input.pattern = '[a-zA-Z0-9][a-zA-Z0-9\\-\\/]*';
+        input.title = 'The employee ID cannot contain special characters.';
         input.required = true;
         input.value = value || '';
 
@@ -158,13 +160,35 @@
         return true;
     }
 
+    function validateEmployeeIdInput(input) {
+        if (!input) return true;
+        const val = input.value.trim();
+        if (!val) {
+            setFieldClientError(input, '');
+            return true;
+        }
+
+        if (/[@#$%^&*!~+=<>[\]{}|;:",?]/.test(val) || !/^[a-zA-Z0-9][a-zA-Z0-9\-\/]*$/.test(val)) {
+            setFieldClientError(input, 'The employee ID cannot contain special characters.');
+            return false;
+        }
+
+        setFieldClientError(input, '');
+        return true;
+    }
+
     function invalidFields() {
         const invalid = [];
         if (guestPhone && !validateGuestPhone(true)) {
             invalid.push(guestPhone);
         }
+        form.querySelectorAll('input[name="employee_ids[]"]').forEach((input) => {
+            if (!validateEmployeeIdInput(input)) {
+                invalid.push(input);
+            }
+        });
         form.querySelectorAll('[data-cu-select], input:not([type="hidden"]), textarea, select').forEach((field) => {
-            if (field === guestPhone) return;
+            if (field === guestPhone || field.name === 'employee_ids[]') return;
             if (field.matches('[data-cu-select]')) {
                 const required = field.querySelector('.cu-dropdown-toggle')?.getAttribute('aria-required') === 'true';
                 const empty = !(field.querySelector('input[type="hidden"]')?.value || '').trim();
@@ -216,6 +240,15 @@
         }
     }
 
+    employeeList?.addEventListener('input', (event) => {
+        if (event.target?.name === 'employee_ids[]') validateEmployeeIdInput(event.target);
+    });
+    employeeList?.addEventListener('change', (event) => {
+        if (event.target?.name === 'employee_ids[]') validateEmployeeIdInput(event.target);
+    });
+    employeeList?.addEventListener('blur', (event) => {
+        if (event.target?.name === 'employee_ids[]') validateEmployeeIdInput(event.target);
+    }, true);
     checkIn?.addEventListener('change', syncCheckoutMin);
     guests?.addEventListener('input', syncEmployeeIds);
     guests?.addEventListener('change', syncEmployeeIds);

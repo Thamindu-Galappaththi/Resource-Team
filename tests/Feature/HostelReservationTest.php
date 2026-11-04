@@ -152,6 +152,22 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 0);
     }
 
+    public function test_employee_id_rejects_special_characters(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'number_of_guests' => 1,
+                'employee_ids' => ['@#'],
+            ]))
+            ->assertSessionHasErrors(['employee_ids.0' => 'The employee ID cannot contain special characters.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
     public function test_create_page_has_title_employee_ids_and_times_without_room_category(): void
     {
         $user = User::factory()->role('coordinator')->create();
