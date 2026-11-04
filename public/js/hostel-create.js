@@ -118,20 +118,45 @@
         note.textContent = message;
     }
 
-    function validateGuestPhone() {
+    function validateGuestPhone(isSubmitting = false) {
         if (!guestPhone) return true;
-        const value = guestPhone.value.trim();
-        if (value && /[a-zA-Z]/.test(value)) {
+        const raw = guestPhone.value.trim();
+        if (!raw) {
+            setFieldClientError(guestPhone, '');
+            return true;
+        }
+        if (/[a-zA-Z]/.test(raw)) {
             setFieldClientError(guestPhone, 'The phone number cannot contain letters.');
             return false;
         }
+
+        const digits = raw.replace(/\D/g, '');
+        const isPlus94 = raw.startsWith('+94') || (digits.startsWith('94') && digits.length > 10);
+        const effectiveDigits = isPlus94 ? digits.replace(/^94/, '') : digits;
+        const requiredDigits = isPlus94 ? 9 : 10;
+
+        if (effectiveDigits.length < requiredDigits) {
+            const hasError = guestPhone.parentElement?.querySelector('.invalid-feedback[data-hc-client-error]');
+            if (isSubmitting || hasError) {
+                setFieldClientError(guestPhone, 'The phone number is incomplete.');
+                return false;
+            }
+            setFieldClientError(guestPhone, '');
+            return true;
+        }
+
+        if (effectiveDigits.length > requiredDigits) {
+            setFieldClientError(guestPhone, 'The phone number cannot be more than 10 digits.');
+            return false;
+        }
+
         setFieldClientError(guestPhone, '');
         return true;
     }
 
     function invalidFields() {
         const invalid = [];
-        if (guestPhone && !validateGuestPhone()) {
+        if (guestPhone && !validateGuestPhone(true)) {
             invalid.push(guestPhone);
         }
         form.querySelectorAll('[data-cu-select], input:not([type="hidden"]), textarea, select').forEach((field) => {
@@ -190,8 +215,9 @@
     checkIn?.addEventListener('change', syncCheckoutMin);
     guests?.addEventListener('input', syncEmployeeIds);
     guests?.addEventListener('change', syncEmployeeIds);
-    guestPhone?.addEventListener('input', validateGuestPhone);
-    guestPhone?.addEventListener('change', validateGuestPhone);
+    guestPhone?.addEventListener('input', () => validateGuestPhone(false));
+    guestPhone?.addEventListener('change', () => validateGuestPhone(true));
+    guestPhone?.addEventListener('blur', () => validateGuestPhone(true));
     syncCheckoutMin();
     syncEmployeeIds();
     document.querySelectorAll('.hc-auto-alert').forEach((alert) => dismissAlert(alert));

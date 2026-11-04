@@ -73,6 +73,20 @@ class StoreHostelReservationRequest extends FormRequest
                             : "Enter {$guests} employee IDs, one for each guest."
                     );
                 }
+
+                $phone = (string) $this->input('guest_phone');
+                if ($phone !== '' && !preg_match('/[a-zA-Z]/', $phone)) {
+                    $trimmed = trim($phone);
+                    $digits = preg_replace('/\D/', '', $trimmed);
+                    $isPlus94 = str_starts_with($trimmed, '+94') || (str_starts_with($digits, '94') && strlen($digits) > 10);
+                    $effectiveDigits = $isPlus94 ? (string) preg_replace('/^94/', '', $digits) : $digits;
+
+                    if (strlen($effectiveDigits) < ($isPlus94 ? 9 : 10)) {
+                        $validator->errors()->add('guest_phone', 'The guest phone number is incomplete.');
+                    } elseif (strlen($effectiveDigits) > ($isPlus94 ? 9 : 10)) {
+                        $validator->errors()->add('guest_phone', 'The guest phone number cannot be more than 10 digits.');
+                    }
+                }
             },
         ];
     }

@@ -649,6 +649,46 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 0);
     }
 
+    public function test_guest_phone_rejects_incomplete_number(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '07712']))
+            ->assertSessionHasErrors(['guest_phone' => 'The guest phone number is incomplete.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_guest_phone_rejects_more_than_ten_digits(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '07712345678']))
+            ->assertSessionHasErrors(['guest_phone' => 'The guest phone number cannot be more than 10 digits.']);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
+    public function test_guest_phone_accepts_ten_digit_local_number(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '0771234567']))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('reservations', 1);
+    }
+
     public function test_approved_stays_complete_at_checkout_through_pages_and_command(): void
     {
         $actor = User::factory()->role('coordinator')->create();
