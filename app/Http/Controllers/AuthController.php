@@ -143,7 +143,7 @@ class AuthController extends Controller
 
         if (! $user) {
             $role = Role::query()
-                ->where('slug', 'nebula_sms_user')
+                ->where('slug', 'slt_employee')
                 ->where('is_active', true)
                 ->first();
 
@@ -158,9 +158,20 @@ class AuthController extends Controller
                 'role_id' => $role->id,
                 'user_role' => $role->slug,
                 'is_active' => true,
-                'slt_employee' => false,
+                'slt_employee' => true,
             ]);
             $user->forceFill(['email_verified_at' => now()])->save();
+            $user->roles()->syncWithoutDetaching([$role->id]);
+        } elseif ($user->user_role === 'nebula_sms_user') {
+            $role = Role::query()->where('slug', 'slt_employee')->first();
+            if ($role) {
+                $user->forceFill([
+                    'role_id' => $role->id,
+                    'user_role' => $role->slug,
+                    'slt_employee' => true,
+                ])->save();
+                $user->roles()->syncWithoutDetaching([$role->id]);
+            }
         }
 
         if ($user->trashed() || ! $user->is_active) {
@@ -222,7 +233,7 @@ class AuthController extends Controller
 
         if (! $user) {
             $role = Role::query()
-                ->where('slug', 'nebula_sms_user')
+                ->where('slug', 'slt_employee')
                 ->where('is_active', true)
                 ->first();
 
@@ -237,9 +248,20 @@ class AuthController extends Controller
                 'role_id' => $role->id,
                 'user_role' => $role->slug,
                 'is_active' => true,
-                'slt_employee' => false,
+                'slt_employee' => true,
             ]);
             $user->forceFill(['email_verified_at' => now()])->save();
+            $user->roles()->syncWithoutDetaching([$role->id]);
+        } elseif ($user->user_role === 'nebula_sms_user') {
+            $role = Role::query()->where('slug', 'slt_employee')->first();
+            if ($role) {
+                $user->forceFill([
+                    'role_id' => $role->id,
+                    'user_role' => $role->slug,
+                    'slt_employee' => true,
+                ])->save();
+                $user->roles()->syncWithoutDetaching([$role->id]);
+            }
         }
 
         if ($user->trashed() || ! $user->is_active) {

@@ -338,7 +338,7 @@ class LoginTest extends TestCase
         $this->assertNotNull(session('facebook_oauth_state'));
     }
 
-    public function test_facebook_login_creates_sms_user_when_unknown(): void
+    public function test_facebook_login_creates_slt_employee_when_unknown(): void
     {
         $this->configureFacebook();
         $this->fakeFacebookGraph('external.user@example.com', 'External User', 'fb-user-new');
@@ -356,9 +356,9 @@ class LoginTest extends TestCase
 
         $this->assertNotNull($user);
         $this->assertSame('External User', $user->name);
-        $this->assertSame('nebula_sms_user', $user->user_role);
+        $this->assertSame('slt_employee', $user->user_role);
         $this->assertTrue($user->is_active);
-        $this->assertFalse($user->slt_employee);
+        $this->assertTrue($user->slt_employee);
         $this->assertAuthenticatedAs($user);
     }
 
