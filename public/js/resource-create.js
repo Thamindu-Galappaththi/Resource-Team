@@ -35,13 +35,22 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFieldError('resourceCategorySelect');
         refreshTypeSelectForCategory(event.target.value);
     });
-    ['resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'primaryResourceSelect', 'linkedResourceSelect'].forEach((id) => {
+    ['resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'primaryResourceSelect'].forEach((id) => {
         document.getElementById(id)?.addEventListener('change', () => clearFieldError(id));
+    });
+    const linkPicker = window.RMLinkPicker({
+        selectId: 'primaryResourceSelect',
+        listId: 'relatedResourcesList',
+        countId: 'relatedResourcesCount',
+        errorId: 'relatedResourcesError',
+        showUrl: (id) => `${config.resourceUrl}/${id}`,
+        resources: () => state.resources,
+        onReady: (ready) => { document.getElementById('saveLinksBtn').disabled = !ready; },
     });
     document.getElementById('existingCategoriesBody')?.addEventListener('click', onCategoryTableClick);
     document.getElementById('existingCategoriesPagination')?.addEventListener('click', onCategoryPaginationClick);
 
-    ['categoryName', 'resourceTypeName', 'resourceNameModel', 'serialNumber'].forEach((id) => {
+    ['categoryName', 'resourceTypeName', 'resourceNameModel', 'serialNumber', ...window.RMHostelFields.fieldIds()].forEach((id) => {
         document.getElementById(id)?.addEventListener('input', () => clearFieldError(id));
     });
 
@@ -116,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await runBusy(event.target, async () => {
             try {
                 const result = await postJSON(config.categoriesUrl, { category_name: categoryName, features });
-                state.categories.push({ id: result.id, name: result.name || categoryName, features: result.features || [] });
+                state.categories.push({ id: result.id, name: result.name || categoryName, features: result.features || [], is_locked: Boolean(result.is_locked) });
                 categoryPage = Math.max(1, Math.ceil(state.categories.length / categoryPageSize));
                 refreshCategorySelects();
                 event.target.reset();
@@ -164,12 +173,15 @@ document.addEventListener('DOMContentLoaded', () => {
             serial_number: document.getElementById('serialNumber').value.trim() || null,
             resource_owner: document.getElementById('resourceOwner')?.value.trim() || null,
             status: window.RMSelect.getValue('resourceStatusSelect'),
+            ...window.RMHostelFields.payload(),
         };
+        const hostel = window.RMHostelFields.isHostel();
         if (!payload.category_id) return showFieldError('resourceCategorySelect', 'Select a category.');
         if (!payload.resource_type_id) return showFieldError('resourceTypeSelect', 'Select a type.');
         if (!payload.location_id) return showFieldError('resourceLocationSelect', 'Select a location.');
         if (!payload.status) return showFieldError('resourceStatusSelect', 'Select a status.');
-        if (!payload.name_model) return showFieldError('resourceNameModel', 'Enter a resource name/model.');
+        if (!window.RMHostelFields.validate(showFieldError)) return;
+        if (!payload.name_model && !hostel) return showFieldError('resourceNameModel', 'Enter a resource name/model.');
 
         await runBusy(event.target, async () => {
         try {
@@ -183,11 +195,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            state.resources.push({ id: result.id, name_model: payload.name_model, serial_number: payload.serial_number || '' });
+            state.resources.push({ id: result.id, name_model: result.name_model || payload.name_model, serial_number: payload.serial_number || '' });
             refreshResourceSelects();
+            if (hostel) {
+                window.RMHostelFields.reset();
+                document.getElementById('resourceNameModel').value = '';
+                document.getElementById('serialNumber').value = '';
+                await swalFire({ icon: 'success', title: 'Hostel saved', text: `${result.name_model} was added with ${result.bed_count} beds.` });
+                return;
+            }
             window.RMSelect.setValue('resourceCategorySelect', '', 'Select a category (e.g., IT Equipment)');
             refreshTypeSelectForCategory('');
-            window.RMSelect.setValue('resourceLocationSelect', '', 'Select a location (e.g., Block A, Floor 2)');
+            window.RMSelect.setValue('resourceLocationSelect', '', 'Select a location (Welisara, Moratuwa or Peradeniya)');
             window.RMSelect.setValue('resourceStatusSelect', '', 'Select status (e.g., Available, Under Maintenance)');
             document.getElementById('resourceNameModel').value = '';
             document.getElementById('serialNumber').value = '';
@@ -203,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 serial_number: 'serialNumber',
                 resource_owner: 'resourceOwner',
                 status: 'resourceStatusSelect',
+                ...window.RMHostelFields.errorFields(),
             });
             await swalFire({ icon: 'error', title: 'Could not save resource', text: error.message });
         }
@@ -212,29 +232,36 @@ document.addEventListener('DOMContentLoaded', () => {
     async function submitLink(event) {
         event.preventDefault();
         clearFieldError('primaryResourceSelect');
-        clearFieldError('linkedResourceSelect');
-        const resourceId = window.RMSelect.getValue('primaryResourceSelect');
-        const linkedResourceId = window.RMSelect.getValue('linkedResourceSelect');
-        if (!resourceId) showFieldError('primaryResourceSelect', 'Select a main resource.');
-        if (!linkedResourceId) showFieldError('linkedResourceSelect', 'Select a related resource.');
-        if (!resourceId || !linkedResourceId) return;
-        if (resourceId === linkedResourceId) {
-            showFieldError('linkedResourceSelect', 'A resource cannot be linked to itself.');
+        linkPicker.clearError();
+        const resourceId = linkPicker.mainId();
+        if (!resourceId) {
+            showFieldError('primaryResourceSelect', 'Select a main resource.');
+            return;
+        }
+        const linkedIds = linkPicker.checkedIds();
+        if (!linkedIds.length && !linkPicker.hasSaved()) {
+            linkPicker.showError('Select at least one related resource.');
+            linkPicker.focus();
             return;
         }
 
         await runBusy(event.target, async () => {
             try {
-                await postJSON(config.linksUrl, { resource_id: resourceId, linked_resource_id: linkedResourceId });
-                window.RMSelect.setValue('primaryResourceSelect', '', 'Select a resource');
-                window.RMSelect.setValue('linkedResourceSelect', '', 'Select a resource to link');
-                await swalFire({ icon: 'success', title: 'Resources linked', text: 'The relationship was saved.' });
-            } catch (error) {
-                showRequestErrors(error, {
-                    resource_id: 'primaryResourceSelect',
-                    linked_resource_id: 'linkedResourceSelect',
+                await postJSON(config.linksUrl, { resource_id: resourceId, linked_resource_ids: linkedIds });
+                linkPicker.markSaved(linkedIds);
+                await swalFire({
+                    icon: 'success',
+                    title: 'Links saved',
+                    text: linkedIds.length
+                        ? `${linkedIds.length} related ${linkedIds.length === 1 ? 'resource is' : 'resources are'} now linked.`
+                        : 'All related resources were unlinked.',
                 });
-                await swalFire({ icon: 'error', title: 'Could not link resources', text: error.message });
+            } catch (error) {
+                showRequestErrors(error, { resource_id: 'primaryResourceSelect' });
+                const linkError = error.errors?.linked_resource_ids?.[0]
+                    || Object.entries(error.errors || {}).find(([key]) => key.startsWith('linked_resource_ids.'))?.[1]?.[0];
+                if (linkError) linkPicker.showError(linkError);
+                await swalFire({ icon: 'error', title: 'Could not save links', text: error.message });
             }
         });
     }
@@ -245,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = editButton?.dataset.editId || deleteButton?.dataset.deleteId;
         if (!id) return;
         const category = state.categories.find((item) => String(item.id) === String(id));
-        if (!category) return;
+        if (!category || category.is_locked) return;
 
         if (editButton) {
             editingCategoryId = id;
@@ -345,7 +372,9 @@ document.addEventListener('DOMContentLoaded', () => {
             features.textContent = (category.features || []).map((feature) => feature.name).filter(Boolean).join(', ') || '—';
             const actions = document.createElement('td');
             actions.className = 'text-end';
-            actions.innerHTML = `<div class="d-inline-flex gap-2">
+            actions.innerHTML = category.is_locked
+                ? '<span class="rm-locked-badge" title="Used for hostel reservations. It cannot be edited or deleted."><i class="ti ti-lock me-1"></i>Fixed</span>'
+                : `<div class="d-inline-flex gap-2">
                 <button type="button" class="btn btn-sm btn-outline-primary rm-icon-btn" data-edit-id="${category.id}" aria-label="Edit" title="Edit"><i class="ti ti-pencil"></i></button>
                 <button type="button" class="btn btn-sm btn-outline-danger rm-icon-btn" data-delete-id="${category.id}" aria-label="Delete" title="Delete"><i class="ti ti-trash"></i></button>
             </div>`;
@@ -402,25 +431,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshResourceSelects() {
-        const items = state.resources.map((resource) => ({
-            value: resource.id,
-            label: `${resource.name_model}${resource.serial_number ? ` (${resource.serial_number})` : ''}`,
-        }));
-        ['primaryResourceSelect', 'linkedResourceSelect'].forEach((id) => {
-            const current = window.RMSelect.getValue(id);
-            const placeholder = window.RMSelect.wrapFor(id)?.dataset.placeholder || 'Select a resource';
-            window.RMSelect.setOptions(id, items, placeholder);
-            const selected = items.find((item) => String(item.value) === String(current));
-            if (selected) window.RMSelect.setValue(id, selected.value, selected.label);
-        });
+        linkPicker.setOptions();
     }
 
     function refreshLocationSelects() {
-        const items = state.locations.map((location) => ({ value: location.id, label: location.name }));
-        const current = window.RMSelect.getValue('resourceLocationSelect');
-        window.RMSelect.setOptions('resourceLocationSelect', items, 'Select a location (e.g., Block A, Floor 2)');
-        const selected = items.find((item) => String(item.value) === String(current));
-        if (selected) window.RMSelect.setValue('resourceLocationSelect', selected.value, selected.label);
+        window.RMHostelFields.setLocations(state.locations);
     }
 
     function renderCategoryFeatures(categoryId) {
@@ -516,6 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('serialNumber').value = resource.serial_number || '';
             const ownerField = document.getElementById('resourceOwner');
             if (ownerField) ownerField.value = resource.resource_owner || '';
+            window.RMHostelFields.fill(resource);
             document.getElementById('saveResourceButton').textContent = 'Save changes';
             bootstrap.Tab.getOrCreateInstance(document.getElementById('resource-tab')).show();
         } catch (error) {
@@ -576,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearResourceErrors() {
-        ['resourceCategorySelect', 'resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'resourceNameModel', 'serialNumber']
+        ['resourceCategorySelect', 'resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'resourceNameModel', 'serialNumber', ...window.RMHostelFields.fieldIds()]
             .forEach(clearFieldError);
     }
 

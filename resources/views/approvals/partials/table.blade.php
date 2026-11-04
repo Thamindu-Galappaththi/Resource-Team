@@ -30,7 +30,12 @@
                 @foreach($rows as $row)
                     <tr>
                         <td class="rsv-ref" data-label="Reservation ID">{{ $row['reference'] }}</td>
-                        <td class="rsv-purpose" data-label="Purpose" title="{{ $row['title'] }}">{{ \Illuminate\Support\Str::limit($row['title'] ?? '', 40) }}</td>
+                        <td class="rsv-purpose" data-label="Purpose" title="{{ $row['title'] }}">
+                            {{ \Illuminate\Support\Str::limit($row['title'] ?? '', 40) }}
+                            @if(! empty($row['special']))
+                                <span class="ap-special-badge"><i class="ti ti-shield-lock"></i>Special request{{ count($row['documents'] ?? []) ? ' · '.count($row['documents']).' doc'.(count($row['documents']) === 1 ? '' : 's') : '' }}</span>
+                            @endif
+                        </td>
                         <td class="rsv-resource" data-label="Resource">{{ $row['resources'] }}</td>
                         <td class="rsv-hide-md" data-label="Requester">{{ $row['requester'] }}</td>
                         <td class="text-nowrap" data-label="Schedule"><div>{{ $row['short_date'] }}</div><div class="small text-muted">{{ $row['time'] }}</div></td>

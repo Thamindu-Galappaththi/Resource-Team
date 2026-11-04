@@ -13,6 +13,7 @@ use App\Models\Resource;
 use App\Models\ResourceCategory;
 use App\Models\User;
 use App\Services\ReservationBookingService;
+use App\Services\ReservationDocumentStore;
 use App\Support\SriLankaHolidays;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -53,7 +54,7 @@ class ReservationController extends Controller
         return view('reservations.create', $this->formLookups($request));
     }
 
-    public function store(StoreReservationRequest $request): RedirectResponse
+    public function store(StoreReservationRequest $request, ReservationDocumentStore $documents): RedirectResponse
     {
         $this->authorize('create', Reservation::class);
 
@@ -67,16 +68,20 @@ class ReservationController extends Controller
             return back()->withInput()->withErrors($exception->errors());
         }
 
+        $documents->attach($reservation, $request->file('special_documents'), $request->user());
+
         return redirect()
             ->route('reservations.show', $reservation)
-            ->with('success', 'Reservation submitted successfully and sent for approval.');
+            ->with('success', $reservation->special_approval
+                ? 'Reservation submitted successfully and sent for special approval.'
+                : 'Reservation submitted successfully and sent for approval.');
     }
 
     public function show(Reservation $reservation): View
     {
         $this->authorize('view', $reservation);
 
-        $reservation->load(['requester', 'createdBy', 'location', 'items.resource.type.category', 'statusHistory.actor']);
+        $reservation->load(['requester', 'createdBy', 'location', 'items.resource.type.category', 'statusHistory.actor', 'documents']);
 
         return view('reservations.show', compact('reservation'));
     }
@@ -87,7 +92,7 @@ class ReservationController extends Controller
         $this->authorize('update', $reservation);
         abort_unless($reservation->canBeEdited(), 403);
 
-        $reservation->load(['items.resource.type']);
+        $reservation->load(['items.resource.type', 'documents']);
         $primary = $reservation->items->first()?->resource;
         $lookups = $this->formLookups($request);
 
@@ -107,7 +112,7 @@ class ReservationController extends Controller
         ]));
     }
 
-    public function update(StoreReservationRequest $request, Reservation $reservation): RedirectResponse
+    public function update(StoreReservationRequest $request, Reservation $reservation, ReservationDocumentStore $documents): RedirectResponse
     {
         abort_if($reservation->type === ReservationType::HOSTEL->value, 404);
         $this->authorize('update', $reservation);
@@ -122,6 +127,8 @@ class ReservationController extends Controller
         } catch (ValidationException $exception) {
             return back()->withInput()->withErrors($exception->errors());
         }
+
+        $documents->attach($reservation, $request->file('special_documents'), $request->user());
 
         return redirect()
             ->route('reservations.show', $reservation)
@@ -183,7 +190,7 @@ class ReservationController extends Controller
         $rangeStart = Carbon::parse($filters['start'])->utc();
         $rangeEnd = Carbon::parse($filters['end'])->utc();
         $baseQuery = Reservation::query()
-            ->with(['requester', 'location', 'items.resource.type.category'])
+            ->with(['requester', 'location', 'hostelStay', 'items.resource.type.category'])
             ->where('status', '!=', ReservationStatus::DRAFT->value)
             ->whereHas('items', fn ($items) => $items->where('starts_at', '<', $rangeEnd)->where('ends_at', '>', $rangeStart));
         $this->restrictCalendarVisibility($baseQuery);
@@ -192,7 +199,8 @@ class ReservationController extends Controller
 
         $visibleReservations = (clone $baseQuery)->get();
         $blockingStatuses = ReservationStatus::blockingItemStatuses();
-        $bookedItems = $visibleReservations->flatMap(fn (Reservation $reservation) =>
+        // Hostel stays share a location's beds; capacity per bed group is enforced when booking and approving.
+        $bookedItems = $visibleReservations->where('type', '!=', ReservationType::HOSTEL->value)->flatMap(fn (Reservation $reservation) =>
             $reservation->items
                 ->filter(fn ($item) => in_array($item->status, $blockingStatuses, true) && $item->starts_at && $item->ends_at)
                 ->map(fn ($item) => [
@@ -657,7 +665,7 @@ class ReservationController extends Controller
                 ->with('type:id,resource_category_id')
                 ->orderBy('name_model')
                 ->get(['id', 'name_model', 'location_id', 'resource_type_id']);
-            $locations = Location::query()->ordered()->get();
+            $locations = Location::query()->forResources()->ordered()->get();
             $statuses = collect(ReservationStatus::cases())
                 ->reject(fn (ReservationStatus $status) => in_array($status, $hiddenStatuses, true))
                 ->values();
@@ -733,9 +741,11 @@ class ReservationController extends Controller
      */
     private function bookingLookups(): array
     {
+        $hostelCategory = (string) config('hostel.category_name');
         $resources = Resource::query()
-            ->with(['type.category', 'location', 'linkedResources'])
+            ->with(['type.category', 'location', 'linkedResources.location', 'linkedFrom.location'])
             ->where('status', 'active')
+            ->whereDoesntHave('type.category', fn ($category) => $category->where('name', $hostelCategory))
             ->orderBy('name_model')
             ->get()
             ->map(fn (Resource $resource) => [
@@ -749,17 +759,22 @@ class ReservationController extends Controller
                 'category_name' => $resource->type?->category?->name,
                 'type_id' => $resource->resource_type_id,
                 'type_name' => $resource->type?->name,
-                'linked_resources' => $resource->linkedResources->map(fn (Resource $linked) => [
-                    'id' => $linked->id,
-                    'name_model' => $linked->name_model,
-                    'serial_number' => $linked->serial_number,
-                    'status' => $linked->status,
-                ])->values(),
+                'linked_resources' => $resource->linkedResources
+                    ->concat($resource->linkedFrom)
+                    ->unique('id')
+                    ->reject(fn (Resource $linked) => $linked->id === $resource->id || $linked->bed_counts !== null)
+                    ->map(fn (Resource $linked) => [
+                        'id' => $linked->id,
+                        'name_model' => $linked->name_model,
+                        'serial_number' => $linked->serial_number,
+                        'status' => $linked->status,
+                        'location_name' => $linked->location?->name,
+                    ])->values(),
             ]);
 
         return [
-            'locations' => Location::query()->ordered()->get(['id', 'name']),
-            'categories' => ResourceCategory::query()->orderBy('name')->get(['id', 'name']),
+            'locations' => Location::query()->forResources()->ordered()->get(['id', 'name']),
+            'categories' => ResourceCategory::query()->where('name', '!=', $hostelCategory)->orderBy('name')->get(['id', 'name']),
             'resources' => $resources,
         ];
     }
@@ -790,7 +805,9 @@ class ReservationController extends Controller
             ReservationStatus::COMPLETED->value => ['#4778d0', '#fff'],
             default => ['#d18b00', '#fff'],
         };
-        $resourceName = $item->resource_name_snapshot ?: $item->resource?->name_model ?: '—';
+        $resourceName = $reservation->type === ReservationType::HOSTEL->value
+            ? $reservation->hostelItemLabel($item)
+            : ($item->resource_name_snapshot ?: $item->resource?->name_model ?: '—');
         $mine = $this->ownsCalendarReservation($reservation);
         $isSlt = request()->user()?->hasRole('slt_employee');
         $publicTitle = $reservation->location?->name ?: $resourceName;

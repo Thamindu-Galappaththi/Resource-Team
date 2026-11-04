@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('purpose', 500)->nullable();
+            $table->string('lecturer_name', 150)->nullable();
+            $table->boolean('special_approval')->default(false)->index();
             $table->unsignedInteger('attendee_count')->nullable();
             $table->time('start_time');
             $table->time('end_time');

@@ -3,7 +3,7 @@
 @section('title', 'Existing Resources')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=20">
+<link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=27">
 @endpush
 
 @section('content')
@@ -134,11 +134,24 @@
                                 <label class="form-label">Category / type features</label>
                                 <div id="editFeaturesList" class="rm-linked-list"></div>
                             </div>
-                            <div class="mb-0" id="editLinkedWrap">
-                                <label class="form-label">Link resources</label>
-                                <div id="editLinkedList" class="rm-linked-list"></div>
-                                <p class="text-muted small mb-0 mt-2">Select related inventory items to keep with this resource.</p>
-                            </div>
+                            <section class="rm-link-section mb-0" id="editLinkedWrap" data-hide-for-hostel>
+                                <h3 class="rm-link-title">Link resources</h3>
+                                <div class="mb-3">
+                                    <label class="form-label">Main resource</label>
+                                    <x-rm-select id="editMainResourceSelect" name="main_resource_id" class="resource-select"
+                                        placeholder="Select a resource"
+                                        :options="[['value' => '', 'label' => 'Select a resource']]" />
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                    <label class="form-label mb-0" for="editLinkedList">Related resources</label>
+                                    <span class="text-muted small" id="editLinkedCount" hidden></span>
+                                </div>
+                                <div id="editLinkedList" class="rm-linked-list rm-linked-scroll" tabindex="-1">
+                                    <p class="text-muted small mb-0">Select a main resource to see its related resources.</p>
+                                </div>
+                                <div class="invalid-feedback" id="editLinkedError"></div>
+                            </section>
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -166,9 +179,12 @@
         categoriesUrl: @json(route('resource-categories.index')),
         typesUrl: @json(route('resource-types.index')),
         locationsUrl: @json(route('locations.index')),
+        linksUrl: @json(route('resource-links.store')),
         lookups: @json($lookups ?? ['categories' => [], 'types' => [], 'locations' => []]),
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-index.js') }}?v=14"></script>
+<script src="{{ asset('js/resource-hostel-fields.js') }}?v=4"></script>
+<script src="{{ asset('js/resource-link-picker.js') }}?v=2"></script>
+<script src="{{ asset('js/resource-index.js') }}?v=22"></script>
 @endpush

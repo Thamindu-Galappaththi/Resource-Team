@@ -5,11 +5,13 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\CanteenReservationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HostelReservationController;
+use App\Http\Controllers\HostelStudentRequestController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PasswordSetupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\ReservationDocumentController;
 use App\Http\Controllers\SltEmployeeDashboardController;
 use App\Http\Controllers\SltEmployeeRequestController;
 use App\Http\Controllers\ResourceCalendarController;
@@ -72,6 +74,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/availability', 'availability')->middleware('permission:reservations.create')->name('availability');
         Route::get('/my-requests', [SltEmployeeRequestController::class, 'resources'])->middleware('permission:reservations.index')->name('mine');
         Route::get('/{reservation}/edit', 'edit')->middleware('permission:reservations.create')->name('edit');
+        Route::get('/{reservation}/documents/{document}', [ReservationDocumentController::class, 'show'])->name('documents.show');
         Route::get('/{reservation}', 'show')->middleware('permission:reservations.index')->name('show');
     });
 
@@ -103,6 +106,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/calendar/stats', [SltEmployeeDashboardController::class, 'hostelCalendarStats'])->middleware('permission:hostel.index')->name('calendar.stats');
         Route::get('/create', 'create')->middleware('permission:hostel.create')->name('create');
         Route::get('/my-requests', [SltEmployeeRequestController::class, 'hostel'])->middleware('permission:hostel.index')->name('mine');
+        Route::get('/student-requests', [HostelStudentRequestController::class, 'index'])->middleware('permission:hostel.manage')->name('student-requests.index');
+        Route::get('/bed-map', 'bedMap')->middleware('permission:hostel.index')->name('bed-map');
+        Route::get('/gate-list', 'gateList')->middleware('permission:hostel.manage')->name('gate-list');
         Route::get('/{reservation}/edit', 'edit')->middleware('permission:hostel.create')->name('edit');
         Route::get('/{reservation}', 'show')->middleware('permission:hostel.index')->name('show');
     });
@@ -222,6 +228,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/{reservation}/cancel', 'cancel')->middleware('permission:reservations.index,reservations.create')->name('cancel');
     });
 
+    Route::prefix('hostel/student-requests')->name('hostel.student-requests.')->middleware('permission:hostel.manage')->controller(HostelStudentRequestController::class)->group(function () {
+        Route::post('/link', 'generateLink')->name('link');
+        Route::post('/{studentRequest}/decision', 'decide')->name('decision');
+    });
+
     Route::prefix('hostel')->name('hostel.')->controller(HostelReservationController::class)->group(function () {
         Route::post('/', 'store')->middleware('permission:hostel.create')->name('store');
         Route::put('/{reservation}', 'update')->middleware('permission:hostel.create')->name('update');
@@ -241,6 +252,15 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('logout')->controller(AuthController::class)->group(function () {
         Route::match(['get', 'post'], '/', 'logout')->name('logout');
     });
+});
+
+// Public student hostel request form. The token comes from the share link that
+// hostel managers send to students, so no login is required.
+Route::get('/hostel-request', fn () => response()->view('hostel.student-link-invalid', [], 404))->middleware('throttle:60,1');
+Route::prefix('hostel-request/{token}')->where(['token' => '[^/]{1,200}'])->controller(HostelStudentRequestController::class)->group(function () {
+    Route::get('/', 'form')->middleware('throttle:60,1')->name('hostel.student-form');
+    Route::post('/', 'submit')->middleware('throttle:6,1')->name('hostel.student-form.submit');
+    Route::get('/submitted', 'done')->middleware('throttle:60,1')->name('hostel.student-form.done');
 });
 
 // Password setup links carry a signed reset token. Keep these accessible when

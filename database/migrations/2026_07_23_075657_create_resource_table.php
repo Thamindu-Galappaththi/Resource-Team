@@ -41,6 +41,11 @@ return new class extends Migration
 
             $table->string('status')->default('active');
 
+            // Hostel Room / Bed resources only: one record per location with beds per group
+            // (e.g. {"permanent":10,"female":40,"male":40}) and their total.
+            $table->unsignedSmallInteger('bed_count')->nullable();
+            $table->json('bed_counts')->nullable();
+
             $table->boolean('is_deleted')->default(false);
             $table->timestamp('deleted_at')->nullable();
 

@@ -110,6 +110,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
     }
 
+    function specialBadge(row) {
+        if (!row.special) return '';
+        const docs = (row.documents || []).length;
+        const suffix = docs ? ` · ${docs} doc${docs === 1 ? '' : 's'}` : '';
+        return ` <span class="ap-special-badge"><i class="ti ti-shield-lock"></i>Special request${suffix}</span>`;
+    }
+
+    function documentList(row) {
+        const docs = row.documents || [];
+        if (!docs.length) return '<span class="text-muted">No documents attached</span>';
+        return `<ul class="ap-doc-list">${docs.map((doc) => `<li>
+            <i class="ti ti-file-text" aria-hidden="true"></i>
+            <a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener">${escapeHtml(doc.name)}</a>
+            <span class="text-muted">${escapeHtml(doc.size)}</span>
+        </li>`).join('')}</ul>`;
+    }
+
     function renderTable(rows, pager, options) {
         if (!rows.length) {
             return `<div class="rsv-empty">
@@ -120,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const body = rows.map((row) => `<tr>
             <td class="rsv-ref" data-label="Reservation ID">${escapeHtml(row.reference)}</td>
-            <td class="rsv-purpose" data-label="Purpose" title="${escapeHtml(row.title)}">${escapeHtml(limitText(row.title, 40))}</td>
+            <td class="rsv-purpose" data-label="Purpose" title="${escapeHtml(row.title)}">${escapeHtml(limitText(row.title, 40))}${specialBadge(row)}</td>
             <td class="rsv-resource" data-label="Resource">${escapeHtml(row.resources)}</td>
             <td class="rsv-hide-md" data-label="Requester">${escapeHtml(row.requester)}</td>
             <td class="text-nowrap" data-label="Schedule"><div>${escapeHtml(row.short_date || row.date)}</div><div class="small text-muted">${escapeHtml(row.time)}</div></td>
@@ -149,6 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
         records = new Map([...(payload.pending || []), ...(payload.history || [])].map((row) => [String(row.id), row]));
         const pendingEl = document.getElementById('ap-stat-pending');
         const historyEl = document.getElementById('ap-stat-history');
+        const specialEl = document.getElementById('ap-stat-special');
+        if (specialEl) specialEl.textContent = Number(payload.summary?.special || 0).toLocaleString();
         if (pendingEl) pendingEl.textContent = Number(payload.summary?.pending || 0).toLocaleString();
         if (historyEl) historyEl.textContent = Number(payload.summary?.history || 0).toLocaleString();
         const pendingCount = document.getElementById('ap-pending-count');
@@ -280,7 +299,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${detailRow('Location', escapeHtml(row.location || '—'))}
                 ${detailRow('Attendees', escapeHtml(row.attendees ?? '—'))}
                 ${detailRow('Purpose', escapeHtml(row.purpose || '—'))}
+                ${row.lecturer ? detailRow('Lecturer', escapeHtml(row.lecturer)) : ''}
                 ${detailRow('Resources', resources)}
+                ${row.special ? detailRow('Special approval', '<span class="ap-special-badge ms-0"><i class="ti ti-shield-lock"></i>Requested by the creator</span>') : ''}
+                ${row.special ? detailRow('Evidence', documentList(row)) : ''}
                 ${row.description ? detailRow('Additional details', escapeHtml(row.description)) : ''}
                 ${row.comment ? detailRow('Latest comment', escapeHtml(row.comment)) : ''}
             </div>

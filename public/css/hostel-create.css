@@ -106,6 +106,33 @@
     border-radius: .65rem;
 }
 
+.hc-page input[type="date"].form-control,
+.hc-page input[type="time"].form-control {
+    height: 48px;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 46px;
+}
+
+.hc-page input[type="date"]::-webkit-datetime-edit,
+.hc-page input[type="time"]::-webkit-datetime-edit,
+.hc-page input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.hc-page input[type="time"]::-webkit-datetime-edit-fields-wrapper,
+.hc-page input[type="date"]::-webkit-datetime-edit-text,
+.hc-page input[type="time"]::-webkit-datetime-edit-text,
+.hc-page input[type="date"]::-webkit-datetime-edit-day-field,
+.hc-page input[type="date"]::-webkit-datetime-edit-month-field,
+.hc-page input[type="date"]::-webkit-datetime-edit-year-field,
+.hc-page input[type="time"]::-webkit-datetime-edit-hour-field,
+.hc-page input[type="time"]::-webkit-datetime-edit-minute-field,
+.hc-page input[type="time"]::-webkit-datetime-edit-second-field,
+.hc-page input[type="time"]::-webkit-datetime-edit-ampm-field {
+    padding: 0;
+    margin: 0;
+    line-height: inherit;
+    vertical-align: baseline;
+}
+
 .hc-page textarea.form-control {
     min-height: 120px;
     padding-top: .75rem;
@@ -133,6 +160,30 @@
     color: var(--hc-muted);
     font-size: .82rem;
 }
+
+.hc-employee-ids {
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid #d5def0;
+    border-radius: .75rem;
+    background: #f8faff;
+}
+
+.hc-employee-ids legend {
+    float: none;
+    width: auto;
+    font-size: 1rem;
+}
+
+.hc-help a {
+    color: var(--hc-blue);
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.hc-help a:hover,
+.hc-help a:focus { text-decoration: none; }
 
 .hc-actions {
     display: flex;

@@ -44,6 +44,8 @@ class Resource extends Model
         'name_model',
         'serial_number',
         'status',
+        'bed_count',
+        'bed_counts',
         'is_deleted',
         'deleted_at',
     ];
@@ -53,6 +55,8 @@ class Resource extends Model
         return [
             'is_deleted' => 'boolean',
             'deleted_at' => 'datetime',
+            'bed_count' => 'integer',
+            'bed_counts' => 'array',
         ];
     }
 
@@ -94,6 +98,20 @@ class Resource extends Model
     }
 
     /**
+     * Links work both ways, so this keeps exactly the given resources linked whichever side stored the row.
+     *
+     * @param  iterable<int|string>  $ids
+     */
+    public function syncLinks(iterable $ids): void
+    {
+        $ids = collect($ids)->map(fn ($id) => (int) $id)->reject(fn ($id) => $id === (int) $this->id)->unique()->values();
+        $incoming = $this->linkedFrom()->pluck('resources.id');
+
+        $this->linkedFrom()->detach($incoming->diff($ids)->values()->all());
+        $this->linkedResources()->sync($ids->diff($incoming)->values()->all());
+    }
+
+    /**
      * Lets you call $resource->category to get the parent category
      * WITHOUT storing a redundant category_id column, and without an
      * extra query per resource (Eloquent can eager-load this "through"
@@ -121,6 +139,21 @@ class Resource extends Model
             ->whereHas('type.category', function (Builder $category) {
                 $category->where('name', config('hostel.category_name', 'Hostel Room'));
             });
+    }
+
+    /** Hostel bed rooms that count toward the fixed capacity (any status except retired ones). */
+    public function scopeHostelBedInventory(Builder $query): Builder
+    {
+        return $query
+            ->whereNotIn('status', ['deleted', 'decommissioned'])
+            ->whereHas('type.category', function (Builder $category) {
+                $category->where('name', config('hostel.category_name', 'Hostel Room'));
+            });
+    }
+
+    public function bedsFor(string $group): int
+    {
+        return (int) ($this->bed_counts[$group] ?? 0);
     }
 
     public function lecturerProfile(): HasOne
