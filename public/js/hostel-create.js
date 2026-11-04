@@ -182,10 +182,40 @@
         return true;
     }
 
+    function getSelectedCapacity() {
+        const locationInput = document.getElementById('location_id') || form?.querySelector('input[name="location_id"]');
+        const bedGroupInput = document.getElementById('bed_group') || form?.querySelector('input[name="bed_group"]');
+        const locationId = locationInput?.value;
+        const bedGroup = bedGroupInput?.value;
+        if (!locationId || !bedGroup || !window.hostelCapacities) return null;
+        const locationCounts = window.hostelCapacities[String(locationId)];
+        if (!locationCounts || locationCounts[bedGroup] === undefined) return null;
+        return Number(locationCounts[bedGroup]);
+    }
+
+    function validateGuestCount() {
+        if (!guests) return true;
+        const count = Number.parseInt(guests.value, 10);
+        if (Number.isNaN(count) || count < 1) {
+            setFieldClientError(guests, 'Please enter a valid number of guests.');
+            return false;
+        }
+        const capacity = getSelectedCapacity();
+        if (capacity !== null && count > capacity) {
+            setFieldClientError(guests, `The number of guests exceeds the room capacity of ${capacity}.`);
+            return false;
+        }
+        setFieldClientError(guests, '');
+        return true;
+    }
+
     function invalidFields() {
         const invalid = [];
         if (guestPhone && !validateGuestPhone(true)) {
             invalid.push(guestPhone);
+        }
+        if (guests && !validateGuestCount()) {
+            invalid.push(guests);
         }
         form.querySelectorAll('input[name="employee_ids[]"]').forEach((input) => {
             if (!validateEmployeeIdInput(input)) {
@@ -193,7 +223,7 @@
             }
         });
         form.querySelectorAll('[data-cu-select], input:not([type="hidden"]), textarea, select').forEach((field) => {
-            if (field === guestPhone || field.name === 'employee_ids[]') return;
+            if (field === guestPhone || field.name === 'employee_ids[]' || field === guests) return;
             if (field.matches('[data-cu-select]')) {
                 const required = field.querySelector('.cu-dropdown-toggle')?.getAttribute('aria-required') === 'true';
                 const empty = !(field.querySelector('input[type="hidden"]')?.value || '').trim();
@@ -234,6 +264,9 @@
         form.addEventListener('change', (event) => {
             const select = event.target.closest?.('[data-cu-select]');
             if (select && event.target.value) setSelectError(select, '');
+            if (['location_id', 'bed_group'].includes(event.target.id) || event.target.name === 'location_id' || event.target.name === 'bed_group') {
+                validateGuestCount();
+            }
         });
 
         const serverError = form.querySelector('.is-invalid, .invalid-feedback.d-block');
@@ -255,8 +288,14 @@
         if (event.target?.name === 'employee_ids[]') validateEmployeeIdInput(event.target);
     }, true);
     checkIn?.addEventListener('change', syncCheckoutMin);
-    guests?.addEventListener('input', syncEmployeeIds);
-    guests?.addEventListener('change', syncEmployeeIds);
+    guests?.addEventListener('input', () => {
+        syncEmployeeIds();
+        validateGuestCount();
+    });
+    guests?.addEventListener('change', () => {
+        syncEmployeeIds();
+        validateGuestCount();
+    });
     guestPhone?.addEventListener('input', () => validateGuestPhone(false));
     guestPhone?.addEventListener('change', () => validateGuestPhone(true));
     guestPhone?.addEventListener('blur', () => validateGuestPhone(true));

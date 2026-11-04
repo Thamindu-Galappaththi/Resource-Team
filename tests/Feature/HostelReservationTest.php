@@ -279,6 +279,29 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 3);
     }
 
+    public function test_guest_count_exceeding_room_capacity_is_rejected(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+        $setup['room']->update([
+            'bed_counts' => ['female' => 5, 'male' => 5, 'permanent' => 0],
+            'bed_count' => 10,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, [
+                'bed_group' => 'female',
+                'number_of_guests' => 8,
+                'employee_ids' => ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8'],
+            ]))
+            ->assertSessionHasErrors([
+                'number_of_guests' => 'The number of guests exceeds the room capacity of 5.',
+            ]);
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
     public function test_special_hostel_request_skips_the_hostel_manager_and_is_decided_in_special_approvals(): void
     {
         Storage::fake('local');

@@ -164,8 +164,11 @@
 @endsection
 
 @push('scripts')
+<script>
+    window.hostelCapacities = @json($hostelCapacities ?? []);
+</script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/hostel-create.js') }}?v=9"></script>
+<script src="{{ asset('js/hostel-create.js') }}?v=10"></script>
 <script src="{{ asset('js/special-approval.js') }}?v=1"></script>
 @endpush

@@ -90,6 +90,19 @@ class StoreHostelReservationRequest extends FormRequest
                     );
                 }
 
+                $locationId = (int) $this->input('location_id');
+                $group = (string) $this->input('bed_group');
+                if ($locationId > 0 && $group !== '' && $guests > 0) {
+                    $hostel = app(\App\Services\HostelBedCapacity::class)->hostelAt($locationId);
+                    $capacity = $hostel?->bedsFor($group) ?? 0;
+                    if ($capacity > 0 && $guests > $capacity) {
+                        $validator->errors()->add(
+                            'number_of_guests',
+                            "The number of guests exceeds the room capacity of {$capacity}."
+                        );
+                    }
+                }
+
                 $phone = (string) $this->input('guest_phone');
                 if ($phone !== '') {
                     if (str_contains($phone, '-')) {
