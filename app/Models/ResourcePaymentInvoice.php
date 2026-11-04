@@ -15,6 +15,7 @@ class ResourcePaymentInvoice extends Model
         'fee_breakdown',
         'issued_at',
         'paid_at',
+        'payment_date',
         'paid_by',
         'payment_method',
         'payment_reference',
@@ -27,6 +28,7 @@ class ResourcePaymentInvoice extends Model
             'fee_breakdown' => 'array',
             'issued_at' => 'datetime',
             'paid_at' => 'datetime',
+            'payment_date' => 'date',
         ];
     }
 

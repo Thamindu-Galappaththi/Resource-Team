@@ -221,6 +221,7 @@ class ResourcePaymentController extends Controller
             'payment_method' => $invoice->payment_method,
             'payment_reference' => $invoice->payment_reference,
             'paid_at' => $invoice->paid_at?->format('d M Y H:i'),
+            'payment_date' => $invoice->payment_date?->format('d M Y'),
             'paid_by' => $invoice->paidBy?->name,
             'extra_hours' => $invoice->status === 'paid' ? (float) $invoice->extra_hours : $requestedHours,
             'confirmed_extra_hours' => (float) $invoice->extra_hours,
@@ -295,8 +296,9 @@ class ResourcePaymentController extends Controller
         abort_unless($request->user()?->hasPermission('payments.mark-paid'), 403);
         validator(['reference' => $reference], ['reference' => ['required', 'regex:/^(RRS|HST)-[0-9]{4}-[0-9]{6}$/i']])->validate();
         $data = $request->validate([
-            'method' => ['required', 'in:cash,card,bank_transfer'],
-            'reference_number' => ['nullable', 'string', 'max:120'],
+            'method' => ['required', 'in:cash,bank_transfer'],
+            'reference_number' => ['nullable', 'required_if:method,bank_transfer', 'string', 'max:120'],
+            'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'extra_hours' => ['required', 'numeric', 'min:0', 'max:24', 'multiple_of:0.5'],
         ]);
         $reservation = $this->findReservation(strtoupper($reference));
@@ -329,6 +331,7 @@ class ResourcePaymentController extends Controller
                 'fee_breakdown' => $breakdown,
                 'status' => 'paid',
                 'paid_at' => now(),
+                'payment_date' => $data['payment_date'],
                 'paid_by' => $request->user()->id,
                 'payment_method' => $data['method'],
                 'payment_reference' => filled($data['reference_number'] ?? null) ? trim($data['reference_number']) : null,
@@ -339,6 +342,7 @@ class ResourcePaymentController extends Controller
                 'payment_status' => 'paid',
                 'invoice_number' => $invoice->invoice_number,
                 'paid_at' => $invoice->paid_at?->format('d M Y H:i'),
+                'payment_date' => $invoice->payment_date?->format('d M Y'),
                 'paid_by' => $request->user()->name,
                 'payment_method' => $invoice->payment_method,
                 'payment_reference' => $invoice->payment_reference,

@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
 <link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=12">
+<link rel="stylesheet" href="{{ asset('css/resource-payment-record.css') }}?v=2">
 <link rel="stylesheet" href="{{ asset('css/dashboard-role.css') }}?v={{ @filemtime(public_path('css/dashboard-role.css')) ?: time() }}">
 @endpush
 
@@ -66,7 +67,6 @@
                 </details>
             </section>
 
-            <div class="rp-gateway-banner"><i class="ti ti-info-circle"></i><span>Online payments are pending gateway integration. Invoices can still be reviewed and printed.</span></div>
         </div>
 
         <aside class="rp-invoice" id="rp-invoice">
@@ -77,9 +77,9 @@
                 <div class="rp-line-items"><div class="rp-line"><span>Base Reservation Fee <small id="rp-base-detail">Includes first hours from the applicable rate</small></span><strong id="rp-base-fee">LKR 0.00</strong></div><div class="rp-line"><span>Extra Hours Charge <small><span id="rp-extra-detail">0.0 hrs × applicable rate</span></small></span><strong id="rp-extra-fee">LKR 0.00</strong></div><div class="rp-line"><span>Discount <small id="rp-discount-detail">Customer category</small></span><strong id="rp-discount">− LKR 0.00</strong></div><div class="rp-line"><span>Tax <small id="rp-tax-detail">Applicable rate</small></span><strong id="rp-tax-fee">LKR 0.00</strong></div></div>
                 <div class="rp-total"><div><span>TOTAL AMOUNT DUE</span><small>Draft total in Sri Lankan rupees</small></div><strong id="rp-total" aria-live="polite" aria-atomic="true">LKR 0.00</strong></div>
                 <div id="rp-rate-warning" class="rp-rate-warning is-hidden" role="status"><i class="ti ti-alert-circle"></i><span>Rate details are not available. Configure an applicable rate before collecting payment.</span></div>
-                <div class="rp-secure-note" id="rp-payment-note"><i class="ti ti-clock-hour-4"></i><span>Payment status: <strong id="rp-payment-status-text">Unpaid</strong>. <span id="rp-payment-note-detail">Online payment gateway is not connected.</span></span></div>
+                <div class="rp-paid-confirmation" id="rp-payment-note" hidden><i class="ti ti-circle-check"></i><span><strong id="rp-payment-status-text">Paid</strong><span id="rp-payment-note-detail"></span></span></div>
             </div>
-            <div class="rp-invoice-actions"><button type="button" class="rp-pay-button" id="rp-pay" disabled title="Online payments are pending gateway integration"><i class="ti ti-credit-card"></i> Pay now</button>@if(auth()->user()?->hasPermission('payments.mark-paid'))<button type="button" class="rp-mark-paid-button" id="rp-mark-paid" data-url-template="{{ route('payments.resources.mark-paid', ['reference' => '__REFERENCE__']) }}" hidden disabled><i class="ti ti-cash"></i> Mark as Paid</button>@endif<button type="button" class="rp-print-button" id="rp-print" disabled><i class="ti ti-printer"></i> Print Invoice</button></div>
+            <div class="rp-invoice-actions">@if(auth()->user()?->hasPermission('payments.mark-paid'))<button type="button" class="rp-mark-paid-button" id="rp-mark-paid" data-url-template="{{ route('payments.resources.mark-paid', ['reference' => '__REFERENCE__']) }}" hidden disabled><i class="ti ti-cash"></i> Mark as Paid</button>@endif<button type="button" class="rp-print-button" id="rp-print" disabled><i class="ti ti-printer"></i> Print Invoice</button></div>
             <div class="rp-invoice-foot"><i class="ti ti-file-invoice"></i> <span id="rp-invoice-footnote">Draft only. Not a tax invoice until issued by Finance.</span></div>
         </aside>
     </div>
@@ -94,6 +94,7 @@ window.RPIndex = {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ asset('js/resource-payment-record.js') }}?v=3"></script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
 <script src="{{ asset('js/resource-payments.js') }}?v=5"></script>
 @endpush

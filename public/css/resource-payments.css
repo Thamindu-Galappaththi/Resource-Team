@@ -731,9 +731,7 @@
 .rp-secure-note { margin-top: .5rem; border: 1px solid #dce8f8; background: #f1f6fd; color: #496686; }
 .rp-secure-note i { color: #1769c2; font-size: .9rem; }
 .rp-invoice-actions { display: grid; gap: .5rem; padding: .85rem 1.1rem .65rem; border-top: 1px solid #e8edf3; background: #f8faff; }
-.rp-pay-button, .rp-print-button { display: flex; height: 41px; align-items: center; justify-content: center; gap: .4rem; border-radius: 9px; font-size: .72rem; font-weight: 800; }
-.rp-pay-button { border: 1px solid #1769c2; background: linear-gradient(120deg, #1769c2, #123a7a); color: #fff; }
-.rp-pay-button:disabled { cursor: not-allowed; opacity: .48; }
+.rp-print-button { display: flex; height: 41px; align-items: center; justify-content: center; gap: .4rem; border-radius: 9px; font-size: .72rem; font-weight: 800; }
 .rp-print-button { border: 1px solid #1769c2; background: #fff; color: #1769c2; }
 .rp-invoice-foot { padding: 0 .7rem .75rem; background: #f8faff; color: #8995a3; font-size: .6rem; text-align: center; }
 .rp-invoice-foot i { margin-right: .15rem; }
@@ -749,6 +747,15 @@
 .rp-status.is-unpaid { background: #fff3d7; color: #946414; }
 .rp-mark-paid-button { display: flex; height: 41px; align-items: center; justify-content: center; gap: .4rem; border: 1px solid #087354; border-radius: 9px; background: #087354; color: #fff; font-size: .72rem; font-weight: 800; }
 .rp-mark-paid-button:hover:not(:disabled) { background: #066347; }
+.rp-invoice-actions .rp-mark-paid-button { width: 100%; height: 48px; font-size: .8rem; }
+.rp-paid-confirmation { display: flex; align-items: flex-start; gap: .55rem; padding: .7rem .75rem; border: 1px solid #bce8d4; border-radius: 9px; background: #eefaf4; color: #08734f; font-size: .72rem; }
+.rp-paid-confirmation > i { flex: 0 0 auto; font-size: 1rem; }
+.rp-paid-confirmation > span, .rp-paid-confirmation > span > span { display: block; }
+.rp-paid-confirmation > span > span { margin-top: .15rem; color: #4e7666; }
+.rp-paid-confirmation[hidden] { display: none !important; }
+.rp-status { transition: opacity .2s ease, transform .2s ease; }
+.rp-status.is-paid { animation: rp-paid-pop .28s ease both; }
+@keyframes rp-paid-pop { from { opacity: .2; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
 .rp-mark-paid-button:disabled { cursor: not-allowed; opacity: .48; }
 .rp-mark-paid-button[hidden], .rp-confirm-usage[hidden] { display: none !important; }
 .swal-field-label { display: block; margin: 0 0 .35rem; color: #34445b; font-size: .82rem; font-weight: 700; text-align: left; }

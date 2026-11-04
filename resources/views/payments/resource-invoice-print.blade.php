@@ -6,7 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Invoice {{ $invoice->invoice_number ?: $reservation->reference }}</title>
     <link rel="stylesheet" href="{{ asset('css/icons/tabler-icons/tabler-icons.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/resource-invoice-print.css') }}?v=1">
+    <link rel="stylesheet" href="{{ asset('css/resource-invoice-print.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('css/resource-payment-record.css') }}?v=2">
 </head>
 @php
     $requester = $reservation->requester ?? $reservation->createdBy;
@@ -27,7 +28,7 @@
         <nav class="invoice-actions" aria-label="Invoice actions">
             <a class="invoice-button is-secondary" href="{{ route('payments.resources') }}"><i class="ti ti-arrow-left" aria-hidden="true"></i> Back to payments</a>
             @if(! $isPaid && $canMarkPaid)
-                <button class="invoice-button is-success" type="button" id="mark-invoice-paid" data-url="{{ route('payments.resources.mark-paid', ['reference' => $reservation->reference]) }}" data-extra-hours="{{ number_format((float) $invoice->extra_hours, 2, '.', '') }}"><i class="ti ti-cash" aria-hidden="true"></i> Mark as Paid</button>
+                <button class="invoice-button is-success" type="button" id="mark-invoice-paid" data-url="{{ route('payments.resources.mark-paid', ['reference' => $reservation->reference]) }}" data-extra-hours="{{ number_format((float) $invoice->extra_hours, 2, '.', '') }}" data-invoice-number="{{ $invoice->invoice_number ?: 'Draft invoice' }}" data-total="{{ number_format((float) ($breakdown['total'] ?? 0), 2, '.', '') }}"><i class="ti ti-cash" aria-hidden="true"></i> Mark as Paid</button>
             @endif
             <button class="invoice-button is-primary" type="button" onclick="window.print()"><i class="ti ti-printer" aria-hidden="true"></i> Print invoice</button>
         </nav>
@@ -38,15 +39,16 @@
             @endif
             <header class="invoice-header">
                 <div class="invoice-brand">
-                    <span>Resource Reservation System</span>
-                    <h1>Invoice</h1>
+                    <img class="invoice-logo" src="{{ asset('images/logos/nebula.png') }}" alt="SLT Mobitel Nebula Institute of Technology" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                    <span class="invoice-logo-fallback" hidden>SLT Mobitel Nebula Institute of Technology</span>
                 </div>
                 <div class="invoice-header-meta">
+                    <span class="invoice-title">INVOICE</span>
                     <strong class="invoice-number">{{ $invoice->invoice_number ?: 'Draft invoice' }}</strong>
                     <span @class(['invoice-status', 'is-paid' => $isPaid, 'is-draft' => $isDraft, 'is-unpaid' => ! $isPaid && ! $isDraft])>
                         @if($isPaid)<i class="ti ti-circle-check"></i>@elseif($isDraft)<i class="ti ti-file-draft"></i>@else<i class="ti ti-clock"></i>@endif
                         {{ $statusLabel }}
-                        @if($isPaid && $invoice->paid_at)<small>{{ $invoice->paid_at->format('d M Y') }}</small>@endif
+                        @if($isPaid && ($invoice->payment_date || $invoice->paid_at))<small>{{ ($invoice->payment_date ?? $invoice->paid_at)->format('d M Y') }}</small>@endif
                     </span>
                 </div>
             </header>
@@ -115,7 +117,7 @@
                 @if($isPaid)
                     <section class="invoice-paid-stamp" aria-label="Payment recorded">
                         <span class="paid-stamp-icon"><i class="ti ti-circle-check"></i></span>
-                        <div><strong>PAID</strong><p>Paid {{ $invoice->paid_at?->format('d M Y, H:i') ?? '' }} · {{ str_replace('_', ' ', ucfirst($invoice->payment_method ?? 'Payment')) }}@if($invoice->payment_reference) · Ref {{ $invoice->payment_reference }}@endif</p></div>
+                        <div><strong>PAID</strong><p>Paid {{ ($invoice->payment_date ?? $invoice->paid_at)?->format('d M Y') ?? '' }} · {{ str_replace('_', ' ', ucfirst($invoice->payment_method ?? 'Payment')) }}@if($invoice->payment_reference) · Ref {{ $invoice->payment_reference }}@endif</p></div>
                     </section>
                 @elseif($isDraft)
                     <aside class="invoice-draft-note"><i class="ti ti-info-circle"></i><span>Draft only. Not a tax invoice until issued by Finance.</span></aside>
@@ -127,40 +129,30 @@
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('js/resource-payment-record.js') }}?v=3"></script>
     @if(! $isPaid && $canMarkPaid)
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             document.getElementById('mark-invoice-paid')?.addEventListener('click', async function () {
                 const button = this;
-                const confirmation = await Swal.fire({
-                    title: 'Record this payment?',
-                    html: '<label class="invoice-swal-label" for="invoice-payment-method">Payment method</label><select id="invoice-payment-method" class="swal2-select"><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank transfer</option></select><label class="invoice-swal-label" for="invoice-payment-reference">Reference number (optional)</label><input id="invoice-payment-reference" class="swal2-input" placeholder="Receipt or transaction reference">',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Mark as paid',
-                    cancelButtonText: 'Cancel',
-                    focusConfirm: false,
-                    preConfirm: () => ({
-                        method: document.getElementById('invoice-payment-method').value,
-                        reference_number: document.getElementById('invoice-payment-reference').value.trim(),
-                    }),
-                });
-                if (!confirmation.isConfirmed) return;
                 button.disabled = true;
                 try {
-                    const response = await fetch(button.dataset.url, {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
-                        body: JSON.stringify({ ...confirmation.value, extra_hours: Number(button.dataset.extraHours || 0) }),
-                    });
-                    const payload = await response.json();
-                    if (!response.ok) throw new Error(payload.message || 'Payment could not be recorded.');
-                    await Swal.fire({ title: 'Payment recorded', text: payload.message, icon: 'success', confirmButtonText: 'Done' });
-                    window.location.reload();
+                    const result = await window.ResourcePaymentRecord.open({ invoiceNumber: button.dataset.invoiceNumber, total: button.dataset.total, url: button.dataset.url, extraHours: button.dataset.extraHours });
+                    if (!result) { button.disabled = false; return; }
+                    const paidDate = result.payment_date || result.paid_at || '';
+                    const method = String(result.payment_method || '').replaceAll('_', ' ');
+                    document.querySelector('.invoice-status')?.classList.remove('is-unpaid', 'is-draft');
+                    const badge = document.querySelector('.invoice-status');
+                    if (badge) { badge.classList.add('is-paid'); badge.innerHTML = `<i class="ti ti-circle-check"></i> Paid <small>${paidDate}</small>`; }
+                    document.querySelector('.invoice-watermark')?.remove();
+                    document.querySelector('.invoice-draft-note')?.remove();
+                    const stamp = document.createElement('section');
+                    stamp.className = 'invoice-paid-stamp';
+                    stamp.innerHTML = `<span class="paid-stamp-icon"><i class="ti ti-circle-check"></i></span><div><strong>PAID</strong><p>Paid ${paidDate} · ${method}${result.payment_reference ? ` · Ref ${String(result.payment_reference).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}` : ''}</p></div>`;
+                    document.querySelector('.invoice-content')?.append(stamp);
+                    button.remove();
                 } catch (error) {
                     button.disabled = false;
-                    Swal.fire({ title: 'Could not record payment', text: error.message, icon: 'error', confirmButtonText: 'OK' });
                 }
             });
         </script>

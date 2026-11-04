@@ -98,12 +98,13 @@
         status.textContent = paid ? 'PAID' : 'UNPAID';
         status.classList.toggle('is-paid', paid);
         status.classList.toggle('is-unpaid', !paid);
-        document.getElementById('rp-payment-status-text').textContent = paid ? 'Paid' : 'Unpaid';
+        document.getElementById('rp-payment-status-text').textContent = paid ? 'Paid' : '';
         const method = reservation?.payment_method ? reservation.payment_method.replaceAll('_', ' ') : '';
         const paymentNoteDetail = document.getElementById('rp-payment-note-detail');
         if (paymentNoteDetail) paymentNoteDetail.textContent = paid
-            ? `${reservation.paid_at ? `on ${reservation.paid_at}` : ''}${reservation.paid_by ? ` by ${reservation.paid_by}` : ''}${method ? ` via ${method}` : ''}${reservation.payment_reference ? ` · Ref ${reservation.payment_reference}` : ''}.`
+            ? ` on ${reservation.payment_date || reservation.paid_at || ''}${method ? ` via ${method}` : ''}${reservation.payment_reference ? ` · Ref ${reservation.payment_reference}` : ''}`
             : '';
+        document.getElementById('rp-payment-note').hidden = !paid;
         document.getElementById('rp-invoice-footnote').textContent = paid
             ? 'Payment recorded. Not a tax invoice until issued by Finance.'
             : 'Draft only. Not a tax invoice until issued by Finance.';
@@ -117,8 +118,6 @@
 
         const rateWarning = document.getElementById('rp-rate-warning');
         rateWarning.classList.toggle('is-hidden', !loaded || Boolean(reservation.has_rate));
-        document.getElementById('rp-pay').disabled = true;
-        document.getElementById('rp-pay').title = paid ? 'This invoice has already been paid' : 'Online payments are pending gateway integration';
         printButton.disabled = !loaded;
         hoursInput.disabled = !loaded || paid;
         document.getElementById('rp-hours-up').disabled = !loaded || paid;
@@ -337,37 +336,24 @@
 
     markPaidButton?.addEventListener('click', async () => {
         if (!reservation || reservation.payment_status === 'paid') return;
-        const result = await swal({
-            title: 'Record payment',
-            icon: 'question',
-            html: `<p>Mark invoice <strong>${escapeHtml(reservation.invoice_number)}</strong> as paid?</p><label class="swal-field-label" for="rp-swal-method">Payment method</label><select id="rp-swal-method" class="form-select"><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank transfer</option></select><label class="swal-field-label mt-3" for="rp-swal-reference">Reference number (optional)</label><input id="rp-swal-reference" class="form-control" maxlength="120" placeholder="Receipt or transaction reference">`,
-            showCancelButton: true,
-            confirmButtonText: 'Mark as Paid',
-            cancelButtonText: 'Cancel',
-            focusConfirm: false,
-            preConfirm: () => ({
-                method: document.getElementById('rp-swal-method').value,
-                reference_number: document.getElementById('rp-swal-reference').value.trim(),
-            }),
-        });
-        if (!result.isConfirmed) return;
+        if (!window.ResourcePaymentRecord) return;
         feeRequestSequence++;
         markPaidButton.disabled = true;
         try {
             const url = markPaidButton.dataset.urlTemplate.replace('__REFERENCE__', encodeURIComponent(reservation.reference));
-            const response = await fetchJson(url, {
-                method: 'POST',
-                headers: jsonHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ ...result.value, extra_hours: Number(hoursInput.value || 0) }),
+            const payload = await window.ResourcePaymentRecord.open({
+                invoiceNumber: reservation.invoice_number,
+                total: reservation.total,
+                url,
+                extraHours: Number(hoursInput.value || 0),
             });
-            const payload = await response.json();
-            if (!response.ok) throw new Error((payload.errors && Object.values(payload.errors).flat()[0]) || payload.message || 'Could not record payment.');
+            if (!payload) { markPaidButton.disabled = false; return; }
             reservation = { ...reservation, ...payload, payment_status: 'paid', has_rate: true };
             usageConfirmed = true;
             renderInvoice();
             setMessage(payload.message, 'success');
-            await alertMessage('Payment recorded', `${reservation.invoice_number} has been marked as paid.`, 'success');
         } catch (error) {
+            markPaidButton.disabled = false;
             renderInvoice();
             setMessage(error.message, 'error');
             await alertMessage('Could not record payment', error.message);
@@ -378,10 +364,6 @@
         if (!reservation) return;
         const url = form.dataset.printTemplate.replace('__REFERENCE__', encodeURIComponent(reservation.reference)) + '?extra_hours=' + encodeURIComponent(hoursInput.value || '0');
         window.open(url, '_blank', 'noopener');
-    });
-
-    document.getElementById('rp-pay').addEventListener('click', () => {
-        alertMessage('Online payment unavailable', 'The online payment gateway is not connected yet.', 'info');
     });
 
     renderInvoice();
