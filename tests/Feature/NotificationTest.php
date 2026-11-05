@@ -139,6 +139,7 @@ class NotificationTest extends TestCase
             'reservation_date' => now()->addDay()->toDateString(),
             'start_time' => '09:00',
             'end_time' => '12:00',
+            'title' => 'Networking training',
             'purpose' => 'Training session',
             'attendee_count' => 10,
         ])->assertRedirect();
@@ -165,6 +166,7 @@ class NotificationTest extends TestCase
             'reservation_date' => now()->addDay()->toDateString(),
             'start_time' => '09:00',
             'end_time' => '12:00',
+            'title' => 'Colleague workshop',
             'purpose' => 'Booked for colleague',
             'attendee_count' => 8,
         ])->assertRedirect();

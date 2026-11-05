@@ -5,7 +5,8 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=29">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
+<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=43">
 @endpush
 
 @section('content')
@@ -30,17 +31,21 @@
     $matchedResource = $resourceOptions->firstWhere('value', $oldResource);
     $oldTypeLabel = $matchedType['label'] ?? 'Select type';
     $oldResourceLabel = $matchedResource['label'] ?? 'All resources of type';
+    $activeTab = 'rates';
+    if (session('rr_tab') === 'history') {
+        $activeTab = 'history';
+    } elseif (session('rr_tab') === 'discounts' || $errors->hasAny(['customer_category', 'discount_percent']) || old('customer_category') !== null || old('discount_percent') !== null) {
+        $activeTab = 'discounts';
+    }
 @endphp
-<div class="container-fluid mt-4 rsv-page rp-page rr-admin">
-    <div class="rsv-header">
+<div class="container-fluid mt-4 rsv-page rp-page rr-admin" data-rr-tab="{{ $activeTab }}">
+    <header class="rr-page-heading">
         <div>
-            <h1 class="rsv-title">Resource Rates</h1>
-            <p class="rsv-subtitle mb-0">Configure effective-dated rates for resources and resource types.</p>
+            <h1>Resource Rates</h1>
+            <p>Configure effective-dated rates for resources and resource types.</p>
         </div>
-        <div class="rsv-header-actions">
-            <a href="{{ route('payments.resources') }}" class="btn rsv-header-btn rsv-calendar-btn"><i class="ti ti-receipt me-1"></i> Back to invoicing</a>
-        </div>
-    </div>
+        <a href="{{ route('payments.resources') }}" class="rr-back-link"><i class="ti ti-receipt"></i> Back to invoicing</a>
+    </header>
 
     @if(session('success'))
         <div class="alert alert-success rsv-auto-alert" role="status">{{ session('success') }}</div>
@@ -55,34 +60,41 @@
         </div>
     @endif
 
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-4">
-            <div class="rsv-stat p-3 p-md-4" style="--stat-color:#1769c2;--stat-icon-bg:#e8f0fa">
-                <span class="rsv-stat-icon"><i class="ti ti-list-details"></i></span>
-                <div class="rsv-stat-label mt-3">Rates</div>
-                <div class="rsv-stat-number">{{ number_format($rateCount) }}</div>
-            </div>
+    <nav class="rr-tabs" aria-label="Resource rate sections">
+        <a href="#rr-rates" @class(['is-active' => $activeTab === 'rates']) @if($activeTab === 'rates') aria-current="page" @endif>Rates</a>
+        <a href="#rr-discounts" @class(['is-active' => $activeTab === 'discounts']) @if($activeTab === 'discounts') aria-current="page" @endif>Discounts</a>
+        <a href="#rr-history" @class(['is-active' => $activeTab === 'history']) @if($activeTab === 'history') aria-current="page" @endif>History</a>
+    </nav>
+
+    <div class="rr-stats rc-cards">
+        <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-list-details"></i></span>
+            <div class="rc-card-label">Rates</div>
+            <div class="rc-card-value">{{ number_format($rateCount) }}</div>
         </div>
-        <div class="col-6 col-lg-4">
-            <div class="rsv-stat p-3 p-md-4" style="--stat-color:#16a77a;--stat-icon-bg:#e7f6f0">
-                <span class="rsv-stat-icon"><i class="ti ti-circle-check"></i></span>
-                <div class="rsv-stat-label mt-3">Active rates</div>
-                <div class="rsv-stat-number" id="rr-active-rates">{{ number_format($activeRateCount) }}</div>
-            </div>
+        <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-circle-check"></i></span>
+            <div class="rc-card-label">Active rates</div>
+            <div class="rc-card-value" id="rr-active-rates">{{ number_format($activeRateCount) }}</div>
         </div>
-        <div class="col-12 col-lg-4">
-            <div class="rsv-stat p-3 p-md-4" style="--stat-color:#d97706;--stat-icon-bg:#fff4e5">
-                <span class="rsv-stat-icon"><i class="ti ti-percentage"></i></span>
-                <div class="rsv-stat-label mt-3">Active discounts</div>
-                <div class="rsv-stat-number" id="rr-active-discounts">{{ number_format($activeDiscountCount) }}</div>
-            </div>
+        <div class="rc-card">
+            <span class="rc-card-icon" aria-hidden="true"><i class="ti ti-percentage"></i></span>
+            <div class="rc-card-label">Active discounts</div>
+            <div class="rc-card-value" id="rr-active-discounts">{{ number_format($activeDiscountCount) }}</div>
         </div>
     </div>
 
-    <section class="card border-0 rsv-panel mb-4">
+    <section class="card border-0 rsv-panel mb-4 rr-management" id="rr-add-rate">
+        <div class="rr-catalog-heading">
+            <div>
+                <span class="rp-title-icon"><i class="ti ti-tag"></i></span>
+                <div>
+                    <h2 class="rr-section-title">Add rate</h2>
+                    <p class="rr-muted">A specific resource overrides the type rate. Leave it open to cover every resource of that type.</p>
+                </div>
+            </div>
+        </div>
         <div class="card-body">
-            <h2 class="rr-section-title">Add rate</h2>
-            <p class="rr-muted mb-3">A specific resource overrides the type rate. Leave it open to cover every resource of that type.</p>
             <form method="POST" action="{{ route('payments.rates.store') }}" class="rr-fields" novalidate>
                 @csrf
                 <div class="rr-field">
@@ -132,28 +144,34 @@
         </div>
     </section>
 
-    <section class="card border-0 rsv-panel mb-4">
+    <section class="card border-0 rsv-panel mb-4 rr-catalog-panel" id="rr-rates">
         <div class="card-body">
-            <div class="rr-card-head">
+            <div class="rr-catalog-heading">
                 <div>
-                    <h2 class="rr-section-title">Rate catalog</h2>
-                    <p class="rr-muted">Active rates are used when a reservation is invoiced.</p>
+                    <span class="rp-title-icon"><i class="ti ti-list-details"></i></span>
+                    <div><h2 class="rr-section-title">Rate catalog</h2>
+                    <p class="rr-muted">Search, compare, and manage the rates applied to reservations.</p></div>
                 </div>
-                <form method="GET" action="{{ route('payments.rates.index') }}" class="rr-field rr-rate-search" data-rr-catalog-search>
-                    <label class="form-label" for="rr-rate-search">Search</label>
-                    <div class="input-group rsv-search-group rp-search-group">
-                        <span class="input-group-text"><i class="ti ti-search"></i></span>
-                        <input id="rr-rate-search" type="search" name="catalog_search" class="form-control" placeholder="Search rates" value="{{ $catalogSearch }}" autocomplete="off">
-                    </div>
-                </form>
             </div>
+            <form method="GET" action="{{ route('payments.rates.index') }}" class="rr-catalog-filters" data-rr-catalog-search>
+                <div class="rr-field rr-rate-search"><label class="form-label" for="rr-rate-search">Search</label><div class="input-group rsv-search-group rp-search-group"><span class="input-group-text"><i class="ti ti-search"></i></span><input id="rr-rate-search" type="search" name="catalog_search" class="form-control" placeholder="Search rates" value="{{ $catalogSearch }}" autocomplete="off"></div></div>
+                <div class="rr-field"><label class="form-label" for="rr-type-filter">Resource type</label><x-rm-select id="rr-type-filter" name="catalog_type" placeholder="All types" :value="$catalogType ?? ''" :options="collect([['value' => '', 'label' => 'All types']])->concat($typeOptions)->all()" /></div>
+                <div class="rr-field"><label class="form-label" for="rr-status-filter">Status</label><x-rm-select id="rr-status-filter" name="catalog_status" placeholder="Active" :value="$catalogStatus ?? 'active'" :options="[['value' => 'active', 'label' => 'Active'], ['value' => 'all', 'label' => 'All statuses'], ['value' => 'inactive', 'label' => 'Inactive']]" /></div>
+                <div class="rr-field rr-catalog-actions">
+                    <label class="form-label rr-field-spacer" for="rr-clear-filters">&nbsp;</label>
+                    <div class="rr-catalog-actions-row">
+                        <button id="rr-clear-filters" type="button" class="rsv-filter-btn rsv-filter-clear" @disabled($catalogSearch === '' && ($catalogType ?? '') === '' && ($catalogStatus ?? 'active') === 'active')>Clear</button>
+                        <button id="rr-export-csv" type="button" class="btn rr-export-btn" aria-label="Export CSV"><i class="ti ti-download"></i> Export CSV</button>
+                    </div>
+                </div>
+            </form>
             <div id="rr-rate-catalog" class="rr-history-body">
                 @include('payments.partials.rate-catalog')
             </div>
         </div>
     </section>
 
-    <section class="card border-0 rsv-panel mb-4">
+    <section class="card border-0 rsv-panel mb-4 rr-management" id="rr-discounts">
         <div class="card-body">
             <h2 class="rr-section-title">Customer category discounts</h2>
             <p class="rr-muted mb-3">The category must match the requester’s user type, such as student or staff. The discount applies after the rate subtotal and before tax.</p>
@@ -223,7 +241,7 @@
         </div>
     </section>
 
-    <section class="card border-0 rsv-panel mb-4">
+    <section class="card border-0 rsv-panel mb-4 rr-management" id="rr-history">
         <div class="card-body">
             <h2 class="rr-section-title">Discount change history</h2>
             <p class="rr-muted mb-3">Discount create, update, activate, and deactivate records.</p>
@@ -233,7 +251,7 @@
         </div>
     </section>
 
-    <section class="card border-0 rsv-panel mb-4">
+    <section class="card border-0 rsv-panel mb-4 rr-management" id="rr-rate-history-panel">
         <div class="card-body">
             <h2 class="rr-section-title">Rate change history</h2>
             <p class="rr-muted mb-3">Rate create, update, activate, and deactivate records.</p>
@@ -351,5 +369,6 @@
 @push('scripts')
 <script type="application/json" id="rr-catalog">@json(['types' => $typeOptions, 'resources' => $resourceOptions])</script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/resource-rates.js') }}?v=12"></script>
+<script src="{{ asset('js/resource-rates.js') }}?v=18"></script>
 @endpush
+

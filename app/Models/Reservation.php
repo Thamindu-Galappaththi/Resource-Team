@@ -26,6 +26,8 @@ class Reservation extends Model
         'title',
         'description',
         'purpose',
+        'lecturer_name',
+        'special_approval',
         'attendee_count',
         'reservation_date',
         'start_time',
@@ -47,7 +49,13 @@ class Reservation extends Model
             'approved_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'approval_archived_at' => 'datetime',
+            'special_approval' => 'boolean',
         ];
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(ReservationDocument::class)->orderBy('id');
     }
 
     protected static function booted(): void
@@ -161,6 +169,32 @@ class Reservation extends Model
         return route('reservations.show', $this);
     }
 
+    /** Calendar label for a hostel item, e.g. "Welisara Hostel · Ladies · 2 beds". */
+    public function hostelItemLabel(ReservationItem $item): string
+    {
+        $name = $item->resource_name_snapshot ?: $item->resource?->name_model ?: 'Hostel';
+        if ($this->type !== \App\Enums\ReservationType::HOSTEL->value) {
+            return $name;
+        }
+        $beds = (int) round((float) $item->quantity);
+        $group = config('hostel.bed_groups.'.$this->hostelStay?->bed_group.'.short');
+
+        return implode(' · ', array_filter([$name, $group, $beds.' '.($beds === 1 ? 'bed' : 'beds')]));
+    }
+
+    /** Hostel rooms with the beds taken in each, e.g. "Welisara Ladies Room 01 (2 beds)". */
+    public function bedAllocationLabel(): string
+    {
+        return $this->items
+            ->filter(fn (ReservationItem $item) => filled($item->resource_name_snapshot))
+            ->map(function (ReservationItem $item) {
+                $beds = (int) round((float) $item->quantity);
+
+                return $item->resource_name_snapshot.' ('.$beds.' '.($beds === 1 ? 'bed' : 'beds').')';
+            })
+            ->implode(', ');
+    }
+
     public function resourceNames(): string
     {
         return $this->items
@@ -195,6 +229,15 @@ class Reservation extends Model
         });
     }
 
+    public function scopeForSpecialApprover(Builder $query, User $user): Builder
+    {
+        return match ($user->specialApprovalScope()) {
+            'all' => $query,
+            'hostel' => $query->where('type', ReservationType::HOSTEL->value),
+            default => $query->where('type', '!=', ReservationType::HOSTEL->value),
+        };
+    }
+
     public function scopeSearch(Builder $query, ?string $search): Builder
     {
         if (! filled($search)) {
@@ -206,7 +249,8 @@ class Reservation extends Model
                 ->orWhere('title', 'like', '%'.$search.'%')
                 ->orWhere('purpose', 'like', '%'.$search.'%')
                 ->orWhereHas('requester', fn (Builder $user) => $user->where('name', 'like', '%'.$search.'%'))
-                ->orWhereHas('hostelStay', fn (Builder $stay) => $stay->where('guest_name', 'like', '%'.$search.'%'))
+                ->orWhereHas('hostelStay', fn (Builder $stay) => $stay->where('guest_name', 'like', '%'.$search.'%')
+                    ->orWhere('employee_ids', 'like', '%'.$search.'%'))
                 ->orWhereHas('items', fn (Builder $item) => $item->where('resource_name_snapshot', 'like', '%'.$search.'%'));
         });
     }
@@ -237,10 +281,6 @@ class Reservation extends Model
             $query->whereHas('items.resource.type', function (Builder $type) use ($filters) {
                 $type->where('resource_category_id', $filters['resource_category_id']);
             });
-        }
-
-        if (($filters['room_type_id'] ?? null) !== null && $filters['room_type_id'] !== '') {
-            $query->whereHas('hostelStay', fn (Builder $stay) => $stay->where('room_type_id', $filters['room_type_id']));
         }
 
         if (($filters['check_in_from'] ?? null) !== null && $filters['check_in_from'] !== '') {

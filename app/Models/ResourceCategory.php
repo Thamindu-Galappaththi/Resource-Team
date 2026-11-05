@@ -21,6 +21,24 @@ class ResourceCategory extends Model
         'name',
     ];
 
+    protected $appends = ['is_locked'];
+
+    public static function isHostelName(?string $name): bool
+    {
+        return strcasecmp(trim((string) $name), (string) config('hostel.category_name', 'Hostel Room')) === 0;
+    }
+
+    /** The Hostel Room category drives hostel bookings, so it cannot be renamed or deleted. */
+    public function isLocked(): bool
+    {
+        return self::isHostelName($this->name);
+    }
+
+    public function getIsLockedAttribute(): bool
+    {
+        return $this->isLocked();
+    }
+
     /**
      * A category has many "Additional Features" rows (Tab 1's
      * repeater). One-to-many: one category -> many features.

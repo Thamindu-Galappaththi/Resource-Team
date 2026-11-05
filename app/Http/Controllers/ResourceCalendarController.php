@@ -50,7 +50,7 @@ class ResourceCalendarController extends Controller
             ])->values(),
             'categories' => $resourceRecords->map(fn (Resource $resource) => $resource->type?->category)
                 ->filter()->unique('id')->sortBy('name')->values(),
-            'locations' => Location::query()->ordered()->get(['id', 'name']),
+            'locations' => Location::query()->forResources()->ordered()->get(['id', 'name']),
             'stats' => [
                 'myResources' => $resourceRecords->where('status', 'active')->count(),
                 'todayBookings' => (clone $visible)->whereDate('reservation_date', $today)->count(),
@@ -77,7 +77,7 @@ class ResourceCalendarController extends Controller
         $statuses = $this->eventStatusValues($filters['status'] ?? null);
 
         $reservations = Reservation::query()
-            ->with(['requester', 'location', 'items.resource.type.category'])
+            ->with(['requester', 'location', 'hostelStay', 'items.resource.type.category'])
             ->visibleTo($request->user())
             ->where('status', '!=', ReservationStatus::DRAFT->value)
             ->whereHas('items', fn ($items) => $items->where('starts_at', '<', $rangeEnd)->where('ends_at', '>', $rangeStart))
@@ -149,7 +149,8 @@ class ResourceCalendarController extends Controller
     private function conflicts(Collection $reservations): array
     {
         $blockingStatuses = ReservationStatus::blockingItemStatuses();
-        $bookedItems = $reservations->flatMap(fn (Reservation $reservation) =>
+        // Hostel stays share a location's beds; capacity per bed group is enforced when booking and approving.
+        $bookedItems = $reservations->where('type', '!=', ReservationType::HOSTEL->value)->flatMap(fn (Reservation $reservation) =>
             $reservation->items
                 ->filter(fn ($item) => in_array($item->status, $blockingStatuses, true) && $item->starts_at && $item->ends_at)
                 ->map(fn ($item) => [
@@ -199,7 +200,9 @@ class ResourceCalendarController extends Controller
             $duration = $nights === 1 ? '1 night' : $nights.' nights';
         }
         $conflict = isset($conflicts[$reservation->id]);
-        $resourceName = $item->resource_name_snapshot ?: $item->resource?->name_model ?: $reservation->title ?: '—';
+        $resourceName = $reservation->type === ReservationType::HOSTEL->value
+            ? $reservation->hostelItemLabel($item)
+            : ($item->resource_name_snapshot ?: $item->resource?->name_model ?: $reservation->title ?: '—');
         $segments = [];
         $segmentStart = $start->copy();
 

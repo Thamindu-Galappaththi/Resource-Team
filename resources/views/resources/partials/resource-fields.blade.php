@@ -19,8 +19,8 @@
     <div class="col-md-6 mb-3">
         <label class="form-label">Location <span class="text-danger">*</span></label>
         <x-rm-select id="resourceLocationSelect" name="location_id" class="location-select" required
-            placeholder="Select a location (e.g., Block A, Floor 2)"
-            :options="[['value' => '', 'label' => 'Select a location (e.g., Block A, Floor 2)']]" />
+            placeholder="Select a location (Welisara, Moratuwa or Peradeniya)"
+            :options="[['value' => '', 'label' => 'Select a location (Welisara, Moratuwa or Peradeniya)']]" />
         <div class="invalid-feedback" id="resourceLocationError"></div>
     </div>
     <div class="col-md-6 mb-3">
@@ -38,9 +38,42 @@
     </div>
 </div>
 
+@php
+    $bedGroups = config('hostel.bed_groups', []);
+    $bedDefault = array_sum(array_column($bedGroups, 'default'));
+    $bedMax = (int) config('hostel.max_beds_per_group', 1000);
+@endphp
+<section class="rm-hostel-beds mb-3" id="hostelBedFields" hidden
+    data-hostel-category="{{ config('hostel.category_name') }}"
+    data-hostel-locations="{{ implode('|', config('hostel.locations', [])) }}"
+    data-bed-type="{{ config('hostel.bed_type_name', 'Bed') }}">
+    <div class="rm-hostel-head">
+        <span class="rm-hostel-icon" aria-hidden="true"><i class="ti ti-bed"></i></span>
+        <div>
+            <h3 class="rm-hostel-title">Hostel beds</h3>
+            <p class="rm-hostel-sub mb-0">One record per location holds every bed group. When new beds are added, edit this record and raise the count.</p>
+        </div>
+        <span class="rm-hostel-total" aria-live="polite"><strong data-bed-total>{{ $bedDefault }}</strong> beds</span>
+    </div>
+    <div class="row g-3">
+        @foreach($bedGroups as $key => $group)
+            <div class="col-md-4">
+                <label for="resourceBeds_{{ $key }}" class="form-label">{{ $group['label'] }} <span class="text-danger">*</span></label>
+                <div class="input-group rm-bed-input has-validation">
+                    <input type="number" class="form-control" id="resourceBeds_{{ $key }}" data-bed-group="{{ $key }}" data-bed-default="{{ $group['default'] }}"
+                        min="0" max="{{ $bedMax }}" step="1" inputmode="numeric" value="{{ $group['default'] }}" required>
+                    <span class="input-group-text">beds</span>
+                    <div class="invalid-feedback" id="resourceBeds_{{ $key }}Error"></div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+</section>
+
 <div class="mb-3">
-    <label for="resourceNameModel" class="form-label">Resource Name / Model <span class="text-danger">*</span></label>
-    <input type="text" class="form-control" id="resourceNameModel" name="name_model" placeholder="e.g., Computer Lab 03" required>
+    <label for="resourceNameModel" class="form-label">Resource Name / Model <span class="text-danger" data-name-required>*</span><span class="text-muted d-none" data-name-optional>(Optional for hostel)</span></label>
+    <input type="text" class="form-control" id="resourceNameModel" name="name_model" maxlength="120" placeholder="e.g., Computer Lab 03" required>
+    <div class="form-text">Maximum 120 characters.</div>
     <div class="invalid-feedback" id="resourceNameError"></div>
 </div>
 

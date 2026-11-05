@@ -61,7 +61,7 @@ class SltEmployeeRequestController extends Controller
         $user = $request->user();
 
         $reservations = Reservation::query()
-            ->with(['location', 'hostelStay.roomType'])
+            ->with(['location', 'hostelStay'])
             ->where(function ($query) use ($user) {
                 $query->where('requester_id', $user->id)
                     ->orWhere('created_by_user_id', $user->id);
@@ -82,10 +82,10 @@ class SltEmployeeRequestController extends Controller
                 $stay = $reservation->hostelStay;
 
                 return [
-                    'title' => $stay?->guest_name ?: ($reservation->title ?: 'Hostel stay'),
+                    'title' => $stay?->displayGuestName() ?: ($reservation->title ?: 'Hostel stay'),
                     'reference' => $reservation->reference,
                     'when' => $this->hostelWhen($reservation),
-                    'meta' => $stay?->roomType?->name ?? $reservation->location?->name,
+                    'meta' => $stay?->bedGroupLabel() ?? $reservation->location?->name,
                     'status' => $status?->label() ?? (string) $reservation->status,
                     'tone' => $this->reservationTone((string) $reservation->status),
                     'href' => route('hostel.show', $reservation),

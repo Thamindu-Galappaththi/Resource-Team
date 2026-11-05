@@ -15,7 +15,7 @@
     <div class="hs-header">
         <div>
             <h1 class="hs-title">{{ $reservation->reference }}</h1>
-            <p class="hs-subtitle mb-0">{{ $reservation->title }}</p>
+            <p class="hs-subtitle mb-0">{{ $reservation->hostelStay?->displayGuestName() ?: '—' }}</p>
         </div>
         <div class="hs-header-actions">
             <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
@@ -40,9 +40,10 @@
                 <h2 class="hs-section-title"><i class="ti ti-bed"></i> Stay details</h2>
                 <div class="hs-card-body">
                     <div class="hs-details">
-                        <div class="hs-detail-row"><span class="hs-detail-label">Guest name</span><span class="hs-detail-value">{{ $reservation->hostelStay?->guest_name ?: '—' }}</span></div>
-                        <div class="hs-detail-row"><span class="hs-detail-label">Room</span><span class="hs-detail-value">{{ $reservation->resourceNames() ?: '—' }}</span></div>
-                        <div class="hs-detail-row"><span class="hs-detail-label">Room category</span><span class="hs-detail-value">{{ $reservation->hostelStay?->roomType?->name ?: '—' }}</span></div>
+                        <div class="hs-detail-row"><span class="hs-detail-label">Guest name</span><span class="hs-detail-value">{{ $reservation->hostelStay?->displayGuestName() ?: '—' }}</span></div>
+                        <div class="hs-detail-row"><span class="hs-detail-label">Employee IDs</span><span class="hs-detail-value">{{ $reservation->hostelStay?->employeeIdList() ?: '—' }}</span></div>
+                        <div class="hs-detail-row"><span class="hs-detail-label">Bed group</span><span class="hs-detail-value">{{ $reservation->hostelStay?->bedGroupLabel() ?: '—' }}</span></div>
+                        <div class="hs-detail-row"><span class="hs-detail-label">Beds</span><span class="hs-detail-value">{{ $reservation->bedAllocationLabel() ?: '—' }}</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Location</span><span class="hs-detail-value">{{ $reservation->location?->name ?: '—' }}</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Check-in</span><span class="hs-detail-value">{{ $reservation->hostelStay?->check_in_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Check-out</span><span class="hs-detail-value">{{ $reservation->hostelStay?->check_out_at?->timezone($tz)->format('d M Y H:i') ?: '—' }}</span></div>
@@ -50,6 +51,7 @@
                         <div class="hs-detail-row"><span class="hs-detail-label">Requester</span><span class="hs-detail-value">{{ $reservation->requester?->name ?: '—' }}</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Created by</span><span class="hs-detail-value">{{ $reservation->createdBy?->name ?: '—' }}</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Requirements</span><span class="hs-detail-value">{{ $reservation->hostelStay?->special_requirements ?: '—' }}</span></div>
+                        @include('reservations.partials.special-summary', ['prefix' => 'hs'])
                         @if($reservation->cancellation_reason)
                             <div class="hs-detail-row"><span class="hs-detail-label">Cancel reason</span><span class="hs-detail-value">{{ $reservation->cancellation_reason }}</span></div>
                         @endif
@@ -59,22 +61,22 @@
 
             @if($reservation->items->isNotEmpty())
                 <section class="hs-card">
-                    <h2 class="hs-section-title"><i class="ti ti-door"></i> Booked room</h2>
+                    <h2 class="hs-section-title"><i class="ti ti-bed"></i> Booked beds</h2>
                     <div class="hs-card-body">
                         <div class="table-responsive hs-table">
                             <table class="table align-middle mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Resource</th>
-                                        <th>Category</th>
+                                        <th>Room</th>
+                                        <th>Beds</th>
                                         <th>Item status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($reservation->items as $item)
                                         <tr>
-                                            <td data-label="Resource">{{ $item->resource_name_snapshot ?: '—' }}</td>
-                                            <td data-label="Category">{{ $item->resource?->type?->category?->name ?? $reservation->hostelStay?->roomType?->name ?? '—' }}</td>
+                                            <td data-label="Room">{{ $item->resource_name_snapshot ?: '—' }}</td>
+                                            <td data-label="Beds">{{ (int) round((float) $item->quantity) }}</td>
                                             <td data-label="Item status"><span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->bookedItemStatusLabel($item) }}</span></td>
                                         </tr>
                                     @endforeach

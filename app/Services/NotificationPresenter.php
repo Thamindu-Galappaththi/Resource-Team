@@ -19,6 +19,7 @@ class NotificationPresenter
         'CanteenReservationCreated' => 'ti-tools-kitchen-2',
         'NewCanteenReservationPending' => 'ti-tools-kitchen-2',
         'CanteenReservationStatusUpdated' => 'ti-tools-kitchen-2',
+        'NewHostelStudentRequest' => 'ti-school',
     ];
 
     private const TITLES = [
@@ -30,6 +31,7 @@ class NotificationPresenter
         'CanteenReservationCreated' => 'Canteen reservation',
         'NewCanteenReservationPending' => 'Canteen approval needed',
         'CanteenReservationStatusUpdated' => 'Canteen reservation update',
+        'NewHostelStudentRequest' => 'Student hostel request',
     ];
 
     /**
@@ -91,6 +93,7 @@ class NotificationPresenter
             'CanteenReservationCreated', 'NewCanteenReservationPending', 'CanteenReservationStatusUpdated' => $reservationId
                 ? route('canteen.show', $reservationId)
                 : route('canteen.index'),
+            'NewHostelStudentRequest' => route('hostel.student-requests.index', array_filter(['search' => $reference ?: null])),
             default => null,
         };
     }

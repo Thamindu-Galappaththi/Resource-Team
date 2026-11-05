@@ -15,6 +15,7 @@ return new class extends Migration
             $table->boolean('slt_employee')->default(false);
             $table->string('nic')->nullable()->unique();
             $table->string('email')->unique();
+            $table->string('microsoft_id')->nullable()->unique();
             $table->string('phone', 20)->nullable();
             $table->string('location')->nullable();
             $table->timestamp('email_verified_at')->nullable();

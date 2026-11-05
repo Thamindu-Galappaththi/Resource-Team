@@ -19,6 +19,10 @@ return [
         'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
         'tenant' => env('MICROSOFT_TENANT', 'organizations'),
         'redirect' => env('MICROSOFT_REDIRECT_URI'),
+        'allowed_domains' => array_values(array_filter(array_map(
+            fn (string $domain) => strtolower(trim($domain)),
+            explode(',', (string) env('MICROSOFT_ALLOWED_DOMAINS', 'slt.lk,slt.com.lk'))
+        ))),
     ],
 
     'slt_erp' => [

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class MicrosoftAuthService
@@ -28,7 +29,7 @@ class MicrosoftAuthService
     }
 
     /**
-     * @return array{id: string, email: string, name: string}
+     * @return array{id: string, email: string, name: string, service_id: ?string, designation: ?string, location: ?string, phone: ?string}
      */
     public function userFromCode(string $code): array
     {
@@ -38,6 +39,8 @@ class MicrosoftAuthService
         $email = strtolower(trim((string) ($profile['mail'] ?? $profile['userPrincipalName'] ?? '')));
         $name = trim((string) ($profile['displayName'] ?? ''));
         $id = trim((string) ($profile['id'] ?? ''));
+        $phones = $profile['businessPhones'] ?? [];
+        $phone = trim((string) ($profile['mobilePhone'] ?? (is_array($phones) ? ($phones[0] ?? '') : '')));
 
         if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new RuntimeException('Microsoft did not provide an email address for this account.');
@@ -46,7 +49,11 @@ class MicrosoftAuthService
         return [
             'id' => $id,
             'email' => $email,
-            'name' => $name,
+            'name' => $name !== '' ? $name : Str::before($email, '@'),
+            'service_id' => $this->nullableString($profile['employeeId'] ?? null),
+            'designation' => $this->nullableString($profile['jobTitle'] ?? null),
+            'location' => $this->nullableString($profile['officeLocation'] ?? null),
+            'phone' => $phone !== '' ? Str::limit($phone, 20, '') : null,
         ];
     }
 
@@ -113,5 +120,12 @@ class MicrosoftAuthService
         }
 
         return $profile;
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        $text = trim((string) $value);
+
+        return $text !== '' ? $text : null;
     }
 }

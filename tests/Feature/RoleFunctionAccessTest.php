@@ -272,7 +272,11 @@ class RoleFunctionAccessTest extends TestCase
 
     public function test_only_resource_managers_can_edit_and_delete_inventory(): void
     {
-        $resource = Resource::factory()->create(['status' => 'active', 'name_model' => 'Hall A']);
+        $resource = Resource::factory()->create([
+            'status' => 'active',
+            'name_model' => 'Hall A',
+            'location_id' => \App\Models\Location::query()->firstOrCreate(['name' => 'Welisara'])->id,
+        ]);
         $resource->load('type');
         $payload = [
             'category_id' => $resource->type->resource_category_id,

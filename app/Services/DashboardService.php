@@ -476,8 +476,8 @@ class DashboardService
     {
         $today = $this->today();
         $hostel = Reservation::query()->where('type', ReservationType::HOSTEL->value);
-        $rooms = Resource::query()->hostelRooms()->count();
-        $occupied = ReservationItem::query()
+        $rooms = (int) Resource::query()->hostelRooms()->sum('bed_count');
+        $occupied = (int) round((float) ReservationItem::query()
             ->whereHas('reservation', function (Builder $query) {
                 $query->where('type', ReservationType::HOSTEL->value)
                     ->whereIn('status', [
@@ -488,8 +488,8 @@ class DashboardService
             })
             ->where('starts_at', '<=', now())
             ->where('ends_at', '>', now())
-            ->distinct()
-            ->count('resource_id');
+            ->whereHas('resource', fn (Builder $query) => $query->hostelRooms())
+            ->sum('quantity'));
         $pending = (clone $hostel)->where('status', ReservationStatus::PENDING_APPROVAL->value)->count();
         $checkIns = HostelStayDetail::query()
             ->whereDate('check_in_at', $today->toDateString())
@@ -501,13 +501,14 @@ class DashboardService
 
         return [
             'kpis' => [
-                $this->kpi('Rooms ready', $rooms, 'Active hostel rooms', 'ti ti-bed', 'primary', $this->url($user, 'hostel.index', 'hostel.index')),
-                $this->kpi('Occupied now', $occupied, $rooms ? round(100 * $occupied / max(1, $rooms)).'% occupancy' : 'No rooms configured', 'ti ti-door', 'info'),
+                $this->kpi('Beds ready', $rooms, 'Active hostel beds', 'ti ti-bed', 'primary', $this->url($user, 'hostel.index', 'hostel.index')),
+                $this->kpi('Beds in use', $occupied, $rooms ? round(100 * $occupied / max(1, $rooms)).'% occupancy' : 'No beds configured', 'ti ti-door', 'info'),
                 $this->kpi('Pending stays', $pending, 'Need a decision', 'ti ti-clock', 'warning', $this->url($user, 'hostel.index', 'hostel.index')),
                 $this->kpi('Check-ins today', $checkIns, 'Arrivals', 'ti ti-login', 'success'),
             ],
             'actions' => $this->actions($user, [
                 ['Hostel bookings', 'ti ti-bed', 'hostel.index', 'hostel.index', 'primary'],
+                ['Today\'s guest list (PDF)', 'ti ti-download', 'hostel.manage', 'hostel.gate-list', 'outline'],
                 ['Calendar', 'ti ti-calendar', 'reservations.calendar', 'reservations.calendar', 'outline'],
             ]),
             'chart' => $this->reservationChart((clone $hostel), 'Hostel stays this week'),
@@ -529,6 +530,12 @@ class DashboardService
                 true
             ),
             'spotlight' => null,
+            'bedMap' => [
+                'date' => $today->toDateString(),
+                'url' => route('hostel.bed-map'),
+                'gateListUrl' => $user->hasPermission('hostel.manage') ? route('hostel.gate-list') : null,
+                'locations' => app(HostelBedCapacity::class)->bedMap($this->now()),
+            ],
         ];
     }
 

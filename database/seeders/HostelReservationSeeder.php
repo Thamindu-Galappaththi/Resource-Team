@@ -6,7 +6,6 @@ use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Models\Location;
 use App\Models\Reservation;
-use App\Models\ResourceType;
 use App\Models\User;
 use App\Services\HostelReservationService;
 use Illuminate\Database\Seeder;
@@ -27,28 +26,19 @@ class HostelReservationSeeder extends Seeder
             return;
         }
 
-        $categoryName = config('hostel.category_name', 'Hostel Room');
-        $single = ResourceType::query()
-            ->where('name', 'Single')
-            ->whereHas('category', fn ($query) => $query->where('name', $categoryName))
-            ->first();
-        $double = ResourceType::query()
-            ->where('name', 'Double')
-            ->whereHas('category', fn ($query) => $query->where('name', $categoryName))
-            ->first();
         $welisara = Location::query()->where('name', 'Welisara')->first();
         $moratuwa = Location::query()->where('name', 'Moratuwa')->first();
 
-        if (! $single || ! $double || ! $welisara || ! $moratuwa) {
+        if (! $welisara || ! $moratuwa) {
             return;
         }
 
         $service = app(HostelReservationService::class);
         $slots = [
-            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'number_of_guests' => 1],
-            ['room_type_id' => $single->id, 'location_id' => $welisara->id, 'number_of_guests' => 1],
-            ['room_type_id' => $double->id, 'location_id' => $welisara->id, 'number_of_guests' => 2],
-            ['room_type_id' => $single->id, 'location_id' => $moratuwa->id, 'number_of_guests' => 1],
+            ['location_id' => $welisara->id, 'number_of_guests' => 1, 'bed_group' => 'male'],
+            ['location_id' => $welisara->id, 'number_of_guests' => 1, 'bed_group' => 'female'],
+            ['location_id' => $welisara->id, 'number_of_guests' => 2, 'bed_group' => 'female'],
+            ['location_id' => $moratuwa->id, 'number_of_guests' => 1, 'bed_group' => 'permanent'],
         ];
         $outcomes = [
             null,
@@ -57,45 +47,54 @@ class HostelReservationSeeder extends Seeder
             ReservationStatus::REJECTED->value,
         ];
         $guests = [
-            ['Kasun Madushanka', 'Summer Internship 2026 Group', '+94 77 123 4567', 'Ground floor if possible'],
-            ['Amali Fernando', 'Conference stay', '+94 71 555 0198', null],
-            ['Nimal Perera', 'Moratuwa site visit lodging', '+94 76 222 1188', 'Late check-in after 20:00'],
-            ['Dr. Ishara Jayasinghe', 'Guest lecturer accommodation', '+94 77 888 4400', 'Quiet room near the lecture halls'],
-            ['Tharindu Silva', 'Workshop stay', '+94 75 111 2233', null],
-            ['Sanduni Wijesinghe', 'Overflow request', '+94 70 444 5566', null],
-            ['Ruwan Dissanayake', 'Audit team lodging', '+94 77 321 0987', 'Twin beds if available'],
-            ['Chathurika Perera', 'Orientation week stay', '+94 71 909 1122', null],
-            ['Malith Bandara', 'Vendor visit lodging', '+94 76 654 3210', null],
-            ['Harini Gunasekara', 'Research attachment stay', '+94 77 210 3344', 'Ground floor access'],
-            ['Pradeep Fernando', 'Sports meet lodging', '+94 75 888 0011', null],
-            ['Nadeesha Jayawardena', 'Training cohort stay', '+94 70 123 7788', null],
-            ['Isuru Rathnayake', 'Maintenance contractor stay', '+94 77 456 0099', null],
-            ['Kavindi Silva', 'External examiner stay', '+94 71 333 2211', 'Early check-in if possible'],
+            ['Mr.', 'Kasun Madushanka', '+94 77 123 4567', 'Ground floor if possible'],
+            ['Ms.', 'Amali Fernando', '+94 71 555 0198', null],
+            ['Mr.', 'Nimal Perera', '+94 76 222 1188', 'Late check-in after 20:00'],
+            ['Dr.', 'Ishara Jayasinghe', '+94 77 888 4400', 'Quiet room near the lecture halls'],
+            ['Mr.', 'Tharindu Silva', '+94 75 111 2233', null],
+            ['Miss', 'Sanduni Wijesinghe', '+94 70 444 5566', null],
+            ['Mr.', 'Ruwan Dissanayake', '+94 77 321 0987', 'Twin beds if available'],
+            ['Mrs.', 'Chathurika Perera', '+94 71 909 1122', null],
+            ['Mr.', 'Malith Bandara', '+94 76 654 3210', null],
+            ['Ms.', 'Harini Gunasekara', '+94 77 210 3344', 'Ground floor access'],
+            ['Mr.', 'Pradeep Fernando', '+94 75 888 0011', null],
+            ['Mrs.', 'Nadeesha Jayawardena', '+94 70 123 7788', null],
+            ['Mr.', 'Isuru Rathnayake', '+94 77 456 0099', null],
+            ['Prof.', 'Kavindi Silva', '+94 71 333 2211', 'Early check-in if possible'],
         ];
 
         foreach ($guests as $index => $guest) {
-            [$guestName, $title, $phone, $requirements] = $guest;
+            [$guestTitle, $guestName, $phone, $requirements] = $guest;
             $slot = $slots[$index % count($slots)];
             $batch = intdiv($index, count($slots));
             $checkIn = now()->addDays(40 + ($batch * 3));
 
             $stay = [
-                'reservation_name' => $title,
+                'guest_title' => $guestTitle,
                 'guest_name' => $guestName,
+                'employee_ids' => array_map(
+                    fn (int $guestNumber) => sprintf('EMP-%03d%d', $index + 1, $guestNumber),
+                    range(1, $slot['number_of_guests']),
+                ),
                 'guest_phone' => $phone,
                 'check_in_date' => $checkIn->toDateString(),
+                'check_in_time' => '11:00',
                 'check_out_date' => $checkIn->copy()->addDays(2)->toDateString(),
-                'room_type_id' => $slot['room_type_id'],
+                'check_out_time' => '10:00',
                 'location_id' => $slot['location_id'],
                 'number_of_guests' => $slot['number_of_guests'],
+                'bed_group' => $slot['bed_group'],
                 'special_requirements' => $requirements,
             ];
             $after = $outcomes[$index % count($outcomes)];
 
-            if (Reservation::query()
+            $existing = Reservation::query()
                 ->where('type', ReservationType::HOSTEL->value)
-                ->where('title', $stay['reservation_name'])
-                ->exists()) {
+                ->whereHas('hostelStay', fn ($query) => $query->where('guest_name', $guestName))
+                ->first();
+            if ($existing) {
+                $existing->hostelStay()->update(['bed_group' => $slot['bed_group']]);
+
                 continue;
             }
 

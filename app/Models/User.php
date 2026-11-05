@@ -29,6 +29,7 @@ class User extends Authenticatable
         'slt_employee',
         'nic',
         'email',
+        'microsoft_id',
         'phone',
         'location',
         'password',
@@ -199,6 +200,36 @@ class User extends Authenticatable
             ->map(fn (string $slug) => RoleHelper::normalizeRole((string) $slug))
             ->unique()
             ->values();
+    }
+
+    /**
+     * Admins see every special approval; hostel managers see hostel stays only;
+     * any other special approver sees every booking except hostel stays.
+     *
+     * @return 'all'|'hostel'|'standard'
+     */
+    public function specialApprovalScope(): string
+    {
+        return match (true) {
+            $this->hasRole('developer', 'super_admin', 'admin') => 'all',
+            $this->hasRole('hostel_manager') => 'hostel',
+            default => 'standard',
+        };
+    }
+
+    public function canSpecialApprove(Reservation $reservation): bool
+    {
+        if (! $this->hasPermission('approvals.special')) {
+            return false;
+        }
+
+        $hostel = $reservation->type === \App\Enums\ReservationType::HOSTEL->value;
+
+        return match ($this->specialApprovalScope()) {
+            'all' => true,
+            'hostel' => $hostel,
+            default => ! $hostel,
+        };
     }
 
     public function hasPermission(string $permission): bool

@@ -69,6 +69,7 @@ class ReservationPolicy
     {
         return $reservation->type === \App\Enums\ReservationType::HOSTEL->value
             && $reservation->status === \App\Enums\ReservationStatus::PENDING_APPROVAL->value
+            && ! $reservation->special_approval
             && ($user->hasRole('developer', 'super_admin', 'admin', 'hostel_manager')
                 || $user->hasPermission('hostel.manage'));
     }

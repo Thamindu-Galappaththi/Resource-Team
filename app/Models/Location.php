@@ -31,6 +31,12 @@ class Location extends Model
             ->orderBy('name');
     }
 
+    /** Campuses where resources can be added (config/resources.php). */
+    public function scopeForResources(Builder $query): Builder
+    {
+        return $query->whereIn('name', config('resources.locations', []));
+    }
+
     /**
      * A location can have many resources assigned to it.
      */
