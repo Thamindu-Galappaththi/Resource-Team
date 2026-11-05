@@ -32,6 +32,7 @@ class Reservation extends Model
         'reservation_date',
         'start_time',
         'end_time',
+        'booking_type',
         'status',
         'submitted_at',
         'approved_at',

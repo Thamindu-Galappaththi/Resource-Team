@@ -216,6 +216,7 @@ class ResourcePaymentController extends Controller
             'invoice_status' => $invoice->status,
             'start' => $start,
             'end' => $end,
+            'booking_type' => $breakdown['booking_type'] ?? null,
             'hours' => round($hours, 2),
             'payment_status' => $invoice->status,
             'payment_method' => $invoice->payment_method,

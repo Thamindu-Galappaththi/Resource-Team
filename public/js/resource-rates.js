@@ -36,8 +36,7 @@
     }
 
     if (window.RMSelect) {
-        bindTypeFilter('rr-type', 'rr-resource');
-        bindTypeFilter('rr-edit-type', 'rr-edit-resource');
+        bindTypeFilter('rr-type-filter', 'rr-resource-filter');
     }
 
     function sectionTarget(section) {
@@ -229,7 +228,7 @@
     }));
     showTab(requestedTab());
 
-    page.querySelector('.rr-export-btn')?.addEventListener('click', () => {
+    page.querySelector('#rr-export-csv')?.addEventListener('click', () => {
         const table = document.getElementById('rr-rate-table');
         if (!table) {
             return;
@@ -253,6 +252,24 @@
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    const importFile = document.getElementById('rr-import-file');
+    document.getElementById('rr-import-trigger')?.addEventListener('click', () => importFile?.click());
+    importFile?.addEventListener('change', () => {
+        if (importFile.files?.length) importFile.form?.requestSubmit();
+    });
+
+    const photoInput = document.getElementById('rr-photo');
+    const photoPreview = document.getElementById('rr-photo-preview');
+    let photoPreviewUrl = null;
+    photoInput?.addEventListener('change', () => {
+        if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+        const file = photoInput.files?.[0];
+        if (!file) { photoPreview.hidden = true; photoPreview.removeAttribute('src'); return; }
+        photoPreviewUrl = URL.createObjectURL(file);
+        photoPreview.src = photoPreviewUrl;
+        photoPreview.hidden = false;
     });
 
     function constraintFields(form) {
@@ -521,15 +538,15 @@
             return;
         }
         rateForm.action = button.dataset.action;
-        const type = (catalog.types || []).find((item) => String(item.value) === String(button.dataset.type || ''));
-        window.RMSelect.setValue('rr-edit-type', button.dataset.type || '', type?.label || 'Select type');
-        filterResources(button.dataset.type || '', 'rr-edit-resource', button.dataset.resource || '');
-        document.getElementById('rr-edit-base').value = button.dataset.base || '';
-        document.getElementById('rr-edit-hours').value = button.dataset.hours || '';
+        document.getElementById('rr-edit-location').value = button.dataset.location || 'all';
+        document.getElementById('rr-edit-resource-name').value = button.dataset.resourceName || '';
+        document.getElementById('rr-edit-daily').value = button.dataset.daily || '0';
+        document.getElementById('rr-edit-half-day').value = button.dataset.halfDay || '0';
         document.getElementById('rr-edit-extra').value = button.dataset.extra || '';
         document.getElementById('rr-edit-tax').value = button.dataset.tax || '0';
         document.getElementById('rr-edit-from').value = button.dataset.from || '';
         document.getElementById('rr-edit-to').value = button.dataset.to || '';
+        document.getElementById('rr-edit-status').value = button.dataset.active === '1' ? 'active' : 'inactive';
         document.getElementById('rr-edit-title').textContent = button.dataset.label || 'Edit rate';
         rateModal.show();
     });

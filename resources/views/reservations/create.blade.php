@@ -9,6 +9,17 @@
 @endpush
 
 @section('content')
+@php
+    $timeStartForType = old('start_time', $prefillStart ?? request('start_time', '09:00'));
+    $timeEndForType = old('end_time', $prefillEnd ?? request('end_time', '17:00'));
+    $derivedBookingType = match ([$timeStartForType, $timeEndForType]) {
+        ['09:00', '17:00'] => 'full_day',
+        ['09:00', '13:00'] => 'half_day_morning',
+        ['13:00', '17:00'] => 'half_day_afternoon',
+        default => ((int) substr((string) $timeStartForType, 0, 2) >= 13 ? 'half_day_afternoon' : 'half_day_morning'),
+    };
+    $prefillBookingType = old('booking_type', $reservation->booking_type ?? $derivedBookingType);
+@endphp
 <div class="container-fluid mt-4 rv-page">
     <div class="rv-header">
         <div>
@@ -90,15 +101,16 @@
                         <input type="date" class="form-control @error('reservation_date') is-invalid @enderror" id="reservation_date" name="reservation_date" value="{{ $prefillDate }}" min="{{ $today }}" required>
                         @error('reservation_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="start_time">Start time <span class="text-danger">*</span></label>
-                        <input type="time" class="form-control @error('start_time') is-invalid @enderror" id="start_time" name="start_time" value="{{ $prefillStart }}" required>
-                        @error('start_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="end_time">End time <span class="text-danger">*</span></label>
-                        <input type="time" class="form-control @error('end_time') is-invalid @enderror" id="end_time" name="end_time" value="{{ $prefillEnd }}" required>
-                        @error('end_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    <div class="col-md-8">
+                        <label class="form-label" for="booking_type">Booking type <span class="text-danger">*</span></label>
+                        <select class="form-select @error('booking_type') is-invalid @enderror" id="booking_type" name="booking_type" required>
+                            <option value="full_day" @selected($prefillBookingType === 'full_day')>Full day · 09:00–17:00</option>
+                            <option value="half_day_morning" @selected($prefillBookingType === 'half_day_morning')>Half day morning · 09:00–13:00</option>
+                            <option value="half_day_afternoon" @selected($prefillBookingType === 'half_day_afternoon')>Half day afternoon · 13:00–17:00</option>
+                        </select>
+                        @error('booking_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <input type="hidden" id="start_time" name="start_time" value="{{ $timeStartForType }}">
+                        <input type="hidden" id="end_time" name="end_time" value="{{ $timeEndForType }}">
                     </div>
                     <div class="col-12">
                         <div id="holidayAlert" class="rv-status is-holiday" hidden></div>
@@ -166,5 +178,22 @@ window.RVCreate = {
 };
 </script>
 <script src="{{ asset('js/reservation-create.js') }}?v=7"></script>
+<script>
+(() => {
+    const selector = document.getElementById('booking_type');
+    const ranges = { full_day: ['09:00', '17:00'], half_day_morning: ['09:00', '13:00'], half_day_afternoon: ['13:00', '17:00'] };
+    const sync = () => {
+        const [start, end] = ranges[selector.value] || ranges.full_day;
+        for (const [id, value] of [['start_time', start], ['end_time', end]]) {
+            const field = document.getElementById(id);
+            field.value = value;
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    };
+    selector.addEventListener('change', sync);
+    sync();
+})();
+</script>
 <script src="{{ asset('js/special-approval.js') }}?v=1"></script>
 @endpush

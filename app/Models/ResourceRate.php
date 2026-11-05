@@ -11,11 +11,11 @@ class ResourceRate extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['resource_type_id', 'resource_id', 'base_fee', 'base_duration_hours', 'extra_hour_rate', 'tax_percent', 'effective_from', 'effective_to', 'is_active', 'created_by', 'updated_by'];
+    protected $fillable = ['resource_type_id', 'resource_id', 'location_id', 'resource_name', 'daily_rate', 'half_day_rate', 'photo_path', 'base_fee', 'base_duration_hours', 'extra_hour_rate', 'tax_percent', 'effective_from', 'effective_to', 'is_active', 'created_by', 'updated_by'];
 
     protected function casts(): array
     {
-        return ['base_fee' => 'decimal:2', 'base_duration_hours' => 'decimal:2', 'extra_hour_rate' => 'decimal:2', 'tax_percent' => 'decimal:3', 'effective_from' => 'date', 'effective_to' => 'date', 'is_active' => 'boolean'];
+        return ['base_fee' => 'decimal:2', 'daily_rate' => 'decimal:2', 'half_day_rate' => 'decimal:2', 'base_duration_hours' => 'decimal:2', 'extra_hour_rate' => 'decimal:2', 'tax_percent' => 'decimal:3', 'effective_from' => 'date', 'effective_to' => 'date', 'is_active' => 'boolean'];
     }
 
     public function resourceType(): BelongsTo
@@ -26,6 +26,11 @@ class ResourceRate extends Model
     public function resource(): BelongsTo
     {
         return $this->belongsTo(Resource::class);
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
     }
 
     public function audits(): HasMany

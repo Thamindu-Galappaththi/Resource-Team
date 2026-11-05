@@ -19,7 +19,12 @@
     $end = \Illuminate\Support\Carbon::parse(($reservation->reservation_date?->toDateString() ?? now()->toDateString()).' '.$endTime);
     if ($end->lessThanOrEqualTo($start)) $end->addDay();
     $duration = $start->diffInMinutes($end) / 60;
-    $bookingType = $duration >= 7 ? 'Full day' : ($start->hour < 12 ? 'Half day morning' : 'Half day afternoon');
+    $bookingType = match ($reservation->booking_type) {
+        'full_day' => 'Full day',
+        'half_day_morning' => 'Half day morning',
+        'half_day_afternoon' => 'Half day afternoon',
+        default => ($duration >= 7 ? 'Full day' : ($start->hour < 12 ? 'Half day morning' : 'Half day afternoon')),
+    };
     $statusLabel = $isPaid ? 'Paid' : ($isDraft ? 'Draft' : 'Unpaid');
     $money = fn ($amount) => 'LKR '.number_format((float) $amount, 2);
 @endphp
@@ -86,21 +91,21 @@
                                     $extraQty = (float) $line['extra_hours'];
                                 @endphp
                                 <tr>
-                                    <td><strong>{{ $line['resource'] }} — Base reservation fee</strong><small>Includes first {{ rtrim(rtrim(number_format((float) $line['base_duration_hours'], 2), '0'), '.') }} hrs · {{ $startTime }}–{{ $endTime }}</small></td>
+                                    <td><strong>{{ $line['resource'] }} — {{ $line['booking_type'] ?? 'Reservation' }} rate</strong><small>{{ $line['booking_time'] ?? ($startTime.'–'.$endTime) }} · {{ number_format((float) $line['base_duration_hours'], 0) }} hours</small></td>
                                     <td class="numeric">{{ number_format($quantity, 2) }}{{ $quantity === 1.0 ? '' : ' units' }}</td>
-                                    <td class="numeric">{{ $money($baseUnit) }}</td>
-                                    <td class="numeric amount">{{ $money($line['base_fee']) }}</td>
+                                    <td class="numeric">{{ $baseUnit == 0 ? 'Free' : $money($baseUnit) }}</td>
+                                    <td class="numeric amount">{{ (float) $line['base_fee'] == 0 ? 'Free' : $money($line['base_fee']) }}</td>
                                 </tr>
                                 @if($extraQty > 0)
                                     <tr>
                                         <td><strong>{{ $line['resource'] }} — Extra hours</strong><small>{{ number_format($extraQty, 1) }} billable hours per resource</small></td>
                                         <td class="numeric">{{ number_format($extraQty, 1) }} hrs × {{ number_format($quantity, 2) }}</td>
-                                        <td class="numeric">{{ $money($hourlyUnit) }} / hr</td>
-                                        <td class="numeric amount">{{ $money($line['extra_hour_fee']) }}</td>
+                                        <td class="numeric">{{ $hourlyUnit == 0 ? 'Free' : $money($hourlyUnit) }} / hr</td>
+                                        <td class="numeric amount">{{ (float) $line['extra_hour_fee'] == 0 ? 'Free' : $money($line['extra_hour_fee']) }}</td>
                                     </tr>
                                 @endif
                             @empty
-                                <tr><td><strong>Resource reservation</strong><small>Rate details are not available for this reservation.</small></td><td class="numeric">—</td><td class="numeric">—</td><td class="numeric amount">{{ $money(0) }}</td></tr>
+                            <tr><td><strong>Resource reservation</strong><small>Rate details are not available for this reservation.</small></td><td class="numeric">—</td><td class="numeric">—</td><td class="numeric amount">{{ $money(0) }}</td></tr>
                             @endforelse
                             </tbody>
                         </table>

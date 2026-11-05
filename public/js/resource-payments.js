@@ -78,16 +78,17 @@
         const loaded = Boolean(reservation);
         const paid = reservation?.payment_status === 'paid';
         const lines = reservation?.lines || [];
-        document.getElementById('rp-base-fee').textContent = money(reservation?.base_fee);
-        document.getElementById('rp-extra-fee').textContent = money(reservation?.extra_hour_fee);
+        const hasLoadedRate = loaded && Boolean(reservation.has_rate);
+        document.getElementById('rp-base-fee').textContent = hasLoadedRate && Number(reservation?.base_fee) === 0 ? 'Free' : money(reservation?.base_fee);
+        document.getElementById('rp-extra-fee').textContent = hasLoadedRate && Number(reservation?.extra_hour_fee) === 0 ? 'Free' : money(reservation?.extra_hour_fee);
         document.getElementById('rp-tax-fee').textContent = money(reservation?.tax_fee);
         document.getElementById('rp-discount').textContent = '− ' + money(reservation?.discount);
         document.getElementById('rp-total').textContent = money(reservation?.total);
         document.getElementById('rp-extra-detail').textContent = lines.length
-            ? lines.map(line => `${line.resource}: ${Number(line.extra_hours).toFixed(1)} extra hrs × ${money(line.extra_hourly_rate)}/hr`).join(' · ')
+            ? lines.map(line => `${line.resource}: ${Number(line.extra_hours).toFixed(1)} extra hrs × ${Number(line.extra_hourly_unit_rate) === 0 ? 'Free' : money(line.extra_hourly_unit_rate)}/hr`).join(' · ')
             : (loaded ? 'Rate not available' : '0.0 hrs × applicable rate');
         document.getElementById('rp-base-detail').textContent = lines.length
-            ? lines.map(line => `${line.resource}: ${Number(line.base_duration_hours).toFixed(1).replace(/\.0$/, '')} hrs included · base ${money(line.base_fee)}`).join(' · ')
+            ? lines.map(line => `${line.resource}: ${line.booking_type} (${line.booking_time}) · ${Number(line.base_fee) === 0 ? 'Free' : money(line.base_fee)}`).join(' · ')
             : (loaded ? 'Rate not available' : 'Includes first hours from the applicable rate');
         document.getElementById('rp-tax-detail').textContent = reservation?.tax_percent === null
             ? 'Per resource rate after discount'
@@ -154,6 +155,7 @@
                 <div><span>Start time</span><strong>${escapeHtml(payload.start)}</strong></div>
                 <div><span>End time</span><strong>${escapeHtml(payload.end)}</strong></div>
                 <div><span>Duration</span><strong>${Number(payload.hours).toFixed(1)} hours</strong></div>
+                <div><span>Booking type</span><strong>${escapeHtml(payload.booking_type || '—')}</strong></div>
                 <div><span>Reservation status</span><strong>${escapeHtml(payload.reservation_status)}</strong></div>
                 <div><span>Payment status</span><strong>${payload.payment_status === 'paid' ? 'Paid' : 'Unpaid'}</strong></div>
             </div>`;
