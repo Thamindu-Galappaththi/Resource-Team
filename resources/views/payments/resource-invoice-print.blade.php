@@ -3,76 +3,164 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Invoice {{ $reservation->reference }}</title>
-    <link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=9">
-    <style>
-        html, body { height: auto; overflow: visible; }
-        body { min-height: 100vh; margin: 0; padding: 32px 16px; background: #f3f6fb; }
-        .rp-print-sheet { position: relative; max-width: 760px; margin: 0 auto; overflow: hidden; border: 1px solid #d5def0; border-radius: 18px; background: #fff; box-shadow: 0 12px 32px rgba(28,55,110,.1); }
-        .rp-print-watermark { position: absolute; top: 44%; left: 50%; z-index: 0; transform: translate(-50%,-50%) rotate(-24deg); color: rgba(23,105,194,.08); font-size: clamp(64px,14vw,128px); font-weight: 900; letter-spacing: .08em; pointer-events: none; }
-        .rp-print-brand { padding: 26px 30px; color: #fff; background: linear-gradient(120deg,#123a7a,#1769c2 52%,#5b4fc9); }
-        .rp-print-brand small { color: rgba(255,255,255,.75); font-size: 11px; font-weight: 700; letter-spacing: .1em; }
-        .rp-print-brand h1 { margin: 7px 0 0; font-size: 27px; }
-        .rp-print-content { padding: 26px 30px; }
-        .rp-print-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding-bottom: 20px; border-bottom: 1px solid #e8edf3; }
-        .rp-print-meta div { display: grid; gap: 5px; }
-        .rp-print-meta span { color: #8090a2; font-size: 11px; }
-        .rp-print-meta strong { color: #24364a; font-size: 14px; }
-        .rp-print-lines { margin: 12px 0; }
-        .rp-print-line { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid #edf0f4; color: #536477; }
-        .rp-print-line strong { color: #24364a; white-space: nowrap; }
-        .rp-print-total { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; color: #1769c2; font-weight: 800; }
-        .rp-print-total strong { color: #132033; font-size: 27px; }
-        .rp-print-pending { padding: 12px 14px; border: 1px solid #dce8f8; border-radius: 10px; background: #f1f6fd; color: #496686; font-size: 12px; }
-        .rp-print-actions { display: flex; justify-content: flex-end; gap: 10px; max-width: 760px; margin: 0 auto 14px; }
-        .rp-print-actions button { padding: 10px 16px; border: 1px solid #1769c2; border-radius: 9px; background: #1769c2; color: white; font-weight: 700; cursor: pointer; }
-        .rp-print-actions a { padding: 10px 16px; border: 1px solid #cad7e6; border-radius: 9px; background: white; color: #1769c2; font-weight: 700; text-decoration: none; }
-        @media print {
-            @page { size: auto; margin: 12mm; }
-            html, body { height: auto !important; overflow: visible !important; padding: 0; background: #fff; }
-            .rp-print-actions { display: none !important; }
-            .rp-print-sheet { overflow: visible; border: 0; border-radius: 0; box-shadow: none; }
-            .rp-print-brand { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-        }
-        @media(max-width:540px) {
-            body { padding: 16px 10px; }
-            .rp-print-content,.rp-print-brand { padding: 20px; }
-            .rp-print-actions { flex-wrap: wrap; }
-            .rp-print-actions a, .rp-print-actions button { flex: 1 1 140px; text-align: center; }
-            .rp-print-meta { grid-template-columns: minmax(0, 1fr); }
-            .rp-print-line { flex-wrap: wrap; }
-            .rp-print-total { flex-wrap: wrap; gap: 8px; }
-            .rp-print-total strong { font-size: 22px; }
-        }
-    </style>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Invoice {{ $invoice->invoice_number ?: $reservation->reference }}</title>
+    <link rel="stylesheet" href="{{ asset('css/icons/tabler-icons/tabler-icons.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/resource-invoice-print.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('css/resource-payment-record.css') }}?v=2">
 </head>
+@php
+    $requester = $reservation->requester ?? $reservation->createdBy;
+    $isPaid = $invoice->status === 'paid';
+    $isDraft = ! $invoice->invoice_number;
+    $startTime = substr((string) $reservation->start_time, 0, 5);
+    $endTime = substr((string) $reservation->end_time, 0, 5);
+    $start = \Illuminate\Support\Carbon::parse(($reservation->reservation_date?->toDateString() ?? now()->toDateString()).' '.$startTime);
+    $end = \Illuminate\Support\Carbon::parse(($reservation->reservation_date?->toDateString() ?? now()->toDateString()).' '.$endTime);
+    if ($end->lessThanOrEqualTo($start)) $end->addDay();
+    $duration = $start->diffInMinutes($end) / 60;
+    $bookingType = match ($reservation->booking_type) {
+        'full_day' => 'Full day',
+        'half_day_morning' => 'Half day morning',
+        'half_day_afternoon' => 'Half day afternoon',
+        default => ($duration >= 7 ? 'Full day' : ($start->hour < 12 ? 'Half day morning' : 'Half day afternoon')),
+    };
+    $statusLabel = $isPaid ? 'Paid' : ($isDraft ? 'Draft' : 'Unpaid');
+    $money = fn ($amount) => 'LKR '.number_format((float) $amount, 2);
+@endphp
 <body>
-    <div class="rp-print-actions"><a href="{{ route('payments.resources') }}">Back to payments</a><button type="button" onclick="window.print()">Print invoice</button></div>
-    <main class="rp-print-sheet">
-        <header class="rp-print-brand"><small>RESOURCE RESERVATION SYSTEM</small><h1>Invoice Preview</h1></header>
-        <section class="rp-print-content">
-            <div class="rp-print-watermark" aria-hidden="true">DRAFT</div>
-            <div class="rp-print-meta">
-                <div><span>Reservation reference</span><strong>{{ $reservation->reference }}</strong></div>
-                <div><span>Reservation date</span><strong>{{ $reservation->reservation_date?->format('d M Y') }}</strong></div>
-                <div><span>Invoice number</span><strong>DRAFT-{{ $reservation->reference }}</strong></div>
-                <div><span>Issue date</span><strong>{{ $issueDate->format('d M Y') }}</strong></div>
-                <div><span>Resource</span><strong>{{ $reservation->resourceNames() ?: 'Resource reservation' }}</strong></div>
-                <div><span>Bill to</span><strong>{{ $reservation->requester?->name ?? $reservation->createdBy?->name ?? 'Reservation user' }}</strong></div>
-                <div><span>Email</span><strong>{{ $reservation->requester?->email ?? $reservation->createdBy?->email ?? 'Not available' }}</strong></div>
+    <div class="invoice-page">
+        <nav class="invoice-actions" aria-label="Invoice actions">
+            <a class="invoice-button is-secondary" href="{{ route('payments.resources') }}"><i class="ti ti-arrow-left" aria-hidden="true"></i> Back to payments</a>
+            @if(! $isPaid && $canMarkPaid)
+                <button class="invoice-button is-success" type="button" id="mark-invoice-paid" data-url="{{ route('payments.resources.mark-paid', ['reference' => $reservation->reference]) }}" data-extra-hours="{{ number_format((float) $invoice->extra_hours, 2, '.', '') }}" data-invoice-number="{{ $invoice->invoice_number ?: 'Draft invoice' }}" data-total="{{ number_format((float) ($breakdown['total'] ?? 0), 2, '.', '') }}"><i class="ti ti-cash" aria-hidden="true"></i> Mark as Paid</button>
+            @endif
+            <button class="invoice-button is-primary" type="button" onclick="window.print()"><i class="ti ti-printer" aria-hidden="true"></i> Print invoice</button>
+        </nav>
+
+        <main class="invoice-card">
+            @if(! $isPaid)
+                <div class="invoice-watermark" aria-hidden="true">DRAFT</div>
+            @endif
+            <header class="invoice-header">
+                <div class="invoice-brand">
+                    <img class="invoice-logo" src="{{ asset('images/logos/nebula.png') }}" alt="SLT Mobitel Nebula Institute of Technology" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                    <span class="invoice-logo-fallback" hidden>SLT Mobitel Nebula Institute of Technology</span>
+                </div>
+                <div class="invoice-header-meta">
+                    <span class="invoice-title">INVOICE</span>
+                    <strong class="invoice-number">{{ $invoice->invoice_number ?: 'Draft invoice' }}</strong>
+                    <span @class(['invoice-status', 'is-paid' => $isPaid, 'is-draft' => $isDraft, 'is-unpaid' => ! $isPaid && ! $isDraft])>
+                        @if($isPaid)<i class="ti ti-circle-check"></i>@elseif($isDraft)<i class="ti ti-file-draft"></i>@else<i class="ti ti-clock"></i>@endif
+                        {{ $statusLabel }}
+                        @if($isPaid && ($invoice->payment_date || $invoice->paid_at))<small>{{ ($invoice->payment_date ?? $invoice->paid_at)->format('d M Y') }}</small>@endif
+                    </span>
+                </div>
+            </header>
+
+            <div class="invoice-content">
+                <section class="invoice-info-grid" aria-label="Invoice details">
+                    <article class="invoice-info-card">
+                        <span class="invoice-section-label">Bill to</span>
+                        <h2>{{ $requester?->name ?? 'Reservation user' }}</h2>
+                        <p>{{ $requester?->email ?? 'Email not available' }}</p>
+                    </article>
+                    <article class="invoice-info-card reservation-info">
+                        <span class="invoice-section-label">Reservation</span>
+                        <dl>
+                            <div><dt>Reference</dt><dd>{{ $reservation->reference }}</dd></div>
+                            <div><dt>Resource</dt><dd>{{ $reservation->resourceNames() ?: 'Resource reservation' }}</dd></div>
+                            <div><dt>Location</dt><dd>{{ $reservation->location?->name ?? 'Location not available' }}</dd></div>
+                            <div><dt>Reservation date</dt><dd>{{ $reservation->reservation_date?->format('d M Y') ?? '—' }}</dd></div>
+                            <div><dt>Booking type</dt><dd>{{ $bookingType }}</dd></div>
+                            <div><dt>Issue date</dt><dd>{{ $issueDate?->format('d M Y') ?? '—' }}</dd></div>
+                        </dl>
+                    </article>
+                </section>
+
+                <section class="invoice-items" aria-label="Invoice line items">
+                    <div class="invoice-table-scroll">
+                        <table class="invoice-table">
+                            <thead><tr><th>Description</th><th class="numeric">Qty</th><th class="numeric">Rate</th><th class="numeric">Amount</th></tr></thead>
+                            <tbody>
+                            @forelse($breakdown['lines'] as $line)
+                                @php
+                                    $quantity = (float) ($line['quantity'] ?? 1);
+                                    $baseUnit = (float) ($line['base_unit_fee'] ?? ((float) $line['base_fee'] / max(1, $quantity)));
+                                    $hourlyUnit = (float) ($line['extra_hourly_unit_rate'] ?? ((float) $line['extra_hourly_rate'] / max(1, $quantity)));
+                                    $extraQty = (float) $line['extra_hours'];
+                                @endphp
+                                <tr>
+                                    <td><strong>{{ $line['resource'] }} — {{ $line['booking_type'] ?? 'Reservation' }} rate</strong><small>{{ $line['booking_time'] ?? ($startTime.'–'.$endTime) }} · {{ number_format((float) $line['base_duration_hours'], 0) }} hours</small></td>
+                                    <td class="numeric">{{ number_format($quantity, 2) }}{{ $quantity === 1.0 ? '' : ' units' }}</td>
+                                    <td class="numeric">{{ $baseUnit == 0 ? 'Free' : $money($baseUnit) }}</td>
+                                    <td class="numeric amount">{{ (float) $line['base_fee'] == 0 ? 'Free' : $money($line['base_fee']) }}</td>
+                                </tr>
+                                @if($extraQty > 0)
+                                    <tr>
+                                        <td><strong>{{ $line['resource'] }} — Extra hours</strong><small>{{ number_format($extraQty, 1) }} billable hours per resource</small></td>
+                                        <td class="numeric">{{ number_format($extraQty, 1) }} hrs × {{ number_format($quantity, 2) }}</td>
+                                        <td class="numeric">{{ $hourlyUnit == 0 ? 'Free' : $money($hourlyUnit) }} / hr</td>
+                                        <td class="numeric amount">{{ (float) $line['extra_hour_fee'] == 0 ? 'Free' : $money($line['extra_hour_fee']) }}</td>
+                                    </tr>
+                                @endif
+                            @empty
+                            <tr><td><strong>Resource reservation</strong><small>Rate details are not available for this reservation.</small></td><td class="numeric">—</td><td class="numeric">—</td><td class="numeric amount">{{ $money(0) }}</td></tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="invoice-totals" aria-label="Invoice totals">
+                    <div class="total-row"><span>Subtotal</span><strong>{{ $money($breakdown['subtotal'] ?? 0) }}</strong></div>
+                    <div class="total-row"><span>Discount <small>({{ rtrim(rtrim(number_format((float) ($breakdown['discount_percent'] ?? 0), 2), '0'), '.') }}%)</small></span><strong class="discount-value">− {{ $money($breakdown['discount'] ?? 0) }}</strong></div>
+                    <div class="total-row"><span>Tax <small>({{ $breakdown['tax_percent'] === null ? 'per resource rate' : rtrim(rtrim(number_format((float) $breakdown['tax_percent'], 3), '0'), '.').'%' }})</small></span><strong>{{ $money($breakdown['tax_fee'] ?? 0) }}</strong></div>
+                    <div class="total-due"><span>Total amount due</span><strong>{{ $money($breakdown['total'] ?? 0) }}</strong></div>
+                </section>
+
+                @if($isPaid)
+                    <section class="invoice-paid-stamp" aria-label="Payment recorded">
+                        <span class="paid-stamp-icon"><i class="ti ti-circle-check"></i></span>
+                        <div><strong>PAID</strong><p>Paid {{ ($invoice->payment_date ?? $invoice->paid_at)?->format('d M Y') ?? '' }} · {{ str_replace('_', ' ', ucfirst($invoice->payment_method ?? 'Payment')) }}@if($invoice->payment_reference) · Ref {{ $invoice->payment_reference }}@endif</p></div>
+                    </section>
+                @elseif($isDraft)
+                    <aside class="invoice-draft-note"><i class="ti ti-info-circle"></i><span>Draft only. Not a tax invoice until issued by Finance.</span></aside>
+                @endif
+                @unless($breakdown['has_rate'])
+                    <aside class="invoice-rate-note"><i class="ti ti-alert-circle"></i><span>Rate details are not available for this resource and reservation date. Finance must configure an applicable rate before collecting payment.</span></aside>
+                @endunless
             </div>
-            <div class="rp-print-lines">
-                @foreach($breakdown['lines'] as $line)
-                    <div class="rp-print-line"><span>{{ $line['resource'] }} · base fee includes first {{ number_format($line['base_duration_hours'], 2) }} hrs</span><strong>LKR {{ number_format($line['base_fee'], 2) }}</strong></div>
-                    <div class="rp-print-line"><span>{{ $line['resource'] }} · {{ number_format($line['extra_hours'], 2) }} extra hrs × LKR {{ number_format($line['extra_hourly_rate'], 2) }}/hr</span><strong>LKR {{ number_format($line['extra_hour_fee'], 2) }}</strong></div>
-                @endforeach
-                <div class="rp-print-line"><span>Discount ({{ number_format($breakdown['discount_percent'], 2) }}%)</span><strong>− LKR {{ number_format($breakdown['discount'], 2) }}</strong></div>
-                <div class="rp-print-line"><span>Tax ({{ $breakdown['tax_percent'] === null ? 'per resource rate' : number_format($breakdown['tax_percent'], 3).'%' }})</span><strong>LKR {{ number_format($breakdown['tax_fee'], 2) }}</strong></div>
-            </div>
-            <div class="rp-print-total"><span>TOTAL AMOUNT DUE</span><strong>LKR {{ number_format($breakdown['total'], 2) }}</strong></div>
-            @unless($breakdown['has_rate'])<div class="rp-print-pending">Rate details are not available for this resource and reservation date. Finance must configure an applicable rate before collecting payment.</div>@endunless
-            <div class="rp-print-pending">Online payment status: Pending. This draft is not a tax invoice until issued by Finance.</div>
-        </section>
-    </main>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('js/resource-payment-record.js') }}?v=3"></script>
+    @if(! $isPaid && $canMarkPaid)
+        <script>
+            document.getElementById('mark-invoice-paid')?.addEventListener('click', async function () {
+                const button = this;
+                button.disabled = true;
+                try {
+                    const result = await window.ResourcePaymentRecord.open({ invoiceNumber: button.dataset.invoiceNumber, total: button.dataset.total, url: button.dataset.url, extraHours: button.dataset.extraHours });
+                    if (!result) { button.disabled = false; return; }
+                    const paidDate = result.payment_date || result.paid_at || '';
+                    const method = String(result.payment_method || '').replaceAll('_', ' ');
+                    document.querySelector('.invoice-status')?.classList.remove('is-unpaid', 'is-draft');
+                    const badge = document.querySelector('.invoice-status');
+                    if (badge) { badge.classList.add('is-paid'); badge.innerHTML = `<i class="ti ti-circle-check"></i> Paid <small>${paidDate}</small>`; }
+                    document.querySelector('.invoice-watermark')?.remove();
+                    document.querySelector('.invoice-draft-note')?.remove();
+                    const stamp = document.createElement('section');
+                    stamp.className = 'invoice-paid-stamp';
+                    stamp.innerHTML = `<span class="paid-stamp-icon"><i class="ti ti-circle-check"></i></span><div><strong>PAID</strong><p>Paid ${paidDate} · ${method}${result.payment_reference ? ` · Ref ${String(result.payment_reference).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}` : ''}</p></div>`;
+                    document.querySelector('.invoice-content')?.append(stamp);
+                    button.remove();
+                } catch (error) {
+                    button.disabled = false;
+                }
+            });
+        </script>
+    @endif
 </body>
 </html>

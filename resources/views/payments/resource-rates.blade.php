@@ -90,48 +90,61 @@
                 <span class="rp-title-icon"><i class="ti ti-tag"></i></span>
                 <div>
                     <h2 class="rr-section-title">Add rate</h2>
-                    <p class="rr-muted">A specific resource overrides the type rate. Leave it open to cover every resource of that type.</p>
+                    <p class="rr-muted">Set rates by training centre and resource. “All locations” applies to additional resources across every centre.</p>
                 </div>
             </div>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ route('payments.rates.store') }}" class="rr-fields" novalidate>
+            <form method="POST" action="{{ route('payments.rates.store') }}" class="rr-fields" enctype="multipart/form-data" novalidate>
                 @csrf
                 <div class="rr-field">
-                    <label class="form-label" for="rr-type">Resource type</label>
-                    <x-rm-select id="rr-type" name="resource_type_id" placeholder="Select type" :value="$oldType" :selected-label="$oldTypeLabel" :required="true" data-rr-required
-                        :options="collect([['value' => '', 'label' => 'Select type']])->concat($typeOptions)->all()" />
-                    <p class="rr-field-error">Please select an item in the list.</p>
-                </div>
-                <div class="rr-field">
-                    <label class="form-label" for="rr-resource">Specific resource</label>
-                    <x-rm-select id="rr-resource" name="resource_id" placeholder="All resources of type" :value="$oldResource" :selected-label="$oldResourceLabel"
-                        :options="collect([['value' => '', 'label' => 'All resources of type']])->concat($resourceOptions)->all()" />
-                </div>
-                <div class="rr-field">
-                    <label class="form-label" for="rr-base">Base fee (LKR)</label>
-                    <input id="rr-base" type="number" name="base_fee" class="form-control" min="0" step="0.01" value="{{ old('base_fee') }}" data-rr-required>
+                    <label class="form-label" for="rr-location">Location</label>
+                    <select id="rr-location" name="location_id" class="form-select" required data-rr-required>
+                        <option value="all" @selected(old('location_id', 'all') === 'all')>All locations</option>
+                        @foreach($locations as $location)<option value="{{ $location->id }}" @selected((string) old('location_id') === (string) $location->id)>Training Centre {{ $location->name }}</option>@endforeach
+                    </select>
                     <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
-                    <label class="form-label" for="rr-hours">Included hours</label>
-                    <input id="rr-hours" type="number" name="base_duration_hours" class="form-control" min="0.01" step="0.01" value="{{ old('base_duration_hours') }}" data-rr-required>
+                    <label class="form-label" for="rr-resource-name">Resource</label>
+                    <input id="rr-resource-name" name="resource_name" class="form-control" list="rr-resource-name-options" maxlength="190" value="{{ old('resource_name') }}" placeholder="Choose or enter a resource name" required data-rr-required>
+                    <datalist id="rr-resource-name-options">@foreach($resources->unique('name_model') as $resource)<option value="{{ $resource->name_model }}">@endforeach</datalist>
                     <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
-                    <label class="form-label" for="rr-extra">Extra hour rate (LKR)</label>
-                    <input id="rr-extra" type="number" name="extra_hour_rate" class="form-control" min="0" step="0.01" value="{{ old('extra_hour_rate') }}" data-rr-required>
+                    <label class="form-label" for="rr-daily">Daily rate (LKR)</label>
+                    <input id="rr-daily" type="number" name="daily_rate" class="form-control" min="0" step="0.01" value="{{ old('daily_rate') }}" required data-rr-required>
+                    <p class="rr-field-error"></p>
+                </div>
+                <div class="rr-field">
+                    <label class="form-label" for="rr-half-day">Half-day rate (LKR)</label>
+                    <input id="rr-half-day" type="number" name="half_day_rate" class="form-control" min="0" step="0.01" value="{{ old('half_day_rate') }}" required data-rr-required>
+                    <p class="rr-field-error"></p>
+                </div>
+                <div class="rr-field">
+                    <label class="form-label" for="rr-extra">Extra hour rate (LKR, optional)</label>
+                    <input id="rr-extra" type="number" name="extra_hour_rate" class="form-control" min="0" step="0.01" value="{{ old('extra_hour_rate') }}" placeholder="Not charged if blank">
                     <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
                     <label class="form-label" for="rr-tax">Tax (%)</label>
-                    <input id="rr-tax" type="number" name="tax_percent" class="form-control" min="0" max="100" step="0.001" value="{{ old('tax_percent', 0) }}" data-rr-required>
+                    <input id="rr-tax" type="number" name="tax_percent" class="form-control" min="0" max="100" step="0.001" value="{{ old('tax_percent', 0) }}">
                     <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
                     <label class="form-label" for="rr-from">Effective from</label>
-                    <input id="rr-from" type="date" name="effective_from" class="form-control" value="{{ old('effective_from', now()->toDateString()) }}" data-rr-required>
+                    <input id="rr-from" type="date" name="effective_from" class="form-control" value="{{ old('effective_from', now()->toDateString()) }}" required data-rr-required>
                     <p class="rr-field-error"></p>
+                </div>
+                <div class="rr-field">
+                    <label class="form-label" for="rr-photo">Photo (optional)</label>
+                    <input id="rr-photo" type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                    <small class="rr-muted">JPG, JPEG, PNG, or WebP · up to 2 MB</small>
+                    <img id="rr-photo-preview" class="rr-photo-preview" alt="Rate photo preview" hidden>
+                </div>
+                <div class="rr-field">
+                    <label class="form-label" for="rr-status">Status</label>
+                    <select id="rr-status" name="status" class="form-select"><option value="active">Active</option><option value="inactive">Inactive</option></select>
                 </div>
                 <div class="rr-field">
                     <label class="form-label" for="rr-to">Effective to</label>
@@ -152,6 +165,11 @@
                     <div><h2 class="rr-section-title">Rate catalog</h2>
                     <p class="rr-muted">Search, compare, and manage the rates applied to reservations.</p></div>
                 </div>
+                <form method="POST" action="{{ route('payments.rates.import') }}" enctype="multipart/form-data" class="rr-import-form">
+                    @csrf
+                    <input type="file" name="rate_card" id="rr-import-file" accept=".csv,text/csv" hidden required>
+                    <button type="button" class="btn rr-export-btn" id="rr-import-trigger"><i class="ti ti-upload"></i> Import CSV</button>
+                </form>
             </div>
             <form method="GET" action="{{ route('payments.rates.index') }}" class="rr-catalog-filters" data-rr-catalog-search>
                 <div class="rr-field rr-rate-search"><label class="form-label" for="rr-rate-search">Search</label><div class="input-group rsv-search-group rp-search-group"><span class="input-group-text"><i class="ti ti-search"></i></span><input id="rr-rate-search" type="search" name="catalog_search" class="form-control" placeholder="Search rates" value="{{ $catalogSearch }}" autocomplete="off"></div></div>
@@ -264,7 +282,7 @@
 
 <div class="modal fade rsv-modal rr-modal-md" id="rr-rate-modal" tabindex="-1" aria-labelledby="rr-edit-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" id="rr-rate-edit-form" class="modal-content" novalidate>
+        <form method="POST" id="rr-rate-edit-form" class="modal-content" enctype="multipart/form-data" novalidate>
             @csrf
             @method('PUT')
             <div class="modal-header">
@@ -273,23 +291,16 @@
             </div>
             <div class="modal-body">
                 <div class="rr-fields">
-                <div class="rr-field">
-                    <label class="form-label" for="rr-edit-type">Resource type</label>
-                    <x-rm-select id="rr-edit-type" name="resource_type_id" placeholder="Select type" :required="true" data-rr-required
-                        :options="collect([['value' => '', 'label' => 'Select type']])->concat($typeOptions)->all()" />
-                    <p class="rr-field-error">Please select an item in the list.</p>
-                </div>
-                <div class="rr-field">
-                    <label class="form-label" for="rr-edit-resource">Specific resource</label>
-                    <x-rm-select id="rr-edit-resource" name="resource_id" placeholder="All resources of type"
-                        :options="collect([['value' => '', 'label' => 'All resources of type']])->concat($resourceOptions)->all()" />
-                </div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-base">Base fee (LKR)</label><input id="rr-edit-base" type="number" name="base_fee" class="form-control" min="0" step="0.01" data-rr-required><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-hours">Included hours</label><input id="rr-edit-hours" type="number" name="base_duration_hours" class="form-control" min="0.01" step="0.01" data-rr-required><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-extra">Extra hour rate (LKR)</label><input id="rr-edit-extra" type="number" name="extra_hour_rate" class="form-control" min="0" step="0.01" data-rr-required><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-tax">Tax (%)</label><input id="rr-edit-tax" type="number" name="tax_percent" class="form-control" min="0" max="100" step="0.001" data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-location">Location</label><select id="rr-edit-location" name="location_id" class="form-select" required data-rr-required><option value="all">All locations</option>@foreach($locations as $location)<option value="{{ $location->id }}">Training Centre {{ $location->name }}</option>@endforeach</select><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-resource-name">Resource</label><input id="rr-edit-resource-name" name="resource_name" class="form-control" list="rr-resource-name-options" maxlength="190" required data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-daily">Daily rate (LKR)</label><input id="rr-edit-daily" type="number" name="daily_rate" class="form-control" min="0" step="0.01" required data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-half-day">Half-day rate (LKR)</label><input id="rr-edit-half-day" type="number" name="half_day_rate" class="form-control" min="0" step="0.01" required data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-extra">Extra hour rate (LKR, optional)</label><input id="rr-edit-extra" type="number" name="extra_hour_rate" class="form-control" min="0" step="0.01"><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-tax">Tax (%)</label><input id="rr-edit-tax" type="number" name="tax_percent" class="form-control" min="0" max="100" step="0.001" value="0"><p class="rr-field-error"></p></div>
                 <div class="rr-field"><label class="form-label" for="rr-edit-from">Effective from</label><input id="rr-edit-from" type="date" name="effective_from" class="form-control" data-rr-required><p class="rr-field-error"></p></div>
                 <div class="rr-field"><label class="form-label" for="rr-edit-to">Effective to</label><input id="rr-edit-to" type="date" name="effective_to" class="form-control"></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-photo">Replace photo (optional)</label><input id="rr-edit-photo" type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"><small class="rr-muted">JPG, JPEG, PNG, or WebP · up to 2 MB</small></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-status">Status</label><select id="rr-edit-status" name="status" class="form-select"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -369,6 +380,6 @@
 @push('scripts')
 <script type="application/json" id="rr-catalog">@json(['types' => $typeOptions, 'resources' => $resourceOptions])</script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/resource-rates.js') }}?v=18"></script>
+<script src="{{ asset('js/resource-rates.js') }}?v=19"></script>
 @endpush
 

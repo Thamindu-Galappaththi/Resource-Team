@@ -127,10 +127,14 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/lecture-fees', [LectureFeeController::class, 'index'])->middleware('permission:payments.view')->name('lecture-fees');
         Route::get('/resources', [ResourcePaymentController::class, 'index'])->middleware('permission:payments.view')->name('resources');
         Route::get('/resources/lookup', [ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
+        Route::post('/resources/{reference}/mark-paid', [ResourcePaymentController::class, 'markPaid'])->middleware('permission:payments.mark-paid')->name('resources.mark-paid');
         Route::get('/resources/invoices/{reference}/print', [ResourcePaymentController::class, 'print'])->middleware('permission:payments.view')->name('resources.print');
         Route::post('/resources/usage/confirm', [ResourcePaymentController::class, 'confirmUsage'])->middleware('permission:payments.view')->name('resources.usage.confirm');
+        Route::get('/history', [ResourcePaymentController::class, 'history'])->middleware('permission:payments.view')->name('history');
+        Route::get('/history/export', [ResourcePaymentController::class, 'exportHistory'])->middleware('permission:payments.view')->name('history.export');
         Route::get('/resource-rates', [ResourceRateController::class, 'index'])->middleware('permission:payments.rates.manage')->name('rates.index');
         Route::post('/resource-rates', [ResourceRateController::class, 'store'])->middleware('permission:payments.rates.manage')->name('rates.store');
+        Route::post('/resource-rates/import', [ResourceRateController::class, 'importCsv'])->middleware('permission:payments.rates.manage')->name('rates.import');
         Route::put('/resource-rates/{rate}', [ResourceRateController::class, 'update'])->middleware('permission:payments.rates.manage')->name('rates.update');
         Route::patch('/resource-rates/{rate}/deactivate', [ResourceRateController::class, 'deactivate'])->middleware('permission:payments.rates.manage')->name('rates.deactivate');
         Route::patch('/resource-rates/{rate}/activate', [ResourceRateController::class, 'activate'])->middleware('permission:payments.rates.manage')->name('rates.activate');

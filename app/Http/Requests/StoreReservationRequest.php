@@ -28,11 +28,17 @@ class StoreReservationRequest extends FormRequest
 
         $this->prepareSpecialApproval();
         $lecturer = $this->input('lecturer_name');
+        $bookingType = $this->input('booking_type');
+        $bookingTimes = [
+            'full_day' => ['09:00', '17:00'],
+            'half_day_morning' => ['09:00', '13:00'],
+            'half_day_afternoon' => ['13:00', '17:00'],
+        ];
         $this->merge([
             'resource_ids' => $resourceIds,
             'requester_id' => $this->input('requester_id', auth()->id()),
-            'start_time' => $this->normalizeTime($this->input('start_time')),
-            'end_time' => $this->normalizeTime($this->input('end_time')),
+            'start_time' => $bookingTimes[$bookingType][0] ?? $this->normalizeTime($this->input('start_time')),
+            'end_time' => $bookingTimes[$bookingType][1] ?? $this->normalizeTime($this->input('end_time')),
             'title' => is_string($this->input('title')) ? trim($this->input('title')) : $this->input('title'),
             'lecturer_name' => is_string($lecturer) && trim($lecturer) !== '' ? trim($lecturer) : null,
         ]);
@@ -59,6 +65,7 @@ class StoreReservationRequest extends FormRequest
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'booking_type' => ['required', 'in:full_day,half_day_morning,half_day_afternoon'],
             'title' => ['required', 'string', 'max:180'],
             'lecturer_name' => ['nullable', 'string', 'max:150'],
             'purpose' => ['required', 'string', 'max:500'],
