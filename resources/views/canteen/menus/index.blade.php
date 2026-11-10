@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Meal Menu Management')
+@section('title', 'Meal plans')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v={{ @filemtime(public_path('css/canteen-dashboard.css')) ?: time() }}">
@@ -26,7 +26,7 @@
     <header class="cd-header">
         <div>
             <div class="cd-eyebrow"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i> Canteen operations</div>
-            <h1 class="cd-title">Meal menu management</h1>
+            <h1 class="cd-title">Meal plans</h1>
             <p class="cd-subtitle">Plan and keep track of the dishes served each day.</p>
         </div>
     </header>

@@ -8,6 +8,7 @@ use App\Http\Requests\StoreCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationStatusRequest;
 use App\Models\CanteenReservation;
+use App\Models\MealMenu;
 use App\Models\Location;
 use App\Models\User;
 use App\Notifications\CanteenReservationStatusUpdated;
@@ -305,7 +306,7 @@ class CanteenReservationController extends Controller
         $prefill = $request?->query('date');
 
         return [
-            'mealTypes' => MealType::cases(),
+            'mealMenus' => MealMenu::query()->orderByDesc('service_date')->orderByDesc('id')->get(),
             'locations' => Location::query()->ordered()->get(),
             'prefillDate' => old('reservation_date', is_string($prefill) ? $prefill : null),
         ];

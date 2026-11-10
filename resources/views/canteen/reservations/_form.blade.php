@@ -16,14 +16,20 @@
             @error('reservation_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         @php
-            $selectedMealType = collect($mealTypes)->first(fn ($type) => $type->value === old('meal_type', $reservation?->meal_type));
+            $selectedMealMenu = collect($mealMenus)->first(fn ($menu) => $menu->name === old('meal_type', $reservation?->meal_type));
             $selectedLocation = $locations->firstWhere('id', (int) old('location_id', $reservation?->location_id));
         @endphp
         <div class="col-md-6">
             <label class="form-label" for="meal_type">Meal type <span class="text-danger">*</span></label>
-            <x-rm-select id="meal_type" name="meal_type" class="{{ $errors->has('meal_type') ? 'is-invalid' : '' }}" placeholder="Select meal type" :value="(string) old('meal_type', $reservation?->meal_type)" :selected-label="$selectedMealType?->label() ?? 'Select meal type'" :required="true"
-                :options="collect([['value' => '', 'label' => 'Select meal type']])->concat(collect($mealTypes)->map(fn ($type) => ['value' => $type->value, 'label' => $type->label()]))->all()" />
+            <x-rm-select id="meal_type" name="meal_type" class="{{ $errors->has('meal_type') ? 'is-invalid' : '' }}" placeholder="Select meal menu" :value="(string) old('meal_type', $reservation?->meal_type)" :selected-label="$selectedMealMenu?->name ?? 'Select meal menu'" :required="true"
+                :options="collect([['value' => '', 'label' => 'Select meal menu']])->concat(collect($mealMenus)->map(fn ($menu) => ['value' => $menu->name, 'label' => $menu->name]))->all()" />
+            @if($mealMenus->isEmpty())<div class="form-text">No meal menus are available yet. Create a menu first.</div>@endif
             @error('meal_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+        </div>
+        <div class="col-12">
+            <section id="mealMenuImagePreview" class="p-3 border rounded-3 bg-light text-center" aria-label="Selected meal image" @if(!$selectedMealMenu?->image_path) hidden @endif>
+                <img id="mealMenuImage" src="{{ $selectedMealMenu?->image_path ? url('storage/'.$selectedMealMenu->image_path) : '' }}" alt="{{ $selectedMealMenu ? 'Meal image for '.$selectedMealMenu->name : '' }}" class="img-fluid rounded-3" style="display:block;max-width:min(100%, 480px);width:auto;height:auto;max-height:240px;object-fit:contain;margin:0 auto;">
+            </section>
         </div>
         <div class="col-md-4">
             <label class="form-label" for="location_id">Location</label>
@@ -43,6 +49,35 @@
         </div>
     </div>
 </section>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const mealInput = document.getElementById('meal_type');
+        const preview = document.getElementById('mealMenuImagePreview');
+        const image = document.getElementById('mealMenuImage');
+        const menus = @json($mealMenus->mapWithKeys(fn ($menu) => [$menu->name => [
+            'url' => $menu->image_path ? url('storage/'.$menu->image_path) : null,
+            'name' => $menu->name,
+        ]])->all());
+
+        const updateMealImage = () => {
+            const menu = menus[mealInput?.value];
+            if (!menu?.url) {
+                preview.hidden = true;
+                image.removeAttribute('src');
+                return;
+            }
+            image.src = menu.url;
+            image.alt = `Meal image for ${menu.name}`;
+            preview.hidden = false;
+        };
+
+        mealInput?.addEventListener('change', updateMealImage);
+        updateMealImage();
+    });
+</script>
+@endpush
 
 <section>
     <h2 class="h5 mb-3">Order requirements</h2>

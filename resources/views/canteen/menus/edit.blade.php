@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Meal Menu')
+@section('title', 'Edit meal plan')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v={{ @filemtime(public_path('css/canteen-dashboard.css')) ?: time() }}">
@@ -15,7 +15,7 @@
 
 @section('content')
 <div class="container-fluid py-4 cp-page">
-    <header class="cd-header"><div><div class="cd-eyebrow"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i> Canteen operations</div><h1 class="cd-title">Edit meal menu</h1><p class="cd-subtitle">Update the service date, dishes, or meal image.</p></div><div class="cd-actions"><a href="{{ route('canteen.menus.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to menus</a></div></header>
+    <header class="cd-header"><div><div class="cd-eyebrow"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i> Canteen operations</div><h1 class="cd-title">Edit meal plan</h1><p class="cd-subtitle">Update the service date, dishes, or meal image.</p></div><div class="cd-actions"><a href="{{ route('canteen.menus.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to meal plans</a></div></header>
     @if($errors->any())<div class="alert alert-danger" role="alert">Please check the highlighted details and try again.</div>@endif
     <section class="mm-edit">
         @if($menu->image_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($menu->image_path))<img class="mm-current-image" src="{{ url('storage/'.$menu->image_path) }}" alt="Current image for {{ $menu->name }}">@endif

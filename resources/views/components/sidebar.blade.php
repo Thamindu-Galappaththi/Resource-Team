@@ -317,7 +317,7 @@
                     <li class="sidebar-item">
                         <a class="sidebar-link {{ request()->routeIs('canteen.menus.*') ? 'active' : '' }}" href="{{ route('canteen.menus.index') }}">
                             <span><i class="ti ti-tools-kitchen-2"></i></span>
-                            <span class="hide-menu">Meal Menus</span>
+                            <span class="hide-menu">Meal plans</span>
                         </a>
                     </li>
                 @endif

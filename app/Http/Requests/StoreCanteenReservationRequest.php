@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\MealType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCanteenReservationRequest extends FormRequest
@@ -17,7 +16,7 @@ class StoreCanteenReservationRequest extends FormRequest
         return [
             'reservation_name' => ['required', 'string', 'max:255'],
             'location_id' => ['nullable', 'integer', 'exists:locations,id'],
-            'meal_type' => ['required', 'string', 'in:'.implode(',', MealType::values())],
+            'meal_type' => ['required', 'string', 'max:120', 'exists:meal_menus,name'],
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
             'reservation_time' => ['required', 'date_format:H:i'],
             'number_of_orders' => ['required', 'integer', 'min:1', 'max:10000'],
