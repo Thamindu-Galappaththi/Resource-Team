@@ -152,7 +152,7 @@
     }
 
     function setAvailability(state, message) {
-        availabilityAlert.className = `rv-status ${state}`;
+        availabilityAlert.className = state === 'idle' ? 'rv-status' : `rv-status is-${state}`;
         const icons = { idle: 'ti-info-circle', ok: 'ti-circle-check', busy: 'ti-ban', warn: 'ti-alert-circle' };
         const icon = icons[state] || 'ti-info-circle';
         availabilityAlert.innerHTML = `<i class="ti ${icon}"></i><span>${message}</span>`;
@@ -215,7 +215,7 @@
             const data = await response.json();
             slotAvailable = Boolean(data.available);
             submitBtn.disabled = !slotAvailable;
-            setAvailability(slotAvailable ? 'ok' : 'busy', data.message || (slotAvailable ? 'This slot is available.' : 'Selected slot unavailable'));
+            setAvailability(slotAvailable ? 'ok' : 'busy', data.message || (slotAvailable ? 'This slot is available.' : 'This slot is not available.'));
         } catch (error) {
             if (error.name === 'AbortError') return;
             slotAvailable = true;

@@ -322,7 +322,7 @@ class ReservationController extends Controller
 
         return response()->json([
             'available' => ! $conflict,
-            'message' => $conflict ? 'Selected slot unavailable' : 'This slot is available.',
+            'message' => $conflict ? 'This slot is not available.' : 'This slot is available.',
         ]);
     }
 

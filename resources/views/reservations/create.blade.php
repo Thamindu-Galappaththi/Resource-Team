@@ -181,7 +181,7 @@ window.RVCreate = {
     ignoreReservationId: @json(isset($reservation) ? $reservation->id : null),
 };
 </script>
-<script src="{{ asset('js/reservation-create.js') }}?v=7"></script>
+<script src="{{ asset('js/reservation-create.js') }}?v=8"></script>
 <script>
 (() => {
     const selector = document.getElementById('booking_type');
