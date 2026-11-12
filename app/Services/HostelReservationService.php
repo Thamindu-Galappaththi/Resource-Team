@@ -30,13 +30,14 @@ class HostelReservationService
     /**
      * @param  array{guest_title:string,guest_name:string,employee_ids:array<int,string>,check_in_date:string,check_in_time:string,check_out_date:string,check_out_time:string,location_id:int,number_of_guests:int,bed_group:string,guest_phone?:string|null,special_requirements?:string|null,requester_id?:int,title?:string}  $payload
      */
-    public function create(array $payload, User $actor): Reservation
+    public function create(array $payload, User $actor, bool $allowPastCheckIn = false): Reservation
     {
         [$startsAt, $endsAt] = $this->stayRange(
             $payload['check_in_date'],
             $payload['check_in_time'],
             $payload['check_out_date'],
             $payload['check_out_time'],
+            $allowPastCheckIn,
         );
 
         return DB::transaction(function () use ($payload, $actor, $startsAt, $endsAt) {
@@ -328,7 +329,7 @@ class HostelReservationService
         ]);
     }
 
-    public function stayRange(string $checkInDate, string $checkInTime, string $checkOutDate, string $checkOutTime): array
+    public function stayRange(string $checkInDate, string $checkInTime, string $checkOutDate, string $checkOutTime, bool $allowPastCheckIn = false): array
     {
         try {
             [$startsAt, $endsAt] = $this->bookings->utcDateTimeRange($checkInDate, $checkInTime, $checkOutDate, $checkOutTime);
@@ -338,7 +339,7 @@ class HostelReservationService
             ]);
         }
 
-        if ($startsAt->lessThanOrEqualTo(now())) {
+        if (! $allowPastCheckIn && $startsAt->lessThanOrEqualTo(now())) {
             throw ValidationException::withMessages([
                 'check_in_time' => 'Check-in must be in the future.',
             ]);

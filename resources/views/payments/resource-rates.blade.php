@@ -114,7 +114,7 @@
                     <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
-                    <label class="form-label" for="rr-daily">Daily rate (LKR) <span class="text-danger">*</span> <small class="rr-time-hint">09:00–17:00</small></label>
+                    <label class="form-label" for="rr-daily">Daily rate (LKR) <span class="text-danger">*</span> <small class="rr-time-hint">09:00 – 17:00</small></label>
                     <input id="rr-daily" type="number" name="daily_rate" class="form-control" min="0" step="0.01" value="{{ old('daily_rate') }}" required data-rr-required>
                     <p class="rr-field-error"></p>
                 </div>
@@ -275,7 +275,7 @@
                 <div class="rr-field"><label class="form-label" for="rr-edit-location">Location <span class="text-danger">*</span></label><x-rm-select id="rr-edit-location" name="location_id" placeholder="Select a location" value="" selected-label="Select a location" :options="$locationOptions->all()" data-rr-required required /><p class="rr-field-error"></p></div>
                 <div class="rr-field"><label class="form-label" for="rr-edit-category">Resource category <span class="text-danger">*</span></label><x-rm-select id="rr-edit-category" name="resource_category_id" placeholder="Select category" value="" selected-label="Select category" :options="$categoryOptions->all()" data-rr-required required /><p class="rr-field-error"></p></div>
                 <div class="rr-field"><label class="form-label" for="rr-edit-type">Resource type <span class="text-danger">*</span></label><x-rm-select id="rr-edit-type" name="resource_type_id" placeholder="Select type" value="" selected-label="Select type" :options="[]" data-rr-required required /><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-daily">Daily rate (LKR) <span class="text-danger">*</span> <small class="rr-time-hint">09:00–17:00</small></label><input id="rr-edit-daily" type="number" name="daily_rate" class="form-control" min="0" step="0.01" required data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-daily">Daily rate (LKR) <span class="text-danger">*</span> <small class="rr-time-hint">09:00 – 17:00</small></label><input id="rr-edit-daily" type="number" name="daily_rate" class="form-control" min="0" step="0.01" required data-rr-required><p class="rr-field-error"></p></div>
                 <div class="rr-field"><label class="form-label" for="rr-edit-half-day">Half-day rate (LKR) <span class="text-danger">*</span> <small class="rr-time-hint">09:00–13:00 / 13:00–17:00</small></label><input id="rr-edit-half-day" type="number" name="half_day_rate" class="form-control" min="0" step="0.01" required data-rr-required><p class="rr-field-error"></p></div>
                 <div class="rr-field"><label class="form-label" for="rr-edit-status">Status</label><x-rm-select id="rr-edit-status" name="status" placeholder="Active" value="active" selected-label="Active" :options="[['value' => 'active', 'label' => 'Active'], ['value' => 'inactive', 'label' => 'Inactive']]" /></div>
                 </div>
