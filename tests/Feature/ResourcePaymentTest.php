@@ -35,7 +35,9 @@ class ResourcePaymentTest extends TestCase
         $user = User::factory()->role('admin')->create();
         $this->actingAs($user)->get(route('payments.resources'))
             ->assertOk()
-            ->assertSee('id="rp-extra-hours" type="number" min="0" max="24" step="0.5"', false)
+            ->assertSee('id="rp-extra-hours" type="hidden"', false)
+            ->assertSee('Payment collection', false)
+            ->assertDontSee('Usage Details', false)
             ->assertSee('id="rp-rate-warning" class="rp-rate-warning is-hidden"', false)
             ->assertSee('Includes first', false)
             ->assertSee('aria-live="polite"', false)
@@ -495,7 +497,8 @@ class ResourcePaymentTest extends TestCase
         $user = User::factory()->role('admin')->create();
         $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
         $this->actingAs($user)->get(route('payments.resources.print', ['reference' => $reservation->reference, 'extra_hours' => 0.5]))
-            ->assertOk()->assertSee('Half day')->assertSee('LKR 1,250.00')->assertSee('LKR 6,250.00')->assertSee('Unpaid');
+            ->assertOk()->assertSee('Half day')->assertSee('LKR 1,250.00')->assertSee('LKR 6,250.00')->assertSee('Unpaid')
+            ->assertSee('NEBULA', false)->assertDontSee('>DRAFT<', false);
     }
 
     private function reservationWithRate(?array $rate, string $start = '09:00:00', string $end = '11:00:00', ?User $requester = null): Reservation

@@ -12,7 +12,8 @@ body { margin: 0; padding: 30px 18px 48px; background: #f1f4f8; color: #17263c; 
 .invoice-button.is-success { background: #12815c; color: #fff; }
 .invoice-button:disabled { cursor: wait; opacity: .65; }
 .invoice-card { position: relative; isolation: isolate; overflow: hidden; border: 1px solid #e4e9f0; border-radius: 16px; background: #fff; box-shadow: 0 10px 34px rgba(16,35,61,.1); }
-.invoice-watermark { position: absolute; z-index: -1; top: 49%; left: 50%; color: rgba(37,99,201,.045); font-size: clamp(90px, 18vw, 170px); font-weight: 900; letter-spacing: .1em; line-height: 1; pointer-events: none; transform: translate(-50%,-50%) rotate(-24deg); user-select: none; }
+.invoice-watermark { position: absolute; z-index: -1; top: 49%; left: 50%; color: rgba(18,58,122,.07); font-size: clamp(72px, 16vw, 148px); font-weight: 900; letter-spacing: .14em; line-height: 1; pointer-events: none; transform: translate(-50%,-50%) rotate(-24deg); user-select: none; }
+.invoice-watermark.is-paid { color: rgba(8,115,84,.06); }
 .invoice-header { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 112px; padding: 20px 30px; color: #fff; background: linear-gradient(112deg, #123a7a 0%, #1769c2 55%, #5b4fc9 100%); break-inside: avoid; page-break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .invoice-brand { display: flex; align-items: center; min-width: 0; }
 .invoice-logo { display: block; width: auto; height: 48px; max-width: min(260px, 55vw); padding: 4px 7px; border-radius: 5px; background: #fff; object-fit: contain; object-position: left center; opacity: 1; }
