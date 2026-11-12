@@ -5,7 +5,7 @@
                 <th>Location</th>
                 <th>Category</th>
                 <th>Resource type</th>
-                <th>Daily rate<br><small>09:00–17:00</small></th>
+                <th>Daily rate<br><small>09:00 – 17:00</small></th>
                 <th>Half-day rate<br><small>09:00–13:00 / 13:00–17:00</small></th>
                 <th>Status</th>
                 <th>Actions</th>

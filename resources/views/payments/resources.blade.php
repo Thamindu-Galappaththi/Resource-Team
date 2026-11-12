@@ -5,8 +5,8 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
-<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=12">
-<link rel="stylesheet" href="{{ asset('css/resource-payment-record.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=13">
+<link rel="stylesheet" href="{{ asset('css/resource-payment-record.css') }}?v=5">
 <link rel="stylesheet" href="{{ asset('css/dashboard-role.css') }}?v={{ @filemtime(public_path('css/dashboard-role.css')) ?: time() }}">
 @endpush
 
@@ -30,10 +30,9 @@
 
     <div id="rp-flash" class="alert rsv-auto-alert d-none" role="status"></div>
 
-    <ol class="rp-steps has-skipped-step" aria-label="Payment steps">
+    <ol class="rp-steps" aria-label="Payment steps">
         <li class="is-current" id="rp-step-find"><span>1</span> Find reservation</li>
-        <li class="is-skipped" id="rp-step-usage"><span>2</span> Confirm usage</li>
-        <li id="rp-step-pay"><span id="rp-step-pay-number">2</span> Pay</li>
+        <li id="rp-step-pay"><span>2</span> Collect payment</li>
     </ol>
 
     <div class="rp-grid">
@@ -55,18 +54,23 @@
                 <div id="rp-reservation" class="rp-reservation rp-empty-reservation"><div class="rp-reservation-summary"><span class="rp-resource-icon"><i class="ti ti-building-community"></i></span><div class="rp-resource-copy"><strong>Search to load a reservation</strong><span>Reservation details and usage will appear here.</span></div><span class="rp-date"><small>STATUS</small><b>Awaiting lookup</b></span></div></div>
             </section>
 
-            <section class="rp-card rp-usage-card" id="rp-usage-card">
-                <details class="rp-usage-disclosure" id="rp-usage-disclosure">
-                <summary class="rp-card-title"><span class="rp-title-icon"><i class="ti ti-clock-hour-4"></i></span><div><h2>Usage Details <span class="rp-optional-badge">Optional</span></h2><p>Booked time is used when no extra hours are entered.</p></div><i class="ti ti-chevron-down rp-usage-chevron" aria-hidden="true"></i></summary>
-                <div class="rp-usage-content">
-                <div class="rp-usage-grid">
-                    <div><label class="rp-label">Reserved Time</label><div id="rp-time-range" class="rp-time-range"><span>Start <b>—</b></span><span>End <b>—</b></span></div></div>
-                    <div><label for="rp-extra-hours" class="rp-label">Extra Hours Used</label><div class="rp-hours-control"><button type="button" id="rp-hours-down" aria-label="Decrease extra hours" disabled><i class="ti ti-chevron-down"></i></button><input id="rp-extra-hours" type="number" min="0" max="24" step="0.5" value="0" aria-label="Extra hours" aria-describedby="rp-overtime-note rp-usage-message" disabled><button type="button" id="rp-hours-up" aria-label="Increase extra hours" disabled><i class="ti ti-chevron-up"></i></button><span>Hours</span></div><small id="rp-overtime-note">Enter any additional time used, in 0.5 hour increments.</small><small class="rp-validation-message" id="rp-usage-message" aria-live="polite"></small></div>
+            <section class="rp-card rp-guide-card">
+                <div class="rp-card-title"><span class="rp-title-icon"><i class="ti ti-checklist"></i></span><div><h2>Payment collection</h2><p>Charges follow the booked reservation time and the resource rate card.</p></div></div>
+                <ol class="rp-guide-list">
+                    <li><span>1</span><div><strong>Find the booking</strong><p>Search with an RRS or HST reference to load the reservation.</p></div></li>
+                    <li><span>2</span><div><strong>Review the invoice</strong><p>Confirm the rate, discount, and tax on the preview before collecting money.</p></div></li>
+                    <li><span>3</span><div><strong>Record the payment</strong><p>Mark cash or bank transfer as paid, then print the invoice for the requester.</p></div></li>
+                </ol>
+                <div class="rp-billing-snapshot">
+                    <div><span>Reserved time</span><div id="rp-time-range" class="rp-time-range"><span>Start <b>—</b></span><span>End <b>—</b></span></div></div>
+                    <div><span>Booked duration</span><strong id="rp-reserved-duration">—</strong></div>
                 </div>
-                <div class="rp-actual-summary"><span>Reserved duration <strong id="rp-reserved-duration">—</strong></span><span>Actual duration <strong id="rp-actual-duration">—</strong></span></div>
-                <div class="rp-usage-foot"><i class="ti ti-info-circle"></i><span>Extra usage is priced from the stored reservation rate. Confirm usage to record an audit entry.</span><button type="button" id="rp-confirm-usage" class="rp-confirm-usage" disabled>Confirm usage</button></div>
-                </div>
-                </details>
+                <input id="rp-extra-hours" type="hidden" value="0">
+                <button type="button" id="rp-hours-up" hidden tabindex="-1"></button>
+                <button type="button" id="rp-hours-down" hidden tabindex="-1"></button>
+                <button type="button" id="rp-confirm-usage" hidden tabindex="-1"></button>
+                <span id="rp-usage-message" hidden></span>
+                <span id="rp-actual-duration" hidden>—</span>
             </section>
 
         </div>
@@ -95,8 +99,7 @@ window.RPIndex = {
     canMarkPaid: @json(auth()->user()?->hasPermission('payments.mark-paid') ?? false)
 };
 </script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/resource-payment-record.js') }}?v=3"></script>
+<script src="{{ asset('js/resource-payment-record.js') }}?v=5"></script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/resource-payments.js') }}?v=6"></script>
+<script src="{{ asset('js/resource-payments.js') }}?v=7"></script>
 @endpush

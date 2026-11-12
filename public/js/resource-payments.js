@@ -67,20 +67,11 @@
     function updateStepState() {
         const loaded = Boolean(reservation);
         const paid = reservation?.payment_status === 'paid';
-        const hasExtra = Number(hoursInput.value || 0) > 0;
         const findStep = document.getElementById('rp-step-find');
-        const usageStep = document.getElementById('rp-step-usage');
         const payStep = document.getElementById('rp-step-pay');
-        const steps = findStep.parentElement;
-        const payStepNumber = document.getElementById('rp-step-pay-number');
         findStep.classList.toggle('is-complete', loaded);
         findStep.classList.toggle('is-current', !loaded);
-        usageStep.classList.toggle('is-skipped', !hasExtra);
-        steps.classList.toggle('has-skipped-step', !hasExtra);
-        payStepNumber.textContent = hasExtra ? '3' : '2';
-        usageStep.classList.toggle('is-current', loaded && hasExtra && !usageConfirmed && !paid);
-        usageStep.classList.toggle('is-complete', loaded && hasExtra && (usageConfirmed || paid));
-        payStep.classList.toggle('is-current', loaded && (!hasExtra || usageConfirmed || paid));
+        payStep.classList.toggle('is-current', loaded && !paid);
         payStep.classList.toggle('is-complete', paid);
     }
 
@@ -130,18 +121,13 @@
         const rateWarning = document.getElementById('rp-rate-warning');
         rateWarning.classList.toggle('is-hidden', !loaded || Boolean(reservation.has_rate));
         printButton.disabled = !loaded;
-        hoursInput.disabled = !loaded || paid;
-        document.getElementById('rp-hours-up').disabled = !loaded || paid;
-        document.getElementById('rp-hours-down').disabled = !loaded || paid;
-        const extraHours = Number(hoursInput.value || 0);
-        confirmUsageButton.hidden = !loaded || paid || extraHours <= 0;
-        confirmUsageButton.disabled = !loaded || paid || !reservation?.has_rate || extraHours <= 0 || usageConfirmed;
+        const extraHours = Number(hoursInput?.value || 0);
         if (markPaidButton) {
             markPaidButton.hidden = !loaded || paid;
-            markPaidButton.disabled = !loaded || paid || !reservation?.has_rate || (extraHours > 0 && !usageConfirmed);
+            markPaidButton.disabled = !loaded || paid || !reservation?.has_rate;
             markPaidButton.title = !reservation?.has_rate
                 ? 'An applicable resource rate is required before recording payment'
-                : (extraHours > 0 && !usageConfirmed ? 'Confirm the extra usage before recording payment' : '');
+                : '';
         }
         updateStepState();
     }
@@ -197,7 +183,7 @@
         reservation = null;
         usageConfirmed = false;
         savedConfirmedHours = 0;
-        hoursInput.value = '0';
+        if (hoursInput) hoursInput.value = '0';
         document.getElementById('rp-time-range').innerHTML = '<span>Start <b>—</b></span><span>End <b>—</b></span>';
         document.getElementById('rp-requester').textContent = 'Reservation user';
         document.getElementById('rp-requester-email').textContent = '';
@@ -214,7 +200,7 @@
     async function refreshBreakdown() {
         if (!reservation || reservation.payment_status === 'paid') return;
         const requestSequence = ++feeRequestSequence;
-        const params = new URLSearchParams({ reference: reservation.reference, extra_hours: hoursInput.value || '0' });
+        const params = new URLSearchParams({ reference: reservation.reference, extra_hours: hoursInput?.value || '0' });
         try {
             const response = await fetchJson(form.action + '?' + params.toString(), { headers: jsonHeaders() });
             const payload = await response.json();
@@ -269,11 +255,9 @@
             reservation = payload;
             usageConfirmed = Boolean(payload.is_usage_confirmed);
             savedConfirmedHours = Number(payload.confirmed_extra_hours ?? payload.extra_hours ?? 0);
-            hoursInput.value = Number(payload.extra_hours || 0).toString();
+            if (hoursInput) hoursInput.value = Number(payload.extra_hours || 0).toString();
             renderReservation(payload);
             renderInvoice();
-            const usageDisclosure = document.getElementById('rp-usage-disclosure');
-            if (Number(payload.extra_hours || 0) > 0) usageDisclosure.open = true;
             setMessage(payload.rate_note || `Reservation loaded. Invoice ${payload.invoice_number} is ${payload.payment_status}.`, payload.has_rate ? 'success' : 'warning');
             showFlash(payload.has_rate ? 'Reservation loaded.' : (payload.rate_note || 'Reservation loaded.'), payload.has_rate ? 'success' : 'warning');
         } catch (error) {
@@ -292,7 +276,7 @@
         }
     });
 
-    hoursInput.addEventListener('input', () => {
+    hoursInput?.addEventListener('input', () => {
         const extraHours = Number(hoursInput.value);
         usageConfirmed = extraHours <= 0 || extraHours === savedConfirmedHours;
         updateStepState();
@@ -309,16 +293,16 @@
         refreshBreakdown();
     });
 
-    document.getElementById('rp-hours-up').addEventListener('click', () => {
+    document.getElementById('rp-hours-up')?.addEventListener('click', () => {
         hoursInput.value = Math.min(24, (Number(hoursInput.value) || 0) + 0.5);
         hoursInput.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    document.getElementById('rp-hours-down').addEventListener('click', () => {
+    document.getElementById('rp-hours-down')?.addEventListener('click', () => {
         hoursInput.value = Math.max(0, (Number(hoursInput.value) || 0) - 0.5);
         hoursInput.dispatchEvent(new Event('input', { bubbles: true }));
     });
 
-    confirmUsageButton.addEventListener('click', async () => {
+    confirmUsageButton?.addEventListener('click', async () => {
         if (!reservation || Number(hoursInput.value) <= 0 || !hoursInput.reportValidity()) return;
         feeRequestSequence++;
         confirmUsageButton.disabled = true;
@@ -358,7 +342,7 @@
                 invoiceNumber: reservation.invoice_number,
                 total: reservation.total,
                 url,
-                extraHours: Number(hoursInput.value || 0),
+                extraHours: Number(hoursInput?.value || 0),
             });
             if (!payload) { markPaidButton.disabled = false; return; }
             reservation = { ...reservation, ...payload, payment_status: 'paid', has_rate: true };
@@ -375,7 +359,7 @@
 
     printButton.addEventListener('click', () => {
         if (!reservation) return;
-        const url = form.dataset.printTemplate.replace('__REFERENCE__', encodeURIComponent(reservation.reference)) + '?extra_hours=' + encodeURIComponent(hoursInput.value || '0');
+        const url = form.dataset.printTemplate.replace('__REFERENCE__', encodeURIComponent(reservation.reference)) + '?extra_hours=' + encodeURIComponent(hoursInput?.value || '0');
         window.open(url, '_blank', 'noopener');
     });
 

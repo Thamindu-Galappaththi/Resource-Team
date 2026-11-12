@@ -442,7 +442,7 @@ class SltEmployeeReservationSeeder extends Seeder
                 'number_of_guests' => $row['guests'],
                 'bed_group' => $this->bedGroupFor($row),
                 'special_requirements' => $row['requirements'],
-            ], $row['owner']);
+            ], $row['owner'], true);
         } catch (\Throwable $exception) {
             $this->command?->warn('Skipped hostel booking '.$row['title'].': '.$exception->getMessage());
 

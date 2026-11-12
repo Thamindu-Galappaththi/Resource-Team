@@ -627,7 +627,42 @@
     background: linear-gradient(120deg, #123a7a 0%, #1769c2 100%);
 }
 
-.rp-usage-card .rp-card-title { margin: 0; }
+.rp-guide-list {
+    display: grid;
+    gap: .85rem;
+    margin: 0;
+    padding: 1rem 1.15rem .35rem;
+    list-style: none;
+}
+.rp-guide-list li { display: flex; gap: .75rem; align-items: flex-start; }
+.rp-guide-list li > span {
+    display: grid;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    place-items: center;
+    border-radius: 50%;
+    background: #e7f0ff;
+    color: #1769c2;
+    font-size: .72rem;
+    font-weight: 800;
+}
+.rp-guide-list strong { display: block; color: #17324f; font-size: .84rem; }
+.rp-guide-list p { margin: .15rem 0 0; color: #65778d; font-size: .75rem; line-height: 1.4; }
+.rp-billing-snapshot {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, .8fr);
+    gap: .8rem;
+    margin: .4rem 1.15rem 1.1rem;
+    padding: .85rem;
+    border: 1px solid #d7e4f6;
+    border-radius: 12px;
+    background: #f6f9ff;
+}
+.rp-billing-snapshot > div { min-width: 0; }
+.rp-billing-snapshot > div > span { display: block; margin-bottom: .35rem; color: #6b7c91; font-size: .68rem; font-weight: 700; }
+.rp-billing-snapshot > div > strong { color: #123a7a; font-size: .95rem; }
+.rp-billing-snapshot .rp-time-range { background: #fff; }
 
 .rp-title-icon {
     display: grid;
@@ -871,6 +906,7 @@
     .rp-search-row { flex-direction: column; }
     .rp-search-group,
     .rp-search-btn { width: 100%; min-width: 0; }
+    .rp-billing-snapshot { grid-template-columns: minmax(0, 1fr); margin-right: .8rem; margin-left: .8rem; }
     .rp-usage-grid { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
     .rp-usage-grid .rp-label { min-height: 0; }
     .rp-usage-grid > div > small { min-height: 0; }
@@ -888,7 +924,7 @@
     .rp-reservation-details { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
     .rp-steps {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         align-items: start;
         gap: .4rem;
         padding: .7rem .55rem;

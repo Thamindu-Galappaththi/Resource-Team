@@ -6,8 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Invoice {{ $invoice->invoice_number ?: $reservation->reference }}</title>
     <link rel="stylesheet" href="{{ asset('css/icons/tabler-icons/tabler-icons.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/resource-invoice-print.css') }}?v=3">
-    <link rel="stylesheet" href="{{ asset('css/resource-payment-record.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('css/resource-invoice-print.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('css/resource-payment-record.css') }}?v=5">
 </head>
 @php
     $requester = $reservation->requester ?? $reservation->createdBy;
@@ -39,9 +39,7 @@
         </nav>
 
         <main class="invoice-card">
-            @if(! $isPaid)
-                <div class="invoice-watermark" aria-hidden="true">DRAFT</div>
-            @endif
+            <div class="invoice-watermark" aria-hidden="true">NEBULA</div>
             <header class="invoice-header">
                 <div class="invoice-brand">
                     <img class="invoice-logo" src="{{ asset('images/logos/nebula.png') }}" alt="SLT Mobitel Nebula Institute of Technology" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
@@ -134,8 +132,7 @@
         </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{{ asset('js/resource-payment-record.js') }}?v=3"></script>
+    <script src="{{ asset('js/resource-payment-record.js') }}?v=5"></script>
     @if(! $isPaid && $canMarkPaid)
         <script>
             document.getElementById('mark-invoice-paid')?.addEventListener('click', async function () {
@@ -149,7 +146,8 @@
                     document.querySelector('.invoice-status')?.classList.remove('is-unpaid', 'is-draft');
                     const badge = document.querySelector('.invoice-status');
                     if (badge) { badge.classList.add('is-paid'); badge.innerHTML = `<i class="ti ti-circle-check"></i> Paid <small>${paidDate}</small>`; }
-                    document.querySelector('.invoice-watermark')?.remove();
+                    const watermark = document.querySelector('.invoice-watermark');
+                    if (watermark) watermark.classList.add('is-paid');
                     document.querySelector('.invoice-draft-note')?.remove();
                     const stamp = document.createElement('section');
                     stamp.className = 'invoice-paid-stamp';
