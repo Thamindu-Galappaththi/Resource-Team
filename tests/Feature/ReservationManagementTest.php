@@ -51,27 +51,60 @@ class ReservationManagementTest extends TestCase
         Notification::assertNotSentTo($user, ReservationCreated::class);
     }
 
-    public function test_overlapping_booking_is_rejected(): void
+    public function test_pending_overlap_is_allowed_and_approved_overlap_is_rejected(): void
     {
         $user = User::factory()->role('coordinator')->create();
+        $admin = User::factory()->role('admin')->create();
         $resource = Resource::factory()->create(['status' => 'active']);
+        $date = now()->addDay()->toDateString();
         $payload = $this->payload($resource, $user, [
+            'reservation_date' => $date,
             'start_time' => '09:00',
             'end_time' => '12:00',
         ]);
 
         $this->actingAs($user)->post(route('reservations.store'), $payload)->assertRedirect();
 
+        $this->actingAs($user)->getJson(route('reservations.availability', [
+            'resource_ids' => [$resource->id],
+            'reservation_date' => $date,
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+        ]))->assertOk()->assertJsonPath('available', true)->assertJsonPath('message', 'This slot is available.');
+
+        $this->actingAs($user)->post(route('reservations.store'), $this->payload($resource, $user, [
+            'reservation_date' => $date,
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'purpose' => 'Second pending request',
+        ]))->assertRedirect();
+
+        $this->assertDatabaseCount('reservations', 2);
+
+        $first = Reservation::query()->orderBy('id')->first();
+        $this->actingAs($admin)->post(route('approvals.decision', $first), [
+            'decision' => 'approve',
+            'comment' => 'Approved for the morning slot',
+        ])->assertRedirect();
+
+        $this->actingAs($user)->getJson(route('reservations.availability', [
+            'resource_ids' => [$resource->id],
+            'reservation_date' => $date,
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+        ]))->assertOk()->assertJsonPath('available', false)->assertJsonPath('message', 'This slot is not available.');
+
         $this->actingAs($user)
             ->from(route('reservations.create'))
             ->post(route('reservations.store'), $this->payload($resource, $user, [
+                'reservation_date' => $date,
                 'start_time' => '10:00',
                 'end_time' => '11:00',
                 'purpose' => 'Overlapping attempt',
             ]))
             ->assertSessionHasErrors('start_time');
 
-        $this->assertDatabaseCount('reservations', 1);
+        $this->assertDatabaseCount('reservations', 2);
     }
 
     public function test_back_to_back_slots_do_not_conflict(): void
@@ -324,7 +357,11 @@ class ReservationManagementTest extends TestCase
                 'id="calendar-resource"',
                 'id="calendar-status"',
             ], false);
-        $this->actingAs($user)->get(route('reservations.create'))->assertOk()->assertSee('Purpose of Reservation');
+        $this->actingAs($user)->get(route('reservations.create'))
+            ->assertOk()
+            ->assertSee('Purpose of Reservation')
+            ->assertSee('Select a time range')
+            ->assertSee('data-cu-multiple', false);
         $this->actingAs($user)->get(route('reservations.index'))->assertOk()->assertSee('Existing Reservations');
     }
 

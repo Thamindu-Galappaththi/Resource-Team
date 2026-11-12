@@ -112,14 +112,21 @@ class MicrosoftUserProvisioner
 
     private function assignSltEmployeeRole(User $user): void
     {
-        $role = $this->sltEmployeeRole();
-
-        if (! $this->isPrivilegedStaff($user)) {
-            $user->role_id = $role->id;
-            $user->user_role = $role->slug;
+        if ($this->hasAssignedStaffRole($user)) {
+            return;
         }
 
+        $role = $this->sltEmployeeRole();
+        $user->role_id = $role->id;
+        $user->user_role = $role->slug;
         $user->roles()->syncWithoutDetaching([$role->id]);
+    }
+
+    private function hasAssignedStaffRole(User $user): bool
+    {
+        $slug = $user->roleSlug();
+
+        return $slug !== '' && $slug !== 'slt_employee';
     }
 
     private function sltEmployeeRole(): Role

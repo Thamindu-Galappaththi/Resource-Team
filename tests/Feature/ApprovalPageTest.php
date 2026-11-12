@@ -121,13 +121,15 @@ class ApprovalPageTest extends TestCase
         $admin = User::factory()->role('admin')->create();
         $requester = User::factory()->role('slt_employee')->create();
         $resource = Resource::factory()->create(['status' => 'active', 'name_model' => 'Board Room']);
-        $pending = $this->pendingReservation($requester, $resource, 'Executive briefing');
+        $pending = $this->pendingReservation($requester, $resource, 'Executive briefing', special: true);
+        $this->pendingReservation($requester, $resource, 'Ordinary lab booking');
 
         $this->actingAs($admin)->get(route('approvals.special'))
             ->assertOk()
-            ->assertSee('Waiting for override', false)
-            ->assertSee('Override history', false)
+            ->assertSee('Waiting for decision', false)
+            ->assertSee('Decision history', false)
             ->assertSee('Executive briefing', false)
+            ->assertDontSee('Ordinary lab booking', false)
             ->assertSee('ap-stats', false)
             ->assertDontSee('special-view-'.$pending->id, false);
 
@@ -149,7 +151,7 @@ class ApprovalPageTest extends TestCase
             ->assertSee('Director approved the exception', false);
     }
 
-    private function pendingReservation(User $requester, Resource $resource, string $title): Reservation
+    private function pendingReservation(User $requester, Resource $resource, string $title, bool $special = false): Reservation
     {
         $start = now('UTC')->addDay()->setTime(4, 30);
         $reservation = Reservation::factory()->create([
@@ -159,6 +161,7 @@ class ApprovalPageTest extends TestCase
             'title' => $title,
             'purpose' => $title,
             'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'special_approval' => $special,
             'reservation_date' => now('Asia/Colombo')->addDay()->toDateString(),
             'start_time' => '10:00:00',
             'end_time' => '12:00:00',

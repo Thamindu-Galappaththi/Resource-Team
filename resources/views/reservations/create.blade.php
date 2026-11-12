@@ -4,21 +4,28 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/reservation-create.css') }}?v=8">
+<link rel="stylesheet" href="{{ asset('css/reservation-create.css') }}?v=10">
 <link rel="stylesheet" href="{{ asset('css/special-approval.css') }}?v=1">
 @endpush
 
 @section('content')
 @php
-    $timeStartForType = old('start_time', $prefillStart ?? request('start_time', '09:00'));
-    $timeEndForType = old('end_time', $prefillEnd ?? request('end_time', '17:00'));
+    $timeStartForType = old('start_time', $prefillStart ?? request('start_time', ''));
+    $timeEndForType = old('end_time', $prefillEnd ?? request('end_time', ''));
     $derivedBookingType = match ([$timeStartForType, $timeEndForType]) {
         ['09:00', '17:00'] => 'full_day',
         ['09:00', '13:00'] => 'half_day_morning',
         ['13:00', '17:00'] => 'half_day_afternoon',
-        default => ((int) substr((string) $timeStartForType, 0, 2) >= 13 ? 'half_day_afternoon' : 'half_day_morning'),
+        default => '',
     };
     $prefillBookingType = old('booking_type', $reservation->booking_type ?? $derivedBookingType);
+    $bookingTypeOptions = [
+        ['value' => '', 'label' => 'Select a time range'],
+        ['value' => 'full_day', 'label' => 'Full day · 09:00–17:00'],
+        ['value' => 'half_day_morning', 'label' => 'Half day morning · 09:00–13:00'],
+        ['value' => 'half_day_afternoon', 'label' => 'Half day afternoon · 13:00–17:00'],
+    ];
+    $bookingTypeLabel = collect($bookingTypeOptions)->firstWhere('value', $prefillBookingType)['label'] ?? 'Select a time range';
 @endphp
 <div class="container-fluid mt-4 rv-page">
     <div class="rv-header">
@@ -73,22 +80,19 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="category_id">Resource category <span class="text-danger">*</span></label>
-                        <x-rm-select id="category_id" name="category_id" class="{{ $errors->has('category_id') ? 'is-invalid' : '' }}"
-                            placeholder="Select a location first" :required="true" :value="(string) ($prefillCategoryId ?? '')"
-                            :options="[['value' => '', 'label' => 'Select a location first']]" />
+                        <x-rm-select id="category_id" name="category_id" multiple array-name="category_ids[]" class="{{ $errors->has('category_id') ? 'is-invalid' : '' }}"
+                            placeholder="Select categories" :required="true" :value="(string) ($prefillCategoryId ?? '')"
+                            :values="$prefillCategoryIds ?? []"
+                            :options="[['value' => '', 'label' => 'Select categories']]" />
                         @error('category_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="resource_id">Resource <span class="text-danger">*</span></label>
-                        <x-rm-select id="resource_id" name="resource_id" class="{{ $errors->has('resource_id') ? 'is-invalid' : '' }}"
-                            placeholder="Select a resource" :required="true" :value="(string) ($prefillResourceId ?? '')"
-                            :options="collect([['value' => '', 'label' => 'Select a resource']])->concat($lookups['resources']->map(fn ($resource) => ['value' => (string) $resource['id'], 'label' => $resource['name_model'].($resource['serial_number'] ? ' ('.$resource['serial_number'].')' : '').($resource['location_name'] ? ' — '.$resource['location_name'] : '')]))->all()" />
+                        <x-rm-select id="resource_id" name="resource_id" multiple array-name="resource_ids[]" class="{{ $errors->has('resource_id') ? 'is-invalid' : '' }}"
+                            placeholder="Select resources" :required="true" :value="(string) ($prefillResourceId ?? '')"
+                            :values="$prefillResourceIds ?? []"
+                            :options="[['value' => '', 'label' => 'Select resources']]" />
                         @error('resource_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-12" id="linkedWrap" hidden>
-                        <label class="form-label">Linked resources</label>
-                        <div id="linkedResources" class="rv-linked"></div>
-                        <p class="rv-hint mb-0 mt-2" id="linkedHint">Tick the linked resources you also need. They are booked in the same slot and checked together.</p>
                     </div>
                 </div>
             </div>
@@ -103,11 +107,9 @@
                     </div>
                     <div class="col-md-8">
                         <label class="form-label" for="booking_type">Booking type <span class="text-danger">*</span></label>
-                        <select class="form-select @error('booking_type') is-invalid @enderror" id="booking_type" name="booking_type" required>
-                            <option value="full_day" @selected($prefillBookingType === 'full_day')>Full day · 09:00–17:00</option>
-                            <option value="half_day_morning" @selected($prefillBookingType === 'half_day_morning')>Half day morning · 09:00–13:00</option>
-                            <option value="half_day_afternoon" @selected($prefillBookingType === 'half_day_afternoon')>Half day afternoon · 13:00–17:00</option>
-                        </select>
+                        <x-rm-select id="booking_type" name="booking_type" class="{{ $errors->has('booking_type') ? 'is-invalid' : '' }}"
+                            placeholder="Select a time range" :required="true" :value="(string) $prefillBookingType"
+                            :selected-label="$bookingTypeLabel" :options="$bookingTypeOptions" />
                         @error('booking_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         <input type="hidden" id="start_time" name="start_time" value="{{ $timeStartForType }}">
                         <input type="hidden" id="end_time" name="end_time" value="{{ $timeEndForType }}">
@@ -163,7 +165,7 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/resource-select.js') }}?v=2"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=4"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
 <script>
 window.RVCreate = {
@@ -171,19 +173,22 @@ window.RVCreate = {
     holidays: @json($holidays),
     availabilityUrl: @json(route('reservations.availability')),
     prefillResourceId: @json($prefillResourceId ? (string) $prefillResourceId : null),
-    prefillResourceIds: @json($prefillResourceIds),
+    prefillResourceIds: @json($prefillResourceIds ?? []),
     prefillLocationId: @json($prefillLocationId ? (string) $prefillLocationId : null),
     prefillCategoryId: @json($prefillCategoryId ? (string) $prefillCategoryId : null),
+    prefillCategoryIds: @json($prefillCategoryIds ?? []),
     ignoreReservationId: @json(isset($reservation) ? $reservation->id : null),
 };
 </script>
-<script src="{{ asset('js/reservation-create.js') }}?v=7"></script>
+<script src="{{ asset('js/reservation-create.js') }}?v=9"></script>
 <script>
 (() => {
     const selector = document.getElementById('booking_type');
     const ranges = { full_day: ['09:00', '17:00'], half_day_morning: ['09:00', '13:00'], half_day_afternoon: ['13:00', '17:00'] };
     const sync = () => {
-        const [start, end] = ranges[selector.value] || ranges.full_day;
+        if (!selector?.value) return;
+        const [start, end] = ranges[selector.value] || [];
+        if (!start || !end) return;
         for (const [id, value] of [['start_time', start], ['end_time', end]]) {
             const field = document.getElementById(id);
             field.value = value;
@@ -191,7 +196,7 @@ window.RVCreate = {
             field.dispatchEvent(new Event('change', { bubbles: true }));
         }
     };
-    selector.addEventListener('change', sync);
+    selector?.addEventListener('change', sync);
     sync();
 })();
 </script>

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -224,6 +225,35 @@ class LoginTest extends TestCase
         $this->assertSame('staff@slt.lk', $user->email);
         $this->assertSame('ms-user-updated', $user->microsoft_id);
         $this->assertTrue($user->slt_employee);
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_microsoft_login_keeps_promoted_staff_role_and_password(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('senerath@slt.com.lk', 'W.A.R. Senerath', 'ms-hostel');
+
+        $user = User::factory()->role('hostel_manager')->create([
+            'email' => 'senerath@slt.com.lk',
+            'name' => 'W.A.R. Senerath',
+            'slt_employee' => true,
+            'microsoft_id' => 'ms-hostel',
+            'password' => 'Abc@12345',
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $user->refresh();
+
+        $this->assertSame('hostel_manager', $user->user_role);
+        $this->assertTrue($user->hasRole('hostel_manager'));
+        $this->assertFalse($user->hasRole('slt_employee'));
+        $this->assertTrue(Hash::check('Abc@12345', $user->password));
         $this->assertAuthenticatedAs($user);
     }
 
