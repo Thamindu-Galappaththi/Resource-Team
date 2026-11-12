@@ -346,7 +346,7 @@ class SltEmployeeDashboardTest extends TestCase
     {
         $employee = User::factory()->role('slt_employee')->create();
         $other = User::factory()->role('slt_employee')->create();
-        $today = now()->toDateString();
+        $today = now(config('reservations.display_timezone', 'Asia/Colombo'))->toDateString();
 
         Reservation::factory()->create([
             'requester_id' => $employee->id,
