@@ -5,39 +5,38 @@
     }
 
     const catalogNode = document.getElementById('rr-catalog');
-    const catalog = catalogNode ? JSON.parse(catalogNode.textContent) : { types: [], resources: [] };
+    const catalog = catalogNode ? JSON.parse(catalogNode.textContent) : { types: [], categories: [], locations: [] };
 
-    function resourceItems(typeId) {
-        return (catalog.resources || [])
-            .filter((item) => !typeId || String(item.type) === String(typeId))
-            .map((item) => ({ value: String(item.value), label: typeId ? (item.name || item.label) : item.label }));
+    function typesFor(categoryId) {
+        return (catalog.types || [])
+            .filter((item) => !categoryId || String(item.category) === String(categoryId))
+            .map((item) => ({ value: String(item.value), label: item.label }));
     }
 
-    function filterResources(typeId, resourceId, keepValue) {
-        if (!window.RMSelect) {
+    function syncTypes(categorySelectId, typeSelectId, placeholder, requireCategory) {
+        if (!window.RMSelect || !document.getElementById(typeSelectId)) {
             return;
         }
-        const current = keepValue == null ? window.RMSelect.getValue(resourceId) : String(keepValue);
-        const items = resourceItems(typeId);
-        window.RMSelect.setOptions(resourceId, items, 'All resources of type');
-        const selected = items.find((item) => item.value === current);
-        if (selected) {
-            window.RMSelect.setValue(resourceId, selected.value, selected.label);
-        }
+        const categoryId = window.RMSelect.getValue(categorySelectId);
+        window.RMSelect.setOptions(typeSelectId, typesFor(categoryId), placeholder, {
+            disabled: Boolean(requireCategory) && !categoryId,
+            placeholderValue: '',
+        });
     }
 
-    function bindTypeFilter(typeId, resourceId) {
-        const input = document.getElementById(typeId);
-        if (!input || !document.getElementById(resourceId)) {
+    function bindCategoryTypes(categorySelectId, typeSelectId, placeholder, requireCategory) {
+        const input = document.getElementById(categorySelectId);
+        if (!input || !document.getElementById(typeSelectId)) {
             return;
         }
-        filterResources(window.RMSelect.getValue(typeId), resourceId);
-        input.addEventListener('change', () => filterResources(window.RMSelect.getValue(typeId), resourceId, ''));
+        syncTypes(categorySelectId, typeSelectId, placeholder, requireCategory);
+        input.addEventListener('change', () => syncTypes(categorySelectId, typeSelectId, placeholder, requireCategory));
     }
 
     if (window.RMSelect) {
-        bindTypeFilter('rr-type', 'rr-resource');
-        bindTypeFilter('rr-edit-type', 'rr-edit-resource');
+        bindCategoryTypes('rr-resource-category', 'rr-type', 'Select type', true);
+        bindCategoryTypes('rr-edit-category', 'rr-edit-type', 'Select type', true);
+        bindCategoryTypes('rr-category-filter', 'rr-type-filter', 'All types', false);
     }
 
     function sectionTarget(section) {
@@ -88,6 +87,7 @@
 
     const searchForm = page.querySelector('[data-rr-catalog-search]');
     const search = document.getElementById('rr-rate-search');
+    const categoryFilter = document.getElementById('rr-category-filter');
     const typeFilter = document.getElementById('rr-type-filter');
     const statusFilter = document.getElementById('rr-status-filter');
     const clearFilters = document.getElementById('rr-clear-filters');
@@ -102,6 +102,12 @@
             url.searchParams.set('catalog_search', query);
         } else {
             url.searchParams.delete('catalog_search');
+        }
+        const category = categoryFilter && window.RMSelect ? window.RMSelect.getValue('rr-category-filter') : '';
+        if (category) {
+            url.searchParams.set('catalog_category', category);
+        } else {
+            url.searchParams.delete('catalog_category');
         }
         const type = typeFilter && window.RMSelect ? window.RMSelect.getValue('rr-type-filter') : '';
         if (type) {
@@ -122,9 +128,10 @@
 
     function catalogHasFilters() {
         const query = search ? search.value.trim() : '';
+        const category = categoryFilter && window.RMSelect ? window.RMSelect.getValue('rr-category-filter') : '';
         const type = typeFilter && window.RMSelect ? window.RMSelect.getValue('rr-type-filter') : '';
         const status = statusFilter && window.RMSelect ? window.RMSelect.getValue('rr-status-filter') : 'active';
-        return Boolean(query || type || (status && status !== 'active'));
+        return Boolean(query || category || type || (status && status !== 'active'));
     }
 
     function toggleClear() {
@@ -144,7 +151,7 @@
             searchTimer = setTimeout(() => loadSection('rate_catalog', catalogFilterUrl()), 350);
         });
     }
-    [typeFilter, statusFilter].forEach((filter) => {
+    [categoryFilter, typeFilter, statusFilter].forEach((filter) => {
         filter?.addEventListener('change', () => {
             if (clearingFilters) {
                 return;
@@ -162,6 +169,7 @@
         if (search) {
             search.value = '';
         }
+        window.RMSelect?.setValue('rr-category-filter', '', 'All categories');
         window.RMSelect?.setValue('rr-type-filter', '', 'All types');
         window.RMSelect?.setValue('rr-status-filter', 'active', 'Active');
         clearingFilters = false;
@@ -229,7 +237,7 @@
     }));
     showTab(requestedTab());
 
-    page.querySelector('.rr-export-btn')?.addEventListener('click', () => {
+    page.querySelector('#rr-export-csv')?.addEventListener('click', () => {
         const table = document.getElementById('rr-rate-table');
         if (!table) {
             return;
@@ -238,7 +246,7 @@
         if (rows.length <= 1) {
             return;
         }
-        const csv = rows.map((row) => [...row.querySelectorAll('th, td')].slice(0, 7).map((cell) => {
+        const csv = rows.map((row) => [...row.querySelectorAll('th, td')].slice(0, 6).map((cell) => {
             const clone = cell.cloneNode(true);
             clone.querySelectorAll('button, form, .rr-actions').forEach((node) => node.remove());
             return `"${clone.textContent.trim().replace(/"/g, '""')}"`;
@@ -253,6 +261,12 @@
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    const importFile = document.getElementById('rr-import-file');
+    document.getElementById('rr-import-trigger')?.addEventListener('click', () => importFile?.click());
+    importFile?.addEventListener('change', () => {
+        if (importFile.files?.length) importFile.form?.requestSubmit();
     });
 
     function constraintFields(form) {
@@ -521,15 +535,13 @@
             return;
         }
         rateForm.action = button.dataset.action;
-        const type = (catalog.types || []).find((item) => String(item.value) === String(button.dataset.type || ''));
-        window.RMSelect.setValue('rr-edit-type', button.dataset.type || '', type?.label || 'Select type');
-        filterResources(button.dataset.type || '', 'rr-edit-resource', button.dataset.resource || '');
-        document.getElementById('rr-edit-base').value = button.dataset.base || '';
-        document.getElementById('rr-edit-hours').value = button.dataset.hours || '';
-        document.getElementById('rr-edit-extra').value = button.dataset.extra || '';
-        document.getElementById('rr-edit-tax').value = button.dataset.tax || '0';
-        document.getElementById('rr-edit-from').value = button.dataset.from || '';
-        document.getElementById('rr-edit-to').value = button.dataset.to || '';
+        const locationId = button.dataset.location && button.dataset.location !== 'all' ? button.dataset.location : '';
+        window.RMSelect?.setValue('rr-edit-location', locationId, locationId ? (button.dataset.locationLabel || '') : 'Select a location');
+        window.RMSelect?.setValue('rr-edit-category', button.dataset.category || '', button.dataset.categoryLabel || 'Select category');
+        window.RMSelect?.setValue('rr-edit-type', button.dataset.type || '', button.dataset.typeLabel || 'Select type');
+        document.getElementById('rr-edit-daily').value = button.dataset.daily || '0';
+        document.getElementById('rr-edit-half-day').value = button.dataset.halfDay || '0';
+        window.RMSelect?.setValue('rr-edit-status', button.dataset.active === '1' ? 'active' : 'inactive', button.dataset.active === '1' ? 'Active' : 'Inactive');
         document.getElementById('rr-edit-title').textContent = button.dataset.label || 'Edit rate';
         rateModal.show();
     });

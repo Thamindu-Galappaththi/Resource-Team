@@ -6,6 +6,8 @@ use App\Enums\ReservationItemStatus;
 use App\Models\Reservation;
 use App\Models\ResourceRate;
 use App\Models\ResourcePaymentDiscountRule;
+use App\Models\Resource;
+use App\Services\AnnexureRateCardImporter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -25,6 +27,19 @@ class ResourceReservationFeeCalculator
         $extraRatesMinor = 0;
         $hasRate = true;
         $lines = [];
+        $bookingType = $reservation->booking_type ?: $this->inferBookingType($reservation);
+        $dailyBooking = $bookingType === 'full_day';
+        $bookedHours = $dailyBooking ? 8.0 : 4.0;
+        $bookingLabel = match ($bookingType) {
+            'full_day' => 'Full day',
+            'half_day_afternoon' => 'Half day afternoon',
+            default => 'Half day morning',
+        };
+        $timeLabel = match ($bookingType) {
+            'full_day' => '09:00–17:00',
+            'half_day_afternoon' => '13:00–17:00',
+            default => '09:00–13:00',
+        };
 
         foreach ($reservation->items as $item) {
             if ($item->status === ReservationItemStatus::CANCELLED->value) {
@@ -38,30 +53,38 @@ class ResourceReservationFeeCalculator
                 continue;
             }
 
-            $rate = $this->resolveRate($typeId, $resource->id, $reservationDate);
+            $rate = $this->resolveRate($resource, $reservationDate);
             if (! $rate) {
                 $hasRate = false;
                 continue;
             }
 
             $quantity = max(1, (float) ($item->quantity ?? 1));
-            $scheduledHours = $this->itemHours($item->starts_at, $item->ends_at, $reservation);
-            $actualHours = round($scheduledHours + $extraHours, 2, PHP_ROUND_HALF_UP);
-            $billableExtraHours = round(max(0, $actualHours - (float) $rate->base_duration_hours), 2, PHP_ROUND_HALF_UP);
-            $lineBaseMinor = $this->toMinor($rate->base_fee * $quantity);
+            $billableExtraHours = $extraHours > 0
+                ? ceil(round($extraHours * 2, 8)) / 2
+                : 0.0;
+            $unitBaseFee = $dailyBooking
+                ? (float) ($rate->daily_rate ?? $rate->base_fee)
+                : (float) ($rate->half_day_rate ?? $rate->base_fee);
+            $lineBaseMinor = $this->toMinor($unitBaseFee * $quantity);
             $lineRateMinor = $this->toMinor($rate->extra_hour_rate * $quantity);
             $lineExtraMinor = (int) round($lineRateMinor * $billableExtraHours, 0, PHP_ROUND_HALF_UP);
 
             $baseMinor += $lineBaseMinor;
             $extraRatesMinor += $lineRateMinor;
             $extraMinor += $lineExtraMinor;
-            $baseDuration = max($baseDuration, (float) $rate->base_duration_hours);
+            $baseDuration = max($baseDuration, $bookedHours);
             $lines[] = [
                 'resource' => $item->resource_name_snapshot ?: $resource->name_model,
+                'quantity' => $quantity,
                 'base_fee' => $this->toMajor($lineBaseMinor),
-                'base_duration_hours' => (float) $rate->base_duration_hours,
+                'base_unit_fee' => $this->toMajor($this->toMinor($unitBaseFee)),
+                'base_duration_hours' => $bookedHours,
+                'booking_type' => $bookingLabel,
+                'booking_time' => $timeLabel,
                 'extra_hours' => $billableExtraHours,
                 'extra_hourly_rate' => $this->toMajor($lineRateMinor),
+                'extra_hourly_unit_rate' => $this->toMajor($this->toMinor($rate->extra_hour_rate)),
                 'extra_hour_fee' => $this->toMajor($lineExtraMinor),
                 'subtotal_minor' => $lineBaseMinor + $lineExtraMinor,
                 'tax_percent' => (float) $rate->tax_percent,
@@ -101,6 +124,7 @@ class ResourceReservationFeeCalculator
             'extra_hours' => array_sum(array_column($lines, 'extra_hours')),
             'billable_extra_hours' => array_sum(array_column($lines, 'extra_hours')),
             'usage_extension_hours' => $extraHours,
+            'booking_type' => $bookingLabel,
             'extra_hourly_rate' => $this->toMajor($extraRatesMinor),
             'extra_hour_fee' => $this->toMajor($extraMinor),
             'subtotal' => $this->toMajor($subtotalMinor),
@@ -118,17 +142,48 @@ class ResourceReservationFeeCalculator
         ];
     }
 
-    private function resolveRate(int $typeId, int $resourceId, string $date): ?ResourceRate
+    private function resolveRate(Resource $resource, string $date): ?ResourceRate
     {
+        $locationId = $resource->location_id;
         $base = ResourceRate::query()
-            ->where('resource_type_id', $typeId)
             ->where('is_active', true)
             ->whereDate('effective_from', '<=', $date)
             ->where(fn ($query) => $query->whereNull('effective_to')->orWhereDate('effective_to', '>=', $date));
 
-        $specific = (clone $base)->where('resource_id', $resourceId)->orderByDesc('effective_from')->first();
+        $specificAtLocation = (clone $base)->where('resource_id', $resource->id)->where('location_id', $locationId)->orderByDesc('effective_from')->first();
+        if ($specificAtLocation) return $specificAtLocation;
 
-        return $specific ?? (clone $base)->whereNull('resource_id')->orderByDesc('effective_from')->first();
+        $normalizedName = AnnexureRateCardImporter::normalizeResourceName($resource->name_model);
+        $locationRate = (clone $base)->where('location_id', $locationId)->whereNull('resource_id')->get()
+            ->first(fn (ResourceRate $rate) => AnnexureRateCardImporter::normalizeResourceName($rate->resource_name) === $normalizedName);
+        if ($locationRate) return $locationRate;
+
+        $typeAtLocation = (clone $base)->where('resource_type_id', $resource->resource_type_id)->where('location_id', $locationId)->whereNull('resource_id')->orderByDesc('effective_from')->first();
+        if ($typeAtLocation) return $typeAtLocation;
+
+        $specificGlobal = (clone $base)->where('resource_id', $resource->id)->whereNull('location_id')->orderByDesc('effective_from')->first();
+        if ($specificGlobal) return $specificGlobal;
+
+        $namedGlobal = (clone $base)->whereNull('location_id')->whereNull('resource_id')->get()
+            ->sortByDesc('effective_from')
+            ->first(fn (ResourceRate $rate) => AnnexureRateCardImporter::normalizeResourceName($rate->resource_name) === $normalizedName);
+        if ($namedGlobal) return $namedGlobal;
+
+        return (clone $base)->where('resource_type_id', $resource->resource_type_id)->whereNull('location_id')->whereNull('resource_id')->orderByDesc('effective_from')->first();
+    }
+
+    private function inferBookingType(Reservation $reservation): string
+    {
+        $start = substr((string) $reservation->start_time, 0, 5);
+        $end = substr((string) $reservation->end_time, 0, 5);
+        if ($start === '09:00' && $end === '17:00') return 'full_day';
+        if ($start === '13:00' && $end === '17:00') return 'half_day_afternoon';
+        if ($start === '09:00' && $end === '13:00') return 'half_day_morning';
+        [$startHour, $startMinute] = array_map('intval', explode(':', $start));
+        [$endHour, $endMinute] = array_map('intval', explode(':', $end));
+        $durationMinutes = (($endHour * 60 + $endMinute) - ($startHour * 60 + $startMinute) + 1440) % 1440;
+        if ($durationMinutes >= 7 * 60) return 'full_day';
+        return $startHour >= 13 ? 'half_day_afternoon' : 'half_day_morning';
     }
 
     private function itemHours(mixed $startsAt, mixed $endsAt, Reservation $reservation): float

@@ -32,6 +32,7 @@ class Reservation extends Model
         'reservation_date',
         'start_time',
         'end_time',
+        'booking_type',
         'status',
         'submitted_at',
         'approved_at',
@@ -121,6 +122,11 @@ class Reservation extends Model
     public function items(): HasMany
     {
         return $this->hasMany(ReservationItem::class);
+    }
+
+    public function resourcePaymentInvoice(): HasOne
+    {
+        return $this->hasOne(ResourcePaymentInvoice::class);
     }
 
     public function hostelStay(): HasOne

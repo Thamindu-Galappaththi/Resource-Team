@@ -34,6 +34,7 @@ return new class extends Migration
              * throughout the payment module.
              */
             $table->unsignedBigInteger('hourly_rate_minor');
+            $table->boolean('is_active')->default(true);
 
             // Additional Finance-approved conditions can be stored here.
             $table->json('conditions')->nullable();
@@ -45,6 +46,7 @@ return new class extends Migration
             $table->index('department');
             $table->index('location');
             $table->index('user_type');
+            $table->index('is_active');
         });
     }
 
