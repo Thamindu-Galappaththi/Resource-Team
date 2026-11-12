@@ -30,8 +30,8 @@ class ResourcePaymentController extends Controller
             'resource_type' => ['nullable', 'integer', 'exists:resource_types,id'],
             'status' => ['nullable', 'in:paid,unpaid'],
             'search' => ['nullable', 'string', 'max:120'],
-            'per_page' => ['nullable', 'integer', 'in:10,25,50'],
             'tab' => ['nullable', 'in:payments,dashboard'],
+            'section' => ['nullable', 'in:payments,dashboard,stats'],
         ]);
 
         $applyDashboardFilters = function ($query) use ($filters) {
@@ -99,10 +99,10 @@ class ResourcePaymentController extends Controller
                     });
             });
         }
-        $payments = $paymentsQuery->latest('issued_at')->paginate((int) ($filters['per_page'] ?? 10))->withQueryString();
+        $payments = $paymentsQuery->latest('issued_at')->paginate(10)->withQueryString();
         $resourceTypes = ResourceType::query()->orderBy('name')->get(['id', 'name']);
 
-        return view('payments.history', [
+        $data = [
             'payments' => $payments,
             'resourceTypes' => $resourceTypes,
             'filters' => $filters,
@@ -119,7 +119,17 @@ class ResourcePaymentController extends Controller
                 'total_amount' => $totalAmount,
                 'collection_rate' => $totalAmount > 0 ? round($paidAmount / $totalAmount * 100, 1) : 0.0,
             ],
-        ]);
+        ];
+
+        if ($request->ajax()) {
+            return match ($request->query('section')) {
+                'dashboard' => view('payments.partials.history-dashboard', $data),
+                'stats' => view('payments.partials.history-stats', $data),
+                default => view('payments.partials.history-payments', $data),
+            };
+        }
+
+        return view('payments.history', $data);
     }
 
     public function exportHistory(Request $request)

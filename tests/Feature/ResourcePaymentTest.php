@@ -6,6 +6,7 @@ use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
 use App\Models\ResourceCategory;
+use App\Models\ResourcePaymentInvoice;
 use App\Models\ResourcePaymentDiscountAudit;
 use App\Models\ResourcePaymentDiscountRule;
 use App\Models\ResourceRate;
@@ -458,6 +459,35 @@ class ResourcePaymentTest extends TestCase
             ->assertOk()
             ->assertSee('21 Oct 2026 09:01')
             ->assertDontSee('21 Oct 2026 03:31');
+    }
+
+    public function test_payment_history_filters_without_search_button_and_ajax_fragments(): void
+    {
+        $user = User::factory()->role('admin')->create();
+        $reservation = $this->reservationWithRate(null);
+        ResourcePaymentInvoice::query()->create([
+            'reservation_id' => $reservation->id,
+            'invoice_number' => 'INV-TEST-1001',
+            'status' => 'unpaid',
+            'extra_hours' => 0,
+            'fee_breakdown' => ['total' => 1500],
+            'issued_at' => now(),
+        ]);
+
+        $this->actingAs($user)->get(route('payments.history'))
+            ->assertOk()
+            ->assertSee('id="rph-filters"', false)
+            ->assertSee('id="rph-status"', false)
+            ->assertSee('INV-TEST-1001', false)
+            ->assertDontSee('rph-search-button', false)
+            ->assertDontSee('Apply filters', false);
+
+        $this->actingAs($user)->get(route('payments.history', ['section' => 'payments', 'search' => 'INV-TEST-1001']), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])->assertOk()
+            ->assertSee('INV-TEST-1001', false)
+            ->assertDontSee('View payments', false)
+            ->assertDontSee('Customer category discounts', false);
     }
 
     public function test_print_invoice_uses_server_rate_breakdown(): void
