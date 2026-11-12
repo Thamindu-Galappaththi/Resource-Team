@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
-<link rel="stylesheet" href="{{ asset('css/reservation-create.css') }}?v=8">
+<link rel="stylesheet" href="{{ asset('css/reservation-create.css') }}?v=9">
 <link rel="stylesheet" href="{{ asset('css/special-approval.css') }}?v=1">
 @endpush
 
@@ -19,6 +19,12 @@
         default => ((int) substr((string) $timeStartForType, 0, 2) >= 13 ? 'half_day_afternoon' : 'half_day_morning'),
     };
     $prefillBookingType = old('booking_type', $reservation->booking_type ?? $derivedBookingType);
+    $bookingTypeOptions = [
+        ['value' => 'full_day', 'label' => 'Full day · 09:00–17:00'],
+        ['value' => 'half_day_morning', 'label' => 'Half day morning · 09:00–13:00'],
+        ['value' => 'half_day_afternoon', 'label' => 'Half day afternoon · 13:00–17:00'],
+    ];
+    $bookingTypeLabel = collect($bookingTypeOptions)->firstWhere('value', $prefillBookingType)['label'] ?? 'Select a booking type';
 @endphp
 <div class="container-fluid mt-4 rv-page">
     <div class="rv-header">
@@ -103,11 +109,9 @@
                     </div>
                     <div class="col-md-8">
                         <label class="form-label" for="booking_type">Booking type <span class="text-danger">*</span></label>
-                        <select class="form-select @error('booking_type') is-invalid @enderror" id="booking_type" name="booking_type" required>
-                            <option value="full_day" @selected($prefillBookingType === 'full_day')>Full day · 09:00–17:00</option>
-                            <option value="half_day_morning" @selected($prefillBookingType === 'half_day_morning')>Half day morning · 09:00–13:00</option>
-                            <option value="half_day_afternoon" @selected($prefillBookingType === 'half_day_afternoon')>Half day afternoon · 13:00–17:00</option>
-                        </select>
+                        <x-rm-select id="booking_type" name="booking_type" class="{{ $errors->has('booking_type') ? 'is-invalid' : '' }}"
+                            placeholder="Select a booking type" :required="true" :value="(string) $prefillBookingType"
+                            :selected-label="$bookingTypeLabel" :options="$bookingTypeOptions" />
                         @error('booking_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         <input type="hidden" id="start_time" name="start_time" value="{{ $timeStartForType }}">
                         <input type="hidden" id="end_time" name="end_time" value="{{ $timeEndForType }}">
@@ -183,7 +187,7 @@ window.RVCreate = {
     const selector = document.getElementById('booking_type');
     const ranges = { full_day: ['09:00', '17:00'], half_day_morning: ['09:00', '13:00'], half_day_afternoon: ['13:00', '17:00'] };
     const sync = () => {
-        const [start, end] = ranges[selector.value] || ranges.full_day;
+        const [start, end] = ranges[selector?.value] || ranges.full_day;
         for (const [id, value] of [['start_time', start], ['end_time', end]]) {
             const field = document.getElementById(id);
             field.value = value;
@@ -191,7 +195,7 @@ window.RVCreate = {
             field.dispatchEvent(new Event('change', { bubbles: true }));
         }
     };
-    selector.addEventListener('change', sync);
+    selector?.addEventListener('change', sync);
     sync();
 })();
 </script>

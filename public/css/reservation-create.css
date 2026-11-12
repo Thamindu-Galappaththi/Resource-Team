@@ -127,6 +127,7 @@
 }
 
 .rv-page .form-control,
+.rv-page .form-select,
 .rv-page .cu-dropdown-toggle {
     min-height: 48px;
     border-color: #cbd3da;
