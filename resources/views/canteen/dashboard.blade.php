@@ -4,6 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/canteen-dashboard.css') }}?v={{ @filemtime(public_path('css/canteen-dashboard.css')) ?: time() }}">
+<link rel="stylesheet" href="{{ asset('css/canteen-pages.css') }}?v={{ @filemtime(public_path('css/canteen-pages.css')) ?: time() }}">
 @endpush
 
 @php
@@ -46,7 +47,7 @@
     @endif
     <div id="cd-flash" class="alert cp-auto-alert d-none" role="status"></div>
 
-    <section class="cd-kpis" aria-label="Reservation summary">
+    <section class="cd-kpis" id="cd-kpis" aria-label="Reservation summary">
         <article class="cd-kpi tone-primary">
             <div class="cd-kpi__top">
                 <span class="cd-kpi__label">Total reservations</span>
@@ -87,7 +88,7 @@
                 <div>
                     <p class="cd-card__eyebrow"><i class="ti ti-inbox" aria-hidden="true"></i> Approvals</p>
                     <h2 id="reviewQueueHeading">Pending requests</h2>
-                    <p class="cd-card__sub">{{ number_format($pendingApprovals->total()) }} {{ \Illuminate\Support\Str::plural('request', $pendingApprovals->total()) }} awaiting review</p>
+                    <p class="cd-card__sub" id="cd-pending-count">{{ number_format($pendingApprovals->total()) }} {{ \Illuminate\Support\Str::plural('request', $pendingApprovals->total()) }} awaiting review</p>
                 </div>
                 <a href="{{ route('canteen.index', ['status' => 'pending']) }}" class="cd-link">
                     View reservation list <i class="ti ti-arrow-up-right" aria-hidden="true"></i>
@@ -112,27 +113,29 @@
                         </div>
                         @can('manageStatus', $reservation)
                             <div class="cd-request__actions">
-                                <form method="POST" action="{{ route('canteen.status', $reservation) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="status" value="approved">
-                                    <button class="cd-chip cd-chip--ok" type="submit"><i class="ti ti-check" aria-hidden="true"></i>Approve</button>
-                                </form>
-                                <button class="cd-chip cd-chip--no" type="button" data-reject-toggle="#rejectDashboard-{{ $reservation->id }}" aria-expanded="false" aria-controls="rejectDashboard-{{ $reservation->id }}">
+                                <button class="cd-chip cd-chip--ok" type="button"
+                                    data-cd-review
+                                    data-cd-action="{{ route('canteen.status', $reservation) }}"
+                                    data-cd-status="approved"
+                                    data-cd-title="Approve reservation?"
+                                    data-cd-sub="{{ $reservation->reservation_ref }} · {{ $reservation->reservation_name }}"
+                                    data-cd-copy="Kitchen can prepare this order after you approve it."
+                                    data-cd-submit="Approve reservation"
+                                    data-cd-icon="ti ti-circle-check">
+                                    <i class="ti ti-check" aria-hidden="true"></i>Approve
+                                </button>
+                                <button class="cd-chip cd-chip--no" type="button"
+                                    data-cd-review
+                                    data-cd-action="{{ route('canteen.status', $reservation) }}"
+                                    data-cd-status="rejected"
+                                    data-cd-title="Reject reservation?"
+                                    data-cd-sub="{{ $reservation->reservation_ref }} · {{ $reservation->reservation_name }}"
+                                    data-cd-copy="The requester will be notified. Add a short reason below."
+                                    data-cd-submit="Reject reservation"
+                                    data-cd-icon="ti ti-circle-x">
                                     <i class="ti ti-x" aria-hidden="true"></i>Reject
                                 </button>
                             </div>
-                            <form id="rejectDashboard-{{ $reservation->id }}" class="cd-reject-form" method="POST" action="{{ route('canteen.status', $reservation) }}" hidden>
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="status" value="rejected">
-                                <label class="form-label" for="rejectDashboardReason-{{ $reservation->id }}">Reason for rejection</label>
-                                <textarea id="rejectDashboardReason-{{ $reservation->id }}" name="approval_comments" class="form-control" rows="2" maxlength="1000" required></textarea>
-                                <div class="cd-reject-actions">
-                                    <button class="btn btn-danger" type="submit">Confirm rejection</button>
-                                    <button class="btn btn-outline-secondary" type="button" data-reject-close>Keep pending</button>
-                                </div>
-                            </form>
                         @endcan
                     </article>
                 @empty
@@ -154,7 +157,7 @@
                 <p class="cd-card__sub">Meal demand and service planning</p>
             </div>
         </div>
-        <div class="cd-glance">
+        <div class="cd-glance" id="cd-glance">
             <article class="cd-glance__item tone-primary">
                 <div class="cd-glance__label"><i class="ti ti-users" aria-hidden="true"></i>Expected today</div>
                 <p class="cd-glance__value">{{ number_format($todayTotal ?? 0) }} <small>orders</small></p>
@@ -182,7 +185,7 @@
                     <p class="cd-card__sub">Pending and approved orders</p>
                 </div>
             </div>
-            <div class="cd-card__body">
+            <div class="cd-card__body" id="cd-meals">
                 @forelse($mealBreakdown as $row)
                     @php
                         $pct = (int) round(100 * ($row['orders'] / $mealMax));
@@ -209,7 +212,7 @@
                     <p class="cd-card__sub">Pending and approved orders only</p>
                 </div>
             </div>
-            <div class="cd-forecast">
+            <div class="cd-forecast" id="cd-forecast">
                 @foreach($forecast as $entry)
                     @php $isToday = ($entry['date'] ?? '') === $todayKey; @endphp
                     <a href="{{ route('canteen.forecast', ['date' => $entry['date']]) }}" class="cd-day{{ $isToday ? ' is-today' : '' }}">
@@ -225,8 +228,39 @@
         </section>
     </div>
 </div>
+
+@if($canReview)
+<div class="modal fade cp-modal" id="cd-review-modal" tabindex="-1" aria-labelledby="cd-review-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="cd-review-form" class="modal-content">
+            @csrf
+            <input type="hidden" name="status" id="cd-review-status" value="">
+            <div class="modal-header">
+                <span class="cp-modal-icon" id="cd-review-icon" aria-hidden="true"><i class="ti ti-circle-check"></i></span>
+                <div>
+                    <h2 class="modal-title fs-5" id="cd-review-title">Review reservation?</h2>
+                    <p class="cp-modal-sub mb-0" id="cd-review-sub"></p>
+                </div>
+                <button type="button" class="cp-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0" id="cd-review-copy">Please confirm this decision.</p>
+                <div id="cd-review-reason-wrap" class="cd-review-reason" hidden>
+                    <label class="form-label" for="cd-review-reason">Reason for rejection <span class="text-danger">*</span></label>
+                    <textarea id="cd-review-reason" name="approval_comments" class="form-control" rows="3" maxlength="1000" placeholder="Explain why this request cannot go ahead"></textarea>
+                    <p class="invalid-feedback d-block" id="cd-review-reason-error"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep pending</button>
+                <button type="submit" class="btn btn-success" id="cd-review-submit">Approve reservation</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/canteen-ui.js') }}?v=5"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=6"></script>
 @endpush

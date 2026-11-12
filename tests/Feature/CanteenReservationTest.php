@@ -382,12 +382,16 @@ class CanteenReservationTest extends TestCase
             ->assertSee('Pending requests')
             ->assertSee('Approve')
             ->assertSee('Reject')
+            ->assertSee('data-cd-review', false)
+            ->assertSee('Approve reservation?')
+            ->assertSee('Reject reservation?')
             ->assertSee('Reason for rejection')
             ->assertSee('Keep pending');
 
         $this->actingAs($staff)
-            ->patch(route('canteen.status', $reservation), ['status' => 'approved'])
-            ->assertRedirect(route('canteen.show', $reservation));
+            ->patchJson(route('canteen.status', $reservation), ['status' => 'approved'])
+            ->assertOk()
+            ->assertJsonPath('message', 'Reservation approved.');
 
         $this->assertDatabaseHas('canteen_reservations', [
             'id' => $reservation->id,

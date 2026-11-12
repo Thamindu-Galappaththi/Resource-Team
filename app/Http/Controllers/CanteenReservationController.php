@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Notifications\CanteenReservationStatusUpdated;
 use App\Notifications\NewCanteenReservationPending;
 use App\Services\NotificationRecipients;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -245,7 +246,7 @@ class CanteenReservationController extends Controller
         return redirect()->route('canteen.show', $reservation)->with('success', 'Reservation updated successfully.');
     }
 
-    public function updateStatus(UpdateCanteenReservationStatusRequest $request, CanteenReservation $reservation): RedirectResponse
+    public function updateStatus(UpdateCanteenReservationStatusRequest $request, CanteenReservation $reservation): JsonResponse|RedirectResponse
     {
         $this->authorize('manageStatus', $reservation);
 
@@ -270,11 +271,18 @@ class CanteenReservationController extends Controller
             );
         });
 
-        return redirect()
-            ->route('canteen.show', $reservation)
-            ->with('success', $status === CanteenReservationStatus::APPROVED->value
-                ? 'Reservation approved.'
-                : 'Reservation rejected.');
+        $message = $status === CanteenReservationStatus::APPROVED->value
+            ? 'Reservation approved.'
+            : 'Reservation rejected.';
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'status' => $status,
+            ]);
+        }
+
+        return redirect()->route('canteen.show', $reservation)->with('success', $message);
     }
 
     public function destroy(CanteenReservation $reservation): RedirectResponse
