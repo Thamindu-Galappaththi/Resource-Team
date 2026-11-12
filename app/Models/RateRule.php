@@ -17,11 +17,13 @@ class RateRule extends Model
         'location',
         'user_type',
         'hourly_rate_minor',
+        'is_active',
         'conditions',
     ];
 
     protected $casts = [
         'hourly_rate_minor' => 'integer',
+        'is_active' => 'boolean',
         'conditions' => 'array',
     ];
 

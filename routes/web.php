@@ -125,6 +125,10 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/lecture-fees', [LectureFeeController::class, 'index'])->middleware('permission:payments.view')->name('lecture-fees');
+        Route::post('/lecture-fees', [LectureFeeController::class, 'store'])->middleware('permission:payments.view')->name('lecture-fees.store');
+        Route::put('/lecture-fees/{rule}', [LectureFeeController::class, 'update'])->middleware('permission:payments.view')->name('lecture-fees.update');
+        Route::patch('/lecture-fees/{rule}/status', [LectureFeeController::class, 'updateStatus'])->middleware('permission:payments.view')->name('lecture-fees.status');
+        Route::delete('/lecture-fees/{rule}', [LectureFeeController::class, 'destroy'])->middleware('permission:payments.view')->name('lecture-fees.destroy');
         Route::get('/resources', [ResourcePaymentController::class, 'index'])->middleware('permission:payments.view')->name('resources');
         Route::get('/resources/lookup', [ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
         Route::post('/resources/{reference}/mark-paid', [ResourcePaymentController::class, 'markPaid'])->middleware('permission:payments.mark-paid')->name('resources.mark-paid');
