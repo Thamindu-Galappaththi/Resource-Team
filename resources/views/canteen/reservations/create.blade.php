@@ -71,15 +71,21 @@
 
         form.addEventListener('submit', (event) => {
             const mealWrap = meal?.closest('[data-cu-select]');
-            if (mealWrap) {
-                mealWrap.classList.toggle('is-invalid', !meal.value);
-            }
+            const location = document.getElementById('location_id');
+            const locationWrap = location?.closest('[data-cu-select]');
+            if (mealWrap) mealWrap.classList.toggle('is-invalid', !meal.value);
+            if (locationWrap) locationWrap.classList.toggle('is-invalid', !location.value);
 
-            if (!meal?.value || date.value < date.min || Number(orders.value) < 1 || Number(orders.value) > 10000) {
+            if (!meal?.value || !location?.value || date.value < date.min || Number(orders.value) < 1 || Number(orders.value) > 10000) {
                 event.preventDefault();
                 if (!meal?.value) {
                     mealWrap?.querySelector('.cu-dropdown-toggle')?.classList.add('is-invalid');
                     mealWrap?.querySelector('.cu-dropdown-toggle')?.focus();
+                    return;
+                }
+                if (!location?.value) {
+                    locationWrap?.querySelector('.cu-dropdown-toggle')?.classList.add('is-invalid');
+                    locationWrap?.querySelector('.cu-dropdown-toggle')?.focus();
                     return;
                 }
                 form.reportValidity();

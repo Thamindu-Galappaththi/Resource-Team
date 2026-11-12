@@ -18,22 +18,24 @@
             @error('reservation_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-md-6">
-            <label class="form-label" for="meal_menu_id">Meal menu <span class="text-danger">*</span></label>
-            <x-rm-select id="meal_menu_id" name="meal_menu_id" class="{{ $errors->has('meal_menu_id') ? 'is-invalid' : '' }}" placeholder="Select meal menu" :value="(string) old('meal_menu_id', $reservation?->meal_menu_id)" :selected-label="$selectedMealMenu?->name ?? 'Select meal menu'" :required="true"
-                :options="collect([['value' => '', 'label' => 'Select meal menu']])->concat($mealMenus->map(fn ($menu) => ['value' => (string) $menu->id, 'label' => $menu->name]))->all()" />
-            @if($mealMenus->isEmpty())<div class="form-text">No meal menus are published yet. Ask the canteen team to add one on Meal Plans.</div>@endif
-            @error('meal_menu_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+            <label class="form-label" for="location_id">Location <span class="text-danger">*</span></label>
+            <x-rm-select id="location_id" name="location_id" class="{{ $errors->has('location_id') ? 'is-invalid' : '' }}" placeholder="Select location" :value="(string) old('location_id', $reservation?->location_id)" :selected-label="$selectedLocation?->name ?? 'Select location'" :required="true"
+                :options="collect([['value' => '', 'label' => 'Select location']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
+            @error('location_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
         <div class="col-12">
-            <section id="mealMenuImagePreview" class="mm-meal-preview" aria-label="Selected meal image" @if(! $selectedMealMenu?->image_path) hidden @endif>
-                <img id="mealMenuImage" src="{{ $selectedMealMenu?->imageUrl() }}" alt="{{ $selectedMealMenu ? 'Meal image for '.$selectedMealMenu->name : '' }}">
-            </section>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label" for="location_id">Location</label>
-            <x-rm-select id="location_id" name="location_id" class="{{ $errors->has('location_id') ? 'is-invalid' : '' }}" placeholder="Select location (optional)" :value="(string) old('location_id', $reservation?->location_id)" :selected-label="$selectedLocation?->name ?? 'Select location (optional)'"
-                :options="collect([['value' => '', 'label' => 'Select location (optional)']])->concat($locations->map(fn ($location) => ['value' => (string) $location->id, 'label' => $location->name]))->all()" />
-            @error('location_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+            <div class="mm-meal-split">
+                <div>
+                    <label class="form-label" for="meal_menu_id">Meal menu <span class="text-danger">*</span></label>
+                    <x-rm-select id="meal_menu_id" name="meal_menu_id" class="{{ $errors->has('meal_menu_id') ? 'is-invalid' : '' }}" placeholder="Select meal menu" :value="(string) old('meal_menu_id', $reservation?->meal_menu_id)" :selected-label="$selectedMealMenu?->name ?? 'Select meal menu'" :required="true"
+                        :options="collect([['value' => '', 'label' => 'Select meal menu']])->concat($mealMenus->map(fn ($menu) => ['value' => (string) $menu->id, 'label' => $menu->name]))->all()" />
+                    @if($mealMenus->isEmpty())<div class="form-text">No meal menus are published yet. Ask the canteen team to add one on Meal Plans.</div>@endif
+                    @error('meal_menu_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                </div>
+                <section id="mealMenuImagePreview" class="mm-meal-preview{{ $selectedMealMenu?->image_path ? '' : ' is-empty' }}" aria-label="Selected meal image" @if(! $selectedMealMenu?->image_path) hidden @endif>
+                    <img id="mealMenuImage" src="{{ $selectedMealMenu?->imageUrl() }}" alt="{{ $selectedMealMenu ? 'Meal image for '.$selectedMealMenu->name : '' }}">
+                </section>
+            </div>
         </div>
         <div class="col-md-4">
             <label class="form-label" for="reservation_date">Service date <span class="text-danger">*</span></label>
@@ -71,7 +73,7 @@
 </section>
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/meal-menus.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/meal-menus.css') }}?v=3">
 @endpush
 @push('scripts')
 <script>
@@ -87,11 +89,13 @@
             const menu = menus[window.RMSelect?.getValue('meal_menu_id') || document.getElementById('meal_menu_id')?.value];
             if (!menu?.url) {
                 preview.hidden = true;
+                preview.classList.add('is-empty');
                 image.removeAttribute('src');
                 return;
             }
             image.src = menu.url;
             image.alt = `Meal image for ${menu.name}`;
+            preview.classList.remove('is-empty');
             preview.hidden = false;
         };
 

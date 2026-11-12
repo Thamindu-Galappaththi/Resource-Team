@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CanteenReservation;
+use App\Models\Location;
 use App\Models\MealMenu;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -22,9 +23,11 @@ class CanteenReservationTest extends TestCase
             'name' => 'Test lunch menu',
             'image_path' => 'meal-menus/test.jpg',
         ])->id;
+        $this->locationId = Location::factory()->create(['name' => 'Canteen Test Location'])->id;
     }
 
     private int $menuId;
+    private int $locationId;
 
     public function test_create_valid_reservation_succeeds_and_defaults_to_pending_status(): void
     {
@@ -35,6 +38,7 @@ class CanteenReservationTest extends TestCase
             'requested_by_user_id' => $user->id,
             'meal_type' => 'lunch',
             'meal_menu_id' => $this->menuId,
+            'location_id' => $this->locationId,
             'reservation_date' => now()->addDay()->toDateString(),
             'reservation_time' => '12:30',
             'number_of_orders' => 12,
@@ -60,6 +64,7 @@ class CanteenReservationTest extends TestCase
             'requested_by_user_id' => $otherUser->id,
             'meal_type' => 'lunch',
             'meal_menu_id' => $this->menuId,
+            'location_id' => $this->locationId,
             'reservation_date' => now()->addDay()->toDateString(),
             'reservation_time' => '12:30',
             'number_of_orders' => 12,
@@ -82,6 +87,7 @@ class CanteenReservationTest extends TestCase
                 'requested_by_user_id' => $user->id,
                 'meal_type' => 'breakfast',
                 'meal_menu_id' => $this->menuId,
+            'location_id' => $this->locationId,
                 'reservation_date' => now()->subDay()->toDateString(),
                 'reservation_time' => '08:00',
                 'number_of_orders' => 2,
@@ -99,6 +105,7 @@ class CanteenReservationTest extends TestCase
                 'requested_by_user_id' => $user->id,
                 'meal_type' => 'snacks',
                 'meal_menu_id' => $this->menuId,
+            'location_id' => $this->locationId,
                 'reservation_date' => now()->addDay()->toDateString(),
                 'reservation_time' => '15:30',
             ])
@@ -110,6 +117,7 @@ class CanteenReservationTest extends TestCase
                 'requested_by_user_id' => $user->id,
                 'meal_type' => 'snacks',
                 'meal_menu_id' => $this->menuId,
+            'location_id' => $this->locationId,
                 'reservation_date' => now()->addDay()->toDateString(),
                 'reservation_time' => '15:30',
                 'number_of_orders' => 0,
@@ -126,6 +134,7 @@ class CanteenReservationTest extends TestCase
             'requested_by_user_id' => $user->id,
             'meal_type' => 'event_catering',
             'meal_menu_id' => $this->menuId,
+            'location_id' => $this->locationId,
             'reservation_date' => now()->addDay()->toDateString(),
             'reservation_time' => '12:00',
             'number_of_orders' => config('canteen.large_group_threshold') + 5,
@@ -434,6 +443,7 @@ class CanteenReservationTest extends TestCase
             'reservation_time' => '12:00:00',
             'meal_type' => 'lunch',
             'meal_menu_id' => $this->menuId,
+            'location_id' => $this->locationId,
             'number_of_orders' => 17,
             'status' => 'approved',
         ]);
@@ -483,6 +493,7 @@ class CanteenReservationTest extends TestCase
             'reservation_name' => 'Timed lunch',
             'meal_type' => 'lunch',
             'meal_menu_id' => $this->menuId,
+            'location_id' => $this->locationId,
             'reservation_date' => now()->addDay()->toDateString(),
             'reservation_time' => '12:30:00',
             'number_of_orders' => 8,

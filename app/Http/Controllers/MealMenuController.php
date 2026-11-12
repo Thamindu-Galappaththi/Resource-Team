@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreMealMenuRequest;
 use App\Http\Requests\UpdateMealMenuRequest;
 use App\Models\MealMenu;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -20,14 +21,22 @@ class MealMenuController extends Controller
         return view('canteen.menus.index', compact('menus'));
     }
 
-    public function store(StoreMealMenuRequest $request): RedirectResponse
+    public function store(StoreMealMenuRequest $request): JsonResponse|RedirectResponse
     {
-        MealMenu::query()->create([
+        $menu = MealMenu::query()->create([
             'name' => $request->validated('name'),
             'image_path' => $request->file('image')->store('meal-menus', 'public'),
         ]);
 
-        return redirect()->route('canteen.menus.index')->with('success', 'Meal menu created.');
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'message' => 'Meal menu published.',
+                'count' => MealMenu::query()->count(),
+                'html' => view('canteen.menus.partials.tile', compact('menu'))->render(),
+            ]);
+        }
+
+        return redirect()->route('canteen.menus.index')->with('success', 'Meal menu published.');
     }
 
     public function edit(MealMenu $menu): View

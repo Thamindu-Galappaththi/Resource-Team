@@ -16,7 +16,7 @@ class UpdateCanteenReservationRequest extends FormRequest
     {
         return [
             'reservation_name' => ['required', 'string', 'max:255'],
-            'location_id' => ['nullable', 'integer', 'exists:locations,id'],
+            'location_id' => ['required', 'integer', 'exists:locations,id'],
             'meal_type' => ['nullable', 'string', 'in:'.implode(',', MealType::values())],
             'meal_menu_id' => ['required', 'integer', 'exists:meal_menus,id'],
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
