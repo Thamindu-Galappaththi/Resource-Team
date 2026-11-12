@@ -68,7 +68,10 @@
             <div class="cp-details">
                 <div class="cp-detail-row"><span class="cp-detail-label">Reservation name</span><span class="cp-detail-value">{{ $reservation->reservation_name }}</span></div>
                 <div class="cp-detail-row"><span class="cp-detail-label">Requester</span><span class="cp-detail-value">{{ $reservation->requestedBy?->name ?? 'Unknown' }}</span></div>
-                <div class="cp-detail-row"><span class="cp-detail-label">Meal type</span><span class="cp-detail-value">{{ $reservation->mealTypeLabel() }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Meal menu</span><span class="cp-detail-value">{{ $reservation->mealMenu?->name ?? $reservation->mealTypeLabel() }}</span></div>
+                @if($reservation->mealMenu?->image_path)
+                    <div class="cp-detail-row"><span class="cp-detail-label">Menu image</span><span class="cp-detail-value"><img src="{{ $reservation->mealMenu->imageUrl() }}" alt="{{ $reservation->mealMenu->name }}" style="display:block;max-width:min(100%,420px);max-height:220px;object-fit:cover;border-radius:12px"></span></div>
+                @endif
                 <div class="cp-detail-row"><span class="cp-detail-label">Location</span><span class="cp-detail-value">{{ $reservation->location?->name ?? '—' }}</span></div>
                 <div class="cp-detail-row"><span class="cp-detail-label">Date & time</span><span class="cp-detail-value">{{ $reservation->reservation_date->format('d M Y') }} at {{ $reservation->serviceTimeLabel() }}</span></div>
                 <div class="cp-detail-row"><span class="cp-detail-label">Orders</span><span class="cp-detail-value">{{ number_format($reservation->number_of_orders) }}</span></div>

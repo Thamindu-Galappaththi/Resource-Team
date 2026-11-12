@@ -55,7 +55,7 @@
         const button = document.getElementById('canteenSubmitButton');
         const date = document.getElementById('reservation_date');
         const orders = document.getElementById('number_of_orders');
-        const meal = document.getElementById('meal_type');
+        const meal = document.getElementById('meal_menu_id');
 
         if (!form || !button || !date || !orders) return;
 

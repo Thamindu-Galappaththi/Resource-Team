@@ -8,6 +8,7 @@ use App\Http\Requests\StoreCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationStatusRequest;
 use App\Models\CanteenReservation;
+use App\Models\MealMenu;
 use App\Models\Location;
 use App\Models\User;
 use App\Notifications\CanteenReservationStatusUpdated;
@@ -186,6 +187,7 @@ class CanteenReservationController extends Controller
         $this->authorize('create', CanteenReservation::class);
 
         $data = $request->validated();
+        $data['meal_type'] = $data['meal_type'] ?? MealType::LUNCH->value;
         $data['requested_by_user_id'] = auth()->id();
         $data['status'] = CanteenReservationStatus::PENDING->value;
 
@@ -208,7 +210,7 @@ class CanteenReservationController extends Controller
     {
         $this->authorize('view', $reservation);
 
-        $reservation->load(['requestedBy', 'location', 'approvedBy']);
+        $reservation->load(['requestedBy', 'location', 'approvedBy', 'mealMenu']);
 
         return view('canteen.reservations.show', compact('reservation'));
     }
@@ -235,6 +237,7 @@ class CanteenReservationController extends Controller
         }
 
         $data = $request->validated();
+        $data['meal_type'] = $data['meal_type'] ?? $reservation->meal_type ?? MealType::LUNCH->value;
         unset($data['status']);
 
         $reservation->update($data);
@@ -305,7 +308,7 @@ class CanteenReservationController extends Controller
         $prefill = $request?->query('date');
 
         return [
-            'mealTypes' => MealType::cases(),
+            'mealMenus' => MealMenu::query()->orderBy('name')->get(),
             'locations' => Location::query()->ordered()->get(),
             'prefillDate' => old('reservation_date', is_string($prefill) ? $prefill : null),
         ];
