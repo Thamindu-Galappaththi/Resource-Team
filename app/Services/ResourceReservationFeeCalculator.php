@@ -154,7 +154,7 @@ class ResourceReservationFeeCalculator
         if ($specificAtLocation) return $specificAtLocation;
 
         $normalizedName = AnnexureRateCardImporter::normalizeResourceName($resource->name_model);
-        $locationRate = (clone $base)->where('location_id', $locationId)->whereNull('resource_id')->get()
+        $locationRate = (clone $base)->where('location_id', $locationId)->get()
             ->first(fn (ResourceRate $rate) => AnnexureRateCardImporter::normalizeResourceName($rate->resource_name) === $normalizedName);
         if ($locationRate) return $locationRate;
 

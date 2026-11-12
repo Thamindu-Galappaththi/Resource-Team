@@ -103,11 +103,18 @@ class AnnexureRateCardImporter
             ? (int) $row['resource_type_id']
             : ($resource?->resource_type_id ?? $this->resolveType($typedImport ? $typeName : $resourceName, $categoryName ?: null));
         $scopeName = $typedImport ? ($typeName ?: $resourceName) : ($resource?->name_model ?? $resourceName);
-        $attributes = ['location_id' => $locationId, 'resource_name' => $scopeName, 'effective_from' => $from];
-        $rate = ResourceRate::query()->where($attributes)->first();
+        $attributes = [
+            'location_id' => $locationId,
+            'resource_name' => $scopeName,
+            'effective_from' => $from,
+        ];
+        $rate = ResourceRate::query()
+            ->when($resource, fn ($query) => $query->where('resource_id', $resource->id), fn ($query) => $query->where($attributes)->whereNull('resource_id'))
+            ->when($resource, fn ($query) => $query->whereDate('effective_from', $from))
+            ->first();
         $data = [
             'resource_type_id' => $resourceTypeId,
-            'resource_id' => null,
+            'resource_id' => $resource?->id,
             'daily_rate' => $daily,
             'half_day_rate' => $half,
             'base_fee' => $daily,
@@ -204,13 +211,20 @@ class AnnexureRateCardImporter
     {
         $query = ResourceRate::query()
             ->where('location_id', $data['location_id'])
-            ->whereNull('resource_id')
+            ->when(
+                ! empty($data['resource_id']),
+                fn ($rates) => $rates->where('resource_id', $data['resource_id']),
+                fn ($rates) => $rates->whereNull('resource_id'),
+            )
             ->where('is_active', true)
             ->where(fn ($rates) => $rates->whereNull('effective_to')->orWhereDate('effective_to', '>=', $data['effective_from']));
         if (! empty($data['effective_to'])) $query->whereDate('effective_from', '<=', $data['effective_to']);
         $normalizedName = self::normalizeResourceName($data['resource_name']);
         $overlaps = $query->get()->first(fn (ResourceRate $rate) => $rate->id !== $exceptId
-            && self::normalizeResourceName($rate->resource_name) === $normalizedName);
+            && (
+                (! empty($data['resource_id']) && (int) $rate->resource_id === (int) $data['resource_id'])
+                || self::normalizeResourceName($rate->resource_name) === $normalizedName
+            ));
         if ($overlaps) {
             throw ValidationException::withMessages(['effective_from' => "Active effective dates overlap for {$data['resource_name']} at this location."]);
         }

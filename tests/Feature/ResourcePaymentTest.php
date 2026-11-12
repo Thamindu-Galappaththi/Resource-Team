@@ -74,6 +74,13 @@ class ResourcePaymentTest extends TestCase
             $this->assertEquals($daily, (float) $rate->daily_rate);
             $this->assertEquals($half, (float) $rate->half_day_rate);
         }
+
+        foreach (['Whiteboard with marker pens', 'Flip chart boards', 'Sound system', 'Multimedia projector', 'Desktop computer', 'Laptop', 'Internet with Wi-Fi'] as $name) {
+            $this->assertSame(3, ResourceRate::query()->where('resource_name', $name)->count(), $name);
+        }
+
+        $this->assertSame(0, ResourceRate::query()->whereNull('location_id')->count());
+        $this->assertTrue(ResourceRate::query()->whereNotNull('resource_id')->exists());
     }
 
     public function test_lookup_resolves_a_price_for_each_seeded_resource_type(): void
