@@ -65,7 +65,7 @@ class StoreReservationRequest extends FormRequest
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
-            'booking_type' => ['required', 'in:full_day,half_day_morning,half_day_afternoon'],
+            'booking_type' => ['nullable', 'in:full_day,half_day_morning,half_day_afternoon'],
             'title' => ['required', 'string', 'max:180'],
             'lecturer_name' => ['nullable', 'string', 'max:150'],
             'purpose' => ['required', 'string', 'max:500'],

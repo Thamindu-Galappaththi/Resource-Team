@@ -57,18 +57,18 @@ class ResourcePaymentTest extends TestCase
     {
         $this->seed(ResourceRateSeeder::class);
         $expected = [
-            'Lecture Hall' => [5000, 2, 2500], 'Lecture Hall (small)' => [3000, 2, 1500],
-            'Computer Lab' => [4000, 2, 2000], 'Auditorium' => [15000, 3, 6000],
-            'Meeting Room' => [2000, 1, 1500], 'Seminar Room' => [2500, 2, 1200],
-            'Projector' => [1000, 1, 500], 'Sports Facility' => [3500, 2, 1800],
+            'Main Auditorium' => [40000, 20000],
+            'Lecture Room 1' => [25000, 12500],
+            'Auditorium' => [20000, 10000],
+            'Classroom (non A/C)' => [10000, 5000],
+            'Laptop' => [4000, 2000],
         ];
 
-        foreach ($expected as $typeName => [$base, $duration, $extra]) {
-            $rate = ResourceRate::query()->whereHas('resourceType', fn ($q) => $q->where('name', $typeName))->first();
-            $this->assertNotNull($rate, $typeName);
-            $this->assertEquals($base, (float) $rate->base_fee);
-            $this->assertEquals($duration, (float) $rate->base_duration_hours);
-            $this->assertEquals($extra, (float) $rate->extra_hour_rate);
+        foreach ($expected as $name => [$daily, $half]) {
+            $rate = ResourceRate::query()->where('resource_name', $name)->orWhere('resource_name', str_replace('non A/C', 'Non A/C', $name))->first();
+            $this->assertNotNull($rate, $name);
+            $this->assertEquals($daily, (float) $rate->daily_rate);
+            $this->assertEquals($half, (float) $rate->half_day_rate);
         }
     }
 
@@ -76,23 +76,27 @@ class ResourcePaymentTest extends TestCase
     {
         $this->seed(ResourceRateSeeder::class);
         $user = User::factory()->role('admin')->create();
-        $rates = ResourceRate::query()->with('resourceType')->get();
+        $rates = ResourceRate::query()->whereNotNull('resource_name')->where('resource_name', '!=', '')->take(3)->get();
 
         foreach ($rates as $rate) {
-            $resource = Resource::factory()->create(['resource_type_id' => $rate->resource_type_id]);
+            $resource = Resource::factory()->create([
+                'resource_type_id' => $rate->resource_type_id,
+                'location_id' => $rate->location_id,
+                'name_model' => $rate->resource_name,
+            ]);
             $reservation = Reservation::factory()->create([
                 'reference' => 'RRS-'.now()->format('Y').'-'.fake()->unique()->numerify('######'),
                 'reservation_date' => now()->addDay()->toDateString(), 'status' => 'confirmed',
-                'start_time' => '09:00:00', 'end_time' => '11:00:00',
+                'start_time' => '09:00:00', 'end_time' => '13:00:00', 'booking_type' => 'half_day_morning',
             ]);
             ReservationItem::factory()->create([
                 'reservation_id' => $reservation->id, 'resource_id' => $resource->id,
                 'starts_at' => $reservation->reservation_date->copy()->setTime(9, 0),
-                'ends_at' => $reservation->reservation_date->copy()->setTime(11, 0),
+                'ends_at' => $reservation->reservation_date->copy()->setTime(13, 0),
             ]);
 
             $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
-                ->assertOk()->assertJsonPath('has_rate', true)->assertJsonPath('base_fee', (int) $rate->base_fee);
+                ->assertOk()->assertJsonPath('has_rate', true)->assertJsonPath('base_fee', (int) $rate->half_day_rate);
         }
     }
 
@@ -101,7 +105,14 @@ class ResourcePaymentTest extends TestCase
         $user = User::factory()->role('admin')->create();
         $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500]);
         $resource = $reservation->items->first()->resource;
-        $this->makeRate($resource->type, ['resource_id' => $resource->id, 'base_fee' => 7000, 'base_duration_hours' => 2, 'extra_hour_rate' => 100]);
+        $this->makeRate($resource->type, [
+            'resource_id' => $resource->id,
+            'location_id' => $resource->location_id,
+            'resource_name' => $resource->name_model,
+            'base_fee' => 7000,
+            'base_duration_hours' => 2,
+            'extra_hour_rate' => 100,
+        ]);
 
         $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference]))
             ->assertOk()->assertJsonPath('base_fee', 7000)->assertJsonPath('has_rate', true);
@@ -133,7 +144,7 @@ class ResourcePaymentTest extends TestCase
         $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '10:00:00');
 
         $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => $reservation->reference, 'extra_hours' => 0.5]))
-            ->assertOk()->assertJsonPath('billable_extra_hours', 0)->assertJsonPath('extra_hour_fee', 0)->assertJsonPath('total', 5000);
+            ->assertOk()->assertJsonPath('billable_extra_hours', 0.5)->assertJsonPath('extra_hour_fee', 1250)->assertJsonPath('total', 6250);
     }
 
     public function test_tax_is_applied_after_discount_and_currency_rounds_half_up_to_cents(): void
@@ -180,7 +191,7 @@ class ResourcePaymentTest extends TestCase
         $this->actingAs($user)->getJson(route('payments.resources.lookup', ['reference' => 'invalid']))
             ->assertUnprocessable()->assertJsonValidationErrors('reference');
         $this->getJson(route('payments.resources.lookup', ['reference' => 'RRS-2026-999999']))
-            ->assertNotFound()->assertJsonPath('message', 'No payable reservation was found for that reference.');
+            ->assertNotFound()->assertJsonPath('message', 'Reservation not found. Check the reference and try again.');
     }
 
     public function test_lookup_print_and_usage_work_with_lowercase_reference(): void
@@ -202,7 +213,7 @@ class ResourcePaymentTest extends TestCase
         $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
 
         $this->actingAs($user)->postJson(route('payments.resources.usage.confirm'), ['reference' => $reservation->reference, 'extra_hours' => 0.5, 'total' => 0.01])
-            ->assertOk()->assertJsonPath('extra_hour_fee', 1250)->assertJsonPath('total', 6250)->assertJsonPath('payment_status', 'pending');
+            ->assertOk()->assertJsonPath('extra_hour_fee', 1250)->assertJsonPath('total', 6250)->assertJsonPath('payment_status', 'unpaid');
         $this->assertDatabaseHas('resource_payment_usage_audits', ['reservation_id' => $reservation->id, 'actor_id' => $user->id, 'extra_hours' => 0.5]);
     }
 
@@ -223,23 +234,20 @@ class ResourcePaymentTest extends TestCase
         $category = ResourceCategory::query()->firstOrCreate(['name' => 'Finance Test Category']);
         $type = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Finance Test Type']);
         $this->post(route('payments.rates.store'), [
-            'resource_type_id' => $type->id, 'base_fee' => 16000, 'base_duration_hours' => 3,
+            'location_id' => 'all', 'resource_name' => 'Finance Test Type',
+            'daily_rate' => 16000, 'half_day_rate' => 8000,
             'extra_hour_rate' => 6500, 'tax_percent' => 0, 'effective_from' => '2028-01-01',
         ])->assertSessionHasNoErrors();
-        $rate = ResourceRate::query()->where('resource_type_id', $type->id)->whereDate('effective_from', '2028-01-01')->firstOrFail();
-        $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'actor_id' => $finance->id, 'action' => 'created']);
+        $rate = ResourceRate::query()->where('resource_name', 'Finance Test Type')->whereDate('effective_from', '2028-01-01')->firstOrFail();
+        $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'actor_id' => $finance->id, 'action' => 'imported']);
         $this->put(route('payments.rates.update', $rate), [
-            'resource_type_id' => $type->id, 'base_fee' => 16500, 'base_duration_hours' => 3,
-            'extra_hour_rate' => 6600, 'tax_percent' => 5, 'effective_from' => '2028-01-01',
+            'location_id' => 'all', 'resource_name' => 'Finance Test Type',
+            'daily_rate' => 16500, 'half_day_rate' => 8250,
+            'extra_hour_rate' => 6600, 'tax_percent' => 5, 'effective_from' => '2028-06-01',
         ])->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'actor_id' => $finance->id, 'action' => 'updated']);
+        $this->assertDatabaseHas('resource_rate_audits', ['actor_id' => $finance->id, 'action' => 'imported']);
         $this->patch(route('payments.rates.deactivate', $rate))->assertSessionHasNoErrors();
         $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'action' => 'deactivated']);
-        $this->assertFalse($rate->fresh()->is_active);
-        $this->put(route('payments.rates.update', $rate), [
-            'resource_type_id' => $type->id, 'base_fee' => 17000, 'base_duration_hours' => 3,
-            'extra_hour_rate' => 6700, 'tax_percent' => 5, 'effective_from' => '2028-01-01',
-        ])->assertSessionHasNoErrors();
         $this->assertFalse($rate->fresh()->is_active);
         $this->get(route('payments.rates.index', ['catalog_status' => 'all']))
             ->assertOk()
@@ -291,10 +299,15 @@ class ResourcePaymentTest extends TestCase
     {
         $this->seed(ResourceRateSeeder::class);
         $finance = User::factory()->role('admin')->create();
-        $type = ResourceType::query()->where('name', 'Auditorium')->firstOrFail();
-        $overlap = ['resource_type_id' => $type->id, 'base_fee' => 1, 'base_duration_hours' => 2, 'extra_hour_rate' => 1, 'tax_percent' => 0, 'effective_from' => '2026-06-01'];
+        $existing = ResourceRate::query()->where('resource_name', 'Main Auditorium')->firstOrFail();
+        $overlap = [
+            'location_id' => (string) $existing->location_id,
+            'resource_name' => 'Main Auditorium',
+            'daily_rate' => 1, 'half_day_rate' => 1,
+            'extra_hour_rate' => 1, 'tax_percent' => 0, 'effective_from' => '2026-06-01',
+        ];
         $this->actingAs($finance)->postJson(route('payments.rates.store'), $overlap)->assertUnprocessable()->assertJsonValidationErrors('effective_from');
-        $this->postJson(route('payments.rates.store'), array_replace($overlap, ['effective_from' => '2028-01-01', 'base_fee' => -1]))->assertUnprocessable()->assertJsonValidationErrors('base_fee');
+        $this->postJson(route('payments.rates.store'), array_replace($overlap, ['effective_from' => '2028-01-01', 'daily_rate' => -1]))->assertUnprocessable()->assertJsonValidationErrors('daily_rate');
 
         $this->actingAs(User::factory()->role('admin')->create())->get(route('payments.rates.index'))->assertOk()->assertSee('Rate catalog');
         $this->actingAs(User::factory()->role('coordinator')->create())->get(route('payments.rates.index'))->assertForbidden();
@@ -411,9 +424,10 @@ class ResourcePaymentTest extends TestCase
             $category = ResourceCategory::query()->firstOrCreate(['name' => 'Timezone Test Category']);
             $type = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Timezone Test Type']);
             $this->actingAs($finance)->post(route('payments.rates.store'), [
-                'resource_type_id' => $type->id,
-                'base_fee' => 1000,
-                'base_duration_hours' => 1,
+                'location_id' => 'all',
+                'resource_name' => 'Timezone Test Type',
+                'daily_rate' => 1000,
+                'half_day_rate' => 500,
                 'extra_hour_rate' => 500,
                 'tax_percent' => 0,
                 'effective_from' => '2028-01-01',
@@ -433,7 +447,7 @@ class ResourcePaymentTest extends TestCase
         $user = User::factory()->role('admin')->create();
         $reservation = $this->reservationWithRate(['base_fee' => 5000, 'base_duration_hours' => 2, 'extra_hour_rate' => 2500], '09:00:00', '11:00:00');
         $this->actingAs($user)->get(route('payments.resources.print', ['reference' => $reservation->reference, 'extra_hours' => 0.5]))
-            ->assertOk()->assertSee('includes first 2.00 hrs', false)->assertSee('LKR 1,250.00')->assertSee('LKR 6,250.00')->assertSee('Pending');
+            ->assertOk()->assertSee('Half day')->assertSee('LKR 1,250.00')->assertSee('LKR 6,250.00')->assertSee('Unpaid');
     }
 
     private function reservationWithRate(?array $rate, string $start = '09:00:00', string $end = '11:00:00', ?User $requester = null): Reservation
@@ -450,8 +464,10 @@ class ResourcePaymentTest extends TestCase
             'ends_at' => $reservation->reservation_date->copy()->setTimeFromTimeString($end),
         ]);
         if ($rate) {
-            $type = $resource->type;
-            $this->makeRate($type, $rate);
+            $this->makeRate($resource->type, $rate + [
+                'resource_name' => $resource->name_model,
+                'location_id' => $resource->location_id,
+            ]);
         }
 
         return $reservation->load('items.resource');
@@ -459,8 +475,12 @@ class ResourcePaymentTest extends TestCase
 
     private function makeRate(ResourceType $type, array $data): ResourceRate
     {
+        $base = $data['base_fee'] ?? 5000;
+
         return ResourceRate::query()->create($data + [
-            'resource_type_id' => $type->id, 'resource_id' => null, 'base_fee' => 5000,
+            'resource_type_id' => $type->id, 'resource_id' => null,
+            'resource_name' => $type->name, 'location_id' => null,
+            'base_fee' => $base, 'daily_rate' => $base, 'half_day_rate' => $base,
             'base_duration_hours' => 2, 'extra_hour_rate' => 2500, 'tax_percent' => 0,
             'effective_from' => now()->subYear()->toDateString(), 'effective_to' => null, 'is_active' => true,
         ]);

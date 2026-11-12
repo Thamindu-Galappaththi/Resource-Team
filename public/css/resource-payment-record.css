@@ -33,5 +33,10 @@
 .rpm-success .swal2-icon.swal2-success { width: 5em !important; height: 5em !important; margin: 0 auto 8px; border: .25em solid #a5dc86 !important; border-radius: 50% !important; background: transparent !important; color: #a5dc86; font-size: 1em; line-height: normal; }
 @keyframes rpm-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
 @keyframes rpm-shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
-@media (max-width: 520px) { .rp-payment-modal.swal2-popup { padding: 20px 16px; } .rp-payment-modal__actions.swal2-actions { display: grid; grid-template-columns: 1fr 1fr; } .rp-payment-modal__confirm.swal2-confirm, .rp-payment-modal__cancel.swal2-cancel { min-width: 0; width: 100%; } }
+@media (max-width: 520px) {
+    .rp-payment-modal.swal2-popup { padding: 20px 16px; }
+    .rpm-methods { grid-template-columns: 1fr; }
+    .rp-payment-modal__actions.swal2-actions { display: grid; grid-template-columns: 1fr 1fr; }
+    .rp-payment-modal__confirm.swal2-confirm, .rp-payment-modal__cancel.swal2-cancel { min-width: 0; width: 100%; }
+}
 @media (prefers-reduced-motion: reduce) { .rp-payment-modal.swal2-popup, .rpm-shake, .rpm-method { animation: none !important; transition: none !important; } }

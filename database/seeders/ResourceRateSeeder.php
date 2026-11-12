@@ -9,6 +9,10 @@ class ResourceRateSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call([
+            LocationSeeder::class,
+            ResourceSeeder::class,
+        ]);
         app(AnnexureRateCardImporter::class)->importPath(database_path('data/rate_card_annexure1.csv'));
     }
 }

@@ -109,7 +109,7 @@ class ReservationBookingService
                 'reservation_date' => $payload['reservation_date'],
                 'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),
                 'end_time' => Carbon::parse($payload['end_time'])->format('H:i:s'),
-                'booking_type' => $payload['booking_type'],
+                'booking_type' => $payload['booking_type'] ?? null,
                 'status' => ReservationStatus::PENDING_APPROVAL->value,
                 'submitted_at' => now(),
             ]);
@@ -241,7 +241,7 @@ class ReservationBookingService
                 'reservation_date' => $payload['reservation_date'],
                 'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),
                 'end_time' => Carbon::parse($payload['end_time'])->format('H:i:s'),
-                'booking_type' => $payload['booking_type'],
+                'booking_type' => $payload['booking_type'] ?? $reservation->booking_type,
             ]);
 
             $reservation->items()->delete();

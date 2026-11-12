@@ -52,7 +52,7 @@ class AnnexureRateCardImporter
     public function importRow(array $row, ?int $actorId = null): ResourceRate
     {
         $locationLabel = trim((string) ($row['location'] ?? ''));
-        $resourceName = trim((string) ($row['resource'] ?? ''));
+        $resourceName = trim((string) ($row['resource'] ?? $row['resource_name'] ?? ''));
         $daily = $this->amount($row['daily rate (lkr)'] ?? $row['daily_rate'] ?? null, 'Daily rate');
         $half = $this->amount($row['half-day rate (lkr)'] ?? $row['half_day_rate'] ?? null, 'Half-day rate');
         $extra = $this->amount($row['extra hour rate (lkr)'] ?? $row['extra_hour_rate'] ?? null, 'Extra hour rate', true);
@@ -60,6 +60,9 @@ class AnnexureRateCardImporter
         $from = trim((string) ($row['effective from'] ?? $row['effective_from'] ?? ''));
         $to = trim((string) ($row['effective to'] ?? $row['effective_to'] ?? '')) ?: null;
         $status = strtolower(trim((string) ($row['status'] ?? 'active')));
+        if ($status === '') {
+            $status = 'active';
+        }
         if (! in_array($status, ['active', 'inactive'], true)) {
             throw ValidationException::withMessages(['file' => "Status must be Active or Inactive for {$resourceName}."]);
         }

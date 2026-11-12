@@ -22,10 +22,6 @@ return [
             'name' => 'Admin',
             'description' => 'Daily operations, reservation approvals, and resource management.',
         ],
-        'finance_admin' => [
-            'name' => 'Finance Admin',
-            'description' => 'Reviews invoices and records resource reservation payments.',
-        ],
         'coordinator' => [
             'name' => 'Coordinator',
             'description' => 'Creates and manages reservations and schedules in real time.',
@@ -184,13 +180,6 @@ return [
             'payments.view',
             'payments.rates.manage',
             'payments.mark-paid',
-            'reports.view',
-        ],
-        'finance_admin' => [
-            'dashboard',
-            'payments.view',
-            'payments.mark-paid',
-            'payments.rates.manage',
             'reports.view',
         ],
         'coordinator' => [

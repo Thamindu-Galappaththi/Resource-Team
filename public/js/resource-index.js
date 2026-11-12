@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFieldError('resourceCategorySelect');
         const types = editResourceTypes.filter((item) => String(item.resource_category_id) === String(event.currentTarget.value));
         window.RMSelect.setOptions('resourceTypeSelect', types.map((item) => ({ value: item.id, label: item.name })), 'Select a resource type (e.g., Laptop)', { disabled: !event.currentTarget.value });
+        window.RMHostelFields?.renderLocations();
     });
     ['resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect'].forEach((id) => {
         document.getElementById(id)?.addEventListener('change', () => clearFieldError(id));

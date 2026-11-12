@@ -17,6 +17,7 @@ return new class extends Migration
             $table->json('fee_breakdown');
             $table->timestamp('issued_at');
             $table->timestamp('paid_at')->nullable();
+            $table->date('payment_date')->nullable();
             $table->foreignId('paid_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('payment_method', 30)->nullable();
             $table->string('payment_reference', 120)->nullable();

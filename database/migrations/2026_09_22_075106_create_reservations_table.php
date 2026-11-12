@@ -27,6 +27,7 @@ return new class extends Migration
             $table->unsignedInteger('attendee_count')->nullable();
             $table->time('start_time');
             $table->time('end_time');
+            $table->string('booking_type', 30)->nullable();
             $table->string('status', 30)->default(ReservationStatus::DRAFT->value);
             $table->dateTime('submitted_at')->nullable();
             $table->dateTime('approved_at')->nullable();

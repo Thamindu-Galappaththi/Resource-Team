@@ -12,6 +12,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('resource_type_id')->constrained('resource_types')->cascadeOnDelete();
             $table->foreignId('resource_id')->nullable()->constrained('resources')->cascadeOnDelete();
+            $table->foreignId('location_id')->nullable()->constrained('locations')->nullOnDelete();
+            $table->string('resource_name', 190)->default('');
+            $table->decimal('daily_rate', 12, 2)->nullable();
+            $table->decimal('half_day_rate', 12, 2)->nullable();
+            $table->string('photo_path')->nullable();
             $table->decimal('base_fee', 12, 2);
             $table->decimal('base_duration_hours', 6, 2);
             $table->decimal('extra_hour_rate', 12, 2);
@@ -23,6 +28,7 @@ return new class extends Migration
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->index(['resource_type_id', 'resource_id', 'is_active', 'effective_from', 'effective_to'], 'resource_rates_lookup_idx');
+            $table->index(['location_id', 'resource_name', 'is_active', 'effective_from'], 'resource_rates_annexure_lookup_idx');
         });
 
         Schema::create('resource_rate_audits', function (Blueprint $table) {
