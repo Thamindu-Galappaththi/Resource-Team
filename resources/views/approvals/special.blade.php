@@ -25,15 +25,14 @@
         <div>
             <h1 class="rsv-title">Special approvals</h1>
             @php
-                [$scopeItems, $scopeItem] = match ($specialScope ?? 'all') {
-                    'hostel' => ['Hostel stays', 'hostel stay'],
-                    'standard' => ['Resource bookings', 'resource booking'],
-                    default => ['Resource bookings and hostel stays', 'reservation'],
+                $scopeItems = match ($specialScope ?? 'all') {
+                    'hostel' => 'hostel stays',
+                    'standard' => 'resource bookings',
+                    default => 'resource bookings and hostel stays',
                 };
             @endphp
             <p class="rsv-subtitle mb-0">
-                {{ $scopeItems }} sent for special approval are listed first, with their supporting documents.
-                You can also override any other pending {{ $scopeItem }}; the reason is stored in its history.
+                Only {{ $scopeItems }} marked for special approval appear here, with their supporting documents.
             </p>
         </div>
         <div class="rsv-header-actions">
@@ -60,7 +59,7 @@
         </div>
         <div class="rsv-stat p-3" style="--stat-color:#d97706;--stat-icon-bg:#fff4e5">
             <span class="rsv-stat-icon"><i class="ti ti-shield-lock"></i></span>
-            <div class="rsv-stat-label mt-3">Waiting for override</div>
+            <div class="rsv-stat-label mt-3">Waiting for decision</div>
             <div class="rsv-stat-number" id="ap-stat-pending">{{ number_format($payload['summary']['pending']) }}</div>
         </div>
         <div class="rsv-stat p-3" style="--stat-color:#16a77a;--stat-icon-bg:#e7f6f0">
@@ -110,7 +109,7 @@
         <div class="card-body">
             <div class="ap-panel-title">
                 <h2>Pending requests</h2>
-                <span id="ap-pending-count">{{ $payload['summary']['pending'] }} awaiting an override</span>
+                <span id="ap-pending-count">{{ $payload['summary']['pending'] }} awaiting a decision</span>
             </div>
             <div id="ap-pending-results">
                 @include('approvals.partials.table', [
@@ -118,8 +117,8 @@
                     'pager' => $payload['pending_pager'],
                     'statusLabel' => 'Status',
                     'emptyIcon' => 'ti-circle-check',
-                    'emptyTitle' => 'No pending overrides',
-                    'emptyCopy' => 'No pending requests match these filters.',
+                    'emptyTitle' => 'No pending special approvals',
+                    'emptyCopy' => 'Normal reservations stay on All approvals. Only special requests appear here.',
                     'canDecide' => $canDecide,
                     'showArchive' => false,
                 ])
@@ -130,8 +129,8 @@
     <div class="card border-0 rsv-panel">
         <div class="card-body">
             <div class="ap-panel-title">
-                <h2>Override history</h2>
-                <span>Elevated decisions and the reason recorded for each one</span>
+                <h2>Decision history</h2>
+                <span>Special approval decisions and the reason recorded for each one</span>
             </div>
             <div id="ap-history-results">
                 @include('approvals.partials.table', [
@@ -139,8 +138,8 @@
                     'pager' => $payload['history_pager'],
                     'statusLabel' => 'Decision',
                     'emptyIcon' => 'ti-history',
-                    'emptyTitle' => 'No overrides yet',
-                    'emptyCopy' => 'Special decisions will appear here.',
+                    'emptyTitle' => 'No special decisions yet',
+                    'emptyCopy' => 'Decisions on special approval requests will appear here.',
                     'canDecide' => false,
                     'showArchive' => false,
                 ])
@@ -191,18 +190,18 @@
         feed: @json(route('approvals.special.feed')),
         canDecide: @json($canDecide),
         allowArchive: false,
-        pendingLabel: 'awaiting an override',
+        pendingLabel: 'awaiting a decision',
         pendingList: {
             statusLabel: 'Status',
             emptyIcon: 'ti-circle-check',
-            emptyTitle: 'No pending overrides',
-            emptyCopy: 'No pending requests match these filters.',
+            emptyTitle: 'No pending special approvals',
+            emptyCopy: 'Normal reservations stay on All approvals. Only special requests appear here.',
         },
         historyList: {
             statusLabel: 'Decision',
             emptyIcon: 'ti-history',
-            emptyTitle: 'No overrides yet',
-            emptyCopy: 'Special decisions will appear here.',
+            emptyTitle: 'No special decisions yet',
+            emptyCopy: 'Decisions on special approval requests will appear here.',
         },
         payload: @json($payload),
     };

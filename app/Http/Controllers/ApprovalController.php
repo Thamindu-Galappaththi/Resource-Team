@@ -67,6 +67,7 @@ class ApprovalController extends Controller
 
     public function specialDecision(Request $request, Reservation $reservation): RedirectResponse
     {
+        abort_unless($reservation->special_approval, 403);
         abort_unless($request->user()->canSpecialApprove($reservation), 403);
 
         return $this->applyDecision($request, $reservation, true);
@@ -256,16 +257,16 @@ class ApprovalController extends Controller
         $pendingQuery = $this->applyListFilters(
             Reservation::query()
                 ->forSpecialApprover($user)
+                ->where('special_approval', true)
                 ->whereNull('approval_archived_at')
                 ->where('status', ReservationStatus::PENDING_APPROVAL->value),
             $filters,
             withStatus: false,
         );
-        $specialRequests = (clone $pendingQuery)->where('special_approval', true)->count();
+        $specialRequests = (clone $pendingQuery)->count();
 
         $pending = $pendingQuery
             ->with($relations)
-            ->orderByDesc('special_approval')
             ->orderBy('reservation_date')
             ->orderBy('start_time')
             ->paginate(10, ['*'], 'pending_page')
@@ -275,7 +276,11 @@ class ApprovalController extends Controller
         $history = ReservationStatusHistory::query()
             ->whereJsonContains('context->action', 'special_override')
             ->whereHas('reservation', function ($query) use ($filters, $user) {
-                $this->applyListFilters($query->forSpecialApprover($user), $filters, withStatus: true);
+                $this->applyListFilters(
+                    $query->forSpecialApprover($user)->where('special_approval', true),
+                    $filters,
+                    withStatus: true,
+                );
             })
             ->with(['reservation.requester', 'reservation.location', 'reservation.items.resource.type.category', 'reservation.documents', 'actor'])
             ->latest('created_at')
