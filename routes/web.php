@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\CanteenReservationController;
+use App\Http\Controllers\MealMenuController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HostelReservationController;
 use App\Http\Controllers\HostelStudentRequestController;
@@ -123,6 +124,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
     });
 
+    Route::prefix('canteen/menus')->name('canteen.menus.')->controller(MealMenuController::class)->middleware(['permission:canteen.manage', 'deny-slt-lists'])->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{menu}/edit', 'edit')->name('edit');
+    });
+
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/lecture-fees', [LectureFeeController::class, 'index'])->middleware('permission:payments.view')->name('lecture-fees');
         Route::post('/lecture-fees', [LectureFeeController::class, 'store'])->middleware('permission:payments.view')->name('lecture-fees.store');
@@ -214,7 +220,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/reservations/{reservation}', 'update')->middleware('permission:canteen.create')->name('update');
         Route::patch('/reservations/{reservation}/status', 'updateStatus')->middleware('permission:canteen.manage')->name('status');
         Route::delete('/reservations/{reservation}', 'destroy')->middleware('permission:canteen.create,canteen.manage')->name('destroy');
+    });
 
+    Route::prefix('canteen/menus')->name('canteen.menus.')->controller(MealMenuController::class)->middleware(['permission:canteen.manage', 'deny-slt-lists'])->group(function () {
+        Route::post('/', 'store')->name('store');
+        Route::put('/{menu}', 'update')->name('update');
+        Route::delete('/{menu}', 'destroy')->name('destroy');
     });
 
     Route::prefix('user-management')->controller(UserManagementController::class)->group(function () {

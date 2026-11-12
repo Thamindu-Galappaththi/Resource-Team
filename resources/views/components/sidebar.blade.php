@@ -20,6 +20,7 @@
         $canHostelStudentRequests = $user->hasPermission('hostel.manage') && ! $isSltEmployee;
         $canCanteenDashboard = $user->hasPermission('canteen.view') && ! $isSltEmployee;
         $canCanteenCreate = $user->hasPermission('canteen.create');
+        $canCanteenMenus = $user->hasPermission('canteen.manage') && ! $isSltEmployee;
         $canCanteenIndex = $user->hasPermission('canteen.index') && ! $isSltEmployee;
         $canSltCanteenRequests = $isSltEmployee && $user->hasPermission('canteen.index');
         $canPayments = $user->hasPermission('payments.view');
@@ -312,6 +313,15 @@
                         <a class="sidebar-link {{ request()->routeIs('canteen.create', 'canteen.edit') ? 'active' : '' }}" href="{{ route('canteen.create') }}">
                             <span><i class="ti ti-plus"></i></span>
                             <span class="hide-menu">Create Canteen Reservation</span>
+                        </a>
+                    </li>
+                @endif
+
+                @if($canCanteenMenus)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('canteen.menus.*') ? 'active' : '' }}" href="{{ route('canteen.menus.index') }}">
+                            <span><i class="ti ti-tools-kitchen-2"></i></span>
+                            <span class="hide-menu">Meal Plans</span>
                         </a>
                     </li>
                 @endif

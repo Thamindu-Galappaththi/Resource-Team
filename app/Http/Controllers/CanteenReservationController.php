@@ -8,11 +8,13 @@ use App\Http\Requests\StoreCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationRequest;
 use App\Http\Requests\UpdateCanteenReservationStatusRequest;
 use App\Models\CanteenReservation;
+use App\Models\MealMenu;
 use App\Models\Location;
 use App\Models\User;
 use App\Notifications\CanteenReservationStatusUpdated;
 use App\Notifications\NewCanteenReservationPending;
 use App\Services\NotificationRecipients;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -186,6 +188,7 @@ class CanteenReservationController extends Controller
         $this->authorize('create', CanteenReservation::class);
 
         $data = $request->validated();
+        $data['meal_type'] = $data['meal_type'] ?? MealType::LUNCH->value;
         $data['requested_by_user_id'] = auth()->id();
         $data['status'] = CanteenReservationStatus::PENDING->value;
 
@@ -208,7 +211,7 @@ class CanteenReservationController extends Controller
     {
         $this->authorize('view', $reservation);
 
-        $reservation->load(['requestedBy', 'location', 'approvedBy']);
+        $reservation->load(['requestedBy', 'location', 'approvedBy', 'mealMenu']);
 
         return view('canteen.reservations.show', compact('reservation'));
     }
@@ -235,6 +238,7 @@ class CanteenReservationController extends Controller
         }
 
         $data = $request->validated();
+        $data['meal_type'] = $data['meal_type'] ?? $reservation->meal_type ?? MealType::LUNCH->value;
         unset($data['status']);
 
         $reservation->update($data);
@@ -242,7 +246,7 @@ class CanteenReservationController extends Controller
         return redirect()->route('canteen.show', $reservation)->with('success', 'Reservation updated successfully.');
     }
 
-    public function updateStatus(UpdateCanteenReservationStatusRequest $request, CanteenReservation $reservation): RedirectResponse
+    public function updateStatus(UpdateCanteenReservationStatusRequest $request, CanteenReservation $reservation): JsonResponse|RedirectResponse
     {
         $this->authorize('manageStatus', $reservation);
 
@@ -267,11 +271,18 @@ class CanteenReservationController extends Controller
             );
         });
 
-        return redirect()
-            ->route('canteen.show', $reservation)
-            ->with('success', $status === CanteenReservationStatus::APPROVED->value
-                ? 'Reservation approved.'
-                : 'Reservation rejected.');
+        $message = $status === CanteenReservationStatus::APPROVED->value
+            ? 'Reservation approved.'
+            : 'Reservation rejected.';
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'status' => $status,
+            ]);
+        }
+
+        return redirect()->route('canteen.show', $reservation)->with('success', $message);
     }
 
     public function destroy(CanteenReservation $reservation): RedirectResponse
@@ -305,7 +316,7 @@ class CanteenReservationController extends Controller
         $prefill = $request?->query('date');
 
         return [
-            'mealTypes' => MealType::cases(),
+            'mealMenus' => MealMenu::query()->orderBy('name')->get(),
             'locations' => Location::query()->ordered()->get(),
             'prefillDate' => old('reservation_date', is_string($prefill) ? $prefill : null),
         ];

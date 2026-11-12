@@ -20,6 +20,7 @@ class CanteenReservation extends Model
         'requested_by_user_id',
         'location_id',
         'meal_type',
+        'meal_menu_id',
         'reservation_date',
         'reservation_time',
         'number_of_orders',
@@ -75,6 +76,11 @@ class CanteenReservation extends Model
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    public function mealMenu(): BelongsTo
+    {
+        return $this->belongsTo(MealMenu::class);
     }
 
     public function location(): BelongsTo

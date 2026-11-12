@@ -28,8 +28,21 @@ function showCanteenFlash(message, type = 'danger') {
 }
 
 let pendingRequest = null;
+const dashboardLiveIds = ['cd-kpis', 'cd-pending-count', 'cd-pending-results', 'cd-glance', 'cd-meals', 'cd-forecast'];
 
-async function refreshPendingQueue(url) {
+function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content
+        || document.querySelector('#cd-review-form [name="_token"]')?.value
+        || '';
+}
+
+function swapLiveNode(id, page) {
+    const current = document.getElementById(id);
+    const next = page.getElementById(id);
+    if (current && next) current.replaceWith(next);
+}
+
+async function refreshDashboard(url, { stats = false } = {}) {
     const current = document.getElementById('cd-pending-results');
     if (!current) return;
 
@@ -49,13 +62,30 @@ async function refreshPendingQueue(url) {
         const next = page.querySelector('#cd-pending-results');
         if (!next) throw new Error('Unable to load pending requests.');
 
-        current.replaceWith(next);
+        if (stats) {
+            dashboardLiveIds.forEach((id) => swapLiveNode(id, page));
+        } else {
+            current.replaceWith(next);
+        }
+
         history.replaceState(null, '', url);
+
+        const results = document.getElementById('cd-pending-results');
+        const pageNo = Number(new URL(url, window.location.origin).searchParams.get('pending_page') || 1);
+        if (stats && results && !results.querySelector('.cd-request') && pageNo > 1) {
+            const previous = new URL(url, window.location.origin);
+            previous.searchParams.set('pending_page', String(pageNo - 1));
+            await refreshDashboard(`${previous.pathname}?${previous.searchParams}#pending-requests`, { stats: true });
+        }
     } catch (error) {
         if (error.name === 'AbortError') return;
         document.getElementById('cd-pending-results')?.classList.remove('is-loading');
         showCanteenFlash(error.message || 'Unable to load pending requests.');
     }
+}
+
+function refreshPendingQueue(url) {
+    return refreshDashboard(url);
 }
 
 document.addEventListener('pointerdown', (event) => {
@@ -92,6 +122,14 @@ document.addEventListener('click', (event) => {
     if (pendingPage) {
         event.preventDefault();
         refreshPendingQueue(pendingPage.href);
+        return;
+    }
+
+    const reviewTrigger = event.target.closest('[data-cd-review]');
+
+    if (reviewTrigger) {
+        event.preventDefault();
+        openCanteenReviewModal(reviewTrigger);
         return;
     }
 
@@ -152,5 +190,111 @@ document.addEventListener('click', (event) => {
     toggleButton?.setAttribute('aria-expanded', 'false');
     toggleButton?.focus();
 });
+
+function openCanteenReviewModal(trigger) {
+    const modalEl = document.getElementById('cd-review-modal');
+    const form = document.getElementById('cd-review-form');
+    if (!modalEl || !form) return;
+
+    const status = trigger.dataset.cdStatus || 'approved';
+    const rejecting = status === 'rejected';
+    form.action = trigger.dataset.cdAction || '';
+    form.dataset.saving = '';
+
+    const statusInput = form.querySelector('#cd-review-status');
+    const title = modalEl.querySelector('#cd-review-title');
+    const sub = modalEl.querySelector('#cd-review-sub');
+    const copy = modalEl.querySelector('#cd-review-copy');
+    const submit = modalEl.querySelector('#cd-review-submit');
+    const icon = modalEl.querySelector('#cd-review-icon i');
+    const reasonWrap = modalEl.querySelector('#cd-review-reason-wrap');
+    const reason = modalEl.querySelector('#cd-review-reason');
+    const reasonError = modalEl.querySelector('#cd-review-reason-error');
+
+    if (statusInput) statusInput.value = status;
+    if (title) title.textContent = trigger.dataset.cdTitle || 'Review reservation?';
+    if (sub) {
+        sub.textContent = trigger.dataset.cdSub || '';
+        sub.hidden = !sub.textContent;
+    }
+    if (copy) copy.textContent = trigger.dataset.cdCopy || 'Please confirm this decision.';
+    if (submit) {
+        submit.textContent = trigger.dataset.cdSubmit || 'Confirm';
+        submit.className = rejecting ? 'btn btn-danger' : 'btn btn-success';
+        submit.disabled = false;
+    }
+    if (icon) icon.className = trigger.dataset.cdIcon || (rejecting ? 'ti ti-circle-x' : 'ti ti-circle-check');
+    if (reasonWrap) reasonWrap.hidden = !rejecting;
+    if (reason) {
+        reason.value = '';
+        reason.required = rejecting;
+        reason.classList.remove('is-invalid');
+    }
+    if (reasonError) reasonError.textContent = '';
+
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    if (rejecting) window.setTimeout(() => reason?.focus(), 200);
+}
+
+async function submitCanteenReview(event) {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || form.id !== 'cd-review-form') return;
+
+    event.preventDefault();
+    if (form.dataset.saving === '1') return;
+
+    const status = form.querySelector('#cd-review-status')?.value;
+    const reason = form.querySelector('#cd-review-reason');
+    const reasonError = form.querySelector('#cd-review-reason-error');
+    const submit = form.querySelector('#cd-review-submit');
+
+    if (status === 'rejected' && !reason?.value.trim()) {
+        reason?.classList.add('is-invalid');
+        if (reasonError) reasonError.textContent = 'Add a reason before rejecting this request.';
+        reason?.focus();
+        return;
+    }
+
+    form.dataset.saving = '1';
+    if (submit) submit.disabled = true;
+
+    try {
+        const body = new FormData(form);
+        body.append('_method', 'PATCH');
+        const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+            body,
+            credentials: 'same-origin',
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const message = payload?.errors?.approval_comments?.[0]
+                || payload?.message
+                || 'Unable to update this reservation.';
+            throw new Error(message);
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById('cd-review-modal'))?.hide();
+        showCanteenFlash(payload.message || 'Reservation updated.', 'success');
+        await refreshDashboard(window.location.href, { stats: true });
+    } catch (error) {
+        if (status === 'rejected' && reasonError) {
+            reason?.classList.add('is-invalid');
+            reasonError.textContent = error.message;
+        } else {
+            showCanteenFlash(error.message, 'danger');
+        }
+    } finally {
+        form.dataset.saving = '';
+        if (submit) submit.disabled = false;
+    }
+}
+
+document.addEventListener('submit', submitCanteenReview);
 
 document.querySelectorAll('.cp-auto-alert').forEach((alert) => dismissCanteenAlert(alert));

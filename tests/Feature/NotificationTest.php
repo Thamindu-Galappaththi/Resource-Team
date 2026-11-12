@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Models\CanteenReservation;
+use App\Models\Location;
+use App\Models\MealMenu;
 use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
@@ -252,9 +254,17 @@ class NotificationTest extends TestCase
         $requester = User::factory()->role('slt_employee')->create();
         $kitchen = User::factory()->role('canteen')->create();
 
+        $menu = MealMenu::query()->create([
+            'name' => 'Notification lunch',
+            'image_path' => 'meal-menus/notify.jpg',
+        ]);
+        $location = Location::factory()->create();
+
         $this->actingAs($requester)->post(route('canteen.store'), [
             'reservation_name' => 'Team lunch',
             'meal_type' => 'lunch',
+            'meal_menu_id' => $menu->id,
+            'location_id' => $location->id,
             'reservation_date' => now()->addDay()->toDateString(),
             'reservation_time' => '12:30',
             'number_of_orders' => 12,
@@ -268,6 +278,8 @@ class NotificationTest extends TestCase
         $this->actingAs($requester)->post(route('canteen.store'), [
             'reservation_name' => 'Large event lunch',
             'meal_type' => 'event_catering',
+            'meal_menu_id' => $menu->id,
+            'location_id' => $location->id,
             'reservation_date' => now()->addDay()->toDateString(),
             'reservation_time' => '12:00',
             'number_of_orders' => (int) config('canteen.large_group_threshold') + 5,
