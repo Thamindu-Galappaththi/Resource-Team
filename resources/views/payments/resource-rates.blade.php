@@ -6,31 +6,32 @@
 <link rel="stylesheet" href="{{ asset('css/create-user.css') }}?v=15">
 <link rel="stylesheet" href="{{ asset('css/reservation-index.css') }}?v=18">
 <link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
-<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=43">
+<link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=48">
 @endpush
 
 @section('content')
 @php
-    $typeOptions = $types->map(function ($type) {
-        return [
-            'value' => (string) $type->id,
-            'label' => trim(($type->category?->name ? $type->category->name.' · ' : '').$type->name),
-        ];
-    })->values();
-    $resourceOptions = $resources->map(function ($resource) {
-        return [
-            'value' => (string) $resource->id,
-            'label' => $resource->name_model.($resource->type?->name ? ' ('.$resource->type->name.')' : ''),
-            'name' => $resource->name_model,
-            'type' => (string) $resource->resource_type_id,
-        ];
-    })->values();
+    $locationOptions = $locations->map(fn ($location) => [
+        'value' => (string) $location->id,
+        'label' => $location->name,
+    ])->values();
+    $categoryOptions = $categories->map(fn ($category) => [
+        'value' => (string) $category->id,
+        'label' => $category->name,
+    ])->values();
+    $typeOptions = $types->map(fn ($type) => [
+        'value' => (string) $type->id,
+        'label' => $type->name,
+        'category' => (string) $type->resource_category_id,
+    ])->values();
+    $oldLocation = (string) old('location_id', '');
+    $oldCategory = (string) old('resource_category_id', '');
     $oldType = (string) old('resource_type_id', '');
-    $oldResource = (string) old('resource_id', '');
-    $matchedType = $typeOptions->firstWhere('value', $oldType);
-    $matchedResource = $resourceOptions->firstWhere('value', $oldResource);
-    $oldTypeLabel = $matchedType['label'] ?? 'Select type';
-    $oldResourceLabel = $matchedResource['label'] ?? 'All resources of type';
+    $oldLocationLabel = $locationOptions->firstWhere('value', $oldLocation)['label'] ?? 'Select a location';
+    $oldCategoryLabel = $categoryOptions->firstWhere('value', $oldCategory)['label'] ?? 'Select category';
+    $oldTypeLabel = $typeOptions->firstWhere('value', $oldType)['label'] ?? 'Select type';
+    $catalogCategoryOptions = collect([['value' => '', 'label' => 'All categories']])->concat($categoryOptions)->all();
+    $catalogTypeOptions = collect([['value' => '', 'label' => 'All types']])->concat($typeOptions->map(fn ($type) => ['value' => $type['value'], 'label' => $type['label']]))->all();
     $activeTab = 'rates';
     if (session('rr_tab') === 'history') {
         $activeTab = 'history';
@@ -42,7 +43,7 @@
     <header class="rr-page-heading">
         <div>
             <h1>Resource Rates</h1>
-            <p>Configure effective-dated rates for resources and resource types.</p>
+            <p>Set daily and half-day rates by location, resource category, and resource type.</p>
         </div>
         <a href="{{ route('payments.resources') }}" class="rr-back-link"><i class="ti ti-receipt"></i> Back to invoicing</a>
     </header>
@@ -90,65 +91,41 @@
                 <span class="rp-title-icon"><i class="ti ti-tag"></i></span>
                 <div>
                     <h2 class="rr-section-title">Add rate</h2>
-                    <p class="rr-muted">Set rates by training centre and resource. “All locations” applies to additional resources across every centre.</p>
+                    <p class="rr-muted">Choose a location, then a category and resource type.</p>
                 </div>
             </div>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ route('payments.rates.store') }}" class="rr-fields" enctype="multipart/form-data" novalidate>
+            <form method="POST" action="{{ route('payments.rates.store') }}" class="rr-fields rr-add-fields" novalidate>
                 @csrf
                 <div class="rr-field">
-                    <label class="form-label" for="rr-location">Location</label>
-                    <select id="rr-location" name="location_id" class="form-select" required data-rr-required>
-                        <option value="all" @selected(old('location_id', 'all') === 'all')>All locations</option>
-                        @foreach($locations as $location)<option value="{{ $location->id }}" @selected((string) old('location_id') === (string) $location->id)>Training Centre {{ $location->name }}</option>@endforeach
-                    </select>
+                    <label class="form-label" for="rr-location">Location <span class="text-danger">*</span></label>
+                    <x-rm-select id="rr-location" name="location_id" placeholder="Select a location" :value="$oldLocation" :selected-label="$oldLocationLabel" :options="$locationOptions->all()" data-rr-required required />
                     <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
-                    <label class="form-label" for="rr-resource-name">Resource</label>
-                    <input id="rr-resource-name" name="resource_name" class="form-control" list="rr-resource-name-options" maxlength="190" value="{{ old('resource_name') }}" placeholder="Choose or enter a resource name" required data-rr-required>
-                    <datalist id="rr-resource-name-options">@foreach($resources->unique('name_model') as $resource)<option value="{{ $resource->name_model }}">@endforeach</datalist>
+                    <label class="form-label" for="rr-resource-category">Resource category <span class="text-danger">*</span></label>
+                    <x-rm-select id="rr-resource-category" name="resource_category_id" placeholder="Select category" :value="$oldCategory" :selected-label="$oldCategoryLabel" :options="$categoryOptions->all()" data-rr-required required />
                     <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
-                    <label class="form-label" for="rr-daily">Daily rate (LKR)</label>
+                    <label class="form-label" for="rr-type">Resource type <span class="text-danger">*</span></label>
+                    <x-rm-select id="rr-type" name="resource_type_id" placeholder="Select type" :value="$oldType" :selected-label="$oldTypeLabel" :options="$oldCategory ? $typeOptions->where('category', $oldCategory)->values()->all() : []" data-rr-required required />
+                    <p class="rr-field-error"></p>
+                </div>
+                <div class="rr-field">
+                    <label class="form-label" for="rr-daily">Daily rate (LKR) <span class="text-danger">*</span> <small class="rr-time-hint">09:00–17:00</small></label>
                     <input id="rr-daily" type="number" name="daily_rate" class="form-control" min="0" step="0.01" value="{{ old('daily_rate') }}" required data-rr-required>
                     <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
-                    <label class="form-label" for="rr-half-day">Half-day rate (LKR)</label>
+                    <label class="form-label" for="rr-half-day">Half-day rate (LKR) <span class="text-danger">*</span> <small class="rr-time-hint">09:00–13:00 / 13:00–17:00</small></label>
                     <input id="rr-half-day" type="number" name="half_day_rate" class="form-control" min="0" step="0.01" value="{{ old('half_day_rate') }}" required data-rr-required>
                     <p class="rr-field-error"></p>
                 </div>
                 <div class="rr-field">
-                    <label class="form-label" for="rr-extra">Extra hour rate (LKR, optional)</label>
-                    <input id="rr-extra" type="number" name="extra_hour_rate" class="form-control" min="0" step="0.01" value="{{ old('extra_hour_rate') }}" placeholder="Not charged if blank">
-                    <p class="rr-field-error"></p>
-                </div>
-                <div class="rr-field">
-                    <label class="form-label" for="rr-tax">Tax (%)</label>
-                    <input id="rr-tax" type="number" name="tax_percent" class="form-control" min="0" max="100" step="0.001" value="{{ old('tax_percent', 0) }}">
-                    <p class="rr-field-error"></p>
-                </div>
-                <div class="rr-field">
-                    <label class="form-label" for="rr-from">Effective from</label>
-                    <input id="rr-from" type="date" name="effective_from" class="form-control" value="{{ old('effective_from', now()->toDateString()) }}" required data-rr-required>
-                    <p class="rr-field-error"></p>
-                </div>
-                <div class="rr-field">
-                    <label class="form-label" for="rr-photo">Photo (optional)</label>
-                    <input id="rr-photo" type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-                    <small class="rr-muted">JPG, JPEG, PNG, or WebP · up to 2 MB</small>
-                    <img id="rr-photo-preview" class="rr-photo-preview" alt="Rate photo preview" hidden>
-                </div>
-                <div class="rr-field">
                     <label class="form-label" for="rr-status">Status</label>
-                    <select id="rr-status" name="status" class="form-select"><option value="active">Active</option><option value="inactive">Inactive</option></select>
-                </div>
-                <div class="rr-field">
-                    <label class="form-label" for="rr-to">Effective to</label>
-                    <input id="rr-to" type="date" name="effective_to" class="form-control" value="{{ old('effective_to') }}">
+                    <x-rm-select id="rr-status" name="status" placeholder="Active" :value="old('status', 'active')" :selected-label="old('status', 'active') === 'inactive' ? 'Inactive' : 'Active'" :options="[['value' => 'active', 'label' => 'Active'], ['value' => 'inactive', 'label' => 'Inactive']]" />
                 </div>
                 <div class="rr-field rr-field-action">
                     <button type="submit" class="btn btn-primary rr-submit rr-submit-rate">Add Rate</button>
@@ -163,22 +140,26 @@
                 <div>
                     <span class="rp-title-icon"><i class="ti ti-list-details"></i></span>
                     <div><h2 class="rr-section-title">Rate catalog</h2>
-                    <p class="rr-muted">Search, compare, and manage the rates applied to reservations.</p></div>
+                    <p class="rr-muted">Search and manage daily and half-day rates by location, category, and type.</p></div>
                 </div>
-                <form method="POST" action="{{ route('payments.rates.import') }}" enctype="multipart/form-data" class="rr-import-form">
-                    @csrf
-                    <input type="file" name="rate_card" id="rr-import-file" accept=".csv,text/csv" hidden required>
-                    <button type="button" class="btn rr-export-btn" id="rr-import-trigger"><i class="ti ti-upload"></i> Import CSV</button>
-                </form>
+                <div class="rr-import-actions">
+                    <a href="{{ route('payments.rates.sample') }}" class="btn rr-export-btn"><i class="ti ti-download"></i> Sample CSV</a>
+                    <form method="POST" action="{{ route('payments.rates.import') }}" enctype="multipart/form-data" class="rr-import-form">
+                        @csrf
+                        <input type="file" name="rate_card" id="rr-import-file" accept=".csv,text/csv" hidden required>
+                        <button type="button" class="btn rr-export-btn" id="rr-import-trigger"><i class="ti ti-upload"></i> Import CSV</button>
+                    </form>
+                </div>
             </div>
             <form method="GET" action="{{ route('payments.rates.index') }}" class="rr-catalog-filters" data-rr-catalog-search>
                 <div class="rr-field rr-rate-search"><label class="form-label" for="rr-rate-search">Search</label><div class="input-group rsv-search-group rp-search-group"><span class="input-group-text"><i class="ti ti-search"></i></span><input id="rr-rate-search" type="search" name="catalog_search" class="form-control" placeholder="Search rates" value="{{ $catalogSearch }}" autocomplete="off"></div></div>
-                <div class="rr-field"><label class="form-label" for="rr-type-filter">Resource type</label><x-rm-select id="rr-type-filter" name="catalog_type" placeholder="All types" :value="$catalogType ?? ''" :options="collect([['value' => '', 'label' => 'All types']])->concat($typeOptions)->all()" /></div>
+                <div class="rr-field"><label class="form-label" for="rr-category-filter">Resource category</label><x-rm-select id="rr-category-filter" name="catalog_category" placeholder="All categories" :value="$catalogCategory ?? ''" :options="$catalogCategoryOptions" /></div>
+                <div class="rr-field"><label class="form-label" for="rr-type-filter">Resource type</label><x-rm-select id="rr-type-filter" name="catalog_type" placeholder="All types" :value="$catalogType ?? ''" :options="$catalogTypeOptions" /></div>
                 <div class="rr-field"><label class="form-label" for="rr-status-filter">Status</label><x-rm-select id="rr-status-filter" name="catalog_status" placeholder="Active" :value="$catalogStatus ?? 'active'" :options="[['value' => 'active', 'label' => 'Active'], ['value' => 'all', 'label' => 'All statuses'], ['value' => 'inactive', 'label' => 'Inactive']]" /></div>
                 <div class="rr-field rr-catalog-actions">
                     <label class="form-label rr-field-spacer" for="rr-clear-filters">&nbsp;</label>
                     <div class="rr-catalog-actions-row">
-                        <button id="rr-clear-filters" type="button" class="rsv-filter-btn rsv-filter-clear" @disabled($catalogSearch === '' && ($catalogType ?? '') === '' && ($catalogStatus ?? 'active') === 'active')>Clear</button>
+                        <button id="rr-clear-filters" type="button" class="rsv-filter-btn rsv-filter-clear" @disabled($catalogSearch === '' && ($catalogCategory ?? '') === '' && ($catalogType ?? '') === '' && ($catalogStatus ?? 'active') === 'active')>Clear</button>
                         <button id="rr-export-csv" type="button" class="btn rr-export-btn" aria-label="Export CSV"><i class="ti ti-download"></i> Export CSV</button>
                     </div>
                 </div>
@@ -290,17 +271,13 @@
                 <button type="button" class="rsv-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="ti ti-x"></i></button>
             </div>
             <div class="modal-body">
-                <div class="rr-fields">
-                <div class="rr-field"><label class="form-label" for="rr-edit-location">Location</label><select id="rr-edit-location" name="location_id" class="form-select" required data-rr-required><option value="all">All locations</option>@foreach($locations as $location)<option value="{{ $location->id }}">Training Centre {{ $location->name }}</option>@endforeach</select><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-resource-name">Resource</label><input id="rr-edit-resource-name" name="resource_name" class="form-control" list="rr-resource-name-options" maxlength="190" required data-rr-required><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-daily">Daily rate (LKR)</label><input id="rr-edit-daily" type="number" name="daily_rate" class="form-control" min="0" step="0.01" required data-rr-required><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-half-day">Half-day rate (LKR)</label><input id="rr-edit-half-day" type="number" name="half_day_rate" class="form-control" min="0" step="0.01" required data-rr-required><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-extra">Extra hour rate (LKR, optional)</label><input id="rr-edit-extra" type="number" name="extra_hour_rate" class="form-control" min="0" step="0.01"><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-tax">Tax (%)</label><input id="rr-edit-tax" type="number" name="tax_percent" class="form-control" min="0" max="100" step="0.001" value="0"><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-from">Effective from</label><input id="rr-edit-from" type="date" name="effective_from" class="form-control" data-rr-required><p class="rr-field-error"></p></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-to">Effective to</label><input id="rr-edit-to" type="date" name="effective_to" class="form-control"></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-photo">Replace photo (optional)</label><input id="rr-edit-photo" type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"><small class="rr-muted">JPG, JPEG, PNG, or WebP · up to 2 MB</small></div>
-                <div class="rr-field"><label class="form-label" for="rr-edit-status">Status</label><select id="rr-edit-status" name="status" class="form-select"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+                <div class="rr-fields rr-add-fields">
+                <div class="rr-field"><label class="form-label" for="rr-edit-location">Location <span class="text-danger">*</span></label><x-rm-select id="rr-edit-location" name="location_id" placeholder="Select a location" value="" selected-label="Select a location" :options="$locationOptions->all()" data-rr-required required /><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-category">Resource category <span class="text-danger">*</span></label><x-rm-select id="rr-edit-category" name="resource_category_id" placeholder="Select category" value="" selected-label="Select category" :options="$categoryOptions->all()" data-rr-required required /><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-type">Resource type <span class="text-danger">*</span></label><x-rm-select id="rr-edit-type" name="resource_type_id" placeholder="Select type" value="" selected-label="Select type" :options="[]" data-rr-required required /><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-daily">Daily rate (LKR) <span class="text-danger">*</span> <small class="rr-time-hint">09:00–17:00</small></label><input id="rr-edit-daily" type="number" name="daily_rate" class="form-control" min="0" step="0.01" required data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-half-day">Half-day rate (LKR) <span class="text-danger">*</span> <small class="rr-time-hint">09:00–13:00 / 13:00–17:00</small></label><input id="rr-edit-half-day" type="number" name="half_day_rate" class="form-control" min="0" step="0.01" required data-rr-required><p class="rr-field-error"></p></div>
+                <div class="rr-field"><label class="form-label" for="rr-edit-status">Status</label><x-rm-select id="rr-edit-status" name="status" placeholder="Active" value="active" selected-label="Active" :options="[['value' => 'active', 'label' => 'Active'], ['value' => 'inactive', 'label' => 'Inactive']]" /></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -378,8 +355,8 @@
 @endsection
 
 @push('scripts')
-<script type="application/json" id="rr-catalog">@json(['types' => $typeOptions, 'resources' => $resourceOptions])</script>
+<script type="application/json" id="rr-catalog">@json(['types' => $typeOptions, 'categories' => $categoryOptions, 'locations' => $locationOptions])</script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/resource-rates.js') }}?v=19"></script>
+<script src="{{ asset('js/resource-rates.js') }}?v=22"></script>
 @endpush
 

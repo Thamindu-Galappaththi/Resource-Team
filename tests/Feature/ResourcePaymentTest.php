@@ -11,6 +11,7 @@ use App\Models\ResourcePaymentDiscountRule;
 use App\Models\ResourceRate;
 use App\Models\ResourceRateAudit;
 use App\Models\ResourceType;
+use App\Models\Location;
 use App\Models\User;
 use Database\Seeders\ResourceRateSeeder;
 use Database\Seeders\RolePermissionSeeder;
@@ -233,19 +234,24 @@ class ResourcePaymentTest extends TestCase
         $this->actingAs($finance)->get(route('payments.rates.index'))->assertOk()->assertSee('Rate catalog');
         $category = ResourceCategory::query()->firstOrCreate(['name' => 'Finance Test Category']);
         $type = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Finance Test Type']);
+        $locationId = Location::query()->value('id');
         $this->post(route('payments.rates.store'), [
-            'location_id' => 'all', 'resource_name' => 'Finance Test Type',
+            'location_id' => $locationId,
+            'resource_category_id' => $category->id,
+            'resource_type_id' => $type->id,
             'daily_rate' => 16000, 'half_day_rate' => 8000,
-            'extra_hour_rate' => 6500, 'tax_percent' => 0, 'effective_from' => '2028-01-01',
+            'status' => 'active',
         ])->assertSessionHasNoErrors();
-        $rate = ResourceRate::query()->where('resource_name', 'Finance Test Type')->whereDate('effective_from', '2028-01-01')->firstOrFail();
+        $rate = ResourceRate::query()->where('resource_name', 'Finance Test Type')->latest('id')->firstOrFail();
         $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'actor_id' => $finance->id, 'action' => 'imported']);
         $this->put(route('payments.rates.update', $rate), [
-            'location_id' => 'all', 'resource_name' => 'Finance Test Type',
+            'location_id' => $locationId,
+            'resource_category_id' => $category->id,
+            'resource_type_id' => $type->id,
             'daily_rate' => 16500, 'half_day_rate' => 8250,
-            'extra_hour_rate' => 6600, 'tax_percent' => 5, 'effective_from' => '2028-06-01',
+            'status' => 'active',
         ])->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('resource_rate_audits', ['actor_id' => $finance->id, 'action' => 'imported']);
+        $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'actor_id' => $finance->id, 'action' => 'updated']);
         $this->patch(route('payments.rates.deactivate', $rate))->assertSessionHasNoErrors();
         $this->assertDatabaseHas('resource_rate_audits', ['resource_rate_id' => $rate->id, 'action' => 'deactivated']);
         $this->assertFalse($rate->fresh()->is_active);
@@ -299,15 +305,16 @@ class ResourcePaymentTest extends TestCase
     {
         $this->seed(ResourceRateSeeder::class);
         $finance = User::factory()->role('admin')->create();
-        $existing = ResourceRate::query()->where('resource_name', 'Main Auditorium')->firstOrFail();
+        $category = ResourceCategory::query()->firstOrCreate(['name' => 'Overlap Test Category']);
+        $type = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Overlap Test Type']);
         $overlap = [
-            'location_id' => (string) $existing->location_id,
-            'resource_name' => 'Main Auditorium',
-            'daily_rate' => 1, 'half_day_rate' => 1,
-            'extra_hour_rate' => 1, 'tax_percent' => 0, 'effective_from' => '2026-06-01',
+            'location_id' => Location::query()->value('id'),
+            'resource_category_id' => $category->id,
+            'resource_type_id' => $type->id,
+            'daily_rate' => 1, 'half_day_rate' => 1, 'status' => 'active',
         ];
-        $this->actingAs($finance)->postJson(route('payments.rates.store'), $overlap)->assertUnprocessable()->assertJsonValidationErrors('effective_from');
-        $this->postJson(route('payments.rates.store'), array_replace($overlap, ['effective_from' => '2028-01-01', 'daily_rate' => -1]))->assertUnprocessable()->assertJsonValidationErrors('daily_rate');
+        $this->actingAs($finance)->post(route('payments.rates.store'), $overlap)->assertSessionHasNoErrors();
+        $this->postJson(route('payments.rates.store'), array_replace($overlap, ['daily_rate' => -1]))->assertUnprocessable()->assertJsonValidationErrors('daily_rate');
 
         $this->actingAs(User::factory()->role('admin')->create())->get(route('payments.rates.index'))->assertOk()->assertSee('Rate catalog');
         $this->actingAs(User::factory()->role('coordinator')->create())->get(route('payments.rates.index'))->assertForbidden();
@@ -393,6 +400,11 @@ class ResourcePaymentTest extends TestCase
 
         $this->actingAs($finance)->get(route('payments.rates.index', ['catalog_status' => 'all']))
             ->assertOk()
+            ->assertSee('Sample CSV', false)
+            ->assertSee('Resource category', false)
+            ->assertSee('09:00 – 17:00', false)
+            ->assertDontSee('Extra hour rate', false)
+            ->assertDontSee('Photo (optional)', false)
             ->assertSee('catalog_page=2', false)
             ->assertSee($firstLabel)
             ->assertSee('id="rr-clear-filters"', false)
@@ -400,6 +412,13 @@ class ResourcePaymentTest extends TestCase
             ->assertDontSee('>Deactivate</button>', false)
             ->assertSee('title="Edit"', false)
             ->assertSee('title="Activate"', false);
+
+        $sample = $this->get(route('payments.rates.sample'));
+        $sample->assertOk();
+        $csv = method_exists($sample, 'streamedContent') ? $sample->streamedContent() : $sample->getContent();
+        $this->assertStringContainsString('Resource category', $csv);
+        $this->assertStringContainsString('Resource type', $csv);
+        $this->assertStringContainsString('Daily rate (LKR)', $csv);
 
         $this->get(route('payments.rates.index', ['catalog_page' => $lastPage, 'catalog_status' => 'all']))
             ->assertOk()
@@ -424,13 +443,12 @@ class ResourcePaymentTest extends TestCase
             $category = ResourceCategory::query()->firstOrCreate(['name' => 'Timezone Test Category']);
             $type = ResourceType::query()->firstOrCreate(['resource_category_id' => $category->id, 'name' => 'Timezone Test Type']);
             $this->actingAs($finance)->post(route('payments.rates.store'), [
-                'location_id' => 'all',
-                'resource_name' => 'Timezone Test Type',
+                'location_id' => Location::query()->value('id'),
+                'resource_category_id' => $category->id,
+                'resource_type_id' => $type->id,
                 'daily_rate' => 1000,
                 'half_day_rate' => 500,
-                'extra_hour_rate' => 500,
-                'tax_percent' => 0,
-                'effective_from' => '2028-01-01',
+                'status' => 'active',
             ])->assertSessionHasNoErrors();
         } finally {
             Carbon::setTestNow();

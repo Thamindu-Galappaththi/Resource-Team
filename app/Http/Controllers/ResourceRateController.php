@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Resource;
+use App\Models\ResourceCategory;
 use App\Models\ResourceRate;
 use App\Models\ResourceRateAudit;
 use App\Models\ResourcePaymentDiscountRule;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ResourceRateController extends Controller
 {
@@ -37,9 +39,11 @@ class ResourceRateController extends Controller
             ->withQueryString()
             ->fragment('rr-discount-history');
         $types = ResourceType::query()->with('category')->orderBy('name')->get();
+        $categories = ResourceCategory::query()->orderBy('name')->get();
         $locations = Location::query()->ordered()->get();
         $resources = Resource::query()->with('type')->orderBy('name_model')->get();
         $catalogSearch = trim((string) $request->query('catalog_search', ''));
+        $catalogCategory = trim((string) $request->query('catalog_category', ''));
         $catalogType = trim((string) $request->query('catalog_type', ''));
         $catalogStatus = (string) $request->query('catalog_status', 'active');
         if (! in_array($catalogStatus, ['active', 'inactive', 'all'], true)) {
@@ -49,10 +53,14 @@ class ResourceRateController extends Controller
         if ($catalogSearch !== '') {
             $catalogQuery->where(function ($query) use ($catalogSearch) {
                 $query->whereHas('resourceType', fn ($type) => $type->where('name', 'like', '%'.$catalogSearch.'%'))
+                    ->orWhereHas('resourceType.category', fn ($category) => $category->where('name', 'like', '%'.$catalogSearch.'%'))
                     ->orWhere('resource_name', 'like', '%'.$catalogSearch.'%')
                     ->orWhereHas('location', fn ($location) => $location->where('name', 'like', '%'.$catalogSearch.'%'))
                     ->orWhereHas('resource', fn ($resource) => $resource->where('name_model', 'like', '%'.$catalogSearch.'%'));
             });
+        }
+        if ($catalogCategory !== '' && ctype_digit($catalogCategory)) {
+            $catalogQuery->whereHas('resourceType', fn ($type) => $type->where('resource_category_id', (int) $catalogCategory));
         }
         if ($catalogType !== '' && ctype_digit($catalogType)) {
             $catalogQuery->where('resource_type_id', (int) $catalogType);
@@ -65,8 +73,10 @@ class ResourceRateController extends Controller
         $data = [
             'rates' => $rates,
             'catalogSearch' => $catalogSearch,
+            'catalogCategory' => $catalogCategory,
             'catalogType' => $catalogType,
             'catalogStatus' => $catalogStatus,
+            'categories' => $categories,
             'rateCount' => ResourceRate::query()->count(),
             'activeRateCount' => ResourceRate::query()->where('is_active', true)->count(),
             'activeDiscountCount' => ResourcePaymentDiscountRule::query()->where('is_active', true)->count(),
@@ -94,9 +104,7 @@ class ResourceRateController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validatedRate($request);
-        $photo = $request->file('photo')?->store('resource-rate-photos', 'public');
-        $this->importRateRow($request, $data, $photo);
+        $this->importRateRow($request, $this->validatedRate($request), null);
 
         return back()->with('success', 'Resource rate added.');
     }
@@ -104,32 +112,61 @@ class ResourceRateController extends Controller
     public function update(Request $request, ResourceRate $rate): RedirectResponse
     {
         $data = $this->validatedRate($request);
-        if ($rate->is_active && Carbon::parse($data['effective_from'])->lessThanOrEqualTo($rate->effective_from)) {
-            throw ValidationException::withMessages(['effective_from' => 'A new rate version must start after the current version begins.']);
-        }
-        $photo = $request->file('photo')?->store('resource-rate-photos', 'public') ?? $rate->photo_path;
-        $old = $rate->only(['location_id', 'resource_name', 'daily_rate', 'half_day_rate', 'extra_hour_rate', 'tax_percent', 'effective_from', 'effective_to', 'is_active', 'photo_path']);
+        $old = $rate->only(['location_id', 'resource_type_id', 'resource_name', 'daily_rate', 'half_day_rate', 'is_active']);
+        $locationId = $data['location_id'] ?? null;
+        $this->assertNoOverlap([
+            'location_id' => $locationId,
+            'resource_name' => $data['resource_name'],
+            'resource_id' => null,
+            'effective_from' => $rate->effective_from?->toDateString() ?: now()->toDateString(),
+            'effective_to' => $rate->effective_to?->toDateString(),
+        ], $rate->id);
 
-        DB::transaction(function () use ($request, $rate, $data, $photo, $old) {
-            if ($rate->is_active) {
-                $newStart = Carbon::parse($data['effective_from'])->startOfDay();
-                $previousDay = $newStart->copy()->subDay()->toDateString();
-                if (! $rate->effective_to || $rate->effective_to->toDateString() >= $previousDay) {
-                    $rate->update(['effective_to' => $previousDay, 'updated_by' => $request->user()->id]);
-                    $this->audit($request, $rate, 'version_closed', $old, $rate->fresh()->only(array_keys($old)));
-                }
-            }
-            $this->importRateRow($request, $data, $photo);
+        DB::transaction(function () use ($request, $rate, $data, $old, $locationId) {
+            $rate->update([
+                'location_id' => $locationId,
+                'resource_type_id' => $data['resource_type_id'],
+                'resource_name' => $data['resource_name'],
+                'daily_rate' => $data['daily_rate'],
+                'half_day_rate' => $data['half_day_rate'],
+                'base_fee' => $data['daily_rate'],
+                'is_active' => ($data['status'] ?? 'active') === 'active',
+                'updated_by' => $request->user()->id,
+            ]);
+            $this->audit($request, $rate, 'updated', $old, $rate->fresh()->only(array_keys($old)));
         });
 
-        return back()->with('success', 'A new resource rate version was created.');
+        return back()->with('success', 'Resource rate updated.');
     }
 
     public function importCsv(Request $request, AnnexureRateCardImporter $importer): RedirectResponse
     {
         $data = $request->validate(['rate_card' => ['required', 'file', 'mimes:csv,txt', 'max:10240']]);
         $count = $importer->importPath($data['rate_card']->getRealPath(), $request->user()->id);
-        return back()->with('success', "Imported {$count} Annexure 1 rate rows.");
+
+        return back()->with('success', "Imported {$count} rate rows.");
+    }
+
+    public function downloadSample(): StreamedResponse
+    {
+        $filename = 'resource-rates-sample.csv';
+        $rows = [
+            ['Location', 'Resource category', 'Resource type', 'Daily rate (LKR)', 'Half-day rate (LKR)', 'Status'],
+            ['Welisara', 'IT Equipment', 'Laptop', '4000', '2000', 'Active'],
+            ['Welisara', 'Physical Space', 'Auditorium', '40000', '20000', 'Active'],
+            ['Moratuwa', 'Physical Space', 'Computer Lab', '7000', '3500', 'Active'],
+        ];
+
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF");
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     public function deactivate(Request $request, ResourceRate $rate): RedirectResponse|JsonResponse
@@ -236,27 +273,29 @@ class ResourceRateController extends Controller
     private function validatedRate(Request $request): array
     {
         $data = $request->validate([
-            'location_id' => ['required', Rule::in(array_merge(['all'], Location::query()->pluck('id')->map(fn ($id) => (string) $id)->all()))],
-            'resource_name' => ['required', 'string', 'max:190'],
+            'location_id' => ['required', 'integer', Rule::exists('locations', 'id')],
+            'resource_category_id' => ['required', 'integer', 'exists:resource_categories,id'],
+            'resource_type_id' => ['required', 'integer', Rule::exists('resource_types', 'id')->where('resource_category_id', $request->input('resource_category_id'))],
             'daily_rate' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
             'half_day_rate' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
-            'extra_hour_rate' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
-            'tax_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'effective_from' => ['required', 'date_format:Y-m-d'],
-            'effective_to' => ['nullable', 'date_format:Y-m-d', 'after:effective_from'],
-            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'status' => ['nullable', 'in:active,inactive'],
         ]);
-        $location = $data['location_id'] === 'all' ? null : Location::query()->findOrFail($data['location_id']);
+        $location = Location::query()->findOrFail($data['location_id']);
+        $type = ResourceType::query()->with('category')->findOrFail($data['resource_type_id']);
+
         return [
-            'location' => $location ? 'Training Centre '.$location->name : 'All locations',
-            'resource_name' => trim($data['resource_name']),
+            'location' => $location->name,
+            'location_id' => $location->id,
+            'resource_category' => $type->category?->name ?? '',
+            'resource_type' => $type->name,
+            'resource_type_id' => $type->id,
+            'resource_name' => $type->name,
             'daily_rate' => (float) $data['daily_rate'],
             'half_day_rate' => (float) $data['half_day_rate'],
-            'extra_hour_rate' => (float) ($data['extra_hour_rate'] ?? 0),
-            'tax_percent' => (float) ($data['tax_percent'] ?? 0),
-            'effective_from' => $data['effective_from'],
-            'effective_to' => $data['effective_to'] ?? null,
+            'extra_hour_rate' => 0,
+            'tax_percent' => 0,
+            'effective_from' => now()->toDateString(),
+            'effective_to' => null,
             'status' => $data['status'] ?? 'active',
         ];
     }

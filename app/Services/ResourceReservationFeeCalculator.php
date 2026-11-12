@@ -158,12 +158,18 @@ class ResourceReservationFeeCalculator
             ->first(fn (ResourceRate $rate) => AnnexureRateCardImporter::normalizeResourceName($rate->resource_name) === $normalizedName);
         if ($locationRate) return $locationRate;
 
+        $typeAtLocation = (clone $base)->where('resource_type_id', $resource->resource_type_id)->where('location_id', $locationId)->whereNull('resource_id')->orderByDesc('effective_from')->first();
+        if ($typeAtLocation) return $typeAtLocation;
+
         $specificGlobal = (clone $base)->where('resource_id', $resource->id)->whereNull('location_id')->orderByDesc('effective_from')->first();
         if ($specificGlobal) return $specificGlobal;
 
-        return (clone $base)->whereNull('location_id')->whereNull('resource_id')->get()
+        $namedGlobal = (clone $base)->whereNull('location_id')->whereNull('resource_id')->get()
             ->sortByDesc('effective_from')
             ->first(fn (ResourceRate $rate) => AnnexureRateCardImporter::normalizeResourceName($rate->resource_name) === $normalizedName);
+        if ($namedGlobal) return $namedGlobal;
+
+        return (clone $base)->where('resource_type_id', $resource->resource_type_id)->whereNull('location_id')->whereNull('resource_id')->orderByDesc('effective_from')->first();
     }
 
     private function inferBookingType(Reservation $reservation): string

@@ -27,9 +27,17 @@ class AnnexureRateCardImporter
                 throw ValidationException::withMessages(['file' => 'The CSV file is empty.']);
             }
             $header = array_map(fn ($column) => strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', (string) $column))), $header);
-            $required = ['location', 'resource', 'daily rate (lkr)', 'half-day rate (lkr)', 'effective from', 'status'];
+            $typeCard = in_array('resource type', $header, true) || in_array('resource_type', $header, true);
+            $required = $typeCard
+                ? ['location', 'resource category', 'resource type', 'daily rate (lkr)', 'half-day rate (lkr)', 'status']
+                : ['location', 'resource', 'daily rate (lkr)', 'half-day rate (lkr)', 'effective from', 'status'];
+            if ($typeCard && ! in_array('resource category', $header, true) && in_array('resource_category', $header, true)) {
+                $required = ['location', 'resource_category', 'resource type', 'daily rate (lkr)', 'half-day rate (lkr)', 'status'];
+            }
             if (array_diff($required, $header)) {
-                throw ValidationException::withMessages(['file' => 'CSV headers must include Location, Resource, Daily rate (LKR), Half-day rate (LKR), Effective from, and Status.']);
+                throw ValidationException::withMessages(['file' => $typeCard
+                    ? 'CSV headers must include Location, Resource category, Resource type, Daily rate (LKR), Half-day rate (LKR), and Status.'
+                    : 'CSV headers must include Location, Resource, Daily rate (LKR), Half-day rate (LKR), Effective from, and Status.']);
             }
 
             $count = 0;
@@ -52,12 +60,14 @@ class AnnexureRateCardImporter
     public function importRow(array $row, ?int $actorId = null): ResourceRate
     {
         $locationLabel = trim((string) ($row['location'] ?? ''));
-        $resourceName = trim((string) ($row['resource'] ?? $row['resource_name'] ?? ''));
+        $categoryName = trim((string) ($row['resource category'] ?? $row['resource_category'] ?? ''));
+        $typeName = trim((string) ($row['resource type'] ?? $row['resource_type'] ?? ''));
+        $resourceName = trim((string) ($row['resource'] ?? $row['resource_name'] ?? $typeName));
         $daily = $this->amount($row['daily rate (lkr)'] ?? $row['daily_rate'] ?? null, 'Daily rate');
         $half = $this->amount($row['half-day rate (lkr)'] ?? $row['half_day_rate'] ?? null, 'Half-day rate');
         $extra = $this->amount($row['extra hour rate (lkr)'] ?? $row['extra_hour_rate'] ?? null, 'Extra hour rate', true);
         $tax = $this->amount($row['tax (%)'] ?? $row['tax_percent'] ?? 0, 'Tax', true);
-        $from = trim((string) ($row['effective from'] ?? $row['effective_from'] ?? ''));
+        $from = trim((string) ($row['effective from'] ?? $row['effective_from'] ?? '')) ?: now()->toDateString();
         $to = trim((string) ($row['effective to'] ?? $row['effective_to'] ?? '')) ?: null;
         $status = strtolower(trim((string) ($row['status'] ?? 'active')));
         if ($status === '') {
@@ -68,8 +78,8 @@ class AnnexureRateCardImporter
         }
         $active = $status === 'active';
 
-        if ($resourceName === '' || $locationLabel === '' || ! $from) {
-            throw ValidationException::withMessages(['file' => 'Every CSV row needs a location, resource name, and effective-from date.']);
+        if ($resourceName === '' || $locationLabel === '') {
+            throw ValidationException::withMessages(['file' => 'Every CSV row needs a location and a resource type.']);
         }
         $fromDate = DateTimeImmutable::createFromFormat('!Y-m-d', $from);
         if (! $fromDate || $fromDate->format('Y-m-d') !== $from) {
@@ -87,9 +97,12 @@ class AnnexureRateCardImporter
         }
 
         $locationId = $this->locationId($locationLabel);
-        $resource = $this->findResource($resourceName, $locationId);
-        $resourceTypeId = $resource?->resource_type_id ?? $this->resolveType($resourceName);
-        $scopeName = $resource?->name_model ?? $resourceName;
+        $typedImport = $typeName !== '' || ! empty($row['resource_type_id']);
+        $resource = $typedImport ? null : $this->findResource($resourceName, $locationId);
+        $resourceTypeId = ! empty($row['resource_type_id'])
+            ? (int) $row['resource_type_id']
+            : ($resource?->resource_type_id ?? $this->resolveType($typedImport ? $typeName : $resourceName, $categoryName ?: null));
+        $scopeName = $typedImport ? ($typeName ?: $resourceName) : ($resource?->name_model ?? $resourceName);
         $attributes = ['location_id' => $locationId, 'resource_name' => $scopeName, 'effective_from' => $from];
         $rate = ResourceRate::query()->where($attributes)->first();
         $data = [
@@ -150,15 +163,30 @@ class AnnexureRateCardImporter
         });
     }
 
-    private function resolveType(string $name): int
+    private function resolveType(string $name, ?string $categoryName = null): int
     {
         $target = self::normalizeResourceName($name);
-        $type = ResourceType::query()->get()->first(fn (ResourceType $item) => self::normalizeResourceName($item->name) === $target);
-        if ($type) return $type->id;
-        $category = ResourceCategory::query()->firstOrCreate(['name' => 'Annexure Resources']);
+        $categoryTarget = $categoryName ? self::normalizeResourceName($categoryName) : '';
+        $type = ResourceType::query()->with('category')->get()->first(function (ResourceType $item) use ($target, $categoryTarget) {
+            if (self::normalizeResourceName($item->name) !== $target) {
+                return false;
+            }
+            if ($categoryTarget === '') {
+                return true;
+            }
+
+            return self::normalizeResourceName((string) $item->category?->name) === $categoryTarget;
+        });
+        if ($type) {
+            return $type->id;
+        }
+        $category = $categoryName
+            ? ResourceCategory::query()->firstOrCreate(['name' => $categoryName])
+            : ResourceCategory::query()->firstOrCreate(['name' => 'Annexure Resources']);
+
         return ResourceType::query()->firstOrCreate(
             ['resource_category_id' => $category->id, 'name' => $name],
-            ['description' => 'Imported from Annexure 1 rate card']
+            ['description' => 'Imported rate card type']
         )->id;
     }
 

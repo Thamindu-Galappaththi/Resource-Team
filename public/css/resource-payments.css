@@ -118,15 +118,29 @@
 .rr-admin .rr-card-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .rr-admin .rr-fields {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
     align-items: start;
 }
-.rsv-modal .rr-fields {
+.rr-admin .rr-add-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.rr-add-fields .form-label::after { content: none !important; }
+.rr-time-hint {
+    display: block;
+    margin: .15rem 0 0;
+    color: #68778b;
+    font-size: .68rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.25;
+}
+.rsv-modal .rr-fields,
+.rsv-modal .rr-add-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
-    align-items: start;
 }
 .rr-admin .rr-field,
 .rsv-modal .rr-field {
@@ -135,6 +149,13 @@
     gap: 6px;
     min-width: 0;
     max-width: none;
+}
+.rr-admin .rr-add-fields > .rr-field,
+.rsv-modal .rr-add-fields > .rr-field {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-row: span 3;
+    align-items: start;
 }
 .rr-admin .rr-field-action,
 .rsv-modal .rr-field-action { grid-column: 1 / -1; justify-self: start; }
@@ -274,7 +295,7 @@
 .rr-admin tr.rr-filtered { display: none !important; }
 .rr-empty { display: none; padding: 1rem .25rem 0; color: #65738a; text-align: center; }
 .rr-empty.is-visible { display: block; }
-.rsv-modal.rr-modal-md .modal-dialog { width: min(760px, calc(100vw - 1.25rem)); }
+.rsv-modal.rr-modal-md .modal-dialog { width: min(640px, calc(100vw - 1.25rem)); }
 .rsv-modal.rr-modal-sm .modal-dialog { width: min(460px, calc(100vw - 1.25rem)); }
 .rsv-modal .form-label { color: #34445b; font-size: .82rem; font-weight: 700; }
 .rsv-modal .form-control {
@@ -285,7 +306,8 @@
 }
 
 @media (max-width: 1199.98px) {
-    .rr-admin .rr-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rr-admin .rr-fields,
+    .rr-admin .rr-add-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .rr-admin .rr-discount-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
     .rr-admin .rr-card-head { flex-direction: column; align-items: stretch; }
     .rr-admin .rr-card-head .rr-rate-search { width: 100%; max-width: none; flex: 0 0 auto; }
@@ -322,7 +344,10 @@
 }
 @media (max-width: 767.98px) {
     .rr-admin .rr-fields,
-    .rsv-modal .rr-fields { grid-template-columns: 1fr; }
+    .rr-admin .rr-add-fields,
+    .rsv-modal .rr-fields,
+    .rsv-modal .rr-add-fields { grid-template-columns: 1fr; }
+    .rr-add-fields > .rr-field { display: flex; flex-direction: column; grid-row: auto; }
     .rr-admin .rr-discount-fields { grid-template-columns: 1fr; }
     .rr-admin .rr-field,
     .rsv-modal .rr-field,
@@ -350,12 +375,12 @@
 .rr-tabs a.is-active { background: #1769c2; color: #fff; box-shadow: 0 3px 8px rgba(23,105,194,.22); }
 .rr-admin .rr-catalog-panel { overflow: visible; border: 1px solid #d5def0 !important; border-radius: 16px; box-shadow: 0 12px 32px rgba(28,55,110,.1); }
 .rr-admin .rr-catalog-panel > .card-body { padding: 0; overflow: visible; }
-.rr-catalog-heading { display: flex; align-items: flex-start; gap: .7rem; padding: .8rem 1.1rem; border-radius: 16px 16px 0 0; overflow: hidden; background: linear-gradient(110deg,#123a7a,#1769c2); }
-.rr-catalog-heading > div { display: flex; align-items: flex-start; gap: .65rem; min-width: 0; flex: 1; }
+.rr-catalog-heading { display: flex; align-items: flex-start; flex-wrap: wrap; gap: .7rem; padding: .8rem 1.1rem; border-radius: 16px 16px 0 0; overflow: hidden; background: linear-gradient(110deg,#123a7a,#1769c2); }
+.rr-catalog-heading > div:not(.rr-import-actions) { display: flex; align-items: flex-start; gap: .65rem; min-width: 0; flex: 1; }
 .rr-catalog-heading .rp-title-icon { width: 32px; height: 32px; flex: 0 0 32px; }
 .rr-catalog-heading .rr-section-title { color: #fff; font-size: .98rem; }
 .rr-catalog-heading .rr-muted { margin: .15rem 0 0; color: rgba(255,255,255,.82); font-size: .75rem; overflow-wrap: anywhere; }
-.rr-catalog-filters { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,.8fr) minmax(0,.7fr) auto; align-items: end; gap: .7rem; padding: 1rem 1.15rem .8rem; }
+.rr-catalog-filters { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,.8fr) minmax(0,.8fr) minmax(0,.7fr) auto; align-items: end; gap: .7rem; padding: 1rem 1.15rem .8rem; }
 .rr-catalog-filters .rr-field { gap: .35rem; }
 .rr-catalog-filters .form-label { font-weight: 500; }
 .rr-catalog-filters .rr-rate-search { width: 100%; max-width: none; }
@@ -452,7 +477,18 @@
 .rr-admin #rr-add-rate .rr-fields { column-gap: 1rem; row-gap: .85rem; }
 .rr-admin #rr-add-rate .form-label { color: #34445b; font-size: .78rem; font-weight: 650; }
 .rr-admin #rr-add-rate .form-control,
-.rr-admin #rr-add-rate .cu-dropdown-toggle { min-height: 48px; border: 1px solid #d7e0eb; border-radius: 9px; background-color: #fff; box-shadow: none !important; outline: none !important; font-size: .88rem; }
+.rr-admin #rr-add-rate .cu-dropdown-toggle,
+.rsv-modal .rr-add-fields .form-control,
+.rsv-modal .rr-add-fields .cu-dropdown-toggle {
+    height: 48px;
+    min-height: 48px;
+    border: 1px solid #d7e0eb;
+    border-radius: 9px;
+    background-color: #fff;
+    box-shadow: none !important;
+    outline: none !important;
+    font-size: .88rem;
+}
 .rr-admin #rr-add-rate .form-control:focus,
 .rr-admin #rr-add-rate .form-control:focus-visible,
 .rr-admin #rr-add-rate .cu-dropdown-toggle:focus,
@@ -484,19 +520,17 @@
     overflow-wrap: normal;
 }
 .rr-admin #rr-rate-table th:nth-child(1),
-.rr-admin #rr-rate-table td:nth-child(1) { width: 20%; }
+.rr-admin #rr-rate-table td:nth-child(1),
 .rr-admin #rr-rate-table th:nth-child(2),
-.rr-admin #rr-rate-table td:nth-child(2),
+.rr-admin #rr-rate-table td:nth-child(2) { width: 14%; }
 .rr-admin #rr-rate-table th:nth-child(3),
-.rr-admin #rr-rate-table td:nth-child(3),
+.rr-admin #rr-rate-table td:nth-child(3) { width: 16%; }
 .rr-admin #rr-rate-table th:nth-child(4),
 .rr-admin #rr-rate-table td:nth-child(4),
 .rr-admin #rr-rate-table th:nth-child(5),
-.rr-admin #rr-rate-table td:nth-child(5) { width: 11%; }
+.rr-admin #rr-rate-table td:nth-child(5) { width: 16%; }
 .rr-admin #rr-rate-table th:nth-child(6),
-.rr-admin #rr-rate-table td:nth-child(6) { width: 16%; }
-.rr-admin #rr-rate-table th:nth-child(7),
-.rr-admin #rr-rate-table td:nth-child(7) { width: 10%; }
+.rr-admin #rr-rate-table td:nth-child(6) { width: 10%; }
 .rr-admin #rr-discounts .rsv-table th:nth-child(1),
 .rr-admin #rr-discounts .rsv-table td:nth-child(1) { width: 34%; }
 .rr-admin #rr-discounts .rsv-table th:nth-child(2),
@@ -536,8 +570,10 @@
     .rr-admin #rr-rate-table tbody td { padding: .8rem .65rem; }
 }
 @media (max-width: 1199.98px) {
-    .rr-catalog-filters { grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; }
+    .rr-catalog-filters { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
     .rr-catalog-filters .rr-rate-search { grid-column: 1 / -1; }
+    .rr-catalog-filters .rr-catalog-actions { grid-column: 1 / -1; }
+    .rr-import-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
     .rr-admin .rr-stats.rc-cards { grid-template-columns: repeat(3, minmax(0,1fr)); }
     .rr-admin #rr-rate-table tbody td { padding: .45rem 0; }
 }
@@ -752,8 +788,36 @@
 .rr-photo-placeholder { font-size: 1.1rem; }
 .rr-money { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rr-override-badge { display: block; width: max-content; margin-top: .2rem; padding: .1rem .38rem; border-radius: 999px; background: #eef4ff; color: #275da8; font-size: .62rem; font-weight: 700; }
-.rr-import-form { margin-left: auto; }
+.rr-import-form { margin-left: 0; }
 .rr-import-form .rr-export-btn { white-space: nowrap; }
+.rr-import-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .5rem;
+    margin-left: auto;
+}
+.rr-import-actions .rr-export-btn {
+    white-space: nowrap;
+    color: #fff;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.28);
+}
+.rr-import-actions .rr-export-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,.2);
+    border-color: rgba(255,255,255,.4);
+}
+.rr-admin #rr-rate-table thead small {
+    display: block;
+    margin-top: .15rem;
+    color: rgba(255,255,255,.78);
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
 .rp-mark-paid-button { display: flex; height: 41px; align-items: center; justify-content: center; gap: .4rem; border: 1px solid #087354; border-radius: 9px; background: #087354; color: #fff; font-size: .72rem; font-weight: 800; }
 .rp-mark-paid-button:hover:not(:disabled) { background: #066347; }
 .rp-invoice-actions .rp-mark-paid-button { width: 100%; height: 48px; font-size: .8rem; }
