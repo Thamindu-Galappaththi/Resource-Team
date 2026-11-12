@@ -18,18 +18,28 @@
     let usageConfirmed = false;
     let savedConfirmedHours = 0;
 
-    function swal(options) {
-        if (window.RMSwal?.fire) return window.RMSwal.fire(options);
-        if (window.Swal?.fire) return window.Swal.fire(options);
-        return Promise.resolve({ isConfirmed: false });
+    function dismissFlash(alert, delay = 5000) {
+        if (!alert || alert.classList.contains('d-none')) return;
+        clearTimeout(alert._rpTimer);
+        alert._rpTimer = setTimeout(() => {
+            alert.style.transition = 'opacity .3s ease';
+            alert.style.opacity = '0';
+            setTimeout(() => {
+                alert.classList.add('d-none');
+                alert.style.opacity = '';
+                alert.textContent = '';
+            }, 300);
+        }, delay);
     }
 
-    function alertMessage(title, text, icon = 'error') {
-        return swal({ title, text, icon, confirmButtonText: 'OK' });
-    }
-
-    function toast(title, icon = 'success') {
-        return swal({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2600, timerProgressBar: true, title, icon });
+    function showFlash(text, type = 'danger') {
+        const flash = document.getElementById('rp-flash');
+        if (!flash || !text) return;
+        flash.className = `alert alert-${type} rsv-auto-alert`;
+        flash.textContent = text;
+        flash.style.opacity = '1';
+        flash.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        dismissFlash(flash);
     }
 
     function jsonHeaders(extra) {
@@ -217,7 +227,7 @@
         } catch (error) {
             if (requestSequence !== feeRequestSequence) return;
             setMessage(error.message, 'error');
-            alertMessage('Could not update invoice', error.message);
+            showFlash(error.message);
         }
         renderInvoice();
     }
@@ -233,9 +243,10 @@
         if (!referencePattern.test(reference)) {
             resetLoadedReservation();
             searchInput.classList.add('is-invalid');
-            setMessage('Enter a reference in the format RRS-YYYY-000000 or HST-YYYY-000000.', 'error');
+            const invalid = 'Enter a reservation reference in the format RRS-YYYY-000000 or HST-YYYY-000000.';
+            setMessage(invalid, 'error');
             searchInput.focus();
-            alertMessage('Invalid reservation reference', 'Use RRS-YYYY-000000 or HST-YYYY-000000.');
+            showFlash(invalid);
             return;
         }
 
@@ -264,7 +275,7 @@
             const usageDisclosure = document.getElementById('rp-usage-disclosure');
             if (Number(payload.extra_hours || 0) > 0) usageDisclosure.open = true;
             setMessage(payload.rate_note || `Reservation loaded. Invoice ${payload.invoice_number} is ${payload.payment_status}.`, payload.has_rate ? 'success' : 'warning');
-            toast('Reservation loaded');
+            showFlash(payload.has_rate ? 'Reservation loaded.' : (payload.rate_note || 'Reservation loaded.'), payload.has_rate ? 'success' : 'warning');
         } catch (error) {
             resetLoadedReservation();
             const notFound = error.status === 404;
@@ -272,7 +283,7 @@
             const detail = error instanceof TypeError ? 'Network error. Check your connection and try again.' : error.message;
             clearReservationCard(title, detail);
             setMessage(detail, 'error');
-            alertMessage(title, detail);
+            showFlash(detail);
         } finally {
             button.disabled = false;
             button.innerHTML = '<i class="ti ti-search"></i> Find';
@@ -325,11 +336,11 @@
             savedConfirmedHours = Number(payload.confirmed_extra_hours ?? payload.extra_hours ?? 0);
             renderInvoice();
             setMessage(payload.message, 'success');
-            await toast('Usage confirmed');
+            showFlash(payload.message || 'Usage confirmed.', 'success');
         } catch (error) {
             document.getElementById('rp-usage-message').textContent = error.message;
             document.getElementById('rp-usage-message').classList.add('is-error');
-            alertMessage('Could not confirm usage', error.message);
+            showFlash(error.message);
         } finally {
             confirmUsageButton.textContent = 'Confirm usage';
             renderInvoice();
@@ -358,7 +369,7 @@
             markPaidButton.disabled = false;
             renderInvoice();
             setMessage(error.message, 'error');
-            await alertMessage('Could not record payment', error.message);
+            showFlash(error.message);
         }
     });
 

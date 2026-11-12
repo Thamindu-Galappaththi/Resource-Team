@@ -28,6 +28,8 @@
         </nav>
     </header>
 
+    <div id="rp-flash" class="alert rsv-auto-alert d-none" role="status"></div>
+
     <ol class="rp-steps has-skipped-step" aria-label="Payment steps">
         <li class="is-current" id="rp-step-find"><span>1</span> Find reservation</li>
         <li class="is-skipped" id="rp-step-usage"><span>2</span> Confirm usage</li>
@@ -96,5 +98,5 @@ window.RPIndex = {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{ asset('js/resource-payment-record.js') }}?v=3"></script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/resource-payments.js') }}?v=5"></script>
+<script src="{{ asset('js/resource-payments.js') }}?v=6"></script>
 @endpush
