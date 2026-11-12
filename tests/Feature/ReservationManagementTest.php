@@ -357,7 +357,11 @@ class ReservationManagementTest extends TestCase
                 'id="calendar-resource"',
                 'id="calendar-status"',
             ], false);
-        $this->actingAs($user)->get(route('reservations.create'))->assertOk()->assertSee('Purpose of Reservation');
+        $this->actingAs($user)->get(route('reservations.create'))
+            ->assertOk()
+            ->assertSee('Purpose of Reservation')
+            ->assertSee('Select a time range')
+            ->assertSee('data-cu-multiple', false);
         $this->actingAs($user)->get(route('reservations.index'))->assertOk()->assertSee('Existing Reservations');
     }
 

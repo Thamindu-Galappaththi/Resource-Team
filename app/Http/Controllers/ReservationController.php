@@ -109,6 +109,13 @@ class ReservationController extends Controller
                 ->values(),
             'prefillLocationId' => old('location_id', $reservation->location_id ?: $primary?->location_id),
             'prefillCategoryId' => old('category_id', $primary?->type?->resource_category_id),
+            'prefillCategoryIds' => collect(old('category_ids', $reservation->items
+                ->map(fn ($item) => $item->resource?->type?->resource_category_id)
+                ->filter()
+                ->all()))
+                ->map(fn ($id) => (string) $id)
+                ->unique()
+                ->values(),
         ]));
     }
 
@@ -733,6 +740,12 @@ class ReservationController extends Controller
                 ->values(),
             'prefillLocationId' => old('location_id', $request->query('location_id')),
             'prefillCategoryId' => old('category_id', $request->query('category_id')),
+            'prefillCategoryIds' => collect(old('category_ids', $request->query('category_ids', [])))
+                ->when($request->query('category_id'), fn ($ids) => $ids->prepend($request->query('category_id')))
+                ->filter(fn ($id) => is_scalar($id) && ctype_digit((string) $id))
+                ->map(fn ($id) => (string) $id)
+                ->unique()
+                ->values(),
         ];
     }
 
