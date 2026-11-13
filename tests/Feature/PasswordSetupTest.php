@@ -57,6 +57,7 @@ class PasswordSetupTest extends TestCase
 
         $this->assertStringContainsString('NEBULA', $html);
         $this->assertStringContainsString('SLT MOBITEL', $html);
+        $this->assertStringContainsString('linear-gradient(135deg,#0b3d91', $html);
         $this->assertStringNotContainsString('<img', $html);
         $this->assertStringNotContainsString('images/logos/nebula.png', $html);
     }
