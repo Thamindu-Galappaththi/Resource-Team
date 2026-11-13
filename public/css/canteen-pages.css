@@ -16,7 +16,7 @@
 }
 
 .cp-surface {
-    overflow: visible;
+    overflow: hidden;
     border: 1px solid #d5def0;
     border-radius: 1rem;
     background: linear-gradient(180deg, #f5f8ff 0%, #fff 110px);
@@ -277,10 +277,9 @@
 .cp-register {
     position: relative;
     max-width: 100%;
-    overflow-x: hidden;
     padding: 1.3rem 1.5rem 1.5rem;
 }
-#cp-results { max-width: 100%; overflow-x: hidden; }
+#cp-results { max-width: 100%; min-width: 0; }
 
 .cp-loading {
     position: absolute;
@@ -316,16 +315,36 @@
 }
 
 .cp-table-scroll {
-    overflow-x: hidden;
+    overflow-x: auto;
     max-width: 100%;
     border: 1px solid #c9d6ee;
     border-radius: 12px;
+    -webkit-overflow-scrolling: touch;
 }
 .cp-page .table {
     width: 100%;
     min-width: 0;
     margin: 0;
-    table-layout: auto;
+    table-layout: fixed;
+}
+.cp-page .cp-table th:last-child,
+.cp-page .cp-table td.cp-actions {
+    width: 14rem;
+}
+.cp-clip {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.cp-clip--name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 .cp-page .cp-table thead th {
     padding: .9rem 1rem;
@@ -347,6 +366,13 @@
     overflow-wrap: anywhere;
     word-break: break-word;
 }
+.cp-page .cp-table thead th:last-child,
+.cp-page .cp-table tbody td.cp-actions {
+    overflow: hidden;
+    overflow-wrap: normal;
+    word-break: normal;
+    white-space: nowrap;
+}
 .cp-page .cp-table tbody tr { animation: cp-row-in .36s ease both; }
 .cp-page .cp-table tbody tr:nth-child(even) td { background: #f5f8ff; }
 .cp-page .cp-table tbody tr:nth-child(2) { animation-delay: .025s; }
@@ -358,23 +384,29 @@
 .cp-page .table td .btn { min-height: 32px; padding: .3rem .55rem; font-size: .77rem; }
 
 .cp-action-group {
-    display: inline-flex;
+    display: flex;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-end;
     gap: .25rem;
+    width: 100%;
 }
 .cp-icon-btn {
-    width: 34px;
-    height: 34px;
-    min-height: 34px !important;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px !important;
     padding: 0 !important;
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     border-radius: 8px;
 }
 .cp-icon-btn.btn-outline-secondary { color: #1769c2; border-color: #9bb8e3; }
 .cp-icon-btn.btn-outline-secondary:hover { color: #fff; background: #1769c2; border-color: #1769c2; }
+.cp-icon-btn.btn-outline-success { color: #15803d; border-color: #86efac; }
+.cp-icon-btn.btn-outline-success:hover { color: #fff; background: #16a34a; border-color: #16a34a; }
 .cp-icon-btn.btn-outline-danger { color: #c24141; border-color: #f0b4b4; }
 .cp-icon-btn.btn-outline-danger:hover { color: #fff; background: #c24141; border-color: #c24141; }
 
@@ -470,6 +502,52 @@
     to { opacity: 0; transform: scale(1); }
 }
 
+@media (max-width: 1199.98px) {
+    .cp-table-scroll {
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+    }
+    .cp-page .table { min-width: 0; table-layout: auto; }
+    .cp-page .cp-table th:last-child,
+    .cp-page .cp-table td.cp-actions { width: 100%; }
+    .cp-page .cp-table thead { display: none; }
+    .cp-page .table,
+    .cp-page .cp-table,
+    .cp-page .cp-table tbody,
+    .cp-page .cp-table tr,
+    .cp-page .cp-table td { display: block; width: 100%; min-width: 0; }
+    .cp-page .cp-table tbody tr {
+        margin-bottom: .85rem;
+        padding: .65rem .85rem;
+        border: 1px solid #d5def0;
+        border-radius: 12px;
+        background: #fff;
+        overflow: visible;
+    }
+    .cp-page .cp-table tbody tr:nth-child(even) { background: #f5f8ff; }
+    .cp-page .cp-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: .4rem 0;
+        background: transparent !important;
+        border: 0;
+        white-space: normal;
+    }
+    .cp-page .cp-table tbody td::before {
+        content: attr(data-label);
+        color: #5b6b86;
+        font-size: .75rem;
+        font-weight: 700;
+        flex: 0 0 auto;
+    }
+    .cp-page .cp-table tbody td.cp-actions { justify-content: flex-end; }
+    .cp-page .cp-table tbody td.cp-actions::before { margin-right: auto; }
+    .cp-clip,
+    .cp-clip--name { max-width: 100%; }
+}
+
 @media (max-width: 991.98px) {
     .cp-filter { max-width: none; flex: 1 1 calc(50% - 14px); }
     .cp-f-search { flex: 1 1 100%; min-width: 0; }
@@ -498,42 +576,6 @@
     }
     .cp-filter-clear { flex: 1 1 auto; width: 100%; }
     .cp-detail-row { grid-template-columns: 1fr; gap: 4px; }
-    .cp-table-scroll {
-        overflow: visible;
-        border: 0;
-        border-radius: 0;
-    }
-    .cp-page .cp-table thead { display: none; }
-    .cp-page .table,
-    .cp-page .cp-table,
-    .cp-page .cp-table tbody,
-    .cp-page .cp-table tr,
-    .cp-page .cp-table td { display: block; width: 100%; min-width: 0; }
-    .cp-page .cp-table tbody tr {
-        margin-bottom: .85rem;
-        padding: .65rem .85rem;
-        border: 1px solid #d5def0;
-        border-radius: 12px;
-        background: #fff;
-        overflow: hidden;
-    }
-    .cp-page .cp-table tbody tr:nth-child(even) { background: #f5f8ff; }
-    .cp-page .cp-table tbody td {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: .4rem 0;
-        background: transparent !important;
-        border: 0;
-    }
-    .cp-page .cp-table tbody td::before {
-        content: attr(data-label);
-        color: #5b6b86;
-        font-size: .75rem;
-        font-weight: 700;
-    }
-    .cp-page .cp-table tbody td.cp-actions { justify-content: flex-end; }
-    .cp-page .cp-table tbody td.cp-actions::before { margin-right: auto; }
 }
 
 @media (max-width: 480px) {

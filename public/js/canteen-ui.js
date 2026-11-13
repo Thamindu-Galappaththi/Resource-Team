@@ -281,6 +281,10 @@ async function submitCanteenReview(event) {
 
         bootstrap.Modal.getInstance(document.getElementById('cd-review-modal'))?.hide();
         showCanteenFlash(payload.message || 'Reservation updated.', 'success');
+        if (document.getElementById('cp-results')) {
+            window.location.reload();
+            return;
+        }
         await refreshDashboard(window.location.href, { stats: true });
     } catch (error) {
         if (status === 'rejected' && reasonError) {

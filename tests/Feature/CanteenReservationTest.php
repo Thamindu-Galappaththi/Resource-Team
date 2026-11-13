@@ -258,7 +258,9 @@ class CanteenReservationTest extends TestCase
         $this->get(route('canteen.index'))
             ->assertOk()
             ->assertSee('Reservation register')
-            ->assertSee('Clear');
+            ->assertSee('Clear')
+            ->assertDontSee('Meal type', false)
+            ->assertDontSee('All requesters', false);
 
         $this->get(route('canteen.forecast', ['date' => now()->toDateString()]))
             ->assertOk()
@@ -368,14 +370,18 @@ class CanteenReservationTest extends TestCase
         $this->actingAs($staff)
             ->get(route('canteen.index'))
             ->assertOk()
-            ->assertDontSee('>Approve</button>', false)
-            ->assertDontSee('>Reject</button>', false);
+            ->assertDontSee('Meal type', false)
+            ->assertDontSee('All requesters', false)
+            ->assertSee('Meal plan', false)
+            ->assertSee('aria-label="Approve '.$reservation->reservation_ref.'"', false)
+            ->assertSee('aria-label="Reject '.$reservation->reservation_ref.'"', false)
+            ->assertSee('data-cd-review', false);
 
         $this->actingAs($staff)
             ->get(route('canteen.show', $reservation))
             ->assertOk()
-            ->assertDontSee('Review request')
-            ->assertDontSee('Approve reservation');
+            ->assertSee('aria-label="Approve '.$reservation->reservation_ref.'"', false)
+            ->assertSee('aria-label="Reject '.$reservation->reservation_ref.'"', false);
 
         $this->get(route('canteen.dashboard'))
             ->assertOk()

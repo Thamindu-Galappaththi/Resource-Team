@@ -39,6 +39,7 @@
                 <p class="text-muted small mb-0">Meal request, service slot, and review notes.</p>
             </div>
             <div class="cp-action-group">
+                @include('canteen.partials.review-buttons', ['reservation' => $reservation])
                 @can('update', $reservation)
                     <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="Edit" aria-label="Edit reservation"><i class="ti ti-pencil"></i></a>
                 @endcan
@@ -89,8 +90,9 @@
 </div>
 
 @include('canteen.partials.confirm-modal')
+@include('canteen.partials.review-modal')
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/canteen-ui.js') }}?v=5"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=7"></script>
 @endpush
