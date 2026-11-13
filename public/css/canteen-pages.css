@@ -325,26 +325,26 @@
     width: 100%;
     min-width: 0;
     margin: 0;
-    table-layout: fixed;
+    table-layout: auto;
 }
-.cp-page .cp-table th:last-child,
-.cp-page .cp-table td.cp-actions {
-    width: 14rem;
-}
+.cp-page .cp-table .cp-col-name { width: 22%; }
+.cp-page .cp-table .cp-col-requester { width: 14%; }
+.cp-page .cp-table .cp-col-service { width: 12%; }
+.cp-page .cp-table .cp-col-meal { width: 12%; }
+.cp-page .cp-table .cp-col-location { width: 12%; }
+.cp-page .cp-table .cp-col-orders { width: 7%; }
+.cp-page .cp-table .cp-col-status { width: 9%; }
+.cp-page .cp-table .cp-col-actions { width: 1%; }
 .cp-clip {
     display: block;
+    max-width: 10.5rem;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .cp-clip--name {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    max-width: 14rem;
 }
 .cp-page .cp-table thead th {
     padding: .9rem 1rem;
@@ -368,10 +368,13 @@
 }
 .cp-page .cp-table thead th:last-child,
 .cp-page .cp-table tbody td.cp-actions {
+    width: 1%;
     overflow: hidden;
     overflow-wrap: normal;
     word-break: normal;
     white-space: nowrap;
+    padding-left: .45rem;
+    padding-right: .75rem;
 }
 .cp-page .cp-table tbody tr { animation: cp-row-in .36s ease both; }
 .cp-page .cp-table tbody tr:nth-child(even) td { background: #f5f8ff; }
@@ -393,7 +396,9 @@
     width: auto;
 }
 .cp-page .cp-table .cp-action-group {
-    width: 100%;
+    width: max-content;
+    margin-left: auto;
+    flex-wrap: nowrap;
 }
 .cp-icon-btn {
     width: 32px;
@@ -513,8 +518,9 @@
         border-radius: 0;
     }
     .cp-page .table { min-width: 0; table-layout: auto; }
+    .cp-page .cp-table col { width: auto; }
     .cp-page .cp-table th:last-child,
-    .cp-page .cp-table td.cp-actions { width: 100%; }
+    .cp-page .cp-table td.cp-actions { width: 100%; min-width: 0; }
     .cp-page .cp-table thead { display: none; }
     .cp-page .table,
     .cp-page .cp-table,

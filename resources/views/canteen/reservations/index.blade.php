@@ -99,6 +99,16 @@
                 @else
                     <div class="cp-table-scroll">
                         <table class="table cp-table align-middle mb-0">
+                            <colgroup>
+                                <col class="cp-col-name">
+                                <col class="cp-col-requester">
+                                <col class="cp-col-service">
+                                <col class="cp-col-meal">
+                                <col class="cp-col-location">
+                                <col class="cp-col-orders">
+                                <col class="cp-col-status">
+                                <col class="cp-col-actions">
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th scope="col">Reference / reservation</th>
