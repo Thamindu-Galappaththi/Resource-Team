@@ -62,6 +62,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
         Route::get('/', 'index')->middleware(['permission:reservations.index', 'deny-slt-lists'])->name('index');
         Route::get('/feed', 'feed')->middleware(['permission:reservations.index', 'deny-slt-lists'])->name('feed');
+        Route::get('/week-sheet', 'weekSheet')->middleware('permission:reservations.week_sheet')->name('week-sheet');
         Route::get('/home', [SltEmployeeDashboardController::class, 'resource'])->middleware('permission:reservations.create')->name('home');
         Route::get('/create', 'create')->middleware('permission:reservations.create')->name('create');
         Route::get('/calendar', 'calendar')->middleware('permission:reservations.calendar')->name('calendar');

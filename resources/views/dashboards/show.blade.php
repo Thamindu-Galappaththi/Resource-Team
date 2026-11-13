@@ -64,6 +64,10 @@
         @include('dashboards.partials.bed-map', ['bedMap' => $bedMap])
     @endif
 
+    @if(!empty($weekSheet['pdfUrl']))
+        @include('dashboards.partials.week-sheet', ['weekSheet' => $weekSheet])
+    @endif
+
     {{-- ── CHART + BREAKDOWN ──────────────────────────────── --}}
     <div class="rd-grid">
         {{-- Bar chart --}}

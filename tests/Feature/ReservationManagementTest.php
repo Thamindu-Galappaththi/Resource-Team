@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\ReservationStatus;
+use App\Enums\ReservationType;
+use App\Models\Location;
 use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
@@ -10,6 +12,7 @@ use App\Models\User;
 use App\Notifications\ReservationCreated;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -512,6 +515,88 @@ class ReservationManagementTest extends TestCase
             ->assertSee('"name":"Audio Mixer Pro"', false)
             ->assertSee('"location_id":"'.$resource->location_id.'"', false)
             ->assertSee('"category_id":"'.$resource->type->resource_category_id.'"', false);
+    }
+
+    public function test_resource_owner_can_download_this_weeks_approved_sheet(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-11 10:00:00', 'Asia/Colombo'));
+
+        $owner = User::factory()->role('resource_owner')->create(['name' => 'Owned Lab Manager']);
+        $requester = User::factory()->role('slt_employee')->create(['name' => 'Nadeesha Perera']);
+        $location = Location::factory()->create(['name' => 'Welisara']);
+        $resource = Resource::factory()->create([
+            'name_model' => 'Main Auditorium',
+            'location_id' => $location->id,
+        ]);
+
+        $approved = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'location_id' => $location->id,
+            'status' => ReservationStatus::APPROVED->value,
+            'title' => 'CCNA special lab',
+            'purpose' => 'Batch 12 extra hours',
+            'lecturer_name' => 'Mr. Silva',
+            'special_approval' => true,
+            'attendee_count' => 18,
+            'reservation_date' => '2026-11-12',
+            'start_time' => '09:00:00',
+            'end_time' => '12:00:00',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $approved->id,
+            'resource_id' => $resource->id,
+            'resource_name_snapshot' => 'Main Auditorium',
+        ]);
+
+        Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'location_id' => $location->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'purpose' => 'Pending should stay off the sheet',
+            'reservation_date' => '2026-11-13',
+        ]);
+        Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'type' => ReservationType::HOSTEL->value,
+            'status' => ReservationStatus::APPROVED->value,
+            'purpose' => 'Hostel stay stays off the sheet',
+            'reservation_date' => '2026-11-12',
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('This week’s approved bookings', false)
+            ->assertSee('Download PDF', false)
+            ->assertSee('Download image', false);
+
+        $pdf = $this->actingAs($owner)->get(route('reservations.week-sheet', ['format' => 'pdf']));
+        $pdf->assertOk();
+        $this->assertStringContainsString('application/pdf', (string) $pdf->headers->get('content-type'));
+        $this->assertStringContainsString('weekly-reservations-2026-11-09.pdf', (string) $pdf->headers->get('content-disposition'));
+
+        $this->actingAs($owner)
+            ->get(route('reservations.week-sheet', ['format' => 'png']))
+            ->assertOk()
+            ->assertSee('Weekly approved reservations', false)
+            ->assertSee('CCNA special lab', false)
+            ->assertSee('Batch 12 extra hours', false)
+            ->assertSee('Lecturer: Mr. Silva', false)
+            ->assertSee('Special approval', false)
+            ->assertSee('18 attendees', false)
+            ->assertSee('Main Auditorium', false)
+            ->assertSee('Nadeesha Perera', false)
+            ->assertDontSee('Pending should stay off the sheet', false)
+            ->assertDontSee('Hostel stay stays off the sheet', false);
+
+        $this->actingAs(User::factory()->role('slt_employee')->create())
+            ->get(route('reservations.week-sheet'))
+            ->assertForbidden();
+
+        Carbon::setTestNow();
     }
 
     /**
