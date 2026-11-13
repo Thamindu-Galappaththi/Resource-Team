@@ -13,6 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -120,6 +121,17 @@ class User extends Authenticatable
     public function hasSetPassword(): bool
     {
         return $this->password_setup_at !== null;
+    }
+
+    public function campusLocationLabel(): string
+    {
+        $location = trim((string) $this->location);
+
+        if ($location === '') {
+            return '';
+        }
+
+        return trim(Str::afterLast($location, ' - ')) ?: $location;
     }
 
     public function markPasswordSetupCompleted(): void

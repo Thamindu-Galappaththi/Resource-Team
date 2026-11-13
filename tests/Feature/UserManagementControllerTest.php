@@ -149,6 +149,88 @@ class UserManagementControllerTest extends TestCase
         ]);
     }
 
+    public function test_user_email_can_be_updated(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('slt_employee')->create([
+            'email' => 'slt.colleague@nebula.local',
+            'slt_employee' => true,
+            'location' => 'Nebula Institute of Technology - Welisara',
+        ]);
+        $user->roles()->sync([$user->role_id]);
+
+        $this->actingAs($administrator)
+            ->from(route('user.management'))
+            ->put(route('users.update', $user), [
+                'slt_employee' => 'yes',
+                'service_id' => '224244',
+                'name' => $user->name,
+                'nic' => $user->nic,
+                'email' => 'gayan_p@slt.com.lk',
+                'phone' => $user->phone ?: '0771234567',
+                'location' => 'Nebula Institute of Technology - Welisara',
+                'user_roles' => ['slt_employee'],
+            ])
+            ->assertRedirect(route('user.management'))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => 'gayan_p@slt.com.lk',
+        ]);
+    }
+
+    public function test_invalid_user_update_reopens_edit_with_submitted_email(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('slt_employee')->create();
+        $user->roles()->sync([$user->role_id]);
+
+        $this->actingAs($administrator)
+            ->from(route('user.management'))
+            ->put(route('users.update', $user), [
+                'slt_employee' => 'no',
+                'name' => $user->name,
+                'nic' => $user->nic,
+                'email' => 'not-an-email',
+                'phone' => $user->phone,
+                'location' => 'Nebula Institute of Technology - Welisara',
+                'user_roles' => ['slt_employee'],
+            ])
+            ->assertRedirect(route('user.management'))
+            ->assertSessionHasErrors('email')
+            ->assertSessionHas('edit_user_id', $user->id)
+            ->assertSessionHas('edit_update_url');
+
+        $this->assertSame('not-an-email', session()->getOldInput('email'));
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => $user->email,
+        ]);
+    }
+
+    public function test_user_list_shows_campus_name_only_in_the_table(): void
+    {
+        $administrator = User::factory()->role('admin')->create(['name' => 'Access Admin']);
+        User::factory()->role('slt_employee')->create([
+            'name' => 'SLT Colleague',
+            'email' => 'slt.colleague@nebula.local',
+            'location' => 'Nebula Institute of Technology - Welisara',
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSee('>Welisara</td>', false)
+            ->assertDontSee('>Nebula Institute of Technology - Welisara</td>', false)
+            ->assertSee('data-value="Nebula Institute of Technology - Welisara"', false)
+            ->assertSee('data-label="Nebula Institute of Technology - Welisara"', false);
+    }
+
     public function test_create_user_page_lists_roles_and_grouped_permissions(): void
     {
         $administrator = User::factory()->role('admin')->create();
@@ -310,6 +392,7 @@ class UserManagementControllerTest extends TestCase
             ->assertSee('Nebula Institute of Technology - Welisara')
             ->assertSee('Nebula Institute of Technology - Moratuwa')
             ->assertSee('Nebula Institute of Technology - Peradeniya')
+            ->assertSee('>Welisara</td>', false)
             ->assertSee('Role access is locked')
             ->assertSee('js-delete-user', false)
             ->assertSee('js-view-user', false)
