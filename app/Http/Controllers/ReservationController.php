@@ -14,7 +14,9 @@ use App\Models\ResourceCategory;
 use App\Models\User;
 use App\Services\ReservationBookingService;
 use App\Services\ReservationDocumentStore;
+use App\Services\ReservationWeekSheetService;
 use App\Support\SriLankaHolidays;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -48,6 +50,28 @@ class ReservationController extends Controller
         $this->authorize('viewAny', Reservation::class);
 
         return $this->uncachedJson($this->indexPayload($request));
+    }
+
+    public function weekSheet(Request $request, ReservationWeekSheetService $sheet): Response|View
+    {
+        $filters = $request->validate([
+            'format' => ['nullable', 'in:pdf,png'],
+            'week' => ['nullable', 'date'],
+        ]);
+        $payload = $sheet->payload($filters['week'] ?? null, $request->user());
+
+        if (($filters['format'] ?? 'pdf') === 'png') {
+            return view('reservations.week-sheet-image', $payload + [
+                'pdfUrl' => route('reservations.week-sheet', array_filter([
+                    'format' => 'pdf',
+                    'week' => $filters['week'] ?? null,
+                ])),
+            ]);
+        }
+
+        return Pdf::loadView('reservations.pdf.week-sheet', $payload)
+            ->setPaper('a4', 'landscape')
+            ->download($payload['filename'].'.pdf');
     }
 
     public function create(Request $request): View

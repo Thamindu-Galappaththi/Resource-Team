@@ -3,9 +3,12 @@
 namespace Tests\Feature;
 
 use App\Enums\ReservationStatus;
+use App\Enums\ReservationType;
 use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
+use App\Models\ResourceCategory;
+use App\Models\ResourceType;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -149,6 +152,47 @@ class ApprovalPageTest extends TestCase
         $this->actingAs($admin)->get(route('approvals.special'))
             ->assertOk()
             ->assertSee('Director approved the exception', false);
+    }
+
+    public function test_resource_owner_does_not_see_hostel_room_approvals(): void
+    {
+        $owner = User::factory()->role('resource_owner')->create();
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $hall = Resource::factory()->create(['status' => 'active', 'name_model' => 'Main Auditorium']);
+        $hostelCategory = ResourceCategory::factory()->create(['name' => config('hostel.category_name')]);
+        $hostelType = ResourceType::factory()->create([
+            'resource_category_id' => $hostelCategory->id,
+            'name' => config('hostel.bed_type_name'),
+        ]);
+        $room = Resource::factory()->create([
+            'status' => 'active',
+            'name_model' => 'Welisara Ladies Room 01',
+            'resource_type_id' => $hostelType->id,
+        ]);
+        $this->pendingReservation($requester, $hall, 'Orientation in Main Auditorium');
+        $hostelStay = $this->pendingReservation($requester, $room, 'Hostel guest stay');
+        $hostelStay->update(['type' => ReservationType::HOSTEL->value]);
+
+        $this->actingAs($owner)->get(route('approvals.index'))
+            ->assertOk()
+            ->assertSee('Orientation in Main Auditorium', false)
+            ->assertSee('Main Auditorium', false)
+            ->assertDontSee('Hostel guest stay', false)
+            ->assertDontSee('Welisara Ladies Room 01', false)
+            ->assertDontSee(config('hostel.category_name'), false);
+
+        $this->actingAs($owner)
+            ->post(route('approvals.decision', $hostelStay), [
+                'decision' => 'approve',
+                'comment' => 'Resource owner should not decide hostel stays',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($admin)->get(route('approvals.index'))
+            ->assertOk()
+            ->assertSee('Hostel guest stay', false)
+            ->assertSee(config('hostel.category_name'), false);
     }
 
     private function pendingReservation(User $requester, Resource $resource, string $title, bool $special = false): Reservation

@@ -10,7 +10,6 @@ use App\Http\Requests\UpdateCanteenReservationStatusRequest;
 use App\Models\CanteenReservation;
 use App\Models\MealMenu;
 use App\Models\Location;
-use App\Models\User;
 use App\Notifications\CanteenReservationStatusUpdated;
 use App\Notifications\NewCanteenReservationPending;
 use App\Services\NotificationRecipients;
@@ -136,7 +135,7 @@ class CanteenReservationController extends Controller
         $this->authorize('viewAny', CanteenReservation::class);
 
         $query = CanteenReservation::query()
-            ->with(['requestedBy', 'approvedBy', 'location']);
+            ->with(['requestedBy', 'approvedBy', 'location', 'mealMenu']);
 
         $this->restrictToOwnUnlessStaff($query);
 
@@ -144,24 +143,12 @@ class CanteenReservationController extends Controller
             ->search($request->input('search'))
             ->filter([
                 'status' => $request->input('status'),
-                'meal_type' => $request->input('meal_type'),
                 'from_date' => $request->input('from_date'),
                 'to_date' => $request->input('to_date'),
             ])
             ->orderByDesc('created_at');
 
-        if ($this->seesAllCanteenReservations() && $request->filled('requested_by_user_id')) {
-            $query->where('requested_by_user_id', $request->integer('requested_by_user_id'));
-        }
-
         $reservations = $query->paginate(10)->appends($request->query());
-
-        $requesters = $this->seesAllCanteenReservations()
-            ? User::query()
-                ->whereIn('id', CanteenReservation::query()->select('requested_by_user_id')->distinct())
-                ->orderBy('name')
-                ->get(['id', 'name'])
-            : collect();
 
         $summaryQuery = CanteenReservation::query();
         $this->restrictToOwnUnlessStaff($summaryQuery);
@@ -173,7 +160,7 @@ class CanteenReservationController extends Controller
             'rejected' => (clone $summaryQuery)->where('status', CanteenReservationStatus::REJECTED->value)->count(),
         ];
 
-        return view('canteen.reservations.index', compact('reservations', 'summary', 'requesters'));
+        return view('canteen.reservations.index', compact('reservations', 'summary'));
     }
 
     public function create(Request $request): View

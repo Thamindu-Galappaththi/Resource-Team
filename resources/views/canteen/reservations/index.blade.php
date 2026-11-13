@@ -53,12 +53,12 @@
 
         <section class="cp-filter-area" aria-label="Filter reservations">
             @php
-                $hasFilters = collect(['search', 'from_date', 'to_date', 'meal_type', 'status', 'requested_by_user_id'])->contains(fn ($key) => filled(request($key)));
+                $hasFilters = collect(['search', 'from_date', 'to_date', 'status'])->contains(fn ($key) => filled(request($key)));
             @endphp
             <form id="cp-filters" method="GET" action="{{ route('canteen.index') }}" class="cp-filters" data-action-lock="off">
                 <div class="cp-filter cp-f-search">
                     <label class="form-label" for="search">Search</label>
-                    <input id="search" type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Reference, reservation, requester">
+                    <input id="search" type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Reference or reservation">
                 </div>
                 <div class="cp-filter">
                     <label class="form-label" for="from_date">From</label>
@@ -69,28 +69,14 @@
                     <input id="to_date" type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                 </div>
                 @php
-                    $selectedMeal = collect(\App\Enums\MealType::cases())->first(fn ($type) => $type->value === request('meal_type'));
                     $statusOptions = [\App\Enums\CanteenReservationStatus::PENDING, \App\Enums\CanteenReservationStatus::APPROVED, \App\Enums\CanteenReservationStatus::REJECTED];
                     $selectedCanteenStatus = collect($statusOptions)->first(fn ($status) => $status->value === request('status'));
-                    $selectedRequester = $requesters->firstWhere('id', (int) request('requested_by_user_id'));
                 @endphp
-                <div class="cp-filter">
-                    <label class="form-label" for="meal_type">Meal type</label>
-                    <x-rm-select id="meal_type" name="meal_type" placeholder="All meals" :value="(string) request('meal_type', '')" :selected-label="$selectedMeal?->label() ?? 'All meals'"
-                        :options="collect([['value' => '', 'label' => 'All meals']])->concat(collect(\App\Enums\MealType::cases())->map(fn ($type) => ['value' => $type->value, 'label' => $type->label()]))->all()" />
-                </div>
                 <div class="cp-filter">
                     <label class="form-label" for="status">Status</label>
                     <x-rm-select id="status" name="status" placeholder="All statuses" :value="(string) request('status', '')" :selected-label="$selectedCanteenStatus?->label() ?? 'All statuses'"
                         :options="collect([['value' => '', 'label' => 'All statuses']])->concat(collect($statusOptions)->map(fn ($status) => ['value' => $status->value, 'label' => $status->label()]))->all()" />
                 </div>
-                @if($requesters->isNotEmpty())
-                    <div class="cp-filter">
-                        <label class="form-label" for="requested_by_user_id">Requester</label>
-                        <x-rm-select id="requested_by_user_id" name="requested_by_user_id" placeholder="All requesters" :value="(string) request('requested_by_user_id', '')" :selected-label="$selectedRequester?->name ?? 'All requesters'"
-                            :options="collect([['value' => '', 'label' => 'All requesters']])->concat($requesters->map(fn ($requester) => ['value' => (string) $requester->id, 'label' => $requester->name]))->all()" />
-                    </div>
-                @endif
                 <div class="cp-filter-actions">
                     <button class="cp-filter-clear" type="button" id="cp-clear" @disabled(! $hasFilters)>Clear</button>
                 </div>
@@ -113,12 +99,20 @@
                 @else
                     <div class="cp-table-scroll">
                         <table class="table cp-table align-middle mb-0">
+                            <colgroup>
+                                <col class="cp-col-name">
+                                <col class="cp-col-service">
+                                <col class="cp-col-meal">
+                                <col class="cp-col-location">
+                                <col class="cp-col-orders">
+                                <col class="cp-col-status">
+                                <col class="cp-col-actions">
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th scope="col">Reference / reservation</th>
-                                    <th scope="col">Requester</th>
                                     <th scope="col">Service</th>
-                                    <th scope="col">Meal</th>
+                                    <th scope="col">Meal plan</th>
                                     <th scope="col">Location</th>
                                     <th scope="col">Orders</th>
                                     <th scope="col">Status</th>
@@ -127,18 +121,22 @@
                             </thead>
                             <tbody>
                                 @foreach($reservations as $reservation)
+                                    @php
+                                        $name = $reservation->reservation_name;
+                                        $mealPlan = $reservation->mealMenu?->name ?? '—';
+                                        $location = $reservation->location?->name ?? '—';
+                                    @endphp
                                     <tr>
                                         <td data-label="Reservation">
-                                            <div class="fw-semibold">{{ $reservation->reservation_name }}</div>
+                                            <div class="fw-semibold cp-clip cp-clip--name" title="{{ $name }}">{{ $name }}</div>
                                             <span class="small text-muted font-monospace">{{ $reservation->reservation_ref }}</span>
                                         </td>
-                                        <td data-label="Requester">{{ $reservation->requestedBy?->name ?? 'Unknown' }}</td>
                                         <td data-label="Service">
                                             <div>{{ $reservation->reservation_date->format('d M Y') }}</div>
                                             <span class="small text-muted">{{ $reservation->serviceTimeLabel() }}</span>
                                         </td>
-                                        <td data-label="Meal">{{ $reservation->mealTypeLabel() }}</td>
-                                        <td data-label="Location">{{ $reservation->location?->name ?? '—' }}</td>
+                                        <td data-label="Meal plan"><span class="cp-clip" title="{{ $mealPlan }}">{{ $mealPlan }}</span></td>
+                                        <td data-label="Location"><span class="cp-clip" title="{{ $location }}">{{ $location }}</span></td>
                                         <td data-label="Orders" class="fw-semibold">{{ number_format($reservation->number_of_orders) }}</td>
                                         <td data-label="Status">
                                             <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
@@ -148,6 +146,7 @@
                                                 @can('view', $reservation)
                                                     <a href="{{ route('canteen.show', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="View" aria-label="View {{ $reservation->reservation_ref }}"><i class="ti ti-eye"></i></a>
                                                 @endcan
+                                                @include('canteen.partials.review-buttons', ['reservation' => $reservation])
                                                 @can('update', $reservation)
                                                     <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="Edit" aria-label="Edit {{ $reservation->reservation_ref }}"><i class="ti ti-pencil"></i></a>
                                                 @endcan
@@ -185,11 +184,12 @@
 </div>
 
 @include('canteen.partials.confirm-modal')
+@include('canteen.partials.review-modal')
 @endsection
 
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/canteen-ui.js') }}?v=5"></script>
-<script src="{{ asset('js/canteen-index.js') }}?v=2"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=8"></script>
+<script src="{{ asset('js/canteen-index.js') }}?v=3"></script>
 @endpush
