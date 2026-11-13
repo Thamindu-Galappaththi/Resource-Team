@@ -307,7 +307,7 @@ class CanteenReservationController extends Controller
         });
 
         return redirect()
-            ->route(auth()->user()?->hasRole('slt_employee') ? 'canteen.mine' : 'canteen.index')
+            ->route(auth()->user()?->usesSltEmployeeWorkspace() ? 'canteen.mine' : 'canteen.index')
             ->with('success', 'Reservation cancelled.');
     }
 

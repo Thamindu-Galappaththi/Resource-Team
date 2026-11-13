@@ -58,7 +58,7 @@
 
 @section('content')
 @php
-    $isSltEmployee = auth()->user()?->hasRole('slt_employee');
+    $isSltEmployee = auth()->user()?->usesSltEmployeeWorkspace();
     $home = $isSltEmployee
         ? (request()->routeIs('hostel.*') ? route('hostel.home')
             : (request()->routeIs('canteen.*') ? route('canteen.home') : route('dashboard')))

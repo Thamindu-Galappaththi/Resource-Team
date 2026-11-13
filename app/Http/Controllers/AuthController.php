@@ -35,6 +35,7 @@ class AuthController extends Controller
     {
         $request->authenticate();
         $request->session()->regenerate();
+        $request->session()->put('auth_portal', 'password');
 
         return redirect()->intended(route('dashboard'));
     }
@@ -84,6 +85,7 @@ class AuthController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        $request->session()->put('auth_portal', 'microsoft');
 
         return redirect()->intended(route('dashboard'));
     }

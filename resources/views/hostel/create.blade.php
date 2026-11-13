@@ -25,7 +25,7 @@
             <h1 class="hc-title">{{ $editing ? 'Edit Hostel Reservation' : 'Create Hostel Reservation' }}</h1>
             <p class="hc-subtitle mb-0">{{ $editing ? 'Update this stay request and keep it in the approval queue.' : 'Book hostel beds for your guests and send the request for hostel approval.' }}</p>
         </div>
-        @if(auth()->user()?->hasRole('slt_employee'))
+        @if(auth()->user()?->usesSltEmployeeWorkspace())
             @if($editing)
                 <a href="{{ route('hostel.mine') }}" class="btn hc-back"><i class="ti ti-arrow-left me-1"></i>Back to my hostel requests</a>
             @endif

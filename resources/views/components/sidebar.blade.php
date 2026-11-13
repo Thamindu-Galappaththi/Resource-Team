@@ -1,7 +1,7 @@
 <div>
     @php
         $user = auth()->user();
-        $isSltEmployee = $user->hasRole('slt_employee');
+        $isSltEmployee = $user->usesSltEmployeeWorkspace();
         $canDashboard = $user->hasPermission('dashboard');
         $canCreateUser = $user->hasPermission('user.create');
         $canManageUsers = $user->hasPermission('user.management');

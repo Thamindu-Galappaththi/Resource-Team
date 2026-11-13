@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -252,9 +253,72 @@ class LoginTest extends TestCase
 
         $this->assertSame('hostel_manager', $user->user_role);
         $this->assertTrue($user->hasRole('hostel_manager'));
-        $this->assertFalse($user->hasRole('slt_employee'));
+        $this->assertTrue($user->hasRole('slt_employee'));
         $this->assertTrue(Hash::check('Abc@12345', $user->password));
         $this->assertAuthenticatedAs($user);
+        $this->assertSame('microsoft', session('auth_portal'));
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('slt-hub', false);
+    }
+
+    public function test_microsoft_login_adds_slt_employee_role_alongside_coordinator(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('ishara.madushanka@slt.com.lk', 'Ishara Madushanka', 'ms-coord');
+
+        $user = User::factory()->role('coordinator')->create([
+            'email' => 'ishara.madushanka@slt.com.lk',
+            'name' => 'Ishara Madushanka',
+            'password' => 'Abc@12345',
+            'nic' => '199001010099',
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $user->refresh();
+
+        $this->assertSame('coordinator', $user->user_role);
+        $this->assertTrue($user->hasRole('coordinator'));
+        $this->assertTrue($user->hasRole('slt_employee'));
+        $this->assertTrue($user->slt_employee);
+        $this->assertSame('microsoft', session('auth_portal'));
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('slt-hub', false)
+            ->assertDontSee('Coordinator Dashboard');
+    }
+
+    public function test_staff_login_keeps_coordinator_dashboard_when_slt_employee_role_is_also_assigned(): void
+    {
+        $coordinator = Role::query()->where('slug', 'coordinator')->first();
+        $sltEmployee = Role::query()->where('slug', 'slt_employee')->first();
+
+        $user = User::factory()->role('coordinator')->create([
+            'email' => 'ishara.madushanka@slt.com.lk',
+            'nic' => '199001010099',
+            'password' => 'Abc@12345',
+            'slt_employee' => true,
+        ]);
+        $user->roles()->sync(array_filter([$coordinator?->id, $sltEmployee?->id]));
+
+        $this->post(route('login.attempt'), [
+            'username' => $user->email,
+            'password' => 'Abc@12345',
+        ])->assertRedirect(route('dashboard'));
+
+        $this->assertSame('password', session('auth_portal'));
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Coordinator Dashboard')
+            ->assertDontSee('slt-hub', false);
     }
 
     public function test_non_slt_user_cannot_login_with_microsoft(): void
