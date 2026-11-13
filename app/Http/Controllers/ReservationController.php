@@ -31,11 +31,14 @@ class ReservationController extends Controller
     {
         $this->authorize('viewAny', Reservation::class);
 
+        $filters = $this->indexFilterOptions();
+
         return $this->htmlPage('reservations.index', [
             'payload' => $this->indexPayload($request),
             'locations' => Location::query()->ordered()->get(),
-            'categories' => ResourceCategory::query()->orderBy('name')->get(),
-            'resources' => Resource::query()->orderBy('name_model')->get(['id', 'name_model', 'serial_number']),
+            'categories' => $filters['categories'],
+            'resources' => $filters['resources'],
+            'filterCatalog' => $filters['filterCatalog'],
             'statuses' => ReservationStatus::cases(),
         ]);
     }
@@ -536,6 +539,39 @@ class ReservationController extends Controller
             ->contains(fn (string $key) => filled($request->input($key)));
     }
 
+    /**
+     * @return array{
+     *     categories: \Illuminate\Support\Collection<int, ResourceCategory>,
+     *     resources: \Illuminate\Support\Collection<int, Resource>,
+     *     filterCatalog: array{categories: \Illuminate\Support\Collection, resources: \Illuminate\Support\Collection}
+     * }
+     */
+    private function indexFilterOptions(): array
+    {
+        $categories = ResourceCategory::query()->orderBy('name')->get();
+        $resources = Resource::query()
+            ->with('type:id,resource_category_id')
+            ->orderBy('name_model')
+            ->get(['id', 'name_model', 'serial_number', 'location_id', 'resource_type_id']);
+
+        return [
+            'categories' => $categories,
+            'resources' => $resources,
+            'filterCatalog' => [
+                'categories' => $categories->map(fn (ResourceCategory $category) => [
+                    'id' => (string) $category->id,
+                    'name' => $category->name,
+                ])->values(),
+                'resources' => $resources->map(fn (Resource $resource) => [
+                    'id' => (string) $resource->id,
+                    'name' => $resource->name_model.($resource->serial_number ? ' ('.$resource->serial_number.')' : ''),
+                    'location_id' => (string) $resource->location_id,
+                    'category_id' => (string) ($resource->type?->resource_category_id ?? ''),
+                ])->values(),
+            ],
+        ];
+    }
+
     private function reservationListItem(Reservation $reservation, $user): array
     {
         $timezone = config('reservations.display_timezone', 'Asia/Colombo');
@@ -562,6 +598,7 @@ class ReservationController extends Controller
             'items' => $reservation->items->map(fn ($item) => [
                 'name' => $item->resource_name_snapshot,
                 'category' => $item->resource?->type?->category?->name ?? '—',
+                'owner' => filled($item->resource?->resource_owner) ? $item->resource->resource_owner : null,
                 'status' => $reservation->bookedItemStatusLabel($item),
                 'status_badge' => $reservation->statusEnum()->badgeClass(),
             ])->values(),

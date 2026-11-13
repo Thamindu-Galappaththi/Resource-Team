@@ -301,6 +301,75 @@ class ReservationManagementTest extends TestCase
         $this->assertNotSame('Cancelled', $pendingRow['items'][0]['status']);
     }
 
+    public function test_existing_reservations_feed_includes_resource_owner_only_when_set(): void
+    {
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $owned = Resource::factory()->create([
+            'status' => 'active',
+            'name_model' => 'Owned Conference Hall',
+            'resource_owner' => 'Hall Keeper',
+        ]);
+        $plain = Resource::factory()->create([
+            'status' => 'active',
+            'name_model' => 'Open Conference Hall',
+            'resource_owner' => null,
+        ]);
+
+        $withOwner = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::APPROVED->value,
+            'purpose' => 'Owned hall booking',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $withOwner->id,
+            'resource_id' => $owned->id,
+            'resource_name_snapshot' => 'Owned Conference Hall',
+        ]);
+
+        $withoutOwner = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::APPROVED->value,
+            'purpose' => 'Open hall booking',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $withoutOwner->id,
+            'resource_id' => $plain->id,
+            'resource_name_snapshot' => 'Open Conference Hall',
+        ]);
+
+        $payload = $this->actingAs($admin)
+            ->getJson(route('reservations.feed'))
+            ->assertOk()
+            ->json('reservations');
+        $ownedRow = collect($payload)->firstWhere('purpose', 'Owned hall booking');
+        $plainRow = collect($payload)->firstWhere('purpose', 'Open hall booking');
+
+        $this->assertSame('Hall Keeper', $ownedRow['items'][0]['owner']);
+        $this->assertNull($plainRow['items'][0]['owner']);
+
+        $this->actingAs($admin)->get(route('reservations.show', $withOwner))
+            ->assertOk()
+            ->assertSee('Hall Keeper', false);
+        $this->actingAs($admin)->get(route('reservations.show', $withoutOwner))
+            ->assertOk()
+            ->assertDontSee('>Owner<', false);
+    }
+
+    public function test_existing_reservations_filter_catalog_maps_resource_category(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Audio Mixer Pro']);
+
+        $this->actingAs($user)->get(route('reservations.index'))
+            ->assertOk()
+            ->assertSee('filterCatalog', false)
+            ->assertSee('Audio Mixer Pro', false)
+            ->assertSee('"category_id":"'.$resource->type->resource_category_id.'"', false);
+    }
+
     public function test_existing_reservations_filter_by_status(): void
     {
         $admin = User::factory()->role('admin')->create();

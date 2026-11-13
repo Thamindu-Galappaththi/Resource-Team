@@ -204,6 +204,7 @@
                                 <h3 class="hr-section-title" id="stayDetails-{{ $reservation->id }}">Stay details</h3>
                                 <div class="hr-details">
                                     <div class="hr-detail-row"><span class="hr-detail-label">Guest name</span><span class="hr-detail-value">{{ $reservation->hostelStay?->displayGuestName() ?: '—' }}</span></div>
+                                    <div class="hr-detail-row"><span class="hr-detail-label">Guest phone</span><span class="hr-detail-value">@if($phone = $reservation->hostelStay?->guestPhone())<a href="tel:{{ preg_replace('/\s+/', '', $phone) }}">{{ $phone }}</a>@else—@endif</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Employee IDs</span><span class="hr-detail-value">{{ $reservation->hostelStay?->employeeIdList() ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Bed group</span><span class="hr-detail-value">{{ $reservation->hostelStay?->bedGroupLabel() ?: '—' }}</span></div>
                                     <div class="hr-detail-row"><span class="hr-detail-label">Beds</span><span class="hr-detail-value">{{ $reservation->bedAllocationLabel() ?: '—' }}</span></div>

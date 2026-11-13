@@ -46,6 +46,10 @@ class UserManagementController extends Controller
                         ->orWhere('nic', 'like', "%{$search}%")
                         ->orWhere('service_id', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%");
+
+                    if (ctype_digit($search)) {
+                        $userQuery->orWhere('id', (int) $search);
+                    }
                 });
             })
             ->when($filters['location'] ?? null, function ($query, string $location) {

@@ -452,6 +452,30 @@ class UserManagementControllerTest extends TestCase
             ->assertDontSee('Control access, roles, and profiles');
     }
 
+    public function test_user_list_can_be_searched_by_id(): void
+    {
+        $administrator = User::factory()->role('admin')->create(['name' => 'Access Admin']);
+        $match = User::factory()->create([
+            'name' => 'Id Search Target',
+            'nic' => '199000000000',
+            'service_id' => null,
+            'email' => 'id.search.target@nebula.local',
+        ]);
+        User::factory()->create([
+            'name' => 'Other Person',
+            'nic' => '198000000000',
+            'service_id' => null,
+            'email' => 'other.person@nebula.local',
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management', ['search' => (string) $match->id]))
+            ->assertOk()
+            ->assertSee('Id Search Target')
+            ->assertSee('>'.$match->id.'</td>', false)
+            ->assertDontSee('Other Person');
+    }
+
     public function test_user_list_keeps_long_names_inside_the_table_cell(): void
     {
         $administrator = User::factory()->role('admin')->create();
