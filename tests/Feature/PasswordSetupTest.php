@@ -55,8 +55,10 @@ class PasswordSetupTest extends TestCase
             'expiresMinutes' => 60,
         ])->render();
 
-        $this->assertStringContainsString('images/logos/nebula.png', $html);
-        $this->assertStringNotContainsString('linear-gradient(135deg,#0b3d91,#00aeef)', $html);
+        $this->assertStringContainsString('NEBULA', $html);
+        $this->assertStringContainsString('SLT MOBITEL', $html);
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertStringNotContainsString('images/logos/nebula.png', $html);
     }
 
     public function test_password_setup_page_is_public_and_shows_email_as_read_only(): void
