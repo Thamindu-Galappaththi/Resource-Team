@@ -649,6 +649,31 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 0);
     }
 
+    public function test_guest_phone_is_shown_on_hostel_view_pages(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => '+94 77 123 4567']))
+            ->assertRedirect();
+
+        $reservation = Reservation::query()->firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('hostel.show', $reservation))
+            ->assertOk()
+            ->assertSee('Guest phone')
+            ->assertSee('+94 77 123 4567');
+
+        $this->actingAs($user)
+            ->get(route('hostel.index'))
+            ->assertOk()
+            ->assertSee('Guest phone')
+            ->assertSee('+94 77 123 4567')
+            ->assertDontSee('data-label="Guest phone"', false);
+    }
+
     public function test_approved_stays_complete_at_checkout_through_pages_and_command(): void
     {
         $actor = User::factory()->role('coordinator')->create();

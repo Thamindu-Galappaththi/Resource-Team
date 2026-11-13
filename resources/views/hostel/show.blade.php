@@ -41,6 +41,7 @@
                 <div class="hs-card-body">
                     <div class="hs-details">
                         <div class="hs-detail-row"><span class="hs-detail-label">Guest name</span><span class="hs-detail-value">{{ $reservation->hostelStay?->displayGuestName() ?: '—' }}</span></div>
+                        <div class="hs-detail-row"><span class="hs-detail-label">Guest phone</span><span class="hs-detail-value">@if($phone = $reservation->hostelStay?->guestPhone())<a href="tel:{{ preg_replace('/\s+/', '', $phone) }}">{{ $phone }}</a>@else—@endif</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Employee IDs</span><span class="hs-detail-value">{{ $reservation->hostelStay?->employeeIdList() ?: '—' }}</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Bed group</span><span class="hs-detail-value">{{ $reservation->hostelStay?->bedGroupLabel() ?: '—' }}</span></div>
                         <div class="hs-detail-row"><span class="hs-detail-label">Beds</span><span class="hs-detail-value">{{ $reservation->bedAllocationLabel() ?: '—' }}</span></div>
