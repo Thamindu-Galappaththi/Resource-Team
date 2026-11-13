@@ -29,7 +29,7 @@ class MicrosoftAuthService
     }
 
     /**
-     * @return array{id: string, email: string, name: string, service_id: ?string, designation: ?string, location: ?string, phone: ?string}
+     * @return array{id: string, email: string, name: string, service_id: ?string, designation: ?string, location: ?string, phone: ?string, nic: ?string}
      */
     public function userFromCode(string $code): array
     {
@@ -50,10 +50,11 @@ class MicrosoftAuthService
             'id' => $id,
             'email' => $email,
             'name' => $name !== '' ? $name : Str::before($email, '@'),
-            'service_id' => $this->nullableString($profile['employeeId'] ?? null),
+            'service_id' => $this->employeeNumber($profile),
             'designation' => $this->nullableString($profile['jobTitle'] ?? null),
             'location' => $this->nullableString($profile['officeLocation'] ?? null),
             'phone' => $phone !== '' ? Str::limit($phone, 20, '') : null,
+            'nic' => null,
         ];
     }
 
@@ -103,11 +104,28 @@ class MicrosoftAuthService
      */
     private function graphProfile(string $accessToken): array
     {
+        $select = 'id,displayName,mail,userPrincipalName,jobTitle,officeLocation,mobilePhone,businessPhones,employeeId,onPremisesSamAccountName';
+
+        try {
+            $profile = $this->graphMe($accessToken, ['$select' => $select]);
+        } catch (RuntimeException) {
+            $profile = $this->graphMe($accessToken);
+        }
+
+        return $profile;
+    }
+
+    /**
+     * @param  array<string, string>  $query
+     * @return array<string, mixed>
+     */
+    private function graphMe(string $accessToken, array $query = []): array
+    {
         try {
             $response = Http::withToken($accessToken)
                 ->timeout(15)
                 ->acceptJson()
-                ->get('https://graph.microsoft.com/v1.0/me')
+                ->get('https://graph.microsoft.com/v1.0/me', $query)
                 ->throw();
         } catch (RequestException $exception) {
             throw new RuntimeException('Could not complete Microsoft sign-in. Please try again.', 0, $exception);
@@ -120,6 +138,27 @@ class MicrosoftAuthService
         }
 
         return $profile;
+    }
+
+    /**
+     * @param  array<string, mixed>  $profile
+     */
+    private function employeeNumber(array $profile): ?string
+    {
+        foreach (['employeeId', 'onPremisesSamAccountName'] as $key) {
+            $digits = preg_replace('/\D+/', '', (string) ($profile[$key] ?? '')) ?? '';
+            if ($digits === '') {
+                continue;
+            }
+
+            if ($key === 'onPremisesSamAccountName' && $digits !== (string) ($profile[$key] ?? '')) {
+                continue;
+            }
+
+            return strlen($digits) < 6 ? str_pad($digits, 6, '0', STR_PAD_LEFT) : $digits;
+        }
+
+        return null;
     }
 
     private function nullableString(mixed $value): ?string

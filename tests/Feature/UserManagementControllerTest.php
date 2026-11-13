@@ -266,6 +266,7 @@ class UserManagementControllerTest extends TestCase
                 'name' => 'M G D Karunananda',
                 'email' => 'dkaru@slt.com.lk',
                 'phone' => '+94714238497',
+                'nic' => '700724123V',
                 'designation' => 'Senior Engineer',
                 'service_id' => '010375',
                 'mock' => true,

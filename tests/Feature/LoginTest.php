@@ -201,6 +201,86 @@ class LoginTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_microsoft_login_stores_employee_id_phone_and_nic_from_graph_and_directory(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('dkaru@slt.com.lk', 'M G D Karunananda', 'ms-erp-user', [
+            'employeeId' => '010375',
+            'mobilePhone' => '',
+            'jobTitle' => 'Senior Engineer',
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'dkaru@slt.com.lk',
+            'service_id' => '010375',
+            'phone' => '+94714238497',
+            'nic' => '700724123V',
+            'designation' => 'Senior Engineer',
+        ]);
+    }
+
+    public function test_microsoft_login_stores_graph_employee_id_and_phone_when_directory_does_not_match(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('new.staff@slt.com.lk', 'New Staff', 'ms-graph-fields', [
+            'employeeId' => '224244',
+            'mobilePhone' => '+94771234567',
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'new.staff@slt.com.lk',
+            'service_id' => '224244',
+            'phone' => '+94771234567',
+            'nic' => null,
+        ]);
+    }
+
+    public function test_microsoft_login_fills_missing_employee_details_on_existing_user(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('staff@slt.lk', 'Updated Staff', 'ms-user-backfill', [
+            'employeeId' => '010888',
+            'mobilePhone' => '0779998887',
+        ]);
+
+        $user = User::factory()->role('slt_employee')->create([
+            'email' => 'staff@slt.lk',
+            'name' => 'Old Name',
+            'slt_employee' => true,
+            'microsoft_id' => null,
+            'service_id' => null,
+            'nic' => null,
+            'phone' => null,
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $user->refresh();
+
+        $this->assertSame('010888', $user->service_id);
+        $this->assertSame('0779998887', $user->phone);
+        $this->assertNull($user->nic);
+    }
+
     public function test_microsoft_login_updates_existing_slt_employee(): void
     {
         $this->configureMicrosoft();
@@ -439,7 +519,10 @@ class LoginTest extends TestCase
         ]);
     }
 
-    private function fakeMicrosoftGraph(string $email, string $name, string $microsoftId = 'ms-user-1'): void
+    /**
+     * @param  array<string, mixed>  $extra
+     */
+    private function fakeMicrosoftGraph(string $email, string $name, string $microsoftId = 'ms-user-1', array $extra = []): void
     {
         Http::fake([
             'https://login.microsoftonline.com/*' => Http::response([
@@ -447,11 +530,12 @@ class LoginTest extends TestCase
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
             ]),
-            'https://graph.microsoft.com/v1.0/me' => Http::response([
+            'https://graph.microsoft.com/v1.0/me*' => Http::response([
                 'id' => $microsoftId,
                 'displayName' => $name,
                 'mail' => $email,
                 'userPrincipalName' => $email,
+                ...$extra,
             ]),
         ]);
     }

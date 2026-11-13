@@ -10,11 +10,7 @@
         <tr>
             <td align="center">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border-radius:14px;overflow:hidden;">
-                    <tr>
-                        <td style="background:linear-gradient(135deg,#0b3d91,#00aeef);padding:20px 24px;text-align:center;">
-                            <img src="{{ url('images/logos/nebula.png') }}" alt="Nebula Institute of Technology" width="140" style="max-width:140px;height:auto;display:inline-block;">
-                        </td>
-                    </tr>
+                    @include('emails.partials.brand-header')
                     <tr>
                         <td style="padding:24px;">
                             <p style="margin:0 0 6px;color:#0b3d91;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Resource Reservation</p>
