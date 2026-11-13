@@ -33,17 +33,21 @@ class MicrosoftUserProvisioner
      */
     private function findExisting(array $profile): ?User
     {
-        if ($profile['id'] !== '') {
-            $byMicrosoftId = User::withTrashed()->where('microsoft_id', $profile['id'])->first();
+        $byMicrosoftId = $profile['id'] !== ''
+            ? User::withTrashed()->where('microsoft_id', $profile['id'])->first()
+            : null;
 
-            if ($byMicrosoftId) {
-                return $byMicrosoftId;
-            }
+        $byEmail = User::withTrashed()
+            ->whereRaw('LOWER(email) = ?', [strtolower($profile['email'])])
+            ->first();
+
+        if ($byMicrosoftId && $byEmail && $byMicrosoftId->isNot($byEmail)) {
+            $byMicrosoftId->forceFill(['microsoft_id' => null])->save();
+
+            return $byEmail;
         }
 
-        return User::withTrashed()
-            ->whereRaw('LOWER(email) = ?', [$profile['email']])
-            ->first();
+        return $byEmail ?? $byMicrosoftId;
     }
 
     /**
@@ -63,9 +67,14 @@ class MicrosoftUserProvisioner
             throw new RuntimeException('Microsoft sign-in is only available for SLT employee staff.');
         }
 
+        $emailTaken = User::withTrashed()
+            ->whereKeyNot($user->id)
+            ->whereRaw('LOWER(email) = ?', [strtolower($profile['email'])])
+            ->exists();
+
         $user->fill([
             'name' => $profile['name'],
-            'email' => $profile['email'],
+            'email' => $emailTaken ? $user->email : $profile['email'],
             'microsoft_id' => $profile['id'] !== '' ? $profile['id'] : $user->microsoft_id,
             'slt_employee' => true,
             'email_verified_at' => $user->email_verified_at ?? now(),
