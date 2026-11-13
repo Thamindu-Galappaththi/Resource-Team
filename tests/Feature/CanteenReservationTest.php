@@ -260,7 +260,8 @@ class CanteenReservationTest extends TestCase
             ->assertSee('Reservation register')
             ->assertSee('Clear')
             ->assertDontSee('Meal type', false)
-            ->assertDontSee('All requesters', false);
+            ->assertDontSee('All requesters', false)
+            ->assertDontSee('Requester', false);
 
         $this->get(route('canteen.forecast', ['date' => now()->toDateString()]))
             ->assertOk()
@@ -284,7 +285,7 @@ class CanteenReservationTest extends TestCase
             ->get(route('canteen.index'))
             ->assertOk()
             ->assertSee('Developer visibility check')
-            ->assertSee('Owner Employee');
+            ->assertDontSee('Requester', false);
     }
 
     public function test_canteen_manage_permission_sees_every_canteen_reservation(): void
@@ -372,6 +373,7 @@ class CanteenReservationTest extends TestCase
             ->assertOk()
             ->assertDontSee('Meal type', false)
             ->assertDontSee('All requesters', false)
+            ->assertDontSee('Requester', false)
             ->assertSee('Meal plan', false)
             ->assertSee('aria-label="Approve '.$reservation->reservation_ref.'"', false)
             ->assertSee('aria-label="Reject '.$reservation->reservation_ref.'"', false)

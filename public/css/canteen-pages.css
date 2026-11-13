@@ -327,11 +327,10 @@
     margin: 0;
     table-layout: auto;
 }
-.cp-page .cp-table .cp-col-name { width: 22%; }
-.cp-page .cp-table .cp-col-requester { width: 14%; }
-.cp-page .cp-table .cp-col-service { width: 12%; }
-.cp-page .cp-table .cp-col-meal { width: 12%; }
-.cp-page .cp-table .cp-col-location { width: 12%; }
+.cp-page .cp-table .cp-col-name { width: 26%; }
+.cp-page .cp-table .cp-col-service { width: 14%; }
+.cp-page .cp-table .cp-col-meal { width: 16%; }
+.cp-page .cp-table .cp-col-location { width: 16%; }
 .cp-page .cp-table .cp-col-orders { width: 7%; }
 .cp-page .cp-table .cp-col-status { width: 9%; }
 .cp-page .cp-table .cp-col-actions { width: 1%; }

@@ -58,7 +58,7 @@
             <form id="cp-filters" method="GET" action="{{ route('canteen.index') }}" class="cp-filters" data-action-lock="off">
                 <div class="cp-filter cp-f-search">
                     <label class="form-label" for="search">Search</label>
-                    <input id="search" type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Reference, reservation, requester">
+                    <input id="search" type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Reference or reservation">
                 </div>
                 <div class="cp-filter">
                     <label class="form-label" for="from_date">From</label>
@@ -101,7 +101,6 @@
                         <table class="table cp-table align-middle mb-0">
                             <colgroup>
                                 <col class="cp-col-name">
-                                <col class="cp-col-requester">
                                 <col class="cp-col-service">
                                 <col class="cp-col-meal">
                                 <col class="cp-col-location">
@@ -112,7 +111,6 @@
                             <thead>
                                 <tr>
                                     <th scope="col">Reference / reservation</th>
-                                    <th scope="col">Requester</th>
                                     <th scope="col">Service</th>
                                     <th scope="col">Meal plan</th>
                                     <th scope="col">Location</th>
@@ -125,7 +123,6 @@
                                 @foreach($reservations as $reservation)
                                     @php
                                         $name = $reservation->reservation_name;
-                                        $requester = $reservation->requestedBy?->name ?? 'Unknown';
                                         $mealPlan = $reservation->mealMenu?->name ?? '—';
                                         $location = $reservation->location?->name ?? '—';
                                     @endphp
@@ -134,7 +131,6 @@
                                             <div class="fw-semibold cp-clip cp-clip--name" title="{{ $name }}">{{ $name }}</div>
                                             <span class="small text-muted font-monospace">{{ $reservation->reservation_ref }}</span>
                                         </td>
-                                        <td data-label="Requester"><span class="cp-clip" title="{{ $requester }}">{{ $requester }}</span></td>
                                         <td data-label="Service">
                                             <div>{{ $reservation->reservation_date->format('d M Y') }}</div>
                                             <span class="small text-muted">{{ $reservation->serviceTimeLabel() }}</span>
