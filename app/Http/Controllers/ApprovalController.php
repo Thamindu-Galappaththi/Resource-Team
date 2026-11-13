@@ -47,7 +47,7 @@ class ApprovalController extends Controller
 
         return [
             'payload' => $payload,
-            'categories' => ResourceCategory::query()->orderBy('name')->get(),
+            'categories' => $this->approvalCategories($request->user()),
             'locations' => Location::query()->ordered()->get(),
             'filters' => $payload['filters'],
             'hasFilters' => $payload['meta']['has_filters'],
@@ -474,9 +474,30 @@ class ApprovalController extends Controller
     {
         abort_unless($user->hasPermission('approvals.index'), 403);
 
-        return Reservation::query()
+        $query = Reservation::query()
             ->whereNull('approval_archived_at')
             ->where('special_approval', false);
+
+        if ($this->hidesHostelApprovals($user)) {
+            $query->where('type', '!=', ReservationType::HOSTEL->value);
+        }
+
+        return $query;
+    }
+
+    private function approvalCategories(User $user)
+    {
+        $hostelCategory = (string) config('hostel.category_name');
+
+        return ResourceCategory::query()
+            ->when($this->hidesHostelApprovals($user), fn ($query) => $query->where('name', '!=', $hostelCategory))
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function hidesHostelApprovals(User $user): bool
+    {
+        return $user->hasRole('resource_owner') && ! $user->hasPermission('hostel.manage');
     }
 
     private function authorizeApprover(User $user): void

@@ -288,7 +288,10 @@ class DashboardService
 
     private function resourceOwner(User $user): array
     {
-        $pending = Reservation::query()->where('status', ReservationStatus::PENDING_APPROVAL->value)->count();
+        $pendingQuery = Reservation::query()
+            ->where('status', ReservationStatus::PENDING_APPROVAL->value)
+            ->where('type', '!=', ReservationType::HOSTEL->value);
+        $pending = (clone $pendingQuery)->count();
         $weekSheet = app(ReservationWeekSheetService::class)->payload(null, $user);
         $approvedWeek = $weekSheet['rows']->count();
 
@@ -316,7 +319,7 @@ class DashboardService
             'breakdown' => $this->statusBreakdown(Reservation::query(), 'Request outcomes'),
             'queue' => $this->reservationList(
                 $user,
-                Reservation::query()->where('status', ReservationStatus::PENDING_APPROVAL->value)->latest('id'),
+                (clone $pendingQuery)->latest('id'),
                 'Waiting for you',
                 'No pending resource requests.'
             ),
