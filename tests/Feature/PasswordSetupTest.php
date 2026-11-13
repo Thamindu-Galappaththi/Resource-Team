@@ -48,6 +48,15 @@ class PasswordSetupTest extends TestCase
                 && ($mail->viewData['expiresMinutes'] ?? null) === 60
                 && str_contains((string) ($mail->viewData['url'] ?? ''), '/setup-password/');
         });
+
+        $html = view('emails.setup-password', [
+            'user' => $user,
+            'url' => 'https://example.test/setup-password/demo',
+            'expiresMinutes' => 60,
+        ])->render();
+
+        $this->assertStringContainsString('images/logos/nebula.png', $html);
+        $this->assertStringNotContainsString('linear-gradient(135deg,#0b3d91,#00aeef)', $html);
     }
 
     public function test_password_setup_page_is_public_and_shows_email_as_read_only(): void
