@@ -298,10 +298,6 @@ class User extends Authenticatable
             return true;
         }
 
-        if ($this->usesSltEmployeeWorkspace()) {
-            return false;
-        }
-
         return $this->extraPermissionTableExists()
             && $this->loadMissing('extraPermissions')->extraPermissions->contains('slug', $permission);
     }
