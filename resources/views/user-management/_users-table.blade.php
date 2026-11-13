@@ -71,7 +71,7 @@
                         @endif
                     </td>
                     <td>{{ $managedUser->email }}</td>
-                    <td>{{ $managedUser->location ?: '—' }}</td>
+                    <td>{{ $managedUser->campusLocationLabel() ?: '—' }}</td>
                     <td>
                         <span class="badge text-bg-primary-subtle text-primary um-role">{{ $roleNames->join(', ') }}</span>
                     </td>

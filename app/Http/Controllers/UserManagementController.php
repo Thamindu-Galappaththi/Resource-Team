@@ -356,7 +356,7 @@ class UserManagementController extends Controller
             'email' => [
                 'required',
                 'email',
-                'max:50',
+                'max:255',
                 Rule::unique('users', 'email')->ignore($user?->id),
             ],
             'phone' => ['required', 'string', 'max:20'],

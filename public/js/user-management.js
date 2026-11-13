@@ -32,6 +32,7 @@ $(function () {
     }
 
     let activeUser = {};
+    let restoringEdit = false;
 
     function rowUser(element) {
         const raw = $(element).closest('tr').attr('data-user');
@@ -313,7 +314,7 @@ $(function () {
             return;
         }
 
-        fillEditModal({
+        activeUser = {
             update_url: config.editUpdateUrl,
             name: old.name,
             nic: old.nic,
@@ -325,11 +326,13 @@ $(function () {
             location: old.location,
             role_slugs: old.user_roles || [],
             extras: old.extra_permissions || [],
-        });
+        };
+        fillEditModal(activeUser);
         applyEditFieldErrors(config.errors || {});
 
         const modalEl = document.getElementById('editUserModal');
         if (modalEl && window.bootstrap?.Modal) {
+            restoringEdit = true;
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
         }
     }
@@ -341,12 +344,13 @@ $(function () {
         $employeeId.attr('placeholder', isSltEmployee ? 'e.g. 010375' : 'Enabled when SLT employee is Yes');
         $('#editEmployeeIdRequired').toggleClass('d-none', !isSltEmployee);
         $('#editLookupEmployee').toggleClass('d-none', !isSltEmployee);
-        $('#editName, #editEmail, #editPhone, #editDesignation').prop('readOnly', isSltEmployee);
+        $('#editName, #editPhone, #editDesignation').prop('readOnly', isSltEmployee);
+        $('#editEmail').prop('readOnly', false);
 
         if (!isSltEmployee) {
             $('#editLookupMessage').text('').attr('class', 'form-text');
             $('#editEmployeeDetails').removeClass('is-visible');
-            $('#editName, #editEmail, #editPhone, #editDesignation').prop('readOnly', false);
+            $('#editName, #editPhone, #editDesignation').prop('readOnly', false);
         }
     }
 
@@ -592,7 +596,15 @@ $(function () {
     });
 
     $('#editUserModal').on('show.bs.modal', function (event) {
-        fillEditModal(userFromModalEvent(event));
+        if (restoringEdit) {
+            restoringEdit = false;
+            return;
+        }
+        const user = userFromModalEvent(event);
+        if (!user?.update_url && !user?.email && !user?.name) {
+            return;
+        }
+        fillEditModal(user);
     });
 
     $('#edit_slt_employee').on('change', function () {
