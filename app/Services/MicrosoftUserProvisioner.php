@@ -63,10 +63,6 @@ class MicrosoftUserProvisioner
             throw new RuntimeException('Your account is inactive. Please contact an administrator.');
         }
 
-        if ($this->isPrivilegedStaff($user) && ! $user->isSltEmployeeStaff()) {
-            throw new RuntimeException('Microsoft sign-in is only available for SLT employee staff.');
-        }
-
         $emailTaken = User::withTrashed()
             ->whereKeyNot($user->id)
             ->whereRaw('LOWER(email) = ?', [strtolower($profile['email'])])
@@ -147,11 +143,6 @@ class MicrosoftUserProvisioner
         }
 
         return $role;
-    }
-
-    private function isPrivilegedStaff(User $user): bool
-    {
-        return $user->hasRole('developer', 'super_admin', 'admin');
     }
 
     private function assertAllowedDomain(string $email): void
