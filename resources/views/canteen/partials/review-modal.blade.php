@@ -1,6 +1,6 @@
 <div class="modal fade cp-modal" id="cd-review-modal" tabindex="-1" aria-labelledby="cd-review-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form id="cd-review-form" class="modal-content">
+        <form id="cd-review-form" class="modal-content" method="POST" data-action-lock="off">
             @csrf
             <input type="hidden" name="status" id="cd-review-status" value="">
             <div class="modal-header">

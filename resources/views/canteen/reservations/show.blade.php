@@ -25,6 +25,7 @@
         </div>
     </header>
 
+    <div id="cp-flash" class="alert cp-auto-alert d-none" role="status"></div>
     @if(session('success'))
         <div class="alert alert-success cp-auto-alert" role="status">{{ session('success') }}</div>
     @endif
@@ -94,5 +95,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/canteen-ui.js') }}?v=7"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=8"></script>
 @endpush

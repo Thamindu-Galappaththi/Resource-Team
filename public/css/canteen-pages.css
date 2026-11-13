@@ -389,6 +389,10 @@
     align-items: center;
     justify-content: flex-end;
     gap: .25rem;
+    flex: 0 0 auto;
+    width: auto;
+}
+.cp-page .cp-table .cp-action-group {
     width: 100%;
 }
 .cp-icon-btn {

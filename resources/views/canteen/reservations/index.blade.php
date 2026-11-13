@@ -184,6 +184,6 @@
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/canteen-ui.js') }}?v=7"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=8"></script>
 <script src="{{ asset('js/canteen-index.js') }}?v=3"></script>
 @endpush

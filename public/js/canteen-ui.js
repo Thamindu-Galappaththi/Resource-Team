@@ -280,12 +280,12 @@ async function submitCanteenReview(event) {
         }
 
         bootstrap.Modal.getInstance(document.getElementById('cd-review-modal'))?.hide();
-        showCanteenFlash(payload.message || 'Reservation updated.', 'success');
-        if (document.getElementById('cp-results')) {
-            window.location.reload();
+        if (document.getElementById('cd-pending-results')) {
+            showCanteenFlash(payload.message || 'Reservation updated.', 'success');
+            await refreshDashboard(window.location.href, { stats: true });
             return;
         }
-        await refreshDashboard(window.location.href, { stats: true });
+        window.location.reload();
     } catch (error) {
         if (status === 'rejected' && reasonError) {
             reason?.classList.add('is-invalid');
