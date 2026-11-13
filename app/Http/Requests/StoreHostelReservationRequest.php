@@ -55,7 +55,7 @@ class StoreHostelReservationRequest extends FormRequest
             'number_of_guests' => ['required', 'integer', 'min:1', 'max:'.self::MAX_GUESTS],
             'bed_group' => ['required', 'string', Rule::in(array_keys(config('hostel.bed_groups', [])))],
             'employee_ids' => ['required', 'array'],
-            'employee_ids.*' => ['required', 'string', 'max:50', 'distinct:ignore_case'],
+            'employee_ids.*' => ['required', 'string', 'max:20', 'regex:/^[0-9]+$/', 'distinct:ignore_case'],
             'special_requirements' => ['nullable', 'string', 'max:1000'],
         ] + $this->specialApprovalRules();
     }
@@ -64,6 +64,7 @@ class StoreHostelReservationRequest extends FormRequest
     {
         return [
             'guest_phone.regex' => 'Enter a valid phone number, for example +94 77 123 4567.',
+            'employee_ids.*.regex' => 'Enter numbers only for the employee ID.',
         ] + $this->specialApprovalMessages();
     }
 

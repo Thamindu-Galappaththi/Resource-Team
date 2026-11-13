@@ -45,11 +45,14 @@
         input.id = `employee_id_${index}`;
         input.name = 'employee_ids[]';
         input.className = 'form-control';
-        input.maxLength = 50;
+        input.inputMode = 'numeric';
+        input.pattern = '[0-9]+';
+        input.maxLength = 20;
         input.autocomplete = 'off';
         input.placeholder = '010456';
+        input.title = 'Enter numbers only';
         input.required = true;
-        input.value = value || '';
+        input.value = String(value || '').replace(/\D+/g, '');
 
         col.append(label, input);
         return col;
@@ -149,6 +152,26 @@
             field.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
+
+    function digitsOnly(event) {
+        if (event.target?.name !== 'employee_ids[]') {
+            return;
+        }
+        const next = event.target.value.replace(/\D+/g, '');
+        if (event.target.value !== next) {
+            event.target.value = next;
+        }
+    }
+
+    employeeList?.addEventListener('input', digitsOnly);
+    employeeList?.addEventListener('beforeinput', (event) => {
+        if (event.target?.name !== 'employee_ids[]' || event.inputType !== 'insertText') {
+            return;
+        }
+        if (event.data && /\D/.test(event.data)) {
+            event.preventDefault();
+        }
+    });
 
     checkIn?.addEventListener('change', syncCheckoutMin);
     guests?.addEventListener('input', syncEmployeeIds);

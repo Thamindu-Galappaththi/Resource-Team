@@ -77,7 +77,7 @@
                                 @for($i = 0; $i < $guestCount; $i++)
                                     <div class="col-12 col-sm-6" data-hc-employee-row>
                                         <label for="employee_id_{{ $i }}" class="form-label">Employee ID {{ $guestCount > 1 ? '(guest '.($i + 1).')' : '' }}</label>
-                                        <input type="text" id="employee_id_{{ $i }}" name="employee_ids[]" class="form-control @error('employee_ids.'.$i) is-invalid @enderror" value="{{ $employeeIds[$i] ?? '' }}" maxlength="50" autocomplete="off" placeholder="010456" required>
+                                        <input type="text" id="employee_id_{{ $i }}" name="employee_ids[]" class="form-control @error('employee_ids.'.$i) is-invalid @enderror" value="{{ $employeeIds[$i] ?? '' }}" inputmode="numeric" pattern="[0-9]+" maxlength="20" autocomplete="off" placeholder="010456" title="Enter numbers only" required>
                                         @error('employee_ids.'.$i)<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                                     </div>
                                 @endfor
@@ -166,6 +166,6 @@
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
 <script src="{{ asset('js/cu-dropdowns.js') }}?v=4"></script>
-<script src="{{ asset('js/hostel-create.js') }}?v=4"></script>
+<script src="{{ asset('js/hostel-create.js') }}?v=5"></script>
 <script src="{{ asset('js/special-approval.js') }}?v=1"></script>
 @endpush
