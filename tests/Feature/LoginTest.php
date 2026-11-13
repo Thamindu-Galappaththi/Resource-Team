@@ -263,6 +263,42 @@ class LoginTest extends TestCase
             ->assertSee('slt-hub', false);
     }
 
+    public function test_microsoft_login_links_to_existing_staff_email_when_microsoft_id_belongs_to_another_user(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('ishara.madushanka@slt.com.lk', 'Ishara Madushanka', 'ms-ishara');
+
+        $staff = User::factory()->role('hostel_manager')->create([
+            'email' => 'ishara.madushanka@slt.com.lk',
+            'name' => 'Ishara Madushanka',
+            'microsoft_id' => null,
+            'password' => 'Abc@12345',
+        ]);
+        $duplicate = User::factory()->role('slt_employee')->create([
+            'email' => 'ishara.madushanka.ms@slt.com.lk',
+            'microsoft_id' => 'ms-ishara',
+            'slt_employee' => true,
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $staff->refresh();
+        $duplicate->refresh();
+
+        $this->assertAuthenticatedAs($staff);
+        $this->assertSame('ms-ishara', $staff->microsoft_id);
+        $this->assertSame('hostel_manager', $staff->user_role);
+        $this->assertTrue($staff->hasRole('hostel_manager'));
+        $this->assertTrue($staff->hasRole('slt_employee'));
+        $this->assertNull($duplicate->microsoft_id);
+        $this->assertSame('ishara.madushanka@slt.com.lk', $staff->email);
+    }
+
     public function test_microsoft_login_adds_slt_employee_role_alongside_coordinator(): void
     {
         $this->configureMicrosoft();
