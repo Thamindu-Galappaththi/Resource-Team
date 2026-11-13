@@ -22,6 +22,9 @@ class StoreHostelReservationRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->prepareSpecialApproval();
+        if (is_string($this->input('guest_phone'))) {
+            $this->merge(['guest_phone' => trim($this->input('guest_phone'))]);
+        }
         $ids = $this->input('employee_ids');
         if (is_array($ids)) {
             $this->merge([
@@ -38,7 +41,12 @@ class StoreHostelReservationRequest extends FormRequest
         return [
             'guest_title' => ['required', Rule::in(HostelStayDetail::GUEST_TITLES)],
             'guest_name' => ['required', 'string', 'max:150'],
-            'guest_phone' => ['required', 'string', 'max:40'],
+            'guest_phone' => [
+                'required',
+                'string',
+                'max:20',
+                'regex:/^\+?[0-9][0-9\s\-()]{7,18}$/',
+            ],
             'check_in_date' => ['required', 'date', 'after_or_equal:today'],
             'check_in_time' => ['required', 'date_format:H:i'],
             'check_out_date' => ['required', 'date', 'after_or_equal:check_in_date'],
@@ -54,7 +62,9 @@ class StoreHostelReservationRequest extends FormRequest
 
     public function messages(): array
     {
-        return $this->specialApprovalMessages();
+        return [
+            'guest_phone.regex' => 'Enter a valid phone number, for example +94 77 123 4567.',
+        ] + $this->specialApprovalMessages();
     }
 
     public function after(): array

@@ -636,6 +636,19 @@ class HostelReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 0);
     }
 
+    public function test_guest_phone_must_be_a_phone_number(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $setup = $this->hostelRoom();
+
+        $this->actingAs($user)
+            ->from(route('hostel.create'))
+            ->post(route('hostel.store'), $this->payload($setup, ['guest_phone' => 'abcd']))
+            ->assertSessionHasErrors('guest_phone');
+
+        $this->assertDatabaseCount('reservations', 0);
+    }
+
     public function test_approved_stays_complete_at_checkout_through_pages_and_command(): void
     {
         $actor = User::factory()->role('coordinator')->create();

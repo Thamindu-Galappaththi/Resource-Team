@@ -61,7 +61,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="guest_phone" class="form-label">Guest phone number <span class="text-danger">*</span></label>
-                        <input type="tel" id="guest_phone" name="guest_phone" class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestPhone ?? '') }}" autocomplete="tel" placeholder="e.g. +94 77 123 4567" required>
+                        <input type="tel" id="guest_phone" name="guest_phone" class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestPhone ?? '') }}" autocomplete="tel" inputmode="tel" maxlength="20" pattern="\+?[0-9][0-9\s\-()]{7,18}" title="Enter a phone number, for example +94 77 123 4567" placeholder="e.g. +94 77 123 4567" required>
                         @error('guest_phone')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12 col-md-6">
