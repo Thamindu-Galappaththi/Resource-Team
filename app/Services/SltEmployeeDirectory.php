@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Rules\SriLankanNic;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -152,6 +153,7 @@ class SltEmployeeDirectory
                 'employeeSupervisorNumber' => '007788',
                 'email' => 'dkaru@slt.com.lk',
                 'mobileNo' => '+94714238497',
+                'nic' => '700724123V',
                 'dateOfBirth' => '24-JUL-70',
                 'gender' => 'Male',
                 'orgName' => 'Provincial Network_WPSW',
@@ -201,7 +203,7 @@ class SltEmployeeDirectory
 
         return [
             'name' => $name,
-            'nic' => null,
+            'nic' => $this->nicFromRecord($record),
             'email' => $email,
             'phone' => $phone,
             'designation' => filled($record['designation'] ?? null) ? (string) $record['designation'] : null,
@@ -218,6 +220,25 @@ class SltEmployeeDirectory
             ],
             'mock' => $mock,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     */
+    private function nicFromRecord(array $record): ?string
+    {
+        foreach (['nic', 'nicNo', 'nicNumber', 'NICNumber', 'nationalId', 'nationalIdentityCardNo', 'identityCardNo', 'employeeNIC', 'nicno'] as $key) {
+            if (! array_key_exists($key, $record) || $record[$key] === null) {
+                continue;
+            }
+
+            $nic = SriLankanNic::normalize((string) $record[$key]);
+            if ($nic !== '' && preg_match(SriLankanNic::pattern(), $nic) === 1) {
+                return $nic;
+            }
+        }
+
+        return null;
     }
 
     private function normalizeEmployeeNo(string $employeeNo): string
