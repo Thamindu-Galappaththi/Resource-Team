@@ -357,14 +357,15 @@ class LoginTest extends TestCase
             ->assertDontSee('slt-hub', false);
     }
 
-    public function test_non_slt_user_cannot_login_with_microsoft(): void
+    public function test_admin_with_slt_email_can_login_with_microsoft(): void
     {
         $this->configureMicrosoft();
-        $this->fakeMicrosoftGraph('admin@slt.lk', 'Admin User');
+        $this->fakeMicrosoftGraph('ishara.madushanka@slt.com.lk', 'Ishara Madushanka', 'ms-admin');
 
-        User::factory()->role('admin')->create([
-            'email' => 'admin@slt.lk',
+        $user = User::factory()->role('admin')->create([
+            'email' => 'ishara.madushanka@slt.com.lk',
             'slt_employee' => false,
+            'microsoft_id' => null,
         ]);
 
         $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
@@ -372,14 +373,21 @@ class LoginTest extends TestCase
                 'code' => 'auth-code',
                 'state' => 'oauth-state',
             ]))
-            ->assertRedirect(route('login'))
-            ->assertSessionHasErrors('microsoft');
+            ->assertRedirect(route('dashboard'));
 
-        $this->assertGuest();
-        $this->assertDatabaseHas('users', [
-            'email' => 'admin@slt.lk',
-            'user_role' => 'admin',
-        ]);
+        $user->refresh();
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame('admin', $user->user_role);
+        $this->assertTrue($user->hasRole('admin'));
+        $this->assertTrue($user->hasRole('slt_employee'));
+        $this->assertTrue($user->slt_employee);
+        $this->assertSame('ms-admin', $user->microsoft_id);
+        $this->assertSame('microsoft', session('auth_portal'));
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('slt-hub', false);
     }
 
     public function test_non_slt_domain_cannot_login_with_microsoft(): void
