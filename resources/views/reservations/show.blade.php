@@ -21,7 +21,7 @@
         </div>
         <div class="rd-header-actions">
             <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
-            @if(auth()->user()?->hasRole('slt_employee'))
+            @if(auth()->user()?->usesSltEmployeeWorkspace())
                 <a href="{{ route('reservations.mine') }}" class="btn rd-back"><i class="ti ti-arrow-left me-1"></i>Back to my resource requests</a>
             @else
                 <a href="{{ route('reservations.index') }}" class="btn rd-back"><i class="ti ti-arrow-left me-1"></i>Back to list</a>

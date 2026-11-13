@@ -17,7 +17,7 @@
         </div>
         <div class="cd-actions">
             <span class="cd-status cd-status--{{ $reservation->statusEnum()->tone() }}">{{ $reservation->statusEnum()->label() }}</span>
-            @if(auth()->user()?->hasRole('slt_employee'))
+            @if(auth()->user()?->usesSltEmployeeWorkspace())
                 <a href="{{ route('canteen.mine') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to my canteen requests</a>
             @else
                 <a href="{{ route('canteen.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to list</a>

@@ -9,7 +9,7 @@
 @endpush
 
 @section('content')
-@php $isSltEmployee = auth()->user()?->hasRole('slt_employee'); @endphp
+@php $isSltEmployee = auth()->user()?->usesSltEmployeeWorkspace(); @endphp
 <div class="rc-page reservation-calendar-page{{ $isSltEmployee ? ' is-slt-calendar' : '' }}">
     <div class="rc-header">
         <div>

@@ -308,7 +308,7 @@ class HostelReservationController extends Controller
         }
 
         return redirect()
-            ->route($request->user()?->hasRole('slt_employee') ? 'hostel.mine' : 'hostel.index')
+            ->route($request->user()?->usesSltEmployeeWorkspace() ? 'hostel.mine' : 'hostel.index')
             ->with('success', 'Hostel reservation cancelled successfully.');
     }
 

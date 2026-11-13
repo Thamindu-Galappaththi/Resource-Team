@@ -181,6 +181,15 @@ class User extends Authenticatable
         return $this->slt_employee || $this->hasRole('slt_employee');
     }
 
+    public function usesSltEmployeeWorkspace(): bool
+    {
+        if (session('auth_portal') === 'microsoft') {
+            return true;
+        }
+
+        return $this->roleSlug() === 'slt_employee';
+    }
+
     public function hasRole(string ...$roles): bool
     {
         $assignedRoles = $this->normalizedRoleSlugs();

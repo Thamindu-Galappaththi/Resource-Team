@@ -17,7 +17,7 @@
             <p class="cd-subtitle">{{ $reservation->reservation_ref }} · {{ $reservation->reservation_name }}</p>
         </div>
         <div class="cd-actions">
-            @if(auth()->user()?->hasRole('slt_employee'))
+            @if(auth()->user()?->usesSltEmployeeWorkspace())
                 <a href="{{ route('canteen.mine') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to my canteen requests</a>
             @else
                 <a href="{{ route('canteen.show', $reservation) }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to details</a>

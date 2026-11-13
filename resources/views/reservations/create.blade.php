@@ -33,7 +33,7 @@
             <h1 class="rv-title">{{ isset($reservation) ? 'Edit Reservation' : 'Create Reservation' }}</h1>
             <p class="rv-subtitle mb-0">{{ isset($reservation) ? 'Update this request and keep it in the approval queue.' : 'Select a resource, date, and time. Overlapping bookings are blocked automatically.' }}</p>
         </div>
-        @if(auth()->user()?->hasRole('slt_employee'))
+        @if(auth()->user()?->usesSltEmployeeWorkspace())
             @if(isset($reservation))
                 <a href="{{ route('reservations.mine') }}" class="btn rv-back"><i class="ti ti-arrow-left me-1"></i>Back to my resource requests</a>
             @endif

@@ -157,7 +157,7 @@ class ReservationController extends Controller
         }
 
         return redirect()
-            ->route($request->user()?->hasRole('slt_employee') ? 'reservations.mine' : 'reservations.index')
+            ->route($request->user()?->usesSltEmployeeWorkspace() ? 'reservations.mine' : 'reservations.index')
             ->with('success', 'Reservation cancelled successfully.');
     }
 
@@ -374,7 +374,7 @@ class ReservationController extends Controller
         }
         $query->filter($filters);
 
-        $isSlt = $request->user()?->hasRole('slt_employee');
+        $isSlt = $request->user()?->usesSltEmployeeWorkspace();
         $calendarReservations = $query->orderBy('start_time')->get()->map(function (Reservation $reservation) use ($isSlt) {
             $mine = $this->ownsCalendarReservation($reservation);
 
@@ -591,7 +591,7 @@ class ReservationController extends Controller
 
     private function restrictCalendarVisibility($query): void
     {
-        if (auth()->user()?->hasRole('slt_employee')) {
+        if (auth()->user()?->usesSltEmployeeWorkspace()) {
             return;
         }
 
@@ -603,7 +603,7 @@ class ReservationController extends Controller
      */
     private function sltCalendarFiltersRestrictToOwn(Request $request, array $filters): bool
     {
-        if (! $request->user()?->hasRole('slt_employee')) {
+        if (! $request->user()?->usesSltEmployeeWorkspace()) {
             return false;
         }
 
@@ -628,7 +628,7 @@ class ReservationController extends Controller
             ReservationStatus::REJECTED,
         ];
 
-        if ($user?->hasRole('slt_employee')) {
+        if ($user?->usesSltEmployeeWorkspace()) {
             $own = Reservation::query()
                 ->with(['location', 'items.resource.type.category'])
                 ->where(function ($query) use ($user) {
@@ -709,14 +709,14 @@ class ReservationController extends Controller
 
     private function excludeHostelForSlt($query): void
     {
-        if (auth()->user()?->hasRole('slt_employee')) {
+        if (auth()->user()?->usesSltEmployeeWorkspace()) {
             $query->where('type', '!=', ReservationType::HOSTEL->value);
         }
     }
 
     private function excludeInactiveForSlt($query): void
     {
-        if (auth()->user()?->hasRole('slt_employee')) {
+        if (auth()->user()?->usesSltEmployeeWorkspace()) {
             $query->whereIn('status', ReservationStatus::calendarActive());
         }
     }
@@ -822,7 +822,7 @@ class ReservationController extends Controller
             ? $reservation->hostelItemLabel($item)
             : ($item->resource_name_snapshot ?: $item->resource?->name_model ?: '—');
         $mine = $this->ownsCalendarReservation($reservation);
-        $isSlt = request()->user()?->hasRole('slt_employee');
+        $isSlt = request()->user()?->usesSltEmployeeWorkspace();
         $publicTitle = $reservation->location?->name ?: $resourceName;
         $title = ($mine || ! $isSlt)
             ? $reservation->reference.' · '.($reservation->title ?: $reservation->purpose)

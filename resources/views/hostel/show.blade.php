@@ -19,7 +19,7 @@
         </div>
         <div class="hs-header-actions">
             <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
-            @if(auth()->user()?->hasRole('slt_employee'))
+            @if(auth()->user()?->usesSltEmployeeWorkspace())
                 <a href="{{ route('hostel.mine') }}" class="btn hs-back"><i class="ti ti-arrow-left me-1"></i>Back to my hostel requests</a>
             @else
                 <a href="{{ route('hostel.index') }}" class="btn hs-back"><i class="ti ti-arrow-left me-1"></i>Back to list</a>
