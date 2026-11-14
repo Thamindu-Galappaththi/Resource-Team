@@ -408,6 +408,43 @@ class CanteenReservationTest extends TestCase
         ]);
     }
 
+    public function test_coordinator_cannot_approve_or_reject_canteen_reservations(): void
+    {
+        $coordinator = User::factory()->role('coordinator')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $reservation = CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'reservation_name' => 'Coordinator should not review',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($coordinator)
+            ->get(route('canteen.index'))
+            ->assertOk()
+            ->assertDontSee('aria-label="Approve '.$reservation->reservation_ref.'"', false)
+            ->assertDontSee('aria-label="Reject '.$reservation->reservation_ref.'"', false);
+
+        $this->get(route('canteen.dashboard'))
+            ->assertOk()
+            ->assertDontSee('aria-label="Approve '.$reservation->reservation_ref.'"', false)
+            ->assertDontSee('data-cd-status="approved"', false)
+            ->assertDontSee('>Approve</button>', false)
+            ->assertDontSee('>Reject</button>', false);
+
+        $this->get(route('canteen.show', $reservation))
+            ->assertOk()
+            ->assertDontSee('aria-label="Approve '.$reservation->reservation_ref.'"', false)
+            ->assertDontSee('aria-label="Reject '.$reservation->reservation_ref.'"', false);
+
+        $this->patchJson(route('canteen.status', $reservation), ['status' => 'approved'])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('canteen_reservations', [
+            'id' => $reservation->id,
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_regular_user_cannot_approve_another_users_reservation(): void
     {
         $requester = User::factory()->role('slt_employee')->create();

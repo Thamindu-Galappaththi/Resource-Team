@@ -79,7 +79,10 @@ class CanteenReservationController extends Controller
         ];
 
         $pendingApprovals = collect();
-        $canReview = $this->seesAllCanteenReservations();
+        $canReview = (bool) auth()->user()?->can(
+            'manageStatus',
+            new CanteenReservation(['status' => CanteenReservationStatus::PENDING->value])
+        );
 
         if ($canReview) {
             $pendingApprovals = CanteenReservation::query()
