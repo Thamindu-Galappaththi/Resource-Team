@@ -694,28 +694,38 @@ a.slt-card--link {
 }
 
 .swal2-container.slt-swal-backdrop {
-    padding: 12px !important;
+    padding: 16px !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
-    background: rgba(32, 41, 54, 0.55) !important;
+    background: rgba(15, 23, 42, 0.58) !important;
+    backdrop-filter: blur(8px);
 }
 
 .slt-swal {
-    width: min(480px, 100%) !important;
+    width: min(420px, 100%) !important;
     max-width: 100% !important;
-    max-height: calc(100vh - 24px) !important;
-    padding: 1.35rem 1.35rem 1.1rem !important;
+    max-height: calc(100vh - 32px) !important;
+    padding: 1.6rem 1.45rem 1.25rem !important;
     overflow: hidden !important;
-    border-radius: 16px !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    border-radius: 22px !important;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28) !important;
     box-sizing: border-box !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
 }
 
-.slt-swal-title {
-    margin: 0 !important;
-    padding: 0 0 0.35rem !important;
-    font-size: 1.35rem !important;
-    font-weight: 700 !important;
-    color: #1f2937 !important;
+.slt-swal-title,
+.slt-swal .swal2-title:empty {
+    display: none !important;
+}
+
+.slt-confirm__title {
+    margin: 0;
+    font-size: 1.22rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+    line-height: 1.3;
 }
 
 .slt-swal-body {
@@ -724,38 +734,129 @@ a.slt-card--link {
     overflow: visible !important;
 }
 
-.slt-swal-sub {
-    margin: 0 0 0.9rem;
-    color: #64748b;
-    font-size: 0.95rem;
+.slt-confirm {
+    display: grid;
+    gap: 0.7rem;
+    text-align: center;
+}
+
+.slt-confirm__icon {
+    display: inline-grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto;
+    border-radius: 16px;
+    background: #fff1f2;
+    color: #e11d48;
+    font-size: 1.45rem;
+    box-shadow: inset 0 0 0 1px rgba(225, 29, 72, 0.12);
+}
+
+.slt-confirm__ref {
+    margin: 0;
+    padding: 0.38rem 0.7rem;
+    border-radius: 999px;
+    background: #eef4ff;
+    color: #1e4f9c;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.35;
     word-break: break-word;
 }
 
-.slt-swal-reason {
-    display: block;
-    width: 100%;
-    min-height: 92px;
-    resize: vertical;
+.slt-confirm__copy {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
-.slt-swal-reason::-webkit-credentials-auto-fill-button,
-.slt-swal-reason::-webkit-contacts-auto-fill-button {
+.slt-confirm__label {
+    margin: 0.15rem 0 0;
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: left;
+}
+
+.slt-confirm__reason {
+    display: block;
+    width: 100%;
+    min-height: 96px;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid #d7e3f4;
+    border-radius: 14px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    resize: vertical;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.slt-confirm__reason:focus {
+    outline: none;
+    border-color: #1769c2;
+    box-shadow: 0 0 0 4px rgba(23, 105, 194, 0.14);
+}
+
+.slt-confirm__reason::-webkit-credentials-auto-fill-button,
+.slt-confirm__reason::-webkit-contacts-auto-fill-button {
     display: none !important;
     visibility: hidden;
     pointer-events: none;
 }
 
+.slt-swal-error {
+    margin: 0.65rem 0 0 !important;
+    padding: 0.45rem 0.7rem !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: #fff1f2 !important;
+    color: #be123c !important;
+    font-size: 0.82rem !important;
+}
+
 .slt-swal-actions {
     display: flex !important;
     flex-wrap: wrap !important;
-    justify-content: center !important;
-    gap: 0.6rem !important;
-    margin: 1rem 0 0 !important;
+    justify-content: stretch !important;
+    gap: 0.7rem !important;
+    margin: 1.15rem 0 0 !important;
     width: 100% !important;
 }
 
-.slt-swal-actions .rm-swal-btn {
-    min-width: 96px;
+.slt-swal-btn {
+    flex: 1 1 calc(50% - 0.35rem);
+    min-width: 0;
+    padding: 0.72rem 0.9rem !important;
+    border-radius: 12px !important;
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+}
+
+.slt-swal-btn--ghost {
+    border: 1px solid #c5d4ea !important;
+    background: #fff !important;
+    color: #1e4f9c !important;
+}
+
+.slt-swal-btn--ghost:hover {
+    background: #f1f6ff !important;
+}
+
+.slt-swal-btn--danger {
+    border: 0 !important;
+    background: linear-gradient(180deg, #fb7185, #e11d48) !important;
+    color: #fff !important;
+}
+
+.slt-swal-btn--danger:hover {
+    filter: brightness(0.97);
 }
 
 .slt-pager {
@@ -1281,16 +1382,16 @@ a.slt-card--link {
     }
 
     .slt-swal {
-        padding: 1.1rem 1rem 0.95rem !important;
+        padding: 1.25rem 1rem 1rem !important;
+        border-radius: 18px !important;
     }
 
-    .slt-swal-title {
-        font-size: 1.15rem !important;
+    .slt-confirm__title {
+        font-size: 1.1rem;
     }
 
-    .slt-swal-actions .rm-swal-btn {
-        flex: 1 1 calc(50% - 0.4rem);
-        min-width: 0;
+    .slt-swal-btn {
+        flex: 1 1 calc(50% - 0.35rem);
     }
 
     .slt-request {

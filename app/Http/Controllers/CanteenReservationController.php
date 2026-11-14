@@ -275,7 +275,7 @@ class CanteenReservationController extends Controller
         return redirect()->route('canteen.show', $reservation)->with('success', $message);
     }
 
-    public function destroy(CanteenReservation $reservation): RedirectResponse
+    public function destroy(Request $request, CanteenReservation $reservation): RedirectResponse
     {
         if (auth()->user()?->can('delete', $reservation)) {
             $reservation->delete();
@@ -289,10 +289,13 @@ class CanteenReservationController extends Controller
             abort(403, 'This reservation cannot be cancelled.');
         }
 
-        DB::transaction(function () use ($reservation) {
+        $reason = trim((string) $request->input('cancellation_reason', ''));
+
+        DB::transaction(function () use ($reservation, $reason) {
             $reservation->update([
                 'status' => CanteenReservationStatus::CANCELLED->value,
                 'approved_by_user_id' => auth()->id(),
+                'approval_comments' => $reason !== '' ? $reason : $reservation->approval_comments,
             ]);
         });
 
