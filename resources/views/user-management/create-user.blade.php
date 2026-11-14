@@ -87,9 +87,9 @@
                     @enderror
                 </div>
                 <div class="col-12 col-md-6">
-                    <label for="nic" class="form-label">NIC <span class="text-danger">*</span></label>
+                    <label for="nic" class="form-label">NIC</label>
                     <input type="text" name="nic" id="nic" class="form-control @error('nic') is-invalid @enderror"
-                        value="{{ old('nic') }}" placeholder="e.g. 962664303V or 199012345678" required maxlength="12">
+                        value="{{ old('nic') }}" placeholder="e.g. 962664303V or 199012345678" maxlength="12">
                     @error('nic')
                     <div class="invalid-feedback">{{ $message }}</div>
                     @enderror

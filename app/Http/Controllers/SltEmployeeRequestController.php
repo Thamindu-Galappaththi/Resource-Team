@@ -131,7 +131,7 @@ class SltEmployeeRequestController extends Controller
                     'edit_href' => $reservation->canBeEdited() ? route('canteen.edit', $reservation) : null,
                     'delete_action' => $reservation->canBeCancelled() ? route('canteen.destroy', $reservation) : null,
                     'delete_method' => 'DELETE',
-                    'delete_needs_reason' => false,
+                    'delete_needs_reason' => true,
                     'delete_title' => 'Cancel this request?',
                 ];
             }),

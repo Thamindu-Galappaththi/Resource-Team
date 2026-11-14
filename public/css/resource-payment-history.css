@@ -140,9 +140,10 @@
     height: 48px;
     min-height: 48px;
 }
+.rp-history-page { padding-bottom: 2.25rem; }
 .rp-history-page .rph-section-body.is-loading { opacity: .7; pointer-events: none; }
-.rp-history-page .rsv-pager { flex-wrap: wrap; gap: .65rem; padding: .85rem .15rem 0; }
-.rph-table-card { margin-bottom: 1rem; }
+.rp-history-page .rsv-pager { flex-wrap: wrap; gap: .65rem; padding: 1rem 1.1rem 1.25rem; }
+.rph-table-card { margin-bottom: 2rem; }
 .rph-table-heading { min-height: 68px; }
 .rph-record-count { padding: .3rem .65rem; border-radius: 999px; background: #f0f5fb; color: #566c86; font-size: .7rem; font-weight: 750; white-space: nowrap; }
 .rp-history-page .rph-section-body .table-responsive {

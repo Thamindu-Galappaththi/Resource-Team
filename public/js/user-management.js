@@ -62,8 +62,8 @@ $(function () {
             const $input = $wrap.find('select, input[type="hidden"]').first();
             const $label = $wrap.find('.js-select-label').first();
             $wrap.find('[data-value]').on('click', function () {
-                const value = $(this).data('value');
-                const label = $(this).data('label') || $(this).text().trim();
+                const value = $(this).attr('data-value');
+                const label = $(this).attr('data-label') || $(this).text().trim();
                 $input.val(value === undefined ? '' : value);
                 $label.text(label);
                 $label.toggleClass('text-muted', !$input.val());
@@ -179,10 +179,10 @@ $(function () {
         const $input = $wrap.find('input[type="hidden"]').first();
         const $label = $wrap.find('.js-select-label').first();
         const $option = $wrap.find('[data-value]').filter(function () {
-            return String($(this).data('value')) === String(value);
+            return String($(this).attr('data-value')) === String(value);
         }).first();
-        $input.val($option.length ? $option.data('value') : (value || ''));
-        $label.text($option.data('label') || fallbackLabel || $option.text().trim() || 'Select');
+        $input.val($option.length ? $option.attr('data-value') : (value || ''));
+        $label.text($option.attr('data-label') || fallbackLabel || $option.text().trim() || 'Select');
         $label.toggleClass('text-muted', !$input.val());
     }
 
@@ -302,9 +302,12 @@ $(function () {
             $('#editLocation').closest('.dropdown').find('.cu-dropdown-toggle').addClass('is-invalid');
             $('#editLocationError').text(errors.location[0]).addClass('d-block');
         }
-        if (errors.user_roles?.length) {
+        if (errors.user_roles?.length || errors['user_roles.0']?.length) {
             $('#editRolesDropdown').addClass('is-invalid');
-            $('#editRolesError').text(errors.user_roles[0]).addClass('d-block');
+            $('#editRolesError').text((errors.user_roles || errors['user_roles.0'])[0]).addClass('d-block');
+        }
+        if (errors.extra_permissions?.length || errors['extra_permissions.0']?.length) {
+            $('#editPermissionsDropdown').addClass('is-invalid');
         }
     }
 
@@ -645,7 +648,7 @@ $(function () {
             return;
         }
 
-        $('.js-edit-extra-permission').prop('disabled', false);
+        $('.js-edit-extra-permission:disabled').prop('checked', false);
         if ($('#edit_service_id').prop('disabled')) {
             $('#edit_service_id').prop('disabled', false);
             if ($('#edit_slt_employee').val() !== 'yes') {

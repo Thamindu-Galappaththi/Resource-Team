@@ -72,6 +72,28 @@ class UserManagementControllerTest extends TestCase
             ->assertSee('10000', false);
     }
 
+    public function test_user_can_be_created_without_nic(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs(User::factory()->role('admin')->create())
+            ->post('/user-management/create-user', [
+                'slt_employee' => 'no',
+                'name' => 'No Nic User',
+                'nic' => '',
+                'email' => 'nonic@example.com',
+                'phone' => '0771234567',
+                'user_roles' => ['admin'],
+                'location' => 'Nebula Institute of Technology - Welisara',
+            ])
+            ->assertRedirect(route('create.user'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'nonic@example.com',
+            'nic' => null,
+        ]);
+    }
+
     public function test_old_format_nic_is_accepted_when_creating_a_user(): void
     {
         $this->withoutMiddleware(ValidateCsrfToken::class);
@@ -146,6 +168,42 @@ class UserManagementControllerTest extends TestCase
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'nic' => '962664303V',
+        ]);
+    }
+
+    public function test_user_update_ignores_unknown_extra_permission_slugs(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('admin')->create([
+            'name' => 'Admin User',
+            'email' => 'admin.edit@nebula.local',
+            'designation' => 'Old title',
+            'location' => 'Nebula Institute of Technology - Welisara',
+        ]);
+        $user->roles()->sync([$user->role_id]);
+
+        $this->actingAs($administrator)
+            ->from(route('user.management'))
+            ->put(route('users.update', $user), [
+                'slt_employee' => 'no',
+                'name' => $user->name,
+                'nic' => $user->nic,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'designation' => 'Updated title',
+                'location' => 'Nebula Institute of Technology - Welisara',
+                'user_roles' => ['admin'],
+                'extra_permissions' => ['dashboard', 'reservations.week_sheet', 'not.a.real.permission'],
+            ])
+            ->assertRedirect(route('user.management'))
+            ->assertSessionHas('status')
+            ->assertSessionMissing('edit_user_id');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'designation' => 'Updated title',
         ]);
     }
 

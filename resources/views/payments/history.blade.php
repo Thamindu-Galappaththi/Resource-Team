@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=38">
 <link rel="stylesheet" href="{{ asset('css/resource-payments.css') }}?v=48">
 <link rel="stylesheet" href="{{ asset('css/dashboard-role.css') }}?v={{ @filemtime(public_path('css/dashboard-role.css')) ?: time() }}">
-<link rel="stylesheet" href="{{ asset('css/resource-payment-history.css') }}?v=7">
+<link rel="stylesheet" href="{{ asset('css/resource-payment-history.css') }}?v=8">
 @endpush
 
 @section('content')
