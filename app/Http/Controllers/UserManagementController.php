@@ -342,8 +342,13 @@ class UserManagementController extends Controller
      */
     private function validateManagedUser(Request $request, ?User $user = null): array
     {
+        $knownPermissionSlugs = Permission::query()->pluck('slug')->all();
         $request->merge([
             'nic' => filled($request->input('nic')) ? SriLankanNic::normalize($request->input('nic')) : null,
+            'extra_permissions' => collect($request->input('extra_permissions', []))
+                ->filter(fn ($slug) => is_string($slug) && in_array($slug, $knownPermissionSlugs, true))
+                ->values()
+                ->all(),
         ]);
 
         return $request->validate([

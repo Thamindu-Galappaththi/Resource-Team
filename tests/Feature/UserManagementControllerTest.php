@@ -171,6 +171,42 @@ class UserManagementControllerTest extends TestCase
         ]);
     }
 
+    public function test_user_update_ignores_unknown_extra_permission_slugs(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('admin')->create([
+            'name' => 'Admin User',
+            'email' => 'admin.edit@nebula.local',
+            'designation' => 'Old title',
+            'location' => 'Nebula Institute of Technology - Welisara',
+        ]);
+        $user->roles()->sync([$user->role_id]);
+
+        $this->actingAs($administrator)
+            ->from(route('user.management'))
+            ->put(route('users.update', $user), [
+                'slt_employee' => 'no',
+                'name' => $user->name,
+                'nic' => $user->nic,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'designation' => 'Updated title',
+                'location' => 'Nebula Institute of Technology - Welisara',
+                'user_roles' => ['admin'],
+                'extra_permissions' => ['dashboard', 'reservations.week_sheet', 'not.a.real.permission'],
+            ])
+            ->assertRedirect(route('user.management'))
+            ->assertSessionHas('status')
+            ->assertSessionMissing('edit_user_id');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'designation' => 'Updated title',
+        ]);
+    }
+
     public function test_user_email_can_be_updated(): void
     {
         $this->withoutMiddleware(ValidateCsrfToken::class);
