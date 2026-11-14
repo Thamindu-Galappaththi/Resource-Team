@@ -72,6 +72,28 @@ class UserManagementControllerTest extends TestCase
             ->assertSee('10000', false);
     }
 
+    public function test_user_can_be_created_without_nic(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs(User::factory()->role('admin')->create())
+            ->post('/user-management/create-user', [
+                'slt_employee' => 'no',
+                'name' => 'No Nic User',
+                'nic' => '',
+                'email' => 'nonic@example.com',
+                'phone' => '0771234567',
+                'user_roles' => ['admin'],
+                'location' => 'Nebula Institute of Technology - Welisara',
+            ])
+            ->assertRedirect(route('create.user'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'nonic@example.com',
+            'nic' => null,
+        ]);
+    }
+
     public function test_old_format_nic_is_accepted_when_creating_a_user(): void
     {
         $this->withoutMiddleware(ValidateCsrfToken::class);

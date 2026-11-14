@@ -259,9 +259,9 @@
                                 <div class="invalid-feedback" id="editNameError"></div>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label for="editNic" class="form-label">NIC <span class="text-danger">*</span></label>
+                                <label for="editNic" class="form-label">NIC</label>
                                 <input type="text" name="nic" id="editNic" class="form-control"
-                                    placeholder="e.g. 962664303V or 199012345678" required maxlength="12">
+                                    placeholder="e.g. 962664303V or 199012345678" maxlength="12">
                                 <div class="invalid-feedback" id="editNicError"></div>
                             </div>
                             <div class="col-12 col-md-6">
