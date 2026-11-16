@@ -109,6 +109,7 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertSee('Reference')
             ->assertSee('Details')
             ->assertSee('Team lunch order')
+            ->assertSee('data-reason="1"', false)
             ->assertDontSee('Secret canteen order');
     }
 

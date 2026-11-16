@@ -62,6 +62,10 @@ class CanteenReservationPolicy
 
     public function manageStatus(User $user, CanteenReservation $reservation): bool
     {
+        if ($user->hasRole('coordinator') && ! $user->hasRole('canteen')) {
+            return false;
+        }
+
         if (! $user->hasPermission('canteen.manage') && ! $user->hasRole('canteen')) {
             return false;
         }
