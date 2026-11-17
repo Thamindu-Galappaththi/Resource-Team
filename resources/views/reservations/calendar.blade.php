@@ -9,7 +9,7 @@
 @endpush
 
 @section('content')
-@php $isSltEmployee = auth()->user()?->hasRole('slt_employee'); @endphp
+@php $isSltEmployee = auth()->user()?->usesSltEmployeeWorkspace(); @endphp
 <div class="rc-page reservation-calendar-page{{ $isSltEmployee ? ' is-slt-calendar' : '' }}">
     <div class="rc-header">
         <div>
@@ -128,5 +128,5 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=29"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=30"></script>
 @endpush

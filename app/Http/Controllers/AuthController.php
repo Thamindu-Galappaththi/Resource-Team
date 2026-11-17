@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Services\MicrosoftAuthService;
 use App\Services\MicrosoftUserProvisioner;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -35,6 +36,7 @@ class AuthController extends Controller
     {
         $request->authenticate();
         $request->session()->regenerate();
+        $request->session()->put('auth_portal', 'password');
 
         return redirect()->intended(route('dashboard'));
     }
@@ -74,6 +76,10 @@ class AuthController extends Controller
 
         try {
             $user = $this->provisioner->sync($this->microsoft->userFromCode($code));
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return $this->microsoftFailed('Could not complete Microsoft sign-in. Please try again.');
         } catch (RuntimeException $exception) {
             return $this->microsoftFailed($exception->getMessage());
         } catch (Throwable $exception) {
@@ -84,6 +90,7 @@ class AuthController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        $request->session()->put('auth_portal', 'microsoft');
 
         return redirect()->intended(route('dashboard'));
     }

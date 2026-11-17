@@ -127,6 +127,7 @@
 }
 
 .rv-page .form-control,
+.rv-page .form-select,
 .rv-page .cu-dropdown-toggle {
     min-height: 48px;
     border-color: #cbd3da;
@@ -149,6 +150,23 @@
     max-width: none;
 }
 .rv-page .cu-select.is-invalid .cu-dropdown-toggle { border-color: #dc3545; }
+.rv-page .cu-select[data-cu-multiple] .cu-check-item {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    width: 100%;
+    text-align: left;
+}
+.rv-page .cu-select[data-cu-multiple] .cu-check-item .form-check-input {
+    pointer-events: none;
+    margin: 0;
+    flex-shrink: 0;
+}
+.rv-page .cu-select[data-cu-multiple] .cu-check-item.is-selected {
+    background: #eef5ff;
+    color: #14315e;
+    font-weight: 600;
+}
 
 .rv-linked {
     display: grid;

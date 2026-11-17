@@ -25,7 +25,7 @@
             <h1 class="hc-title">{{ $editing ? 'Edit Hostel Reservation' : 'Create Hostel Reservation' }}</h1>
             <p class="hc-subtitle mb-0">{{ $editing ? 'Update this stay request and keep it in the approval queue.' : 'Book hostel beds for your guests and send the request for hostel approval.' }}</p>
         </div>
-        @if(auth()->user()?->hasRole('slt_employee'))
+        @if(auth()->user()?->usesSltEmployeeWorkspace())
             @if($editing)
                 <a href="{{ route('hostel.mine') }}" class="btn hc-back"><i class="ti ti-arrow-left me-1"></i>Back to my hostel requests</a>
             @endif
@@ -61,7 +61,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="guest_phone" class="form-label">Guest phone number <span class="text-danger">*</span></label>
-                        <input type="tel" id="guest_phone" name="guest_phone" pattern="[^\-a-zA-Z]+" title="The phone number cannot contain letters or negative signs." class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestPhone ?? '') }}" autocomplete="tel" placeholder="e.g. +94 77 123 4567" required>
+                        <input type="tel" id="guest_phone" name="guest_phone" class="form-control @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestPhone ?? '') }}" autocomplete="tel" inputmode="tel" maxlength="20" pattern="\+?[0-9][0-9\s\-()]{7,18}" title="Enter a phone number, for example +94 77 123 4567" placeholder="e.g. +94 77 123 4567" required>
                         @error('guest_phone')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12 col-md-6">
@@ -77,7 +77,7 @@
                                 @for($i = 0; $i < $guestCount; $i++)
                                     <div class="col-12 col-sm-6" data-hc-employee-row>
                                         <label for="employee_id_{{ $i }}" class="form-label">Employee ID {{ $guestCount > 1 ? '(guest '.($i + 1).')' : '' }}</label>
-                                        <input type="text" id="employee_id_{{ $i }}" name="employee_ids[]" pattern="[a-zA-Z0-9][a-zA-Z0-9\-\/]*" title="The employee ID cannot contain special characters." class="form-control @error('employee_ids.'.$i) is-invalid @enderror" value="{{ $employeeIds[$i] ?? '' }}" maxlength="50" autocomplete="off" placeholder="010456" required>
+                                        <input type="text" id="employee_id_{{ $i }}" name="employee_ids[]" class="form-control @error('employee_ids.'.$i) is-invalid @enderror" value="{{ $employeeIds[$i] ?? '' }}" inputmode="numeric" pattern="[0-9]+" maxlength="20" autocomplete="off" placeholder="010456" title="Enter numbers only" required>
                                         @error('employee_ids.'.$i)<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                                     </div>
                                 @endfor

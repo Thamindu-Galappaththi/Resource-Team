@@ -10,7 +10,7 @@ class DenySltEmployeeLists
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->hasRole('slt_employee')) {
+        if ($request->user()?->usesSltEmployeeWorkspace()) {
             abort(403);
         }
 

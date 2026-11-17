@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -199,6 +201,86 @@ class LoginTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_microsoft_login_stores_employee_id_phone_and_nic_from_graph_and_directory(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('dkaru@slt.com.lk', 'M G D Karunananda', 'ms-erp-user', [
+            'employeeId' => '010375',
+            'mobilePhone' => '',
+            'jobTitle' => 'Senior Engineer',
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'dkaru@slt.com.lk',
+            'service_id' => '010375',
+            'phone' => '+94714238497',
+            'nic' => '700724123V',
+            'designation' => 'Senior Engineer',
+        ]);
+    }
+
+    public function test_microsoft_login_stores_graph_employee_id_and_phone_when_directory_does_not_match(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('new.staff@slt.com.lk', 'New Staff', 'ms-graph-fields', [
+            'employeeId' => '224244',
+            'mobilePhone' => '+94771234567',
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'new.staff@slt.com.lk',
+            'service_id' => '224244',
+            'phone' => '+94771234567',
+            'nic' => null,
+        ]);
+    }
+
+    public function test_microsoft_login_fills_missing_employee_details_on_existing_user(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('staff@slt.lk', 'Updated Staff', 'ms-user-backfill', [
+            'employeeId' => '010888',
+            'mobilePhone' => '0779998887',
+        ]);
+
+        $user = User::factory()->role('slt_employee')->create([
+            'email' => 'staff@slt.lk',
+            'name' => 'Old Name',
+            'slt_employee' => true,
+            'microsoft_id' => null,
+            'service_id' => null,
+            'nic' => null,
+            'phone' => null,
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $user->refresh();
+
+        $this->assertSame('010888', $user->service_id);
+        $this->assertSame('0779998887', $user->phone);
+        $this->assertNull($user->nic);
+    }
+
     public function test_microsoft_login_updates_existing_slt_employee(): void
     {
         $this->configureMicrosoft();
@@ -227,14 +309,17 @@ class LoginTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
-    public function test_non_slt_user_cannot_login_with_microsoft(): void
+    public function test_microsoft_login_keeps_promoted_staff_role_and_password(): void
     {
         $this->configureMicrosoft();
-        $this->fakeMicrosoftGraph('admin@slt.lk', 'Admin User');
+        $this->fakeMicrosoftGraph('senerath@slt.com.lk', 'W.A.R. Senerath', 'ms-hostel');
 
-        User::factory()->role('admin')->create([
-            'email' => 'admin@slt.lk',
-            'slt_employee' => false,
+        $user = User::factory()->role('hostel_manager')->create([
+            'email' => 'senerath@slt.com.lk',
+            'name' => 'W.A.R. Senerath',
+            'slt_employee' => true,
+            'microsoft_id' => 'ms-hostel',
+            'password' => 'Abc@12345',
         ]);
 
         $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
@@ -242,14 +327,147 @@ class LoginTest extends TestCase
                 'code' => 'auth-code',
                 'state' => 'oauth-state',
             ]))
-            ->assertRedirect(route('login'))
-            ->assertSessionHasErrors('microsoft');
+            ->assertRedirect(route('dashboard'));
 
-        $this->assertGuest();
-        $this->assertDatabaseHas('users', [
-            'email' => 'admin@slt.lk',
-            'user_role' => 'admin',
+        $user->refresh();
+
+        $this->assertSame('hostel_manager', $user->user_role);
+        $this->assertTrue($user->hasRole('hostel_manager'));
+        $this->assertTrue($user->hasRole('slt_employee'));
+        $this->assertTrue(Hash::check('Abc@12345', $user->password));
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame('microsoft', session('auth_portal'));
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('slt-hub', false);
+    }
+
+    public function test_microsoft_login_links_to_existing_staff_email_when_microsoft_id_belongs_to_another_user(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('ishara.madushanka@slt.com.lk', 'Ishara Madushanka', 'ms-ishara');
+
+        $staff = User::factory()->role('hostel_manager')->create([
+            'email' => 'ishara.madushanka@slt.com.lk',
+            'name' => 'Ishara Madushanka',
+            'microsoft_id' => null,
+            'password' => 'Abc@12345',
         ]);
+        $duplicate = User::factory()->role('slt_employee')->create([
+            'email' => 'ishara.madushanka.ms@slt.com.lk',
+            'microsoft_id' => 'ms-ishara',
+            'slt_employee' => true,
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $staff->refresh();
+        $duplicate->refresh();
+
+        $this->assertAuthenticatedAs($staff);
+        $this->assertSame('ms-ishara', $staff->microsoft_id);
+        $this->assertSame('hostel_manager', $staff->user_role);
+        $this->assertTrue($staff->hasRole('hostel_manager'));
+        $this->assertTrue($staff->hasRole('slt_employee'));
+        $this->assertNull($duplicate->microsoft_id);
+        $this->assertSame('ishara.madushanka@slt.com.lk', $staff->email);
+    }
+
+    public function test_microsoft_login_adds_slt_employee_role_alongside_coordinator(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('ishara.madushanka@slt.com.lk', 'Ishara Madushanka', 'ms-coord');
+
+        $user = User::factory()->role('coordinator')->create([
+            'email' => 'ishara.madushanka@slt.com.lk',
+            'name' => 'Ishara Madushanka',
+            'password' => 'Abc@12345',
+            'nic' => '199001010099',
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $user->refresh();
+
+        $this->assertSame('coordinator', $user->user_role);
+        $this->assertTrue($user->hasRole('coordinator'));
+        $this->assertTrue($user->hasRole('slt_employee'));
+        $this->assertTrue($user->slt_employee);
+        $this->assertSame('microsoft', session('auth_portal'));
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('slt-hub', false)
+            ->assertDontSee('Coordinator Dashboard');
+    }
+
+    public function test_staff_login_keeps_coordinator_dashboard_when_slt_employee_role_is_also_assigned(): void
+    {
+        $coordinator = Role::query()->where('slug', 'coordinator')->first();
+        $sltEmployee = Role::query()->where('slug', 'slt_employee')->first();
+
+        $user = User::factory()->role('coordinator')->create([
+            'email' => 'ishara.madushanka@slt.com.lk',
+            'nic' => '199001010099',
+            'password' => 'Abc@12345',
+            'slt_employee' => true,
+        ]);
+        $user->roles()->sync(array_filter([$coordinator?->id, $sltEmployee?->id]));
+
+        $this->post(route('login.attempt'), [
+            'username' => $user->email,
+            'password' => 'Abc@12345',
+        ])->assertRedirect(route('dashboard'));
+
+        $this->assertSame('password', session('auth_portal'));
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Coordinator Dashboard')
+            ->assertDontSee('slt-hub', false);
+    }
+
+    public function test_admin_with_slt_email_can_login_with_microsoft(): void
+    {
+        $this->configureMicrosoft();
+        $this->fakeMicrosoftGraph('ishara.madushanka@slt.com.lk', 'Ishara Madushanka', 'ms-admin');
+
+        $user = User::factory()->role('admin')->create([
+            'email' => 'ishara.madushanka@slt.com.lk',
+            'slt_employee' => false,
+            'microsoft_id' => null,
+        ]);
+
+        $this->withSession(['microsoft_oauth_state' => 'oauth-state'])
+            ->get(route('login.microsoft.callback', [
+                'code' => 'auth-code',
+                'state' => 'oauth-state',
+            ]))
+            ->assertRedirect(route('dashboard'));
+
+        $user->refresh();
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame('admin', $user->user_role);
+        $this->assertTrue($user->hasRole('admin'));
+        $this->assertTrue($user->hasRole('slt_employee'));
+        $this->assertTrue($user->slt_employee);
+        $this->assertSame('ms-admin', $user->microsoft_id);
+        $this->assertSame('microsoft', session('auth_portal'));
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('slt-hub', false);
     }
 
     public function test_non_slt_domain_cannot_login_with_microsoft(): void
@@ -301,7 +519,10 @@ class LoginTest extends TestCase
         ]);
     }
 
-    private function fakeMicrosoftGraph(string $email, string $name, string $microsoftId = 'ms-user-1'): void
+    /**
+     * @param  array<string, mixed>  $extra
+     */
+    private function fakeMicrosoftGraph(string $email, string $name, string $microsoftId = 'ms-user-1', array $extra = []): void
     {
         Http::fake([
             'https://login.microsoftonline.com/*' => Http::response([
@@ -309,11 +530,12 @@ class LoginTest extends TestCase
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
             ]),
-            'https://graph.microsoft.com/v1.0/me' => Http::response([
+            'https://graph.microsoft.com/v1.0/me*' => Http::response([
                 'id' => $microsoftId,
                 'displayName' => $name,
                 'mail' => $email,
                 'userPrincipalName' => $email,
+                ...$extra,
             ]),
         ]);
     }

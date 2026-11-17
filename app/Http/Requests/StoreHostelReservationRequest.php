@@ -22,6 +22,9 @@ class StoreHostelReservationRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->prepareSpecialApproval();
+        if (is_string($this->input('guest_phone'))) {
+            $this->merge(['guest_phone' => trim($this->input('guest_phone'))]);
+        }
         $ids = $this->input('employee_ids');
         if (is_array($ids)) {
             $this->merge([
@@ -38,7 +41,27 @@ class StoreHostelReservationRequest extends FormRequest
         return [
             'guest_title' => ['required', Rule::in(HostelStayDetail::GUEST_TITLES)],
             'guest_name' => ['required', 'string', 'max:150'],
-            'guest_phone' => ['required', 'string', 'max:40', 'not_regex:/[a-zA-Z]/'],
+            'guest_phone' => [
+                'required',
+                'string',
+                'max:20',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $phone = (string) $value;
+                    if (str_contains($phone, '-')) {
+                        $fail('The guest phone number cannot contain a negative sign.');
+
+                        return;
+                    }
+                    if (preg_match('/[a-zA-Z]/', $phone)) {
+                        $fail('The guest phone number cannot contain letters.');
+
+                        return;
+                    }
+                    if (! preg_match('/^\+?[0-9][0-9\s()]{7,18}$/', $phone)) {
+                        $fail('Enter a valid phone number, for example +94 77 123 4567.');
+                    }
+                },
+            ],
             'check_in_date' => ['required', 'date', 'after_or_equal:today'],
             'check_in_time' => ['required', 'date_format:H:i'],
             'check_out_date' => ['required', 'date', 'after_or_equal:check_in_date'],
@@ -50,7 +73,7 @@ class StoreHostelReservationRequest extends FormRequest
             'employee_ids.*' => [
                 'required',
                 'string',
-                'max:50',
+                'max:20',
                 'distinct:ignore_case',
                 function (string $attribute, mixed $value, \Closure $fail) {
                     $val = trim((string) $value);
@@ -59,8 +82,14 @@ class StoreHostelReservationRequest extends FormRequest
 
                         return;
                     }
-                    if (! preg_match('/^[a-zA-Z0-9][a-zA-Z0-9\-\/]*$/', $val)) {
-                        $fail('The employee ID cannot contain special characters.');
+                    if (! ctype_digit($val)) {
+                        if (preg_match('/[^a-zA-Z0-9]/', $val)) {
+                            $fail('The employee ID cannot contain special characters.');
+
+                            return;
+                        }
+
+                        $fail('Enter numbers only for the employee ID.');
                     }
                 },
             ],
@@ -72,6 +101,8 @@ class StoreHostelReservationRequest extends FormRequest
     {
         return [
             'guest_phone.not_regex' => 'The guest phone number cannot contain letters.',
+            'guest_phone.regex' => 'Enter a valid phone number, for example +94 77 123 4567.',
+            'employee_ids.*.regex' => 'Enter numbers only for the employee ID.',
         ] + $this->specialApprovalMessages();
     }
 

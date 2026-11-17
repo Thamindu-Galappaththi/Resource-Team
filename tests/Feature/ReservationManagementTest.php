@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\ReservationStatus;
+use App\Enums\ReservationType;
+use App\Models\Location;
 use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
@@ -10,6 +12,7 @@ use App\Models\User;
 use App\Notifications\ReservationCreated;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -51,27 +54,60 @@ class ReservationManagementTest extends TestCase
         Notification::assertNotSentTo($user, ReservationCreated::class);
     }
 
-    public function test_overlapping_booking_is_rejected(): void
+    public function test_pending_overlap_is_allowed_and_approved_overlap_is_rejected(): void
     {
         $user = User::factory()->role('coordinator')->create();
+        $admin = User::factory()->role('admin')->create();
         $resource = Resource::factory()->create(['status' => 'active']);
+        $date = now()->addDay()->toDateString();
         $payload = $this->payload($resource, $user, [
+            'reservation_date' => $date,
             'start_time' => '09:00',
             'end_time' => '12:00',
         ]);
 
         $this->actingAs($user)->post(route('reservations.store'), $payload)->assertRedirect();
 
+        $this->actingAs($user)->getJson(route('reservations.availability', [
+            'resource_ids' => [$resource->id],
+            'reservation_date' => $date,
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+        ]))->assertOk()->assertJsonPath('available', true)->assertJsonPath('message', 'This slot is available.');
+
+        $this->actingAs($user)->post(route('reservations.store'), $this->payload($resource, $user, [
+            'reservation_date' => $date,
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'purpose' => 'Second pending request',
+        ]))->assertRedirect();
+
+        $this->assertDatabaseCount('reservations', 2);
+
+        $first = Reservation::query()->orderBy('id')->first();
+        $this->actingAs($admin)->post(route('approvals.decision', $first), [
+            'decision' => 'approve',
+            'comment' => 'Approved for the morning slot',
+        ])->assertRedirect();
+
+        $this->actingAs($user)->getJson(route('reservations.availability', [
+            'resource_ids' => [$resource->id],
+            'reservation_date' => $date,
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+        ]))->assertOk()->assertJsonPath('available', false)->assertJsonPath('message', 'This slot is not available.');
+
         $this->actingAs($user)
             ->from(route('reservations.create'))
             ->post(route('reservations.store'), $this->payload($resource, $user, [
+                'reservation_date' => $date,
                 'start_time' => '10:00',
                 'end_time' => '11:00',
                 'purpose' => 'Overlapping attempt',
             ]))
             ->assertSessionHasErrors('start_time');
 
-        $this->assertDatabaseCount('reservations', 1);
+        $this->assertDatabaseCount('reservations', 2);
     }
 
     public function test_back_to_back_slots_do_not_conflict(): void
@@ -268,6 +304,75 @@ class ReservationManagementTest extends TestCase
         $this->assertNotSame('Cancelled', $pendingRow['items'][0]['status']);
     }
 
+    public function test_existing_reservations_feed_includes_resource_owner_only_when_set(): void
+    {
+        $admin = User::factory()->role('admin')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+        $owned = Resource::factory()->create([
+            'status' => 'active',
+            'name_model' => 'Owned Conference Hall',
+            'resource_owner' => 'Hall Keeper',
+        ]);
+        $plain = Resource::factory()->create([
+            'status' => 'active',
+            'name_model' => 'Open Conference Hall',
+            'resource_owner' => null,
+        ]);
+
+        $withOwner = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::APPROVED->value,
+            'purpose' => 'Owned hall booking',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $withOwner->id,
+            'resource_id' => $owned->id,
+            'resource_name_snapshot' => 'Owned Conference Hall',
+        ]);
+
+        $withoutOwner = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'status' => ReservationStatus::APPROVED->value,
+            'purpose' => 'Open hall booking',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $withoutOwner->id,
+            'resource_id' => $plain->id,
+            'resource_name_snapshot' => 'Open Conference Hall',
+        ]);
+
+        $payload = $this->actingAs($admin)
+            ->getJson(route('reservations.feed'))
+            ->assertOk()
+            ->json('reservations');
+        $ownedRow = collect($payload)->firstWhere('purpose', 'Owned hall booking');
+        $plainRow = collect($payload)->firstWhere('purpose', 'Open hall booking');
+
+        $this->assertSame('Hall Keeper', $ownedRow['items'][0]['owner']);
+        $this->assertNull($plainRow['items'][0]['owner']);
+
+        $this->actingAs($admin)->get(route('reservations.show', $withOwner))
+            ->assertOk()
+            ->assertSee('Hall Keeper', false);
+        $this->actingAs($admin)->get(route('reservations.show', $withoutOwner))
+            ->assertOk()
+            ->assertDontSee('>Owner<', false);
+    }
+
+    public function test_existing_reservations_filter_catalog_maps_resource_category(): void
+    {
+        $user = User::factory()->role('coordinator')->create();
+        $resource = Resource::factory()->create(['name_model' => 'Audio Mixer Pro']);
+
+        $this->actingAs($user)->get(route('reservations.index'))
+            ->assertOk()
+            ->assertSee('filterCatalog', false)
+            ->assertSee('Audio Mixer Pro', false)
+            ->assertSee('"category_id":"'.$resource->type->resource_category_id.'"', false);
+    }
+
     public function test_existing_reservations_filter_by_status(): void
     {
         $admin = User::factory()->role('admin')->create();
@@ -324,7 +429,11 @@ class ReservationManagementTest extends TestCase
                 'id="calendar-resource"',
                 'id="calendar-status"',
             ], false);
-        $this->actingAs($user)->get(route('reservations.create'))->assertOk()->assertSee('Purpose of Reservation');
+        $this->actingAs($user)->get(route('reservations.create'))
+            ->assertOk()
+            ->assertSee('Purpose of Reservation')
+            ->assertSee('Select a time range')
+            ->assertSee('data-cu-multiple', false);
         $this->actingAs($user)->get(route('reservations.index'))->assertOk()->assertSee('Existing Reservations');
     }
 
@@ -406,6 +515,88 @@ class ReservationManagementTest extends TestCase
             ->assertSee('"name":"Audio Mixer Pro"', false)
             ->assertSee('"location_id":"'.$resource->location_id.'"', false)
             ->assertSee('"category_id":"'.$resource->type->resource_category_id.'"', false);
+    }
+
+    public function test_resource_owner_can_download_this_weeks_approved_sheet(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-11 10:00:00', 'Asia/Colombo'));
+
+        $owner = User::factory()->role('resource_owner')->create(['name' => 'Owned Lab Manager']);
+        $requester = User::factory()->role('slt_employee')->create(['name' => 'Nadeesha Perera']);
+        $location = Location::factory()->create(['name' => 'Welisara']);
+        $resource = Resource::factory()->create([
+            'name_model' => 'Main Auditorium',
+            'location_id' => $location->id,
+        ]);
+
+        $approved = Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'location_id' => $location->id,
+            'status' => ReservationStatus::APPROVED->value,
+            'title' => 'CCNA special lab',
+            'purpose' => 'Batch 12 extra hours',
+            'lecturer_name' => 'Mr. Silva',
+            'special_approval' => true,
+            'attendee_count' => 18,
+            'reservation_date' => '2026-11-12',
+            'start_time' => '09:00:00',
+            'end_time' => '12:00:00',
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $approved->id,
+            'resource_id' => $resource->id,
+            'resource_name_snapshot' => 'Main Auditorium',
+        ]);
+
+        Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'location_id' => $location->id,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'purpose' => 'Pending should stay off the sheet',
+            'reservation_date' => '2026-11-13',
+        ]);
+        Reservation::factory()->create([
+            'requester_id' => $requester->id,
+            'created_by_user_id' => $requester->id,
+            'type' => ReservationType::HOSTEL->value,
+            'status' => ReservationStatus::APPROVED->value,
+            'purpose' => 'Hostel stay stays off the sheet',
+            'reservation_date' => '2026-11-12',
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('This week’s approved bookings', false)
+            ->assertSee('Download PDF', false)
+            ->assertSee('Download image', false);
+
+        $pdf = $this->actingAs($owner)->get(route('reservations.week-sheet', ['format' => 'pdf']));
+        $pdf->assertOk();
+        $this->assertStringContainsString('application/pdf', (string) $pdf->headers->get('content-type'));
+        $this->assertStringContainsString('weekly-reservations-2026-11-09.pdf', (string) $pdf->headers->get('content-disposition'));
+
+        $this->actingAs($owner)
+            ->get(route('reservations.week-sheet', ['format' => 'png']))
+            ->assertOk()
+            ->assertSee('Weekly approved reservations', false)
+            ->assertSee('CCNA special lab', false)
+            ->assertSee('Batch 12 extra hours', false)
+            ->assertSee('Lecturer: Mr. Silva', false)
+            ->assertSee('Special approval', false)
+            ->assertSee('18 attendees', false)
+            ->assertSee('Main Auditorium', false)
+            ->assertSee('Nadeesha Perera', false)
+            ->assertDontSee('Pending should stay off the sheet', false)
+            ->assertDontSee('Hostel stay stays off the sheet', false);
+
+        $this->actingAs(User::factory()->role('slt_employee')->create())
+            ->get(route('reservations.week-sheet'))
+            ->assertForbidden();
+
+        Carbon::setTestNow();
     }
 
     /**

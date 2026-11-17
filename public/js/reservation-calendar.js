@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const result = await response.json();
             if (!response.ok || !result.available) {
-                showFeedback(result.message || 'That time is unavailable. Select another slot.', 'danger');
+                showFeedback(result.message || 'This slot is not available.', 'danger');
                 return;
             }
             const createUrl = new URL(calendarElement.dataset.createUrl, window.location.origin);

@@ -1,0 +1,94 @@
+.lf-page .rr-stats.rc-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+.lf-page .rr-stats .rc-card:nth-child(4)::after { content: "\eb4d"; }
+
+.lf-page #lf-add {
+    overflow: visible;
+    border: 1px solid #d5def0 !important;
+    border-radius: 16px;
+    background: #fff !important;
+    box-shadow: 0 12px 32px rgba(28, 55, 110, .1) !important;
+}
+.lf-page #lf-add > .card-body {
+    padding: clamp(1rem, 2vw, 1.4rem);
+    overflow: visible;
+}
+.lf-page .rr-catalog-heading .rr-section-title {
+    color: #fff !important;
+}
+.lf-page .rr-catalog-heading .rr-muted {
+    max-width: none;
+    margin: .2rem 0 0;
+    color: #fff !important;
+    font-size: .8rem;
+    line-height: 1.45;
+    overflow-wrap: break-word;
+}
+.lf-page .rr-submit-rate {
+    min-height: 42px;
+    height: 42px;
+    padding: .45rem 1.2rem;
+    border-radius: 9px;
+    background: #1769c2;
+    box-shadow: none;
+    font-weight: 650;
+}
+.lf-page .rr-submit-rate:hover { background: #145aa5; }
+
+.lf-page .lf-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)) minmax(0, .9fr) auto;
+    align-items: end;
+    gap: .75rem .85rem;
+}
+.lf-page .lf-filters .rr-rate-search { grid-column: auto; }
+.lf-page .lf-filters .rr-catalog-actions { justify-self: start; }
+.lf-page #lf-catalog {
+    padding: 0 1.15rem 1.15rem;
+    min-width: 0;
+    overflow: visible;
+}
+.lf-page #lf-catalog.is-loading { opacity: .7; pointer-events: none; }
+.lf-page .rr-add-fields .form-label::after { content: none !important; }
+.lf-page #lf-table td.rsv-actions,
+.lf-page #lf-table th:last-child { width: 9.5rem; }
+.lf-page .rsv-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .65rem;
+    width: 100%;
+    margin: .85rem 0 0;
+    padding: .35rem 0 .15rem;
+    background: #fff;
+    color: #5b6b80;
+}
+.lf-page .rsv-pager .small {
+    margin: 0;
+    color: #5b6b80;
+    white-space: nowrap;
+}
+.lf-page .rr-catalog-panel {
+    overflow: hidden;
+    background: #fff !important;
+}
+
+@media (max-width: 1199.98px) {
+    .lf-page .rr-stats.rc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lf-page .lf-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lf-page .lf-filters .rr-rate-search,
+    .lf-page .lf-filters .rr-catalog-actions { grid-column: 1 / -1; }
+}
+@media (max-width: 767.98px) {
+    .lf-page .rr-stats.rc-cards { grid-template-columns: 1fr; }
+    .lf-page .lf-filters { grid-template-columns: 1fr; }
+    .lf-page .lf-filters .rr-rate-search,
+    .lf-page .lf-filters .rr-catalog-actions { grid-column: auto; }
+    .lf-page .rr-catalog-actions-row { width: 100%; }
+    .lf-page .rr-catalog-actions-row .rsv-filter-clear { flex: 1; }
+    .lf-page .rsv-pager { justify-content: center; text-align: center; }
+    .lf-page .rsv-pager .small { white-space: normal; }
+}

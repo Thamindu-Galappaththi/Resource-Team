@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('resourceCategorySelect')?.addEventListener('change', (event) => {
         clearFieldError('resourceCategorySelect');
         refreshTypeSelectForCategory(event.target.value);
+        window.RMHostelFields.renderLocations();
     });
     ['resourceTypeSelect', 'resourceLocationSelect', 'resourceStatusSelect', 'primaryResourceSelect'].forEach((id) => {
         document.getElementById(id)?.addEventListener('change', () => clearFieldError(id));

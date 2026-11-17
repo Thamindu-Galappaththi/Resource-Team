@@ -1,7 +1,7 @@
 <div>
     @php
         $user = auth()->user();
-        $isSltEmployee = $user->hasRole('slt_employee');
+        $isSltEmployee = $user->usesSltEmployeeWorkspace();
         $canDashboard = $user->hasPermission('dashboard');
         $canCreateUser = $user->hasPermission('user.create');
         $canManageUsers = $user->hasPermission('user.management');
@@ -20,6 +20,7 @@
         $canHostelStudentRequests = $user->hasPermission('hostel.manage') && ! $isSltEmployee;
         $canCanteenDashboard = $user->hasPermission('canteen.view') && ! $isSltEmployee;
         $canCanteenCreate = $user->hasPermission('canteen.create');
+        $canCanteenMenus = $user->hasPermission('canteen.manage') && ! $isSltEmployee;
         $canCanteenIndex = $user->hasPermission('canteen.index') && ! $isSltEmployee;
         $canSltCanteenRequests = $isSltEmployee && $user->hasPermission('canteen.index');
         $canPayments = $user->hasPermission('payments.view');
@@ -316,6 +317,15 @@
                     </li>
                 @endif
 
+                @if($canCanteenMenus)
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('canteen.menus.*') ? 'active' : '' }}" href="{{ route('canteen.menus.index') }}">
+                            <span><i class="ti ti-tools-kitchen-2"></i></span>
+                            <span class="hide-menu">Meal Plans</span>
+                        </a>
+                    </li>
+                @endif
+
                 @if($canCanteenIndex)
                     <li class="sidebar-item">
                         <a class="sidebar-link {{ request()->routeIs('canteen.index', 'canteen.show') ? 'active' : '' }}" href="{{ route('canteen.index') }}">
@@ -359,6 +369,12 @@
                         </a>
                     </li>
                 @endif
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ request()->routeIs('payments.history*') ? 'active' : '' }}" href="{{ route('payments.history') }}">
+                        <span><i class="ti ti-table"></i></span>
+                        <span class="hide-menu">View Payments</span>
+                    </a>
+                </li>
             @endif
 
             @if($canReports)

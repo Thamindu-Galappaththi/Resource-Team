@@ -13,6 +13,7 @@
     let active = null;
     let request = null;
     let searchTimer = null;
+    let suppressFilterChange = false;
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -227,9 +228,16 @@
         const badge = document.getElementById('rsv-view-badge');
         badge.className = `badge ${row.status_badge}`;
         badge.textContent = row.status_label;
-        const items = (row.items || []).length
-            ? row.items.map((item) => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.category)}</td><td><span class="badge ${escapeHtml(item.status_badge || row.status_badge || 'bg-secondary')}">${escapeHtml(item.status)}</span></td></tr>`).join('')
-            : '<tr><td colspan="3" class="text-muted">No resources recorded.</td></tr>';
+        const booked = row.items || [];
+        const showOwner = booked.some((item) => Boolean(item.owner));
+        const items = booked.length
+            ? booked.map((item) => `<tr>
+                <td>${escapeHtml(item.name)}</td>
+                <td>${escapeHtml(item.category)}</td>
+                ${showOwner ? `<td>${item.owner ? escapeHtml(item.owner) : ''}</td>` : ''}
+                <td><span class="badge ${escapeHtml(item.status_badge || row.status_badge || 'bg-secondary')}">${escapeHtml(item.status)}</span></td>
+            </tr>`).join('')
+            : `<tr><td colspan="${showOwner ? 4 : 3}" class="text-muted">No resources recorded.</td></tr>`;
         const history = (row.history || []).length
             ? row.history.map((item) => `<div class="rsv-history">
                 <div class="rsv-history-title">${escapeHtml(item.from ? `${item.from} → ${item.to}` : item.to)}</div>
@@ -260,7 +268,7 @@
             <h3 class="rsv-section-title">Booked resources</h3>
             <div class="table-responsive rsv-mini-table">
                 <table class="table align-middle mb-0">
-                    <thead><tr><th>Resource</th><th>Category</th><th>Item status</th></tr></thead>
+                    <thead><tr><th>Resource</th><th>Category</th>${showOwner ? '<th>Owner</th>' : ''}<th>Item status</th></tr></thead>
                     <tbody>${items}</tbody>
                 </table>
             </div>
@@ -284,11 +292,27 @@
         bootstrap.Modal.getOrCreateInstance(document.getElementById('rsv-cancel-modal')).show();
     }
 
+    function syncDependentFilters(changedId) {
+        if (!window.RMSelect?.cascadeResourceFilters) return;
+        window.RMSelect.cascadeResourceFilters({
+            resources: config.filterCatalog?.resources || [],
+            categories: config.filterCatalog?.categories || [],
+            locationSelectId: 'location_id',
+            categorySelectId: 'resource_category_id',
+            resourceSelectId: 'resource_id',
+            emptyValue: '',
+            updateCategories: changedId !== 'resource_category_id' && changedId !== 'resource_id',
+        });
+    }
+
     function resetFilters() {
+        suppressFilterChange = true;
         document.getElementById('search').value = '';
         document.getElementById('from_date').value = '';
         document.getElementById('to_date').value = '';
         Object.entries(placeholders).forEach(([id, label]) => window.RMSelect?.setValue(id, '', label));
+        syncDependentFilters();
+        suppressFilterChange = false;
         toggleClear();
         fetchList(config.url);
     }
@@ -305,10 +329,17 @@
     });
     ['from_date', 'to_date', 'location_id', 'resource_category_id', 'resource_id', 'status'].forEach((id) => {
         document.getElementById(id)?.addEventListener('change', () => {
+            if (suppressFilterChange) return;
+            if (id === 'location_id' || id === 'resource_category_id') {
+                suppressFilterChange = true;
+                syncDependentFilters(id);
+                suppressFilterChange = false;
+            }
             toggleClear();
             fetchList();
         });
     });
+    syncDependentFilters();
 
     document.getElementById('rsv-results')?.addEventListener('click', (event) => {
         const view = event.target.closest('[data-rsv-view]');

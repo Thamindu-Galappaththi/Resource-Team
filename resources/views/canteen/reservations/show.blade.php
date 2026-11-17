@@ -17,7 +17,7 @@
         </div>
         <div class="cd-actions">
             <span class="cd-status cd-status--{{ $reservation->statusEnum()->tone() }}">{{ $reservation->statusEnum()->label() }}</span>
-            @if(auth()->user()?->hasRole('slt_employee'))
+            @if(auth()->user()?->usesSltEmployeeWorkspace())
                 <a href="{{ route('canteen.mine') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to my canteen requests</a>
             @else
                 <a href="{{ route('canteen.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to list</a>
@@ -25,6 +25,7 @@
         </div>
     </header>
 
+    <div id="cp-flash" class="alert cp-auto-alert d-none" role="status"></div>
     @if(session('success'))
         <div class="alert alert-success cp-auto-alert" role="status">{{ session('success') }}</div>
     @endif
@@ -39,6 +40,7 @@
                 <p class="text-muted small mb-0">Meal request, service slot, and review notes.</p>
             </div>
             <div class="cp-action-group">
+                @include('canteen.partials.review-buttons', ['reservation' => $reservation])
                 @can('update', $reservation)
                     <a href="{{ route('canteen.edit', $reservation) }}" class="btn btn-sm btn-outline-secondary cp-icon-btn" title="Edit" aria-label="Edit reservation"><i class="ti ti-pencil"></i></a>
                 @endcan
@@ -68,7 +70,10 @@
             <div class="cp-details">
                 <div class="cp-detail-row"><span class="cp-detail-label">Reservation name</span><span class="cp-detail-value">{{ $reservation->reservation_name }}</span></div>
                 <div class="cp-detail-row"><span class="cp-detail-label">Requester</span><span class="cp-detail-value">{{ $reservation->requestedBy?->name ?? 'Unknown' }}</span></div>
-                <div class="cp-detail-row"><span class="cp-detail-label">Meal type</span><span class="cp-detail-value">{{ $reservation->mealTypeLabel() }}</span></div>
+                <div class="cp-detail-row"><span class="cp-detail-label">Meal menu</span><span class="cp-detail-value">{{ $reservation->mealMenu?->name ?? $reservation->mealTypeLabel() }}</span></div>
+                @if($reservation->mealMenu?->image_path)
+                    <div class="cp-detail-row"><span class="cp-detail-label">Menu image</span><span class="cp-detail-value"><img src="{{ $reservation->mealMenu->imageUrl() }}" alt="{{ $reservation->mealMenu->name }}" style="display:block;max-width:min(100%,420px);max-height:220px;object-fit:cover;border-radius:12px"></span></div>
+                @endif
                 <div class="cp-detail-row"><span class="cp-detail-label">Location</span><span class="cp-detail-value">{{ $reservation->location?->name ?? '—' }}</span></div>
                 <div class="cp-detail-row"><span class="cp-detail-label">Date & time</span><span class="cp-detail-value">{{ $reservation->reservation_date->format('d M Y') }} at {{ $reservation->serviceTimeLabel() }}</span></div>
                 <div class="cp-detail-row"><span class="cp-detail-label">Orders</span><span class="cp-detail-value">{{ number_format($reservation->number_of_orders) }}</span></div>
@@ -86,8 +91,9 @@
 </div>
 
 @include('canteen.partials.confirm-modal')
+@include('canteen.partials.review-modal')
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/canteen-ui.js') }}?v=5"></script>
+<script src="{{ asset('js/canteen-ui.js') }}?v=8"></script>
 @endpush

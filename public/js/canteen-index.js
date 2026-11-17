@@ -1,11 +1,9 @@
 (function () {
     const form = document.getElementById('cp-filters');
     const placeholders = {
-        meal_type: 'All meals',
         status: 'All statuses',
-        requested_by_user_id: 'All requesters',
     };
-    const filterIds = ['search', 'from_date', 'to_date', 'meal_type', 'status', 'requested_by_user_id'];
+    const filterIds = ['search', 'from_date', 'to_date', 'status'];
 
     function dismissAlert(alert, delay = 5000) {
         if (!alert || alert.classList.contains('d-none')) return;
@@ -115,7 +113,7 @@
         toggleClear();
     });
 
-    ['from_date', 'to_date', 'meal_type', 'status', 'requested_by_user_id'].forEach((id) => {
+    ['from_date', 'to_date', 'status'].forEach((id) => {
         document.getElementById(id)?.addEventListener('change', () => {
             toggleClear();
             refresh(filterUrl());

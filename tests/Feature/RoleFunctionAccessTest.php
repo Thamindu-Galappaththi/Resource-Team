@@ -8,6 +8,7 @@ use App\Models\Permission;
 use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
+use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -433,6 +434,71 @@ class RoleFunctionAccessTest extends TestCase
         $this->actingAs(User::factory()->role('coordinator')->create())
             ->get(route('hostel.create'))
             ->assertOk();
+    }
+
+    public function test_staff_portal_ignores_slt_employee_permissions_when_other_roles_are_assigned(): void
+    {
+        $hostel = Role::query()->where('slug', 'hostel_manager')->first();
+        $slt = Role::query()->where('slug', 'slt_employee')->first();
+        $management = Role::query()->where('slug', 'management')->first();
+
+        $user = User::factory()->role('hostel_manager')->create();
+        $user->roles()->sync(array_filter([$hostel?->id, $slt?->id]));
+
+        $html = $this->actingAs($user)
+            ->withSession(['auth_portal' => 'password'])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('HOSTEL')
+            ->assertDontSee('Create Reservations')
+            ->assertDontSee('Create Canteen Reservation')
+            ->assertDontSee('PAYMENTS')
+            ->getContent();
+
+        $this->assertStringNotContainsString('nav-small-cap-text">CANTEEN', $html);
+
+        $this->actingAs($user)->withSession(['auth_portal' => 'password'])
+            ->get(route('reservations.create'))
+            ->assertForbidden();
+        $this->actingAs($user)->withSession(['auth_portal' => 'password'])
+            ->get(route('canteen.create'))
+            ->assertForbidden();
+        $this->actingAs($user)->withSession(['auth_portal' => 'password'])
+            ->get(route('hostel.index'))
+            ->assertOk();
+
+        $user->roles()->sync(array_filter([$hostel?->id, $slt?->id, $management?->id]));
+        $user = $user->fresh();
+
+        $this->actingAs($user)
+            ->withSession(['auth_portal' => 'password'])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('HOSTEL')
+            ->assertSee('PAYMENTS')
+            ->assertSee('Reports')
+            ->assertDontSee('Create Canteen Reservation');
+
+        $this->actingAs($user)->withSession(['auth_portal' => 'password'])
+            ->get(route('reports.index'))
+            ->assertOk();
+        $this->actingAs($user)->withSession(['auth_portal' => 'password'])
+            ->get(route('canteen.create'))
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->withSession(['auth_portal' => 'microsoft'])
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('slt-hub', false)
+            ->assertDontSee('PAYMENTS');
+
+        $this->actingAs($user)->withSession(['auth_portal' => 'microsoft'])
+            ->get(route('reservations.create'))
+            ->assertOk();
+        $this->actingAs($user)->withSession(['auth_portal' => 'microsoft'])
+            ->get(route('hostel.index'))
+            ->assertForbidden();
     }
 
     private function roleHas(string $role, string $permission): bool

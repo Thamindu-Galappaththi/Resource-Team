@@ -74,38 +74,43 @@
         }
 
         event.preventDefault();
-        const needsReason = button.dataset.reason === '1';
         const result = await swalFire({
-            title: button.dataset.title || 'Delete this request?',
-            html: `<p class="slt-swal-sub">${escapeHtml(button.dataset.sub || '')}</p>${needsReason ? '<label class="visually-hidden" for="slt-swal-reason">Cancellation reason</label><textarea id="slt-swal-reason" class="form-control slt-swal-reason" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="Cancellation reason" rows="3"></textarea>' : ''}`,
+            title: '',
+            html: `<div class="slt-confirm">
+                <span class="slt-confirm__icon" aria-hidden="true"><i class="ti ti-calendar-off"></i></span>
+                <h2 class="slt-confirm__title">${escapeHtml(button.dataset.title || 'Cancel this request?')}</h2>
+                <p class="slt-confirm__ref">${escapeHtml(button.dataset.sub || '')}</p>
+                <p class="slt-confirm__copy">This request will be cancelled. Add a short reason so the team knows why.</p>
+                <label class="slt-confirm__label" for="slt-swal-reason">Cancellation reason</label>
+                <textarea id="slt-swal-reason" class="slt-confirm__reason" rows="3" maxlength="1000" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="e.g. Plans changed, date no longer needed"></textarea>
+            </div>`,
             showCancelButton: true,
-            confirmButtonText: 'Delete',
+            confirmButtonText: 'Cancel request',
             cancelButtonText: 'Keep',
             reverseButtons: true,
             focusConfirm: false,
             allowOutsideClick: false,
             scrollbarPadding: false,
             heightAuto: false,
-            width: 480,
+            width: 440,
+            didOpen: () => document.getElementById('slt-swal-reason')?.focus(),
             preConfirm: () => {
-                if (!needsReason) {
-                    return true;
-                }
                 const value = document.getElementById('slt-swal-reason')?.value.trim() || '';
                 if (!value) {
-                    window.Swal?.showValidationMessage('A reason is required.');
+                    window.Swal?.showValidationMessage('Please add a cancellation reason.');
                     return false;
                 }
                 return value;
             },
             customClass: {
                 ...(window.RMSwal?.base?.customClass || {}),
-                popup: 'rm-swal slt-swal',
+                popup: 'slt-swal',
                 title: 'slt-swal-title',
                 htmlContainer: 'slt-swal-body',
-                confirmButton: 'btn btn-danger rm-swal-btn',
-                cancelButton: 'btn btn-outline-secondary rm-swal-btn',
+                confirmButton: 'slt-swal-btn slt-swal-btn--danger',
+                cancelButton: 'slt-swal-btn slt-swal-btn--ghost',
                 actions: 'slt-swal-actions',
+                validationMessage: 'slt-swal-error',
                 container: 'slt-swal-backdrop',
             },
         });
@@ -120,13 +125,11 @@
         const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const method = (button.dataset.method || 'POST').toUpperCase();
         form.innerHTML = `<input type="hidden" name="_token" value="${token}">${method !== 'POST' ? `<input type="hidden" name="_method" value="${method}">` : ''}`;
-        if (needsReason) {
-            const reason = document.createElement('input');
-            reason.type = 'hidden';
-            reason.name = 'cancellation_reason';
-            reason.value = String(result.value || '').trim();
-            form.appendChild(reason);
-        }
+        const reason = document.createElement('input');
+        reason.type = 'hidden';
+        reason.name = 'cancellation_reason';
+        reason.value = String(result.value || '').trim();
+        form.appendChild(reason);
         document.body.appendChild(form);
         form.submit();
     });

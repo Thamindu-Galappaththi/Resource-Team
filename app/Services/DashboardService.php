@@ -288,17 +288,18 @@ class DashboardService
 
     private function resourceOwner(User $user): array
     {
-        $pending = Reservation::query()->where('status', ReservationStatus::PENDING_APPROVAL->value)->count();
-        $approvedWeek = Reservation::query()
-            ->whereIn('status', [ReservationStatus::APPROVED->value, ReservationStatus::CONFIRMED->value])
-            ->where('reservation_date', '>=', $this->today()->copy()->subDays(6)->toDateString())
-            ->count();
+        $pendingQuery = Reservation::query()
+            ->where('status', ReservationStatus::PENDING_APPROVAL->value)
+            ->where('type', '!=', ReservationType::HOSTEL->value);
+        $pending = (clone $pendingQuery)->count();
+        $weekSheet = app(ReservationWeekSheetService::class)->payload(null, $user);
+        $approvedWeek = $weekSheet['rows']->count();
 
         return [
             'kpis' => [
                 $this->kpi('Resources', Resource::query()->count(), Resource::query()->where('status', 'active')->count().' active', 'ti ti-building', 'primary', $this->url($user, 'resources.index', 'resources.index')),
                 $this->kpi('Pending approvals', $pending, 'Decisions needed', 'ti ti-clock-hour-4', 'warning', $this->url($user, 'approvals.index', 'approvals.index')),
-                $this->kpi('Approved this week', $approvedWeek, 'Bookings cleared', 'ti ti-circle-check', 'success'),
+                $this->kpi('Approved this week', $approvedWeek, 'Bookings on the week sheet', 'ti ti-circle-check', 'success'),
                 $this->kpi('Maintenance', Resource::query()->where('status', 'under_maintenance')->count(), 'Unavailable assets', 'ti ti-tool', 'danger', $this->url($user, 'resources.index', 'resources.index')),
             ],
             'actions' => $this->actions($user, [
@@ -307,11 +308,18 @@ class DashboardService
                 ['Resource calendar', 'ti ti-calendar', 'resources.calendar', 'resources.calendar', 'outline'],
                 ['Reservations', 'ti ti-list', 'reservations.index', 'reservations.index', 'outline'],
             ]),
+            'weekSheet' => $user->hasPermission('reservations.week_sheet') ? [
+                'label' => $weekSheet['label'],
+                'count' => $approvedWeek,
+                'specialCount' => $weekSheet['specialCount'],
+                'pdfUrl' => $this->url($user, 'reservations.week_sheet', 'reservations.week-sheet', ['format' => 'pdf']),
+                'pngUrl' => $this->url($user, 'reservations.week_sheet', 'reservations.week-sheet', ['format' => 'png']),
+            ] : null,
             'chart' => $this->reservationChart(Reservation::query(), 'Usage this week'),
             'breakdown' => $this->statusBreakdown(Reservation::query(), 'Request outcomes'),
             'queue' => $this->reservationList(
                 $user,
-                Reservation::query()->where('status', ReservationStatus::PENDING_APPROVAL->value)->latest('id'),
+                (clone $pendingQuery)->latest('id'),
                 'Waiting for you',
                 'No pending resource requests.'
             ),

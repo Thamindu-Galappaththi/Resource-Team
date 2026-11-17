@@ -173,7 +173,7 @@ class SltEmployeeDashboardController extends Controller
             ->with(['hostelStay', 'location', 'requester', 'items.resource'])
             ->where('type', ReservationType::HOSTEL->value)
             ->where('status', '!=', ReservationStatus::DRAFT->value)
-            ->when($user?->hasRole('slt_employee'), fn ($query) => $query->whereIn('status', ReservationStatus::calendarActive()))
+            ->when($user?->usesSltEmployeeWorkspace(), fn ($query) => $query->whereIn('status', ReservationStatus::calendarActive()))
             ->where(function ($query) use ($range) {
                 $query->whereBetween('reservation_date', [$range['start']->toDateString(), $range['end']->toDateString()])
                     ->orWhereHas('hostelStay', function ($stay) use ($range) {
@@ -204,7 +204,7 @@ class SltEmployeeDashboardController extends Controller
 
         $reservations = CanteenReservation::query()
             ->with(['location', 'requestedBy'])
-            ->when($user?->hasRole('slt_employee'), fn ($query) => $query->whereIn('status', CanteenReservationStatus::calendarActive()))
+            ->when($user?->usesSltEmployeeWorkspace(), fn ($query) => $query->whereIn('status', CanteenReservationStatus::calendarActive()))
             ->whereDate('reservation_date', '>=', $range['start']->toDateString())
             ->whereDate('reservation_date', '<', $range['end']->toDateString())
             ->orderBy('reservation_date')

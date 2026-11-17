@@ -184,7 +184,7 @@
     };
 </script>
 <script src="{{ asset('js/resource-select.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-hostel-fields.js') }}?v=4"></script>
+<script src="{{ asset('js/resource-hostel-fields.js') }}?v=5"></script>
 <script src="{{ asset('js/resource-link-picker.js') }}?v=2"></script>
-<script src="{{ asset('js/resource-index.js') }}?v=22"></script>
+<script src="{{ asset('js/resource-index.js') }}?v=23"></script>
 @endpush

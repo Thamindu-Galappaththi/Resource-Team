@@ -16,7 +16,7 @@
             <h1 class="cd-title">Create reservation</h1>
             <p class="cd-subtitle">Plan your meal service with the canteen team.</p>
         </div>
-        @unless(auth()->user()?->hasRole('slt_employee'))
+        @unless(auth()->user()?->usesSltEmployeeWorkspace())
             <div class="cd-actions">
                 <a href="{{ route('canteen.index') }}" class="cd-btn cd-btn--outline"><i class="ti ti-arrow-left" aria-hidden="true"></i>All reservations</a>
             </div>
@@ -36,7 +36,7 @@
             <form id="canteenReservationForm" method="POST" action="{{ route('canteen.store') }}">
                 @include('canteen.reservations._form')
                 <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 pt-4 mt-2 border-top cp-form-actions">
-                    <a href="{{ auth()->user()?->hasRole('slt_employee') ? route('canteen.home') : route('canteen.index') }}" class="btn btn-outline-secondary">Discard</a>
+                    <a href="{{ auth()->user()?->usesSltEmployeeWorkspace() ? route('canteen.home') : route('canteen.index') }}" class="btn btn-outline-secondary">Discard</a>
                     <button id="canteenSubmitButton" type="submit" class="btn btn-primary">
                         <span class="submit-label"><i class="ti ti-check me-1" aria-hidden="true"></i>Submit reservation</span>
                         <span class="submit-loading d-none"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Submitting...</span>
@@ -55,7 +55,7 @@
         const button = document.getElementById('canteenSubmitButton');
         const date = document.getElementById('reservation_date');
         const orders = document.getElementById('number_of_orders');
-        const meal = document.getElementById('meal_type');
+        const meal = document.getElementById('meal_menu_id');
 
         if (!form || !button || !date || !orders) return;
 
@@ -71,15 +71,21 @@
 
         form.addEventListener('submit', (event) => {
             const mealWrap = meal?.closest('[data-cu-select]');
-            if (mealWrap) {
-                mealWrap.classList.toggle('is-invalid', !meal.value);
-            }
+            const location = document.getElementById('location_id');
+            const locationWrap = location?.closest('[data-cu-select]');
+            if (mealWrap) mealWrap.classList.toggle('is-invalid', !meal.value);
+            if (locationWrap) locationWrap.classList.toggle('is-invalid', !location.value);
 
-            if (!meal?.value || date.value < date.min || Number(orders.value) < 1 || Number(orders.value) > 10000) {
+            if (!meal?.value || !location?.value || date.value < date.min || Number(orders.value) < 1 || Number(orders.value) > 10000) {
                 event.preventDefault();
                 if (!meal?.value) {
                     mealWrap?.querySelector('.cu-dropdown-toggle')?.classList.add('is-invalid');
                     mealWrap?.querySelector('.cu-dropdown-toggle')?.focus();
+                    return;
+                }
+                if (!location?.value) {
+                    locationWrap?.querySelector('.cu-dropdown-toggle')?.classList.add('is-invalid');
+                    locationWrap?.querySelector('.cu-dropdown-toggle')?.focus();
                     return;
                 }
                 form.reportValidity();

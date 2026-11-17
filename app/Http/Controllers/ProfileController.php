@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdatePasswordRequest;
 use App\Http\Requests\UpdateProfileRequest;
+use App\Models\Location;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -11,16 +13,10 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public const CAMPUSES = [
-        'Nebula Institute of Technology - Welisara',
-        'Nebula Institute of Technology - Moratuwa',
-        'Nebula Institute of Technology - Peradeniya',
-    ];
-
     public function show(Request $request): View
     {
         $user = $request->user()->loadMissing(['role', 'roles']);
-        $locations = self::CAMPUSES;
+        $locations = Location::query()->ordered()->pluck('name')->all();
 
         if (filled($user->location) && ! in_array($user->location, $locations, true)) {
             array_unshift($locations, $user->location);
@@ -33,7 +29,7 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function update(UpdateProfileRequest $request): RedirectResponse
+    public function update(UpdateProfileRequest $request): RedirectResponse|JsonResponse
     {
         $user = $request->user();
         $validated = $request->validated();
@@ -54,12 +50,25 @@ class ProfileController extends Controller
 
         $user->update($validated);
 
+        if ($request->ajax() || $request->expectsJson()) {
+            $user->refresh();
+
+            return response()->json([
+                'message' => 'Your profile was updated.',
+                'user' => [
+                    'name' => $user->name,
+                    'avatar_url' => $user->avatarUrl(),
+                    'has_avatar' => filled($user->user_profile),
+                ],
+            ]);
+        }
+
         return redirect()
             ->route('user.profile')
             ->with('status', 'profile-updated');
     }
 
-    public function updatePassword(UpdatePasswordRequest $request): RedirectResponse
+    public function updatePassword(UpdatePasswordRequest $request): RedirectResponse|JsonResponse
     {
         $password = $request->validated('password');
 
@@ -69,6 +78,13 @@ class ProfileController extends Controller
 
         auth()->logoutOtherDevices($password);
         $request->session()->regenerate();
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'message' => 'Your password was changed.',
+                'csrf_token' => csrf_token(),
+            ]);
+        }
 
         return redirect()
             ->route('user.profile', ['tab' => 'security'])

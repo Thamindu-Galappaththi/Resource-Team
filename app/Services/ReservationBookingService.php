@@ -87,7 +87,13 @@ class ReservationBookingService
             // Shared-capacity bookings (hostel beds) arrive with per-room quantities already checked by the caller.
             $quantities = $payload['quantities'] ?? [];
             if ($quantities === []) {
-                $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt);
+                $this->lockDaysAndAssertNoOverlap(
+                    $resourceIds,
+                    $startsAt,
+                    $endsAt,
+                    null,
+                    ReservationStatus::occupyingItemStatuses(),
+                );
             }
 
             $primary = $resources[$resourceIds->first()];
@@ -109,6 +115,7 @@ class ReservationBookingService
                 'reservation_date' => $payload['reservation_date'],
                 'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),
                 'end_time' => Carbon::parse($payload['end_time'])->format('H:i:s'),
+                'booking_type' => $payload['booking_type'] ?? null,
                 'status' => ReservationStatus::PENDING_APPROVAL->value,
                 'submitted_at' => now(),
             ]);
@@ -221,7 +228,13 @@ class ReservationBookingService
 
             $quantities = $payload['quantities'] ?? [];
             if ($quantities === []) {
-                $this->lockDaysAndAssertNoOverlap($resourceIds, $startsAt, $endsAt, $reservation->id);
+                $this->lockDaysAndAssertNoOverlap(
+                    $resourceIds,
+                    $startsAt,
+                    $endsAt,
+                    $reservation->id,
+                    ReservationStatus::occupyingItemStatuses(),
+                );
             }
 
             $primary = $resources[$resourceIds->first()];
@@ -240,6 +253,7 @@ class ReservationBookingService
                 'reservation_date' => $payload['reservation_date'],
                 'start_time' => Carbon::parse($payload['start_time'])->format('H:i:s'),
                 'end_time' => Carbon::parse($payload['end_time'])->format('H:i:s'),
+                'booking_type' => $payload['booking_type'] ?? $reservation->booking_type,
             ]);
 
             $reservation->items()->delete();
@@ -315,9 +329,36 @@ class ReservationBookingService
             ->update(['status' => ReservationItemStatus::CANCELLED->value]);
     }
 
-    public function hasConflict(Collection|array $resourceIds, CarbonInterface $startsAt, CarbonInterface $endsAt, ?int $ignoreReservationId = null): bool
+    public function hasConflict(
+        Collection|array $resourceIds,
+        CarbonInterface $startsAt,
+        CarbonInterface $endsAt,
+        ?int $ignoreReservationId = null,
+        ?array $blockingStatuses = null,
+    ): bool {
+        return $this->conflictingItems(
+            $resourceIds,
+            $startsAt,
+            $endsAt,
+            $ignoreReservationId,
+            $blockingStatuses ?? ReservationStatus::occupyingItemStatuses(),
+        )->isNotEmpty();
+    }
+
+    public function assertApprovedSlotFree(Reservation $reservation): void
     {
-        return $this->conflictingItems($resourceIds, $startsAt, $endsAt, $ignoreReservationId)->isNotEmpty();
+        $items = $reservation->items;
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        $this->lockDaysAndAssertNoOverlap(
+            $items->pluck('resource_id'),
+            $items->min('starts_at'),
+            $items->max('ends_at'),
+            $reservation->id,
+            ReservationStatus::occupyingItemStatuses(),
+        );
     }
 
     public function lockResourcesAndAssertNoOverlap(
@@ -407,7 +448,7 @@ class ReservationBookingService
 
         $conflicts = $this->conflictingItems($resourceIds, $startsAt, $endsAt, $ignoreReservationId, $blockingStatuses);
         if ($conflicts->isNotEmpty()) {
-            throw new ReservationConflictException('Selected slot unavailable.');
+            throw new ReservationConflictException('This slot is not available.');
         }
     }
 

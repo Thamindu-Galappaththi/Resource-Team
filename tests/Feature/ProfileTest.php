@@ -36,10 +36,17 @@ class ProfileTest extends TestCase
             ->get(route('user.profile'))
             ->assertOk()
             ->assertSee('My Profile')
+            ->assertSee('Location', false)
+            ->assertSee('id="rs-location"', false)
+            ->assertSee('Full name', false)
+            ->assertSee('text-danger', false)
+            ->assertDontSee('Campus', false)
             ->assertSee('Nimal Perera')
             ->assertSee('199012345678')
             ->assertSee('Security')
-            ->assertDontSee('Change password')
+            ->assertSee('data-rs-tab-btn="security"', false)
+            ->assertSee('data-rs-panel="security"', false)
+            ->assertSee(' hidden', false)
             ->assertDontSee('Profile page setup is pending.');
     }
 
@@ -65,7 +72,7 @@ class ProfileTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->put(route('user.profile.update'), [
+            ->putJson(route('user.profile.update'), [
                 'name' => 'New Name',
                 'email' => 'new@nebula.local',
                 'phone' => '0771111111',
@@ -74,8 +81,9 @@ class ProfileTest extends TestCase
                 'user_role' => 'admin',
                 'role_id' => 1,
             ])
-            ->assertRedirect(route('user.profile'))
-            ->assertSessionHas('status', 'profile-updated');
+            ->assertOk()
+            ->assertJsonPath('message', 'Your profile was updated.')
+            ->assertJsonPath('user.name', 'New Name');
 
         $user->refresh();
 
@@ -94,13 +102,13 @@ class ProfileTest extends TestCase
 
         $this->actingAs($user)
             ->from(route('user.profile'))
-            ->put(route('user.profile.password'), [
+            ->putJson(route('user.profile.password'), [
                 'current_password' => 'wrong-pass',
                 'password' => 'new-secret1',
                 'password_confirmation' => 'new-secret1',
             ])
-            ->assertRedirect(route('user.profile', ['tab' => 'security']))
-            ->assertSessionHasErrors('current_password', errorBag: 'updatePassword');
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('current_password');
 
         $this->assertTrue(Hash::check('secret-pass', $user->fresh()->password));
     }
@@ -112,13 +120,13 @@ class ProfileTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->put(route('user.profile.password'), [
+            ->putJson(route('user.profile.password'), [
                 'current_password' => 'secret-pass',
                 'password' => 'new-secret1',
                 'password_confirmation' => 'new-secret1',
             ])
-            ->assertRedirect(route('user.profile', ['tab' => 'security']))
-            ->assertSessionHas('status', 'password-updated');
+            ->assertOk()
+            ->assertJsonPath('message', 'Your password was changed.');
 
         $this->assertTrue(Hash::check('new-secret1', $user->fresh()->password));
     }
@@ -129,14 +137,15 @@ class ProfileTest extends TestCase
         $user = User::factory()->role('coordinator')->create();
 
         $this->actingAs($user)
-            ->put(route('user.profile.update'), [
+            ->putJson(route('user.profile.update'), [
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone ?? '0771234567',
                 'location' => 'Nebula Institute of Technology - Welisara',
                 'avatar' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
             ])
-            ->assertRedirect(route('user.profile'));
+            ->assertOk()
+            ->assertJsonPath('user.has_avatar', true);
 
         $user->refresh();
         $this->assertNotNull($user->user_profile);

@@ -47,6 +47,10 @@ class UserManagementController extends Controller
                         ->orWhere('nic', 'like', "%{$search}%")
                         ->orWhere('service_id', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%");
+
+                    if (ctype_digit($search)) {
+                        $userQuery->orWhere('id', (int) $search);
+                    }
                 });
             })
             ->when($filters['location'] ?? null, function ($query, string $location) {
@@ -115,7 +119,7 @@ class UserManagementController extends Controller
             'name' => $validated['name'],
             'service_id' => $validated['service_id'] ?? null,
             'slt_employee' => $validated['slt_employee'] === 'yes',
-            'nic' => $validated['nic'],
+            'nic' => $validated['nic'] ?? null,
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'location' => $validated['location'],
@@ -173,7 +177,7 @@ class UserManagementController extends Controller
             'name' => $validated['name'],
             'service_id' => $validated['service_id'] ?? null,
             'slt_employee' => $validated['slt_employee'] === 'yes',
-            'nic' => $validated['nic'],
+            'nic' => $validated['nic'] ?? null,
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'location' => $validated['location'],
@@ -339,8 +343,13 @@ class UserManagementController extends Controller
      */
     private function validateManagedUser(Request $request, ?User $user = null): array
     {
+        $knownPermissionSlugs = Permission::query()->pluck('slug')->all();
         $request->merge([
-            'nic' => SriLankanNic::normalize($request->input('nic')),
+            'nic' => filled($request->input('nic')) ? SriLankanNic::normalize($request->input('nic')) : null,
+            'extra_permissions' => collect($request->input('extra_permissions', []))
+                ->filter(fn ($slug) => is_string($slug) && in_array($slug, $knownPermissionSlugs, true))
+                ->values()
+                ->all(),
         ]);
 
         return $request->validate([
@@ -348,7 +357,7 @@ class UserManagementController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'service_id' => ['nullable', 'required_if:slt_employee,yes', 'prohibited_unless:slt_employee,yes', 'string', 'max:20'],
             'nic' => [
-                'required',
+                'nullable',
                 'string',
                 'max:12',
                 new SriLankanNic,
@@ -357,7 +366,7 @@ class UserManagementController extends Controller
             'email' => [
                 'required',
                 'email',
-                'max:50',
+                'max:255',
                 Rule::unique('users', 'email')->ignore($user?->id),
             ],
             'phone' => ['required', 'string', 'max:20'],

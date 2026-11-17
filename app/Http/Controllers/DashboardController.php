@@ -13,7 +13,7 @@ class DashboardController extends Controller
     {
         $user = auth()->user()->loadMissing('role');
 
-        if ($user->hasRole('slt_employee')) {
+        if ($user->usesSltEmployeeWorkspace()) {
             return view('dashboards.slt-employee', $this->dashboards->sltHub($user));
         }
 

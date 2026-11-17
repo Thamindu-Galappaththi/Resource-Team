@@ -72,6 +72,28 @@ class UserManagementControllerTest extends TestCase
             ->assertSee('10000', false);
     }
 
+    public function test_user_can_be_created_without_nic(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs(User::factory()->role('admin')->create())
+            ->post('/user-management/create-user', [
+                'slt_employee' => 'no',
+                'name' => 'No Nic User',
+                'nic' => '',
+                'email' => 'nonic@example.com',
+                'phone' => '0771234567',
+                'user_roles' => ['admin'],
+                'location' => 'Nebula Institute of Technology - Welisara',
+            ])
+            ->assertRedirect(route('create.user'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'nonic@example.com',
+            'nic' => null,
+        ]);
+    }
+
     public function test_old_format_nic_is_accepted_when_creating_a_user(): void
     {
         $this->withoutMiddleware(ValidateCsrfToken::class);
@@ -149,6 +171,124 @@ class UserManagementControllerTest extends TestCase
         ]);
     }
 
+    public function test_user_update_ignores_unknown_extra_permission_slugs(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('admin')->create([
+            'name' => 'Admin User',
+            'email' => 'admin.edit@nebula.local',
+            'designation' => 'Old title',
+            'location' => 'Nebula Institute of Technology - Welisara',
+        ]);
+        $user->roles()->sync([$user->role_id]);
+
+        $this->actingAs($administrator)
+            ->from(route('user.management'))
+            ->put(route('users.update', $user), [
+                'slt_employee' => 'no',
+                'name' => $user->name,
+                'nic' => $user->nic,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'designation' => 'Updated title',
+                'location' => 'Nebula Institute of Technology - Welisara',
+                'user_roles' => ['admin'],
+                'extra_permissions' => ['dashboard', 'reservations.week_sheet', 'not.a.real.permission'],
+            ])
+            ->assertRedirect(route('user.management'))
+            ->assertSessionHas('status')
+            ->assertSessionMissing('edit_user_id');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'designation' => 'Updated title',
+        ]);
+    }
+
+    public function test_user_email_can_be_updated(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('slt_employee')->create([
+            'email' => 'slt.colleague@nebula.local',
+            'slt_employee' => true,
+            'location' => 'Nebula Institute of Technology - Welisara',
+        ]);
+        $user->roles()->sync([$user->role_id]);
+
+        $this->actingAs($administrator)
+            ->from(route('user.management'))
+            ->put(route('users.update', $user), [
+                'slt_employee' => 'yes',
+                'service_id' => '224244',
+                'name' => $user->name,
+                'nic' => $user->nic,
+                'email' => 'gayan_p@slt.com.lk',
+                'phone' => $user->phone ?: '0771234567',
+                'location' => 'Nebula Institute of Technology - Welisara',
+                'user_roles' => ['slt_employee'],
+            ])
+            ->assertRedirect(route('user.management'))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => 'gayan_p@slt.com.lk',
+        ]);
+    }
+
+    public function test_invalid_user_update_reopens_edit_with_submitted_email(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $administrator = User::factory()->role('admin')->create();
+        $user = User::factory()->role('slt_employee')->create();
+        $user->roles()->sync([$user->role_id]);
+
+        $this->actingAs($administrator)
+            ->from(route('user.management'))
+            ->put(route('users.update', $user), [
+                'slt_employee' => 'no',
+                'name' => $user->name,
+                'nic' => $user->nic,
+                'email' => 'not-an-email',
+                'phone' => $user->phone,
+                'location' => 'Nebula Institute of Technology - Welisara',
+                'user_roles' => ['slt_employee'],
+            ])
+            ->assertRedirect(route('user.management'))
+            ->assertSessionHasErrors('email')
+            ->assertSessionHas('edit_user_id', $user->id)
+            ->assertSessionHas('edit_update_url');
+
+        $this->assertSame('not-an-email', session()->getOldInput('email'));
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => $user->email,
+        ]);
+    }
+
+    public function test_user_list_shows_campus_name_only_in_the_table(): void
+    {
+        $administrator = User::factory()->role('admin')->create(['name' => 'Access Admin']);
+        User::factory()->role('slt_employee')->create([
+            'name' => 'SLT Colleague',
+            'email' => 'slt.colleague@nebula.local',
+            'location' => 'Nebula Institute of Technology - Welisara',
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management'))
+            ->assertOk()
+            ->assertSee('>Welisara</td>', false)
+            ->assertDontSee('>Nebula Institute of Technology - Welisara</td>', false)
+            ->assertSee('data-value="Nebula Institute of Technology - Welisara"', false)
+            ->assertSee('data-label="Nebula Institute of Technology - Welisara"', false);
+    }
+
     public function test_create_user_page_lists_roles_and_grouped_permissions(): void
     {
         $administrator = User::factory()->role('admin')->create();
@@ -184,6 +324,7 @@ class UserManagementControllerTest extends TestCase
                 'name' => 'M G D Karunananda',
                 'email' => 'dkaru@slt.com.lk',
                 'phone' => '+94714238497',
+                'nic' => '700724123V',
                 'designation' => 'Senior Engineer',
                 'service_id' => '010375',
                 'mock' => true,
@@ -310,6 +451,7 @@ class UserManagementControllerTest extends TestCase
             ->assertSee('Nebula Institute of Technology - Welisara')
             ->assertSee('Nebula Institute of Technology - Moratuwa')
             ->assertSee('Nebula Institute of Technology - Peradeniya')
+            ->assertSee('>Welisara</td>', false)
             ->assertSee('Role access is locked')
             ->assertSee('js-delete-user', false)
             ->assertSee('js-view-user', false)
@@ -382,6 +524,31 @@ class UserManagementControllerTest extends TestCase
             ->assertOk()
             ->assertSee('Specific Target User')
             ->assertDontSee('Completely Different Person');
+    }
+
+    public function test_user_list_can_be_searched_by_id(): void
+    {
+        $administrator = User::factory()->role('admin')->create(['name' => 'Access Admin']);
+        $match = User::factory()->create([
+            'name' => 'Id Search Target',
+            'nic' => '199000000000',
+            'service_id' => null,
+            'email' => 'id.search.target@nebula.local',
+        ]);
+        User::factory()->create([
+            'name' => 'Other Person',
+            'nic' => '198000000000',
+            'service_id' => null,
+            'email' => 'other.person@nebula.local',
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('user.management', ['search' => (string) $match->id]))
+            ->assertOk()
+            ->assertSee('Id Search Target')
+            ->assertSee('>'.$match->id.'</td>', false)
+            ->assertDontSee('Other Person');
+    }
     }
 
     public function test_user_list_keeps_long_names_inside_the_table_cell(): void

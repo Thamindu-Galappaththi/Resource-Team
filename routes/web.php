@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\CanteenReservationController;
+use App\Http\Controllers\MealMenuController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HostelReservationController;
 use App\Http\Controllers\HostelStudentRequestController;
@@ -61,6 +62,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('reservations')->name('reservations.')->controller(ReservationController::class)->group(function () {
         Route::get('/', 'index')->middleware(['permission:reservations.index', 'deny-slt-lists'])->name('index');
         Route::get('/feed', 'feed')->middleware(['permission:reservations.index', 'deny-slt-lists'])->name('feed');
+        Route::get('/week-sheet', 'weekSheet')->middleware('permission:reservations.week_sheet')->name('week-sheet');
         Route::get('/home', [SltEmployeeDashboardController::class, 'resource'])->middleware('permission:reservations.create')->name('home');
         Route::get('/create', 'create')->middleware('permission:reservations.create')->name('create');
         Route::get('/calendar', 'calendar')->middleware('permission:reservations.calendar')->name('calendar');
@@ -123,14 +125,28 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/reservations/{reservation}/edit', 'edit')->middleware('permission:canteen.create')->name('edit');
     });
 
+    Route::prefix('canteen/menus')->name('canteen.menus.')->controller(MealMenuController::class)->middleware(['permission:canteen.manage', 'deny-slt-lists'])->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{menu}/edit', 'edit')->name('edit');
+    });
+
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/lecture-fees', [LectureFeeController::class, 'index'])->middleware('permission:payments.view')->name('lecture-fees');
+        Route::post('/lecture-fees', [LectureFeeController::class, 'store'])->middleware('permission:payments.view')->name('lecture-fees.store');
+        Route::put('/lecture-fees/{rule}', [LectureFeeController::class, 'update'])->middleware('permission:payments.view')->name('lecture-fees.update');
+        Route::patch('/lecture-fees/{rule}/status', [LectureFeeController::class, 'updateStatus'])->middleware('permission:payments.view')->name('lecture-fees.status');
+        Route::delete('/lecture-fees/{rule}', [LectureFeeController::class, 'destroy'])->middleware('permission:payments.view')->name('lecture-fees.destroy');
         Route::get('/resources', [ResourcePaymentController::class, 'index'])->middleware('permission:payments.view')->name('resources');
         Route::get('/resources/lookup', [ResourcePaymentController::class, 'lookup'])->middleware('permission:payments.view')->name('resources.lookup');
+        Route::post('/resources/{reference}/mark-paid', [ResourcePaymentController::class, 'markPaid'])->middleware('permission:payments.mark-paid')->name('resources.mark-paid');
         Route::get('/resources/invoices/{reference}/print', [ResourcePaymentController::class, 'print'])->middleware('permission:payments.view')->name('resources.print');
         Route::post('/resources/usage/confirm', [ResourcePaymentController::class, 'confirmUsage'])->middleware('permission:payments.view')->name('resources.usage.confirm');
+        Route::get('/history', [ResourcePaymentController::class, 'history'])->middleware('permission:payments.view')->name('history');
+        Route::get('/history/export', [ResourcePaymentController::class, 'exportHistory'])->middleware('permission:payments.view')->name('history.export');
         Route::get('/resource-rates', [ResourceRateController::class, 'index'])->middleware('permission:payments.rates.manage')->name('rates.index');
         Route::post('/resource-rates', [ResourceRateController::class, 'store'])->middleware('permission:payments.rates.manage')->name('rates.store');
+        Route::post('/resource-rates/import', [ResourceRateController::class, 'importCsv'])->middleware('permission:payments.rates.manage')->name('rates.import');
+        Route::get('/resource-rates/sample.csv', [ResourceRateController::class, 'downloadSample'])->middleware('permission:payments.rates.manage')->name('rates.sample');
         Route::put('/resource-rates/{rate}', [ResourceRateController::class, 'update'])->middleware('permission:payments.rates.manage')->name('rates.update');
         Route::patch('/resource-rates/{rate}/deactivate', [ResourceRateController::class, 'deactivate'])->middleware('permission:payments.rates.manage')->name('rates.deactivate');
         Route::patch('/resource-rates/{rate}/activate', [ResourceRateController::class, 'activate'])->middleware('permission:payments.rates.manage')->name('rates.activate');
@@ -205,7 +221,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/reservations/{reservation}', 'update')->middleware('permission:canteen.create')->name('update');
         Route::patch('/reservations/{reservation}/status', 'updateStatus')->middleware('permission:canteen.manage')->name('status');
         Route::delete('/reservations/{reservation}', 'destroy')->middleware('permission:canteen.create,canteen.manage')->name('destroy');
+    });
 
+    Route::prefix('canteen/menus')->name('canteen.menus.')->controller(MealMenuController::class)->middleware(['permission:canteen.manage', 'deny-slt-lists'])->group(function () {
+        Route::post('/', 'store')->name('store');
+        Route::put('/{menu}', 'update')->name('update');
+        Route::delete('/{menu}', 'destroy')->name('destroy');
     });
 
     Route::prefix('user-management')->controller(UserManagementController::class)->group(function () {

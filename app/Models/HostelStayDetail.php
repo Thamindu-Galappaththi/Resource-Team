@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Crypt;
+use Throwable;
 
 class HostelStayDetail extends Model
 {
@@ -37,6 +39,21 @@ class HostelStayDetail extends Model
     public function displayGuestName(): string
     {
         return trim(($this->guest_title ? $this->guest_title.' ' : '').$this->guest_name);
+    }
+
+    public function guestPhone(): ?string
+    {
+        if (! filled($this->guest_phone_encrypted)) {
+            return null;
+        }
+
+        try {
+            $phone = Crypt::decryptString($this->guest_phone_encrypted);
+
+            return filled($phone) ? $phone : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     public function bedGroupLabel(): ?string

@@ -4,8 +4,6 @@
     const holidays = config.holidays || {};
 
     const resourceSelect = document.getElementById('resource_id');
-    const linkedWrap = document.getElementById('linkedWrap');
-    const linkedBox = document.getElementById('linkedResources');
     const availabilityAlert = document.getElementById('availabilityAlert');
     const holidayAlert = document.getElementById('holidayAlert');
     const submitBtn = document.getElementById('submitReservation');
@@ -40,10 +38,6 @@
         flash.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-    }
-
     function resourceLabel(resource) {
         return resource.name_model || 'Resource';
     }
@@ -65,94 +59,54 @@
 
     function filteredResources() {
         const locationId = window.RMSelect.getValue('location_id');
-        const categoryId = window.RMSelect.getValue('category_id');
-        if (!locationId || !categoryId) return [];
+        const categoryIds = window.RMSelect.getValues('category_id');
+        if (!locationId || !categoryIds.length) return [];
+        const allowed = new Set(categoryIds.map(String));
         return (lookups.resources || []).filter((resource) => {
             if (String(resource.location_id) !== String(locationId)) return false;
-            if (String(resource.category_id) !== String(categoryId)) return false;
-            return true;
+            return allowed.has(String(resource.category_id));
         });
     }
 
     function refreshCategories() {
         const locationId = window.RMSelect.getValue('location_id');
         const rows = categoriesForLocation(locationId);
-        const current = window.RMSelect.getValue('category_id') || config.prefillCategoryId || '';
+        const keep = [
+            ...(config.prefillCategoryIds || []),
+            config.prefillCategoryId,
+            ...window.RMSelect.getValues('category_id'),
+        ].filter(Boolean).map(String);
         window.RMSelect.setOptions(
             'category_id',
             rows.map((category) => ({ value: String(category.id), label: category.name })),
-            locationId ? 'Select a category' : 'Select a location first',
-            { disabled: !locationId }
+            locationId ? 'Select categories' : 'Select a location first',
+            { disabled: !locationId, selected: keep }
         );
-        const stillVisible = rows.find((row) => String(row.id) === String(current));
-        if (stillVisible) {
-            window.RMSelect.setValue('category_id', String(stillVisible.id), stillVisible.name);
-        }
     }
 
     function selectedResourceIds() {
-        const ids = [];
-        if (resourceSelect.value) ids.push(resourceSelect.value);
-        linkedBox.querySelectorAll('input[name="resource_ids[]"]:checked').forEach((el) => ids.push(el.value));
-        return ids;
+        return window.RMSelect.getValues('resource_id');
     }
 
     function refreshResources() {
         const rows = filteredResources();
-        const current = resourceSelect.value || config.prefillResourceId || '';
-        const ready = Boolean(window.RMSelect.getValue('location_id') && window.RMSelect.getValue('category_id'));
+        const ready = Boolean(window.RMSelect.getValue('location_id') && window.RMSelect.getValues('category_id').length);
+        const keep = [
+            ...(config.prefillResourceIds || []),
+            config.prefillResourceId,
+            ...window.RMSelect.getValues('resource_id'),
+        ].filter(Boolean).map(String);
         window.RMSelect.setOptions(
             'resource_id',
             rows.map((resource) => ({ value: String(resource.id), label: resourceLabel(resource) })),
-            ready ? 'Select a resource' : 'Select a location and category first',
-            { disabled: !ready }
+            ready ? 'Select resources' : 'Select a location and category first',
+            { disabled: !ready, selected: keep }
         );
-        const stillVisible = rows.find((row) => String(row.id) === String(current));
-        if (stillVisible) {
-            window.RMSelect.setValue('resource_id', String(stillVisible.id), resourceLabel(stillVisible));
-        }
-        renderLinked();
         checkAvailability();
     }
 
-    function renderLinked() {
-        const resource = (lookups.resources || []).find((row) => String(row.id) === String(resourceSelect.value));
-        linkedBox.innerHTML = '';
-        if (!resource) {
-            linkedWrap.hidden = true;
-            return;
-        }
-
-        const linkedResources = (resource.linked_resources || []).filter((row) => row.status === 'active');
-        const linkedIds = linkedResources.map((row) => String(row.id));
-        const extraResources = (config.prefillResourceIds || [])
-            .map(String)
-            .filter((id) => id !== String(resource.id) && !linkedIds.includes(id))
-            .map((id) => (lookups.resources || []).find((row) => String(row.id) === id))
-            .filter(Boolean);
-
-        linkedWrap.hidden = false;
-        const hint = document.getElementById('linkedHint');
-        if (!linkedResources.length && !extraResources.length) {
-            linkedBox.innerHTML = '<p class="rv-hint mb-0">This resource has no linked resources.</p>';
-            if (hint) hint.hidden = true;
-            return;
-        }
-
-        if (hint) hint.hidden = false;
-        [...linkedResources, ...extraResources].forEach((linked) => {
-            const id = `linked-${linked.id}`;
-            const checked = (config.prefillResourceIds || []).map(String).includes(String(linked.id)) ? ' checked' : '';
-            linkedBox.insertAdjacentHTML('beforeend', `<label class="rv-linked-item" for="${id}">
-                <input class="form-check-input" type="checkbox" name="resource_ids[]" value="${linked.id}" id="${id}"${checked}>
-                <span>${escapeHtml(resourceLabel(linked))}</span>
-            </label>`);
-        });
-        linkedBox.querySelectorAll('input').forEach((el) => el.addEventListener('change', checkAvailability));
-    }
-
     function setAvailability(state, message) {
-        availabilityAlert.className = `rv-status ${state}`;
+        availabilityAlert.className = state === 'idle' ? 'rv-status' : `rv-status is-${state}`;
         const icons = { idle: 'ti-info-circle', ok: 'ti-circle-check', busy: 'ti-ban', warn: 'ti-alert-circle' };
         const icon = icons[state] || 'ti-info-circle';
         availabilityAlert.innerHTML = `<i class="ti ${icon}"></i><span>${message}</span>`;
@@ -215,7 +169,7 @@
             const data = await response.json();
             slotAvailable = Boolean(data.available);
             submitBtn.disabled = !slotAvailable;
-            setAvailability(slotAvailable ? 'ok' : 'busy', data.message || (slotAvailable ? 'This slot is available.' : 'Selected slot unavailable'));
+            setAvailability(slotAvailable ? 'ok' : 'busy', data.message || (slotAvailable ? 'This slot is available.' : 'This slot is not available.'));
         } catch (error) {
             if (error.name === 'AbortError') return;
             slotAvailable = true;
@@ -229,10 +183,7 @@
         refreshResources();
     });
     document.getElementById('category_id')?.addEventListener('change', refreshResources);
-    resourceSelect.addEventListener('change', () => {
-        renderLinked();
-        checkAvailability();
-    });
+    resourceSelect.addEventListener('change', checkAvailability);
     ['reservation_date', 'start_time', 'end_time'].forEach((id) => {
         document.getElementById(id)?.addEventListener('change', checkAvailability);
         document.getElementById(id)?.addEventListener('input', checkAvailability);
@@ -240,23 +191,31 @@
 
     form?.addEventListener('submit', (event) => {
         const locationId = window.RMSelect.getValue('location_id');
-        const categoryId = window.RMSelect.getValue('category_id');
+        const categoryIds = window.RMSelect.getValues('category_id');
+        const resourceIds = window.RMSelect.getValues('resource_id');
+        const bookingType = document.getElementById('booking_type')?.value;
         if (!locationId) {
             event.preventDefault();
             showFlash('Select a location.');
             document.getElementById('location_id')?.closest('.cu-select')?.classList.add('is-invalid');
             return;
         }
-        if (!categoryId) {
+        if (!categoryIds.length) {
             event.preventDefault();
             showFlash('Select a resource category.');
             document.getElementById('category_id')?.closest('.cu-select')?.classList.add('is-invalid');
             return;
         }
-        if (!resourceSelect.value) {
+        if (!resourceIds.length) {
             event.preventDefault();
             showFlash('Select a resource.');
             document.getElementById('resource_id')?.closest('.cu-select')?.classList.add('is-invalid');
+            return;
+        }
+        if (!bookingType) {
+            event.preventDefault();
+            showFlash('Select a time range.');
+            document.getElementById('booking_type')?.closest('.cu-select')?.classList.add('is-invalid');
             return;
         }
         const title = document.getElementById('title');
@@ -280,11 +239,5 @@
         if (location) window.RMSelect.setValue('location_id', String(location.id), location.name);
     }
     refreshCategories();
-    if (config.prefillCategoryId) {
-        const category = categoriesForLocation(window.RMSelect.getValue('location_id'))
-            .find((row) => String(row.id) === String(config.prefillCategoryId));
-        if (category) window.RMSelect.setValue('category_id', String(category.id), category.name);
-    }
-
     refreshResources();
 })();

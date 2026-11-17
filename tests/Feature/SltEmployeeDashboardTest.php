@@ -109,6 +109,7 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertSee('Reference')
             ->assertSee('Details')
             ->assertSee('Team lunch order')
+            ->assertSee('data-reason="1"', false)
             ->assertDontSee('Secret canteen order');
     }
 
@@ -257,7 +258,7 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertSee('Hostel reservation calendar')
             ->assertSee('Create Hostel Reservation')
             ->assertSee('is-slt-calendar', false)
-            ->assertSee('reservation-calendar.js?v=29', false)
+            ->assertSee('reservation-calendar.js?v=30', false)
             ->assertDontSee('All locations')
             ->assertSee(route('hostel.create', absolute: false));
 
@@ -286,7 +287,7 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertSee('Canteen reservation calendar')
             ->assertSee('Create reservation')
             ->assertSee('is-slt-calendar', false)
-            ->assertSee('reservation-calendar.js?v=29', false)
+            ->assertSee('reservation-calendar.js?v=30', false)
             ->assertDontSee('All locations')
             ->assertSee(route('canteen.create', absolute: false));
 
@@ -346,7 +347,7 @@ class SltEmployeeDashboardTest extends TestCase
     {
         $employee = User::factory()->role('slt_employee')->create();
         $other = User::factory()->role('slt_employee')->create();
-        $today = now()->toDateString();
+        $today = now(config('reservations.display_timezone', 'Asia/Colombo'))->toDateString();
 
         Reservation::factory()->create([
             'requester_id' => $employee->id,
@@ -434,7 +435,7 @@ class SltEmployeeDashboardTest extends TestCase
             ->get(route('reservations.calendar'))
             ->assertOk()
             ->assertSee('is-slt-calendar', false)
-            ->assertSee('reservation-calendar.js?v=29', false)
+            ->assertSee('reservation-calendar.js?v=30', false)
             ->assertDontSee('All locations')
             ->assertDontSee('id="calendar-location"', false)
             ->assertDontSee('id="refreshCalendarButton"', false);

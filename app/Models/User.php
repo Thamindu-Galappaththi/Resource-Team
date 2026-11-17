@@ -13,6 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -122,6 +123,17 @@ class User extends Authenticatable
         return $this->password_setup_at !== null;
     }
 
+    public function campusLocationLabel(): string
+    {
+        $location = trim((string) $this->location);
+
+        if ($location === '') {
+            return '';
+        }
+
+        return trim(Str::afterLast($location, ' - ')) ?: $location;
+    }
+
     public function markPasswordSetupCompleted(): void
     {
         $this->forceFill(['password_setup_at' => now()])->save();
@@ -167,6 +179,34 @@ class User extends Authenticatable
     public function isSltEmployeeStaff(): bool
     {
         return $this->slt_employee || $this->hasRole('slt_employee');
+    }
+
+    public function usesSltEmployeeWorkspace(): bool
+    {
+        if (session('auth_portal') === 'microsoft') {
+            return true;
+        }
+
+        return $this->roleSlug() === 'slt_employee';
+    }
+
+    /**
+     * Roles that apply to the current login. Microsoft sessions use SLT Employee
+     * only. Staff-portal sessions ignore SLT Employee when any other role exists.
+     *
+     * @return Collection<int, string>
+     */
+    public function workspaceRoleSlugs(): Collection
+    {
+        if ($this->usesSltEmployeeWorkspace()) {
+            return collect(['slt_employee']);
+        }
+
+        $staffRoles = $this->normalizedRoleSlugs()
+            ->reject(fn (string $slug) => $slug === 'slt_employee')
+            ->values();
+
+        return $staffRoles->isNotEmpty() ? $staffRoles : $this->normalizedRoleSlugs();
     }
 
     public function hasRole(string ...$roles): bool
@@ -238,19 +278,28 @@ class User extends Authenticatable
             return false;
         }
 
-        $this->loadMissing('role.permissions', 'roles.permissions');
+        $active = $this->workspaceRoleSlugs();
 
-        if ($this->roles->contains(fn (Role $role) => $role->hasPermission($permission))
-            || $this->role?->hasPermission($permission)
-            || ($this->extraPermissionTableExists()
-                && $this->loadMissing('extraPermissions')->extraPermissions->contains('slug', $permission))) {
+        if ($active->contains(fn (string $slug) => in_array($slug, ['developer', 'super_admin'], true))) {
             return true;
         }
 
-        return $this->roles->pluck('slug')
-            ->push($this->roleSlug())
-            ->filter()
-            ->contains(fn (string $slug) => RoleHelper::hasPermission($slug, $permission));
+        $this->loadMissing('role.permissions', 'roles.permissions');
+
+        $roles = $this->assignedRoles()->filter(
+            fn (Role $role) => $active->contains(RoleHelper::normalizeRole((string) $role->slug))
+        );
+
+        if ($roles->contains(fn (Role $role) => $role->hasPermission($permission))) {
+            return true;
+        }
+
+        if ($active->contains(fn (string $slug) => RoleHelper::hasPermission($slug, $permission))) {
+            return true;
+        }
+
+        return $this->extraPermissionTableExists()
+            && $this->loadMissing('extraPermissions')->extraPermissions->contains('slug', $permission);
     }
 
     public function avatarUrl(): string

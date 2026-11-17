@@ -451,6 +451,17 @@
     flex-wrap: wrap;
     gap: 0.45rem;
 }
+.cd-review-reason {
+    margin-top: 1rem;
+}
+.cd-review-reason .form-label {
+    margin-bottom: .35rem;
+    color: #9f1239;
+    font-size: .82rem;
+    font-weight: 700;
+}
+.cd-review-reason .invalid-feedback:empty { display: none; }
+.cd-chip:disabled { opacity: .65; cursor: not-allowed; }
 
 .cd-empty {
     display: flex;

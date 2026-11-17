@@ -25,14 +25,29 @@ class StoreReservationRequest extends FormRequest
             ->unique()
             ->values()
             ->all();
+        $categoryIds = collect($this->input('category_ids', []))
+            ->when($this->input('category_id'), fn ($ids) => $ids->prepend($this->input('category_id')))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         $this->prepareSpecialApproval();
         $lecturer = $this->input('lecturer_name');
+        $bookingType = $this->input('booking_type');
+        $bookingTimes = [
+            'full_day' => ['09:00', '17:00'],
+            'half_day_morning' => ['09:00', '13:00'],
+            'half_day_afternoon' => ['13:00', '17:00'],
+        ];
         $this->merge([
             'resource_ids' => $resourceIds,
+            'resource_id' => $resourceIds[0] ?? $this->input('resource_id'),
+            'category_ids' => $categoryIds,
+            'category_id' => $categoryIds[0] ?? $this->input('category_id'),
             'requester_id' => $this->input('requester_id', auth()->id()),
-            'start_time' => $this->normalizeTime($this->input('start_time')),
-            'end_time' => $this->normalizeTime($this->input('end_time')),
+            'start_time' => $bookingTimes[$bookingType][0] ?? $this->normalizeTime($this->input('start_time')),
+            'end_time' => $bookingTimes[$bookingType][1] ?? $this->normalizeTime($this->input('end_time')),
             'title' => is_string($this->input('title')) ? trim($this->input('title')) : $this->input('title'),
             'lecturer_name' => is_string($lecturer) && trim($lecturer) !== '' ? trim($lecturer) : null,
         ]);
@@ -53,12 +68,15 @@ class StoreReservationRequest extends FormRequest
             'resource_id' => ['required', 'integer', Rule::exists('resources', 'id')],
             'resource_ids' => ['array'],
             'resource_ids.*' => ['integer', Rule::exists('resources', 'id')],
+            'category_ids' => ['array'],
+            'category_ids.*' => ['integer', Rule::exists('resource_categories', 'id')],
             'requester_id' => ['required', 'integer', 'exists:users,id'],
             'location_id' => ['required', 'integer', 'exists:locations,id'],
             'category_id' => ['required', 'integer', 'exists:resource_categories,id'],
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'booking_type' => ['nullable', 'in:full_day,half_day_morning,half_day_afternoon'],
             'title' => ['required', 'string', 'max:180'],
             'lecturer_name' => ['nullable', 'string', 'max:150'],
             'purpose' => ['required', 'string', 'max:500'],
@@ -97,19 +115,26 @@ class StoreReservationRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            $category = ResourceCategory::query()->find($this->input('category_id'));
-            if ($category?->isLocked()) {
-                $validator->errors()->add('category_id', 'Hostel rooms are booked from Hostel Reservations.');
+            $categoryIds = collect($this->input('category_ids', [$this->input('category_id')]))->filter()->map(fn ($id) => (int) $id);
+            foreach ($categoryIds as $categoryId) {
+                $category = ResourceCategory::query()->find($categoryId);
+                if ($category?->isLocked()) {
+                    $validator->errors()->add('category_id', 'Hostel rooms are booked from Hostel Reservations.');
+                    break;
+                }
             }
-            $resource = Resource::query()->with('type')->find($this->input('resource_id'));
-            if ($resource && $resource->status !== 'active') {
-                $validator->errors()->add('resource_id', 'The selected resource is not available for booking.');
-            }
-            if ($resource && $this->filled('location_id') && (int) $resource->location_id !== (int) $this->input('location_id')) {
-                $validator->errors()->add('location_id', 'The resource does not belong to the selected location.');
-            }
-            if ($resource && $this->filled('category_id') && (int) $resource->type?->resource_category_id !== (int) $this->input('category_id')) {
-                $validator->errors()->add('category_id', 'The resource does not belong to the selected category.');
+            $resourceIds = collect($this->input('resource_ids', [$this->input('resource_id')]))->filter()->unique();
+            $resources = Resource::query()->with('type')->whereIn('id', $resourceIds)->get();
+            foreach ($resources as $resource) {
+                if ($resource->status !== 'active') {
+                    $validator->errors()->add('resource_id', 'The selected resource is not available for booking.');
+                }
+                if ($this->filled('location_id') && (int) $resource->location_id !== (int) $this->input('location_id')) {
+                    $validator->errors()->add('location_id', 'The resource does not belong to the selected location.');
+                }
+                if ($categoryIds->isNotEmpty() && ! $categoryIds->contains((int) $resource->type?->resource_category_id)) {
+                    $validator->errors()->add('category_id', 'The resource does not belong to the selected category.');
+                }
             }
         });
     }

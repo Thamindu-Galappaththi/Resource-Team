@@ -52,6 +52,14 @@ enum ReservationStatus: string
         ];
     }
 
+    /** Resource slots are taken only after a booking is approved. */
+    public static function occupyingItemStatuses(): array
+    {
+        return [
+            ReservationItemStatus::CONFIRMED->value,
+        ];
+    }
+
     public static function cancellable(): array
     {
         return [

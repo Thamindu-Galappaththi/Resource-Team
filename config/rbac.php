@@ -59,6 +59,7 @@ return [
         'reservations.calendar' => ['name' => 'Reservation calendar', 'module' => 'reservations'],
         'reservations.create' => ['name' => 'Create reservation', 'module' => 'reservations'],
         'reservations.index' => ['name' => 'Existing reservations', 'module' => 'reservations'],
+        'reservations.week_sheet' => ['name' => 'Weekly reservation sheet', 'module' => 'reservations'],
         'resources.create' => ['name' => 'Create resource', 'module' => 'resources'],
         'resources.index' => ['name' => 'Existing resources', 'module' => 'resources'],
         'resources.calendar' => ['name' => 'Resource calendar', 'module' => 'resources'],
@@ -73,6 +74,7 @@ return [
         'canteen.manage' => ['name' => 'Manage canteen reservations', 'module' => 'canteen'],
         'payments.view' => ['name' => 'View payments', 'module' => 'payments'],
         'payments.rates.manage' => ['name' => 'Manage resource rates', 'module' => 'payments'],
+        'payments.mark-paid' => ['name' => 'Record resource payments', 'module' => 'payments'],
         'reports.view' => ['name' => 'Reports and analytics', 'module' => 'reports'],
     ],
 
@@ -100,6 +102,7 @@ return [
                 ['slug' => 'reservations.index', 'action' => 'View'],
                 ['slug' => 'reservations.create', 'action' => 'Create'],
                 ['slug' => 'reservations.calendar', 'action' => 'Calendar'],
+                ['slug' => 'reservations.week_sheet', 'action' => 'Week sheet'],
             ],
         ],
         [
@@ -139,6 +142,7 @@ return [
             'actions' => [
                 ['slug' => 'payments.view', 'action' => 'View'],
                 ['slug' => 'payments.rates.manage', 'action' => 'Manage rates'],
+                ['slug' => 'payments.mark-paid', 'action' => 'Record payments'],
             ],
         ],
         [
@@ -163,6 +167,7 @@ return [
             'reservations.calendar',
             'reservations.create',
             'reservations.index',
+            'reservations.week_sheet',
             'resources.create',
             'resources.index',
             'resources.calendar',
@@ -177,6 +182,7 @@ return [
             'canteen.manage',
             'payments.view',
             'payments.rates.manage',
+            'payments.mark-paid',
             'reports.view',
         ],
         'coordinator' => [
@@ -197,6 +203,7 @@ return [
             'reservations.calendar',
             'reservations.create',
             'reservations.index',
+            'reservations.week_sheet',
             'resources.create',
             'resources.index',
             'resources.calendar',

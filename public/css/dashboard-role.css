@@ -633,3 +633,29 @@
     /* ── spot ── */
     .rd-spot { grid-template-columns: 1fr; }
 }
+
+.rws-panel { margin-bottom: 1.5rem; }
+.rws-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+}
+.rws-sub { margin-top: 0.3rem; color: #64748b; font-size: 0.85rem; }
+.rws-copy { color: #475569; font-size: 0.88rem; }
+.rws-tools { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.rws-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+.rws-btn--pdf { background: #1769c2; color: #fff; }
+.rws-btn--pdf:hover { background: #1258a3; color: #fff; }
+.rws-btn--png { background: #e7f6f0; color: #0f7a58; }
+.rws-btn--png:hover { background: #d4eee4; color: #0c6247; }

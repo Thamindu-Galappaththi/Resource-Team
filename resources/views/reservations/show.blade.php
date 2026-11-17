@@ -21,7 +21,7 @@
         </div>
         <div class="rd-header-actions">
             <span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->statusEnum()->label() }}</span>
-            @if(auth()->user()?->hasRole('slt_employee'))
+            @if(auth()->user()?->usesSltEmployeeWorkspace())
                 <a href="{{ route('reservations.mine') }}" class="btn rd-back"><i class="ti ti-arrow-left me-1"></i>Back to my resource requests</a>
             @else
                 <a href="{{ route('reservations.index') }}" class="btn rd-back"><i class="ti ti-arrow-left me-1"></i>Back to list</a>
@@ -68,12 +68,18 @@
                     @if($reservation->items->isEmpty())
                         <p class="rd-empty mb-0">No resources booked.</p>
                     @else
+                        @php
+                            $showResourceOwner = $reservation->items->contains(fn ($item) => filled($item->resource?->resource_owner));
+                        @endphp
                         <div class="table-responsive rd-table">
                             <table class="table align-middle mb-0">
                                 <thead>
                                     <tr>
                                         <th>Resource</th>
                                         <th>Category</th>
+                                        @if($showResourceOwner)
+                                            <th>Owner</th>
+                                        @endif
                                         <th>Item status</th>
                                     </tr>
                                 </thead>
@@ -82,6 +88,9 @@
                                         <tr>
                                             <td data-label="Resource">{{ $item->resource_name_snapshot ?: '—' }}</td>
                                             <td data-label="Category">{{ $item->resource?->type?->category?->name ?? '—' }}</td>
+                                            @if($showResourceOwner)
+                                                <td data-label="Owner">{{ $item->resource?->resource_owner ?: '' }}</td>
+                                            @endif
                                             <td data-label="Item status"><span class="badge {{ $reservation->statusEnum()->badgeClass() }}">{{ $reservation->bookedItemStatusLabel($item) }}</span></td>
                                         </tr>
                                     @endforeach
