@@ -33,12 +33,15 @@
                 data-rs-tab-btn="profile"
                 @if($tab === 'profile') aria-current="page" @endif
             >Profile</a>
+
+            @if(!$user->slt_employee)
             <a
                 class="rs-tab {{ $tab === 'security' ? 'is-active' : '' }}"
                 href="{{ $securityUrl }}"
                 data-rs-tab-btn="security"
                 @if($tab === 'security') aria-current="page" @endif
             >Security</a>
+            @endif
         </nav>
     </header>
 
