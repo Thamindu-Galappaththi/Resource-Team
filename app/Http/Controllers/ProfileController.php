@@ -16,6 +16,11 @@ class ProfileController extends Controller
     public function show(Request $request): View
     {
         $user = $request->user()->loadMissing(['role', 'roles']);
+
+        if ($user->slt_employee && $request->query('tab') === 'security') {
+            return redirect()->route('user.profile');
+        }
+        
         $locations = Location::query()->ordered()->pluck('name')->all();
 
         if (filled($user->location) && ! in_array($user->location, $locations, true)) {
@@ -70,6 +75,12 @@ class ProfileController extends Controller
 
     public function updatePassword(UpdatePasswordRequest $request): RedirectResponse|JsonResponse
     {
+        $user = $request->user();
+
+        if ($user->slt_employee) {
+            abort(403, 'You are not authorized to change your password.');
+        }
+
         $password = $request->validated('password');
 
         $request->user()->update([
@@ -104,6 +115,10 @@ class ProfileController extends Controller
 
     private function activeTab(Request $request): string
     {
+        if ($request->user()->slt_employee) {
+            return 'profile';
+        }
+        
         if ($request->session()->get('status') === 'password-updated') {
             return 'security';
         }
