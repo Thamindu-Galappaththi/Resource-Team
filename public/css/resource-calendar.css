@@ -899,6 +899,13 @@
 .rc-table tbody tr:hover td { background: #eaf1ff; }
 .rc-table tbody tr:last-child td { border-bottom: 0; }
 .rc-table td:first-child { color: #14315e; font-weight: 700; }
+.rc-table a.rc-table-link {
+    color: #1769c2;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.rc-table a.rc-table-link:hover { color: #0f4c9a; }
 .rc-table-footer {
     display: flex;
     flex-wrap: wrap;

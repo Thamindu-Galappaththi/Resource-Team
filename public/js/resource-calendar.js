@@ -396,9 +396,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const details = event.extendedProps || {};
             const start = details.reservationStart ? new Date(details.reservationStart) : new Date(event.start);
             const end = details.reservationEnd ? new Date(details.reservationEnd) : new Date(event.end);
+            const name = escapeHtml(details.resource || event.title);
+            const resource = details.url
+                ? `<a class="rc-table-link" href="${escapeHtml(details.url)}">${name}</a>`
+                : name;
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${escapeHtml(details.resource || event.title)}</td>
+                <td>${resource}</td>
                 <td>${formatStayDates(start, end)}</td>
                 <td>${formatStayTimes(start, end, details.duration, details.reservationType)}</td>
                 <td>${escapeHtml(details.owner || '—')}</td>
