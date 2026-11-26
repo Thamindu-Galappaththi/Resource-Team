@@ -707,11 +707,7 @@ class ReservationController extends Controller
      */
     private function calendarFilterOptions(?User $user): array
     {
-        $hiddenStatuses = [
-            ReservationStatus::DRAFT,
-            ReservationStatus::CANCELLED,
-            ReservationStatus::REJECTED,
-        ];
+        $statuses = collect(ReservationStatus::listFilters());
 
         if ($user?->usesSltEmployeeWorkspace()) {
             $own = Reservation::query()
@@ -747,8 +743,7 @@ class ReservationController extends Controller
             $categories = $categoryIds->isEmpty()
                 ? collect()
                 : ResourceCategory::query()->orderBy('name')->whereIn('id', $categoryIds)->get();
-            $statuses = collect(ReservationStatus::cases())
-                ->reject(fn (ReservationStatus $status) => in_array($status, $hiddenStatuses, true))
+            $statuses = $statuses
                 ->filter(fn (ReservationStatus $status) => $statusValues->contains($status->value))
                 ->values();
         } else {
@@ -758,9 +753,6 @@ class ReservationController extends Controller
                 ->orderBy('name_model')
                 ->get(['id', 'name_model', 'location_id', 'resource_type_id']);
             $locations = Location::query()->forResources()->ordered()->get();
-            $statuses = collect(ReservationStatus::cases())
-                ->reject(fn (ReservationStatus $status) => in_array($status, $hiddenStatuses, true))
-                ->values();
         }
 
         return [
