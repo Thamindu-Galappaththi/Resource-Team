@@ -29,7 +29,7 @@ class CanteenReservationController extends Controller
 
         $today = now()->toDateString();
         $windowEnd = now()->addDays(6)->toDateString();
-        $query = CanteenReservation::query()->with('requestedBy');
+        $query = CanteenReservation::query()->with(['requestedBy', 'location']);
         $this->restrictToOwnUnlessStaff($query);
 
         $reservations = $query
@@ -58,18 +58,15 @@ class CanteenReservationController extends Controller
             ->keys()
             ->first();
 
-        $mealBreakdown = collect(MealType::cases())
-            ->map(function (MealType $meal) use ($todayReservations) {
-                $group = $todayReservations->where('meal_type', $meal->value);
-
-                return [
-                    'meal' => $meal->label(),
-                    'orders' => $this->orderCount($group),
-                    'groups' => $group->count(),
-                ];
-            })
-            ->filter(fn (array $row) => $row['orders'] > 0)
-            ->values();
+        $mealBreakdown = $todayReservations
+            ->sortBy(fn (CanteenReservation $reservation) => $reservation->reservation_time)
+            ->values()
+            ->map(fn (CanteenReservation $reservation) => [
+                'name' => $reservation->reservation_name,
+                'time' => $reservation->serviceTimeLabel(),
+                'orders' => (int) $reservation->number_of_orders,
+                'url' => route('canteen.show', $reservation),
+            ]);
 
         $summaryQuery = CanteenReservation::query();
         $this->restrictToOwnUnlessStaff($summaryQuery);

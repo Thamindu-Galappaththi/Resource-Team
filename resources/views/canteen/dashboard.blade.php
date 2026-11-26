@@ -181,7 +181,7 @@
         <section class="cd-card cd-card--success" aria-labelledby="mealBreakdownHeading">
             <div class="cd-card__head">
                 <div>
-                    <h2 id="mealBreakdownHeading">Today by meal</h2>
+                    <h2 id="mealBreakdownHeading">Today's orders</h2>
                     <p class="cd-card__sub">Pending and approved orders</p>
                 </div>
             </div>
@@ -193,8 +193,8 @@
                     <div class="cd-meal">
                         <span class="cd-meal__icon" aria-hidden="true"><i class="ti ti-tools-kitchen-2"></i></span>
                         <div class="cd-meal__copy">
-                            <div class="cd-meal__name">{{ $row['meal'] }}</div>
-                            <div class="cd-meal__meta">{{ number_format($row['orders']) }} {{ \Illuminate\Support\Str::plural('order', $row['orders']) }} · {{ number_format($row['groups']) }} {{ \Illuminate\Support\Str::plural('group', $row['groups']) }}</div>
+                            <div class="cd-meal__name"><a href="{{ $row['url'] }}">{{ $row['name'] }}</a></div>
+                            <div class="cd-meal__meta">{{ $row['time'] }} · {{ number_format($row['orders']) }} {{ \Illuminate\Support\Str::plural('order', $row['orders']) }}</div>
                             <div class="cd-meal__bar" aria-hidden="true"><span style="width: {{ $pct }}%"></span></div>
                         </div>
                         <div class="cd-meal__orders">{{ number_format($row['orders']) }}</div>

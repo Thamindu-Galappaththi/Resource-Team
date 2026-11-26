@@ -565,6 +565,8 @@
 }
 
 .cd-meal__name { font-weight: 700; color: #0f172a; }
+.cd-meal__name a { color: inherit; text-decoration: none; }
+.cd-meal__name a:hover { color: #1769c2; }
 .cd-meal__meta { color: #64748b; font-size: 0.78rem; }
 .cd-meal__bar {
     height: 6px;

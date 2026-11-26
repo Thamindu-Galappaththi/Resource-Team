@@ -530,6 +530,10 @@ class CanteenReservationTest extends TestCase
             ->assertSeeText('17 orders')
             ->assertSeeText('9 orders')
             ->assertSeeText('11 orders')
+            ->assertSee('Approved kitchen lunch')
+            ->assertSee('Pending breakfast trays')
+            ->assertDontSee("Today by meal")
+            ->assertDontSee('1 group')
             ->assertDontSeeText('108 orders')
             ->assertDontSeeText('91 orders');
     }
