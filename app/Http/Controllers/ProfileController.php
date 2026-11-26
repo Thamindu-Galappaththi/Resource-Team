@@ -13,9 +13,15 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request): View
+    public function show(Request $request): View|RedirectResponse
     {
         $user = $request->user()->loadMissing(['role', 'roles']);
+        $showSecurity = $this->allowsPasswordChange($request);
+
+        if (! $showSecurity && $request->query('tab') === 'security') {
+            return redirect()->route('user.profile');
+        }
+
         $locations = Location::query()->ordered()->pluck('name')->all();
 
         if (filled($user->location) && ! in_array($user->location, $locations, true)) {
@@ -26,6 +32,7 @@ class ProfileController extends Controller
             'user' => $user,
             'locations' => $locations,
             'tab' => $this->activeTab($request),
+            'showSecurity' => $showSecurity,
         ]);
     }
 
@@ -70,6 +77,10 @@ class ProfileController extends Controller
 
     public function updatePassword(UpdatePasswordRequest $request): RedirectResponse|JsonResponse
     {
+        if (! $this->allowsPasswordChange($request)) {
+            abort(403, 'Password changes are not available for Microsoft sign-in.');
+        }
+
         $password = $request->validated('password');
 
         $request->user()->update([
@@ -104,6 +115,10 @@ class ProfileController extends Controller
 
     private function activeTab(Request $request): string
     {
+        if (! $this->allowsPasswordChange($request)) {
+            return 'profile';
+        }
+
         if ($request->session()->get('status') === 'password-updated') {
             return 'security';
         }
@@ -114,5 +129,12 @@ class ProfileController extends Controller
         }
 
         return $request->query('tab') === 'security' ? 'security' : 'profile';
+    }
+
+    private function allowsPasswordChange(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user !== null && ! $user->usesSltEmployeeWorkspace();
     }
 }

@@ -22,8 +22,10 @@
         <p class="rs-profile-lead" data-rs-lead>
             @if($tab === 'security')
                 Change your password here. Contact details stay on the Profile tab.
-            @else
+            @elseif($showSecurity)
                 Update the details used on reservations. Password changes are on the Security tab.
+            @else
+                Update the details used on reservations.
             @endif
         </p>
         <nav class="rs-tabs" aria-label="Account sections">
@@ -33,12 +35,15 @@
                 data-rs-tab-btn="profile"
                 @if($tab === 'profile') aria-current="page" @endif
             >Profile</a>
+
+            @if($showSecurity)
             <a
                 class="rs-tab {{ $tab === 'security' ? 'is-active' : '' }}"
                 href="{{ $securityUrl }}"
                 data-rs-tab-btn="security"
                 @if($tab === 'security') aria-current="page" @endif
             >Security</a>
+            @endif
         </nav>
     </header>
 
@@ -130,6 +135,7 @@
                 </form>
             </section>
 
+            @if($showSecurity)
             <section class="rs-profile-card" id="rs-security-panel" data-rs-panel="security" @if($tab !== 'security') hidden @endif>
                 <h2>Change password</h2>
                 <p class="hint">Confirm your current password, then set a new one. Other signed-in devices will be signed out.</p>
@@ -182,6 +188,7 @@
                     </div>
                 </form>
             </section>
+            @endif
         </div>
     </div>
 </div>
@@ -189,5 +196,5 @@
 
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/profile.js') }}?v=3"></script>
+<script src="{{ asset('js/profile.js') }}?v=4"></script>
 @endpush

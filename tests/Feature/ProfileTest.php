@@ -43,16 +43,82 @@ class ProfileTest extends TestCase
             ->assertDontSee('Campus', false)
             ->assertSee('Nimal Perera')
             ->assertSee('199012345678')
-            ->assertSee('Security')
-            ->assertSee('data-rs-tab-btn="security"', false)
-            ->assertSee('data-rs-panel="security"', false)
-            ->assertSee(' hidden', false)
+            ->assertSee('Update the details used on reservations.')
+            ->assertDontSee('Security')
+            ->assertDontSee('data-rs-tab-btn="security"', false)
+            ->assertDontSee('data-rs-panel="security"', false)
+            ->assertDontSee('Change password')
             ->assertDontSee('Profile page setup is pending.');
+    }
+
+    public function test_slt_employee_security_url_returns_to_profile(): void
+    {
+        $user = User::factory()->role('slt_employee')->create();
+
+        $this->actingAs($user)
+            ->get(route('user.profile', ['tab' => 'security']))
+            ->assertRedirect(route('user.profile'));
+    }
+
+    public function test_slt_employee_cannot_change_password(): void
+    {
+        $user = User::factory()->role('slt_employee')->create([
+            'password' => 'secret-pass',
+        ]);
+
+        $this->actingAs($user)
+            ->putJson(route('user.profile.password'), [
+                'current_password' => 'secret-pass',
+                'password' => 'new-secret1',
+                'password_confirmation' => 'new-secret1',
+            ])
+            ->assertForbidden();
+
+        $this->assertTrue(Hash::check('secret-pass', $user->fresh()->password));
+    }
+
+    public function test_microsoft_sign_in_hides_security_for_staff_who_also_have_a_password(): void
+    {
+        $user = User::factory()->role('admin')->create([
+            'slt_employee' => true,
+            'password' => 'secret-pass',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['auth_portal' => 'microsoft'])
+            ->get(route('user.profile'))
+            ->assertOk()
+            ->assertDontSee('data-rs-tab-btn="security"', false);
+
+        $this->actingAs($user)
+            ->withSession(['auth_portal' => 'microsoft'])
+            ->putJson(route('user.profile.password'), [
+                'current_password' => 'secret-pass',
+                'password' => 'new-secret1',
+                'password_confirmation' => 'new-secret1',
+            ])
+            ->assertForbidden();
+
+        $this->assertTrue(Hash::check('secret-pass', $user->fresh()->password));
+    }
+
+    public function test_staff_flagged_as_slt_employee_can_still_open_security_on_the_password_portal(): void
+    {
+        $user = User::factory()->role('admin')->create([
+            'slt_employee' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['auth_portal' => 'password'])
+            ->get(route('user.profile'))
+            ->assertOk()
+            ->assertSee('data-rs-tab-btn="security"', false)
+            ->assertSee('Password changes are on the Security tab.');
     }
 
     public function test_security_tab_shows_password_form(): void
     {
-        $user = User::factory()->role('slt_employee')->create();
+        $user = User::factory()->role('admin')->create();
 
         $this->actingAs($user)
             ->get(route('user.profile', ['tab' => 'security']))

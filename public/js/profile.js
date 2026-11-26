@@ -7,10 +7,13 @@
     const title = page.querySelector('[data-rs-title]');
     const lead = page.querySelector('[data-rs-lead]');
     const tabs = [...page.querySelectorAll('[data-rs-tab-btn]')];
+    const hasSecurity = Boolean(page.querySelector('[data-rs-tab-btn="security"]'));
     const copy = {
         profile: {
             title: 'My Profile',
-            lead: 'Update the details used on reservations. Password changes are on the Security tab.',
+            lead: hasSecurity
+                ? 'Update the details used on reservations. Password changes are on the Security tab.'
+                : 'Update the details used on reservations.',
         },
         security: {
             title: 'Security',
@@ -19,7 +22,7 @@
     };
 
     function showTab(name, url, replace) {
-        const tab = name === 'security' ? 'security' : 'profile';
+        const tab = name === 'security' && hasSecurity ? 'security' : 'profile';
         page.dataset.rsTab = tab;
         page.querySelectorAll('[data-rs-panel]').forEach((panel) => {
             panel.hidden = panel.getAttribute('data-rs-panel') !== tab;
