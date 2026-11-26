@@ -41,7 +41,7 @@ class ReservationController extends Controller
             'categories' => $filters['categories'],
             'resources' => $filters['resources'],
             'filterCatalog' => $filters['filterCatalog'],
-            'statuses' => ReservationStatus::cases(),
+            'statuses' => ReservationStatus::listFilters(),
         ]);
     }
 

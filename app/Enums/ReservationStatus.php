@@ -20,6 +20,20 @@ enum ReservationStatus: string
         return array_map(fn (self $case) => $case->value, self::cases());
     }
 
+    /** Statuses a reservation can actually be in. Draft is only a history step, and confirmed / in progress are never stored. */
+    public static function listFilters(): array
+    {
+        return [
+            self::PENDING_APPROVAL,
+            self::CHANGES_REQUESTED,
+            self::APPROVED,
+            self::COMPLETED,
+            self::REJECTED,
+            self::CANCELLED,
+            self::EXPIRED,
+        ];
+    }
+
     public function label(): string
     {
         return match ($this) {
