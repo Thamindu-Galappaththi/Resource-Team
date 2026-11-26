@@ -266,6 +266,57 @@ window.RMSelect = {
     },
 };
 
+window.RMScrollLock = {
+    locked: false,
+    lock() {
+        if (this.locked) {
+            return;
+        }
+        this.locked = true;
+        this.onWheel = (event) => {
+            if (this.canScroll(event.target, event.deltaY)) {
+                return;
+            }
+            event.preventDefault();
+        };
+        this.onTouch = (event) => {
+            if (event.target.closest?.('.rc-day-list, .rc-modal-box, .swal2-popup')) {
+                return;
+            }
+            event.preventDefault();
+        };
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+        document.addEventListener('wheel', this.onWheel, { passive: false, capture: true });
+        document.addEventListener('touchmove', this.onTouch, { passive: false, capture: true });
+    },
+    unlock() {
+        if (!this.locked || window.Swal?.isVisible?.() || document.querySelector('.rc-modal.show')) {
+            return;
+        }
+        this.locked = false;
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.removeEventListener('wheel', this.onWheel, { capture: true });
+        document.removeEventListener('touchmove', this.onTouch, { capture: true });
+    },
+    canScroll(target, deltaY) {
+        let node = target instanceof Element ? target : null;
+        while (node && node !== document.body) {
+            const style = window.getComputedStyle(node);
+            if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) {
+                const atTop = node.scrollTop <= 0;
+                const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
+                if ((deltaY < 0 && !atTop) || (deltaY > 0 && !atBottom)) {
+                    return true;
+                }
+            }
+            node = node.parentElement;
+        }
+        return false;
+    },
+};
+
 window.RMSwal = {
     base: {
         buttonsStyling: false,
@@ -283,7 +334,20 @@ window.RMSwal = {
         },
     },
     fire(options) {
-        return Swal.fire({ ...this.base, ...options });
+        const didOpen = options.didOpen;
+        const didClose = options.didClose;
+        return Swal.fire({
+            ...this.base,
+            ...options,
+            didOpen(popup) {
+                window.RMScrollLock.lock();
+                didOpen?.call(this, popup);
+            },
+            didClose(popup) {
+                window.RMScrollLock.unlock();
+                didClose?.call(this, popup);
+            },
+        });
     },
 };
 

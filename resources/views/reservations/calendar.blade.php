@@ -4,7 +4,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/resource-management.css') }}?v=11">
-<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=39">
+<link rel="stylesheet" href="{{ asset('css/resource-calendar.css') }}?v=40">
 <link rel="stylesheet" href="{{ asset('css/reservation-calendar.css') }}?v=16">
 @endpush
 
@@ -127,6 +127,6 @@
         filterCatalog: @json($filterCatalog),
     };
 </script>
-<script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/reservation-calendar.js') }}?v=30"></script>
+<script src="{{ asset('js/resource-select.js') }}?v=4"></script>
+<script src="{{ asset('js/reservation-calendar.js') }}?v=31"></script>
 @endpush

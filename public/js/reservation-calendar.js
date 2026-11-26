@@ -870,11 +870,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         modal.classList.add('show');
         modal.setAttribute('aria-hidden', 'false');
+        window.RMScrollLock?.lock();
     }
 
     function closeReservationModal() {
         modal?.classList.remove('show');
         modal?.setAttribute('aria-hidden', 'true');
+        window.RMScrollLock?.unlock();
     }
 
     function isTimeGrid(viewType) {

@@ -675,10 +675,12 @@
     line-height: 1.4;
     overflow-wrap: anywhere;
 }
-.swal2-container.rc-holiday-backdrop {
+.swal2-container.rc-holiday-backdrop,
+.swal2-container.rm-swal-backdrop {
     background: rgba(15, 32, 68, .58) !important;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    overscroll-behavior: none;
 }
 .rm-swal:has(.rc-holiday-dialog) .swal2-title,
 .rc-holiday-swal .swal2-title {
@@ -695,6 +697,7 @@
     gap: 8px;
     max-height: min(60vh, 420px);
     overflow: auto;
+    overscroll-behavior: contain;
     padding: 2px 2px 8px;
     text-align: left;
 }
@@ -944,6 +947,7 @@
     max-width: calc(100% - 24px);
     max-height: calc(100vh - 24px);
     overflow: auto;
+    overscroll-behavior: contain;
     background: linear-gradient(180deg, #f4f7ff 0%, #fff 120px);
     border: 1px solid #c9d6ee;
     border-radius: 18px;
