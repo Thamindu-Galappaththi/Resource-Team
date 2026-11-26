@@ -64,13 +64,35 @@
         showTab(params.get('tab') === 'security' ? 'security' : 'profile');
     });
 
+    function dismissAlert(alert) {
+        if (!alert.isConnected) {
+            return;
+        }
+        alert.style.transition = 'opacity .3s ease';
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 300);
+    }
+
+    function scheduleAlertDismiss(alert) {
+        if (alert._rsTimer) {
+            clearTimeout(alert._rsTimer);
+        }
+        alert._rsTimer = setTimeout(() => dismissAlert(alert), 10000);
+    }
+
     function showAlert(target, message, type) {
         const host = page.querySelector(`[data-rs-alert="${target}"]`);
         if (!host) {
             return;
         }
-        host.innerHTML = `<div class="rs-alert rs-alert-${type === 'danger' ? 'err' : 'ok'}" role="${type === 'danger' ? 'alert' : 'status'}">${message}</div>`;
+        const kind = type === 'danger' ? 'err' : 'ok';
+        host.innerHTML = `<div class="rs-alert rs-alert-${kind}" role="${type === 'danger' ? 'alert' : 'status'}">${message}</div>`;
+        if (kind === 'ok') {
+            scheduleAlertDismiss(host.querySelector('.rs-alert'));
+        }
     }
+
+    page.querySelectorAll('.rs-alert-ok').forEach(scheduleAlertDismiss);
 
     function csrfHeaders() {
         return {

@@ -196,5 +196,5 @@
 
 @push('scripts')
 <script src="{{ asset('js/resource-select.js') }}?v=3"></script>
-<script src="{{ asset('js/profile.js') }}?v=4"></script>
+<script src="{{ asset('js/profile.js') }}?v=5"></script>
 @endpush
