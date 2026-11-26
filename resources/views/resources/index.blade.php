@@ -74,7 +74,6 @@
                         ['value' => 'inactive', 'label' => 'Inactive'],
                         ['value' => 'under_maintenance', 'label' => 'Under Maintenance'],
                         ['value' => 'decommissioned', 'label' => 'Decommissioned'],
-                        ['value' => 'pending_deletion', 'label' => 'Pending Deletion'],
                     ]" />
                 </div>
                 <div class="col-12 col-lg-2">
