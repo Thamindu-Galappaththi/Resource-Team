@@ -553,6 +553,18 @@ a.slt-card--link {
     white-space: nowrap;
 }
 
+.slt-table td:nth-child(2) {
+    max-width: 16rem;
+}
+
+.slt-table__title {
+    display: block;
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .slt-table th {
     background: #0b3d91;
     color: #fff;
@@ -1352,11 +1364,20 @@ a.slt-card--link {
         border-bottom: 0;
     }
 
+    .slt-table td:nth-child(2) {
+        max-width: none;
+    }
+
     .slt-table tbody td {
         display: flex;
         justify-content: space-between;
         gap: 0.75rem;
         background: transparent !important;
+    }
+
+    .slt-table__title {
+        min-width: 0;
+        max-width: 100%;
     }
 
     .slt-table tbody td::before {

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CanteenReservationStatus;
-use App\Enums\MealType;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Models\CanteenReservation;
@@ -106,7 +105,7 @@ class SltEmployeeRequestController extends Controller
         $reservations = CanteenReservation::query()
             ->with(['location'])
             ->where('requested_by_user_id', $user->id)
-            ->latest('reservation_date')
+            ->latest('created_at')
             ->latest('id')
             ->paginate(10)
             ->appends($request->except('partial'));
@@ -118,13 +117,13 @@ class SltEmployeeRequestController extends Controller
             'columns' => ['Reference', 'Request', 'Date', 'Details', 'Status'],
             'requests' => $this->mapPaginator($reservations, function (CanteenReservation $reservation) {
                 $status = CanteenReservationStatus::tryFrom((string) $reservation->status);
-                $meal = MealType::tryFrom((string) $reservation->meal_type);
+                $orders = (int) $reservation->number_of_orders;
 
                 return [
                     'title' => $reservation->reservation_name ?: 'Canteen reservation',
                     'reference' => $reservation->reservation_ref,
                     'when' => $this->canteenWhen($reservation),
-                    'meta' => trim(($meal?->label() ?? '').' · '.$reservation->number_of_orders.' orders', ' ·'),
+                    'meta' => number_format($orders).' '.($orders === 1 ? 'order' : 'orders'),
                     'status' => $status?->label() ?? (string) $reservation->status,
                     'tone' => $status?->tone() ?? 'pending',
                     'href' => route('canteen.show', $reservation),

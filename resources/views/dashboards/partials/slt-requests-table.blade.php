@@ -22,7 +22,7 @@
                                 <a class="slt-table__ref" href="{{ $item['href'] }}">{{ $item['reference'] }}</a>
                             </td>
                             <td data-label="{{ $columns[1] }}">
-                                <strong>{{ $item['title'] }}</strong>
+                                <strong class="slt-table__title" title="{{ $item['title'] }}">{{ $item['title'] }}</strong>
                             </td>
                             <td data-label="{{ $columns[2] }}">{{ $item['when'] ?: '—' }}</td>
                             <td data-label="{{ $columns[3] }}">{{ $item['meta'] ?: '—' }}</td>

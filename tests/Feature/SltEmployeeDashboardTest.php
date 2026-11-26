@@ -95,22 +95,44 @@ class SltEmployeeDashboardTest extends TestCase
         CanteenReservation::factory()->create([
             'requested_by_user_id' => $employee->id,
             'reservation_name' => 'Team lunch order',
+            'meal_type' => 'breakfast',
+            'number_of_orders' => 15,
             'status' => CanteenReservationStatus::PENDING->value,
+            'created_at' => now()->subHour(),
+        ]);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $employee->id,
+            'reservation_name' => 'Newest canteen order',
+            'meal_type' => 'lunch',
+            'number_of_orders' => 7,
+            'status' => CanteenReservationStatus::PENDING->value,
+            'created_at' => now(),
         ]);
         CanteenReservation::factory()->create([
             'requested_by_user_id' => $other->id,
             'reservation_name' => 'Secret canteen order',
         ]);
 
-        $this->actingAs($employee)
+        $html = $this->actingAs($employee)
             ->get(route('canteen.mine'))
             ->assertOk()
             ->assertSee('My canteen requests')
             ->assertSee('Reference')
             ->assertSee('Details')
             ->assertSee('Team lunch order')
+            ->assertSee('15 orders')
+            ->assertSee('7 orders')
+            ->assertSee('slt-table__title', false)
             ->assertSee('data-reason="1"', false)
-            ->assertDontSee('Secret canteen order');
+            ->assertDontSee('Breakfast', false)
+            ->assertDontSee('Lunch', false)
+            ->assertDontSee('Secret canteen order')
+            ->getContent();
+
+        $this->assertLessThan(
+            strpos($html, 'Team lunch order'),
+            strpos($html, 'Newest canteen order')
+        );
     }
 
     public function test_my_requests_ajax_pagination_returns_table_fragment(): void
