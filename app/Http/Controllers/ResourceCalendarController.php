@@ -26,6 +26,8 @@ class ResourceCalendarController extends Controller
             ->orderBy('name_model')
             ->get();
 
+        $this->bookings->expirePastPendingReservations();
+
         $timezone = $this->bookings->timezone();
         $today = now($timezone)->toDateString();
         $monthStart = now($timezone)->startOfMonth()->toDateString();
@@ -63,6 +65,8 @@ class ResourceCalendarController extends Controller
 
     public function events(Request $request): JsonResponse
     {
+        $this->bookings->expirePastPendingReservations();
+
         $filters = $request->validate([
             'start' => ['required', 'date'],
             'end' => ['required', 'date', 'after:start'],

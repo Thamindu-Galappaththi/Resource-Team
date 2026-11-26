@@ -132,6 +132,13 @@ class ApprovalController extends Controller
     {
         abort_unless(is_null($reservation->approval_archived_at), 404);
         abort_unless($reservation->status === ReservationStatus::PENDING_APPROVAL->value, 409, 'This reservation has already been reviewed.');
+        if ($this->bookings->expirePendingReservation($reservation->id)) {
+            $route = $specialOverride ? 'approvals.special' : 'approvals.index';
+
+            return redirect()->route($route)->withErrors([
+                'decision' => 'This reservation expired because its date has passed.',
+            ]);
+        }
         if (! $specialOverride) {
             abort_unless($this->visibleQuery($request->user())->whereKey($reservation->id)->exists(), 403);
         }
@@ -250,6 +257,8 @@ class ApprovalController extends Controller
 
     private function specialPayload(Request $request): array
     {
+        $this->bookings->expirePastPendingReservations();
+
         $filters = $this->listFilters($request);
         $relations = ['requester', 'location', 'items.resource.type.category', 'statusHistory.actor', 'documents'];
 
@@ -341,6 +350,8 @@ class ApprovalController extends Controller
 
     private function indexPayload(Request $request): array
     {
+        $this->bookings->expirePastPendingReservations();
+
         $user = $request->user();
         $filters = $this->listFilters($request);
         $base = $this->visibleQuery($user);

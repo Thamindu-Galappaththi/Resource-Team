@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ReservationItemStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Models\Location;
@@ -597,6 +598,64 @@ class ReservationManagementTest extends TestCase
             ->assertForbidden();
 
         Carbon::setTestNow();
+    }
+
+    public function test_past_pending_resource_reservations_expire_and_hostel_requests_stay_pending(): void
+    {
+        $owner = User::factory()->role('resource_owner')->create();
+        $resource = Resource::factory()->create(['status' => 'active', 'name_model' => 'Owner Hall']);
+        $timezone = config('reservations.display_timezone', 'Asia/Colombo');
+        $yesterday = now($timezone)->subDay();
+
+        $past = Reservation::factory()->create([
+            'type' => ReservationType::STANDARD->value,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'reservation_date' => $yesterday->toDateString(),
+            'title' => 'Yesterday pending lab',
+            'location_id' => $resource->location_id,
+        ]);
+        $item = ReservationItem::factory()->create([
+            'reservation_id' => $past->id,
+            'resource_id' => $resource->id,
+            'status' => ReservationItemStatus::HELD->value,
+            'starts_at' => $yesterday->copy()->setTime(9, 0)->utc(),
+            'ends_at' => $yesterday->copy()->setTime(11, 0)->utc(),
+        ]);
+        $today = Reservation::factory()->create([
+            'type' => ReservationType::STANDARD->value,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'reservation_date' => now($timezone)->toDateString(),
+            'title' => 'Today pending lab',
+        ]);
+        $hostel = Reservation::factory()->create([
+            'type' => ReservationType::HOSTEL->value,
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+            'reservation_date' => $yesterday->toDateString(),
+            'title' => 'Past hostel stay',
+        ]);
+
+        $this->actingAs($owner)->get(route('reservations.calendar'))->assertOk();
+
+        $this->assertSame(ReservationStatus::EXPIRED->value, $past->fresh()->status);
+        $this->assertSame(ReservationItemStatus::CANCELLED->value, $item->fresh()->status);
+        $this->assertSame(ReservationStatus::PENDING_APPROVAL->value, $today->fresh()->status);
+        $this->assertSame(ReservationStatus::PENDING_APPROVAL->value, $hostel->fresh()->status);
+        $this->assertDatabaseHas('reservation_status_history', [
+            'reservation_id' => $past->id,
+            'to_status' => ReservationStatus::EXPIRED->value,
+        ]);
+
+        $events = $this->actingAs($owner)
+            ->getJson(route('resources.calendar.events', [
+                'start' => $yesterday->copy()->subDay()->toIso8601String(),
+                'end' => now($timezone)->addDay()->toIso8601String(),
+            ]))
+            ->assertOk()
+            ->json();
+
+        $pastEvent = collect($events)->first(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $past->id);
+        $this->assertNotNull($pastEvent);
+        $this->assertSame(ReservationStatus::EXPIRED->value, $pastEvent['extendedProps']['statusValue']);
     }
 
     /**

@@ -506,6 +506,70 @@ class ReservationBookingService
             ->get();
     }
 
+    public function expirePastPendingReservations(): int
+    {
+        $expiredCount = 0;
+        $today = now($this->timezone())->toDateString();
+
+        Reservation::query()
+            ->where('type', '!=', ReservationType::HOSTEL->value)
+            ->where('status', ReservationStatus::PENDING_APPROVAL->value)
+            ->whereDate('reservation_date', '<', $today)
+            ->select('id')
+            ->chunkById(100, function ($reservations) use (&$expiredCount): void {
+                foreach ($reservations as $reservation) {
+                    if ($this->expirePendingReservation($reservation->id)) {
+                        $expiredCount++;
+                    }
+                }
+            });
+
+        return $expiredCount;
+    }
+
+    public function expirePendingReservation(int $reservationId): bool
+    {
+        return DB::transaction(function () use ($reservationId): bool {
+            $reservation = Reservation::query()
+                ->whereKey($reservationId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $reservation
+                || $reservation->type === ReservationType::HOSTEL->value
+                || $reservation->status !== ReservationStatus::PENDING_APPROVAL->value
+                || ! $this->reservationDateHasPassed($reservation)) {
+                return false;
+            }
+
+            $reservation->update(['status' => ReservationStatus::EXPIRED->value]);
+            $reservation->items()
+                ->whereIn('status', [
+                    ReservationItemStatus::HELD->value,
+                    ReservationItemStatus::REQUESTED->value,
+                ])
+                ->update(['status' => ReservationItemStatus::CANCELLED->value]);
+
+            ReservationStatusHistory::query()->create([
+                'reservation_id' => $reservation->id,
+                'from_status' => ReservationStatus::PENDING_APPROVAL->value,
+                'to_status' => ReservationStatus::EXPIRED->value,
+                'actor_id' => null,
+                'reason' => 'Automatically expired because the reservation date passed while approval was still pending.',
+                'created_at' => now(),
+            ]);
+
+            return true;
+        });
+    }
+
+    private function reservationDateHasPassed(Reservation $reservation): bool
+    {
+        $date = $reservation->reservation_date?->toDateString();
+
+        return $date !== null && $date < now($this->timezone())->toDateString();
+    }
+
     private function recordHistory(Reservation $reservation, ?string $from, string $to, User $actor, ?string $reason): void
     {
         ReservationStatusHistory::query()->create([

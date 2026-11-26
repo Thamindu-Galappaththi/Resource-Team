@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('hostel:expire-pending-reservations')->everyMinute()->withoutOverlapping();
+        $schedule->command('reservations:expire-pending')->everyMinute()->withoutOverlapping();
         $schedule->command('hostel:complete-reservations')->everyMinute()->withoutOverlapping();
         $schedule->command('canteen:complete-reservations')->hourly()->withoutOverlapping();
     })

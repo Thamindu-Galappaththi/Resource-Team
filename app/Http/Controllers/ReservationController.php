@@ -210,6 +210,7 @@ class ReservationController extends Controller
     public function calendarEvents(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Reservation::class);
+        $this->bookings->expirePastPendingReservations();
         $filters = $request->validate([
             'start' => ['required', 'date'],
             'end' => ['required', 'date', 'after:start'],
@@ -378,6 +379,8 @@ class ReservationController extends Controller
      */
     private function calendarPayload(Request $request): array
     {
+        $this->bookings->expirePastPendingReservations();
+
         $timezone = $this->bookings->timezone();
         $now = Carbon::now($timezone);
         $year = $request->filled('year') ? max(2000, min(2100, (int) $request->year)) : $now->year;
