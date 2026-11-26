@@ -107,7 +107,7 @@
                             <div class="cd-request__meta">
                                 <span>{{ $reservation->requestedBy?->name ?? 'Unknown requester' }}</span>
                                 <span>{{ $reservation->reservation_date->format('d M Y') }} · {{ $reservation->serviceTimeLabel() }}</span>
-                                <span>{{ $reservation->mealTypeLabel() }} · {{ number_format($reservation->number_of_orders) }} orders</span>
+                                <span>{{ number_format($reservation->number_of_orders) }} {{ \Illuminate\Support\Str::plural('order', $reservation->number_of_orders) }}</span>
                                 @if($reservation->location)<span>{{ $reservation->location->name }}</span>@endif
                             </div>
                         </div>
