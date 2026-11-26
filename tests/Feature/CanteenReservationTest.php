@@ -534,6 +534,48 @@ class CanteenReservationTest extends TestCase
             ->assertDontSeeText('91 orders');
     }
 
+    public function test_past_pending_reservations_expire_and_stay_out_of_the_review_queue(): void
+    {
+        $staff = User::factory()->role('canteen')->create();
+        $requester = User::factory()->role('slt_employee')->create();
+
+        $past = CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'reservation_name' => 'Yesterday pending lunch',
+            'reservation_date' => now()->subDay()->toDateString(),
+            'reservation_time' => '12:00:00',
+            'status' => 'pending',
+        ]);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'reservation_name' => 'Today pending lunch',
+            'reservation_date' => now()->toDateString(),
+            'reservation_time' => '12:30:00',
+            'status' => 'pending',
+        ]);
+        CanteenReservation::factory()->create([
+            'requested_by_user_id' => $requester->id,
+            'reservation_name' => 'Future pending lunch',
+            'reservation_date' => now()->addDays(3)->toDateString(),
+            'reservation_time' => '08:00:00',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('canteen.dashboard'))
+            ->assertOk()
+            ->assertSeeInOrder(['Today pending lunch', 'Future pending lunch'])
+            ->assertDontSee('Yesterday pending lunch');
+
+        $this->assertSame('expired', $past->fresh()->status);
+
+        $this->actingAs($staff)
+            ->patchJson(route('canteen.status', $past), ['status' => 'approved'])
+            ->assertForbidden();
+
+        $this->assertSame('expired', $past->fresh()->status);
+    }
+
     public function test_store_accepts_browser_time_with_seconds(): void
     {
         $user = User::factory()->role('slt_employee')->create();

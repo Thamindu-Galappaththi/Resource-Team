@@ -69,7 +69,7 @@
                     <input id="to_date" type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                 </div>
                 @php
-                    $statusOptions = [\App\Enums\CanteenReservationStatus::PENDING, \App\Enums\CanteenReservationStatus::APPROVED, \App\Enums\CanteenReservationStatus::REJECTED];
+                    $statusOptions = [\App\Enums\CanteenReservationStatus::PENDING, \App\Enums\CanteenReservationStatus::APPROVED, \App\Enums\CanteenReservationStatus::REJECTED, \App\Enums\CanteenReservationStatus::EXPIRED];
                     $selectedCanteenStatus = collect($statusOptions)->first(fn ($status) => $status->value === request('status'));
                 @endphp
                 <div class="cp-filter">

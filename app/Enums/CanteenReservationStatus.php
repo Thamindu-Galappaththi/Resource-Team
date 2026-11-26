@@ -10,6 +10,7 @@ enum CanteenReservationStatus: string
     case REJECTED = 'rejected';
     case CANCELLED = 'cancelled';
     case COMPLETED = 'completed';
+    case EXPIRED = 'expired';
 
     public static function values(): array
     {
@@ -42,7 +43,7 @@ enum CanteenReservationStatus: string
             self::APPROVED, self::CONFIRMED => 'bg-success-subtle text-success',
             self::PENDING => 'bg-warning-subtle text-dark',
             self::REJECTED, self::CANCELLED => 'bg-danger-subtle text-danger',
-            self::COMPLETED => 'bg-secondary-subtle text-secondary',
+            self::COMPLETED, self::EXPIRED => 'bg-secondary-subtle text-secondary',
         };
     }
 
@@ -54,6 +55,7 @@ enum CanteenReservationStatus: string
             self::REJECTED => 'rejected',
             self::CANCELLED => 'cancelled',
             self::COMPLETED => 'completed',
+            self::EXPIRED => 'expired',
         };
     }
 }

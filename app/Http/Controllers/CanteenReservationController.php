@@ -25,6 +25,8 @@ class CanteenReservationController extends Controller
     {
         $this->authorize('viewAny', CanteenReservation::class);
 
+        CanteenReservation::expirePastPending();
+
         $today = now()->toDateString();
         $windowEnd = now()->addDays(6)->toDateString();
         $query = CanteenReservation::query()->with('requestedBy');
@@ -88,6 +90,7 @@ class CanteenReservationController extends Controller
             $pendingApprovals = CanteenReservation::query()
                 ->with(['requestedBy', 'location'])
                 ->where('status', CanteenReservationStatus::PENDING->value)
+                ->whereDate('reservation_date', '>=', $today)
                 ->orderBy('reservation_date')
                 ->orderBy('reservation_time')
                 ->paginate(5, ['*'], 'pending_page')
@@ -136,6 +139,8 @@ class CanteenReservationController extends Controller
     public function index(Request $request): View
     {
         $this->authorize('viewAny', CanteenReservation::class);
+
+        CanteenReservation::expirePastPending();
 
         $query = CanteenReservation::query()
             ->with(['requestedBy', 'approvedBy', 'location', 'mealMenu']);
@@ -201,6 +206,8 @@ class CanteenReservationController extends Controller
     {
         $this->authorize('view', $reservation);
 
+        CanteenReservation::expirePastPending();
+        $reservation->refresh();
         $reservation->load(['requestedBy', 'location', 'approvedBy', 'mealMenu']);
 
         return view('canteen.reservations.show', compact('reservation'));
@@ -239,6 +246,9 @@ class CanteenReservationController extends Controller
     public function updateStatus(UpdateCanteenReservationStatusRequest $request, CanteenReservation $reservation): JsonResponse|RedirectResponse
     {
         $this->authorize('manageStatus', $reservation);
+
+        CanteenReservation::expirePastPending();
+        $reservation->refresh();
 
         abort_unless($reservation->status === CanteenReservationStatus::PENDING->value, 403, 'Only pending reservations can be approved or rejected.');
 

@@ -14,6 +14,8 @@ class CompleteCanteenReservations extends Command
 
     public function handle(): int
     {
+        $expired = CanteenReservation::expirePastPending();
+
         $updated = CanteenReservation::query()
             ->whereIn('status', CanteenReservationStatus::accepted())
             ->where('reservation_date', '<=', now()->toDateString())
@@ -28,6 +30,7 @@ class CompleteCanteenReservations extends Command
             $reservation->update(['status' => CanteenReservationStatus::COMPLETED->value]);
         }
 
+        $this->info('Expired '.$expired.' pending canteen reservation(s).');
         $this->info('Completed '.$updated->count().' canteen reservation(s).');
 
         return self::SUCCESS;

@@ -74,6 +74,7 @@ class CanteenReservationPolicy
             CanteenReservationStatus::REJECTED->value,
             CanteenReservationStatus::CANCELLED->value,
             CanteenReservationStatus::COMPLETED->value,
+            CanteenReservationStatus::EXPIRED->value,
         ], true);
     }
 }

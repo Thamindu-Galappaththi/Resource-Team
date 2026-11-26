@@ -179,7 +179,8 @@
 .cd-status--approved { background: #bbf7d0; color: #166534; }
 .cd-status--rejected { background: #fecaca; color: #9f1239; }
 .cd-status--cancelled,
-.cd-status--completed { background: #e2e8f0; color: #475569; }
+.cd-status--completed,
+.cd-status--expired { background: #e2e8f0; color: #475569; }
 
 .cp-auto-alert {
     border: 0;

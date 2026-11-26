@@ -102,6 +102,8 @@ class SltEmployeeRequestController extends Controller
     {
         $user = $request->user();
 
+        CanteenReservation::expirePastPending();
+
         $reservations = CanteenReservation::query()
             ->with(['location'])
             ->where('requested_by_user_id', $user->id)

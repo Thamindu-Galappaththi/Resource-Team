@@ -428,6 +428,7 @@ class SltEmployeeDashboardController extends Controller
                 CanteenReservationStatus::REJECTED => ReservationStatus::REJECTED->value,
                 CanteenReservationStatus::CANCELLED => ReservationStatus::CANCELLED->value,
                 CanteenReservationStatus::COMPLETED => ReservationStatus::COMPLETED->value,
+                CanteenReservationStatus::EXPIRED => ReservationStatus::EXPIRED->value,
                 default => ReservationStatus::PENDING_APPROVAL->value,
             },
             mine: $mine,

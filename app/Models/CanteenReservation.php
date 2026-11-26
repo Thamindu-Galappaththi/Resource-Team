@@ -131,6 +131,7 @@ class CanteenReservation extends Model
             CanteenReservationStatus::REJECTED->value,
             CanteenReservationStatus::CANCELLED->value,
             CanteenReservationStatus::COMPLETED->value,
+            CanteenReservationStatus::EXPIRED->value,
         ], true)) {
             return false;
         }
@@ -140,6 +141,16 @@ class CanteenReservation extends Model
         }
 
         return in_array($this->status, [CanteenReservationStatus::PENDING->value, ...CanteenReservationStatus::accepted()], true);
+    }
+
+    public static function expirePastPending(): int
+    {
+        return static::query()
+            ->where('status', CanteenReservationStatus::PENDING->value)
+            ->whereDate('reservation_date', '<', now()->toDateString())
+            ->update([
+                'status' => CanteenReservationStatus::EXPIRED->value,
+            ]);
     }
 
     public function isPastReservation(): bool

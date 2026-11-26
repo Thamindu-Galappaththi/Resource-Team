@@ -433,6 +433,8 @@ class DashboardService
 
     private function canteen(User $user): array
     {
+        CanteenReservation::expirePastPending();
+
         $today = $this->today()->toDateString();
         $orders = CanteenReservation::query();
         $todayOrders = (clone $orders)->whereDate('reservation_date', $today);
@@ -466,7 +468,11 @@ class DashboardService
             'breakdown' => $this->canteenStatusBreakdown(),
             'queue' => $this->canteenList(
                 $user,
-                CanteenReservation::query()->where('status', CanteenReservationStatus::PENDING->value)->latest('id'),
+                CanteenReservation::query()
+                    ->where('status', CanteenReservationStatus::PENDING->value)
+                    ->whereDate('reservation_date', '>=', $today)
+                    ->orderBy('reservation_date')
+                    ->orderBy('reservation_time'),
                 'Orders to confirm',
                 'No pending canteen orders.'
             ),
