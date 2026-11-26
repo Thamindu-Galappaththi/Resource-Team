@@ -223,6 +223,19 @@ class ReservationController extends Controller
 
         $rangeStart = Carbon::parse($filters['start'])->utc();
         $rangeEnd = Carbon::parse($filters['end'])->utc();
+        $visibleFrom = $this->sltCalendarVisibleFrom()?->copy()->utc();
+        if ($visibleFrom && $rangeEnd->lte($visibleFrom)) {
+            $holidays = collect(SriLankaHolidays::calendarEvents())->filter(function (array $event) use ($filters) {
+                $date = substr((string) ($event['start'] ?? ''), 0, 10);
+
+                return $date >= substr($filters['start'], 0, 10) && $date < substr($filters['end'], 0, 10);
+            });
+
+            return response()->json($holidays->values());
+        }
+        if ($visibleFrom && $rangeStart->lt($visibleFrom)) {
+            $rangeStart = $visibleFrom;
+        }
         $baseQuery = Reservation::query()
             ->with(['requester', 'location', 'hostelStay', 'items.resource.type.category'])
             ->where('status', '!=', ReservationStatus::DRAFT->value)
@@ -435,6 +448,9 @@ class ReservationController extends Controller
             $date = $currentDate->copy()->day($day);
             $iso = $date->toDateString();
             $dayItems = $byDate->get($iso, collect());
+            if ($isSlt && $iso < $now->toDateString()) {
+                $dayItems = collect();
+            }
 
             $holiday = $holidaysByDate[$iso] ?? null;
             $previewLimit = $holiday ? 1 : 2;
@@ -460,6 +476,11 @@ class ReservationController extends Controller
         $countedReservations = $isSlt
             ? $calendarReservations->where('mine', true)
             : $calendarReservations;
+        if ($isSlt) {
+            $countedReservations = $countedReservations->filter(
+                fn (array $row) => ($row['reservation_date'] ?? '') >= $todayKey
+            );
+        }
 
         return [
             'currentDate' => $currentDate,
@@ -766,6 +787,15 @@ class ReservationController extends Controller
         return $user !== null
             && ((int) $reservation->requester_id === (int) $user->id
                 || (int) $reservation->created_by_user_id === (int) $user->id);
+    }
+
+    private function sltCalendarVisibleFrom(): ?Carbon
+    {
+        if (! request()->user()?->usesSltEmployeeWorkspace()) {
+            return null;
+        }
+
+        return Carbon::now($this->bookings->timezone())->startOfDay();
     }
 
     private function excludeHostelForSlt($query): void

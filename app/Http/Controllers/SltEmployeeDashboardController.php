@@ -246,6 +246,19 @@ class SltEmployeeDashboardController extends Controller
             ->get();
 
         $today = now($month->timezoneName)->toDateString();
+        $visibleFrom = $this->sltCalendarVisibleFrom($user);
+        if ($visibleFrom) {
+            $from = $visibleFrom->toDateString();
+            $reservations = $reservations->filter(function (Reservation $reservation) use ($month, $from) {
+                foreach ($this->hostelDates($reservation, $month) as $date) {
+                    if ($date >= $from) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+        }
 
         return [
             'month' => $reservations->count(),
@@ -263,10 +276,13 @@ class SltEmployeeDashboardController extends Controller
      */
     private function canteenCalendarStatsData(Carbon $month): array
     {
+        $user = request()->user();
+        $visibleFrom = $this->sltCalendarVisibleFrom($user);
         $reservations = CanteenReservation::query()
-            ->where('requested_by_user_id', request()->user()->id)
+            ->where('requested_by_user_id', $user->id)
             ->whereYear('reservation_date', $month->year)
             ->whereMonth('reservation_date', $month->month)
+            ->when($visibleFrom, fn ($query) => $query->whereDate('reservation_date', '>=', $visibleFrom->toDateString()))
             ->get();
 
         $today = now($month->timezoneName)->toDateString();
@@ -280,7 +296,7 @@ class SltEmployeeDashboardController extends Controller
     }
 
     /**
-     * @return array{start: Carbon, end: Carbon}
+     * @return array{start: Carbon, end: Carbon, holidayStart: Carbon}
      */
     private function eventRange(Request $request): array
     {
@@ -289,20 +305,29 @@ class SltEmployeeDashboardController extends Controller
             'end' => ['required', 'date', 'after:start'],
         ]);
 
+        $requestedStart = Carbon::parse($data['start'])->startOfDay();
+        $end = Carbon::parse($data['end'])->startOfDay();
+        $start = $requestedStart->copy();
+        $visibleFrom = $this->sltCalendarVisibleFrom($request->user());
+        if ($visibleFrom && $start->lt($visibleFrom)) {
+            $start = $visibleFrom->copy()->startOfDay();
+        }
+
         return [
-            'start' => Carbon::parse($data['start'])->startOfDay(),
-            'end' => Carbon::parse($data['end'])->startOfDay(),
+            'start' => $start,
+            'end' => $end,
+            'holidayStart' => $requestedStart,
         ];
     }
 
     /**
      * @param  list<array<string, mixed>>  $events
-     * @param  array{start: Carbon, end: Carbon}  $range
+     * @param  array{start: Carbon, end: Carbon, holidayStart?: Carbon}  $range
      * @return list<array<string, mixed>>
      */
     private function withHolidays(array $events, array $range): array
     {
-        $start = $range['start']->toDateString();
+        $start = ($range['holidayStart'] ?? $range['start'])->toDateString();
         $end = $range['end']->toDateString();
         $holidays = collect(SriLankaHolidays::calendarEvents())->filter(function (array $event) use ($start, $end) {
             $date = substr((string) ($event['start'] ?? ''), 0, 10);
@@ -336,6 +361,16 @@ class SltEmployeeDashboardController extends Controller
             $end = $start->copy()->addDay();
         } else {
             return null;
+        }
+
+        $visibleFrom = $this->sltCalendarVisibleFrom($user);
+        if ($visibleFrom) {
+            if ($end->lte($visibleFrom)) {
+                return null;
+            }
+            if ($start->lt($visibleFrom)) {
+                $start = $visibleFrom->copy()->startOfDay();
+            }
         }
 
         return $this->calendarEvent(
@@ -475,6 +510,15 @@ class SltEmployeeDashboardController extends Controller
     {
         return (int) $reservation->requester_id === (int) $user->id
             || (int) $reservation->created_by_user_id === (int) $user->id;
+    }
+
+    private function sltCalendarVisibleFrom($user): ?Carbon
+    {
+        if (! $user?->usesSltEmployeeWorkspace()) {
+            return null;
+        }
+
+        return now(config('reservations.display_timezone', 'Asia/Colombo'))->startOfDay();
     }
 
 }

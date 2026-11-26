@@ -6,10 +6,12 @@ use App\Enums\CanteenReservationStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\ReservationType;
 use App\Models\CanteenReservation;
+use App\Models\HostelStayDetail;
 use App\Models\Reservation;
 use App\Models\ReservationItem;
 use App\Models\Resource;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -523,16 +525,103 @@ class SltEmployeeDashboardTest extends TestCase
             ->assertSee('Back to my resource requests');
     }
 
-    private function calendarBooking(User $requester, Resource $resource, string $title): Reservation
+    public function test_slt_calendars_hide_reservations_before_today(): void
     {
-        $start = now('UTC')->addDay()->setTime(4, 30);
+        $employee = User::factory()->role('slt_employee')->create();
+        $admin = User::factory()->role('admin')->create();
+        $timezone = config('reservations.display_timezone', 'Asia/Colombo');
+        $today = now($timezone)->startOfDay();
+        $yesterday = $today->copy()->subDay();
+        $tomorrow = $today->copy()->addDay();
+        $resource = Resource::factory()->create(['status' => 'active', 'name_model' => 'Hall B']);
+
+        $pastResource = $this->calendarBooking($employee, $resource, 'Yesterday lab', $yesterday);
+        $futureResource = $this->calendarBooking($employee, $resource, 'Tomorrow lab', $tomorrow);
+
+        $pastHostel = Reservation::factory()->create([
+            'requester_id' => $employee->id,
+            'type' => ReservationType::HOSTEL->value,
+            'title' => 'Ended hostel stay',
+            'reservation_date' => $yesterday->toDateString(),
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+        ]);
+        HostelStayDetail::factory()->create([
+            'reservation_id' => $pastHostel->id,
+            'check_in_at' => $yesterday->copy()->setTime(14, 0),
+            'check_out_at' => $yesterday->copy()->setTime(18, 0),
+        ]);
+        $ongoingHostel = Reservation::factory()->create([
+            'requester_id' => $employee->id,
+            'type' => ReservationType::HOSTEL->value,
+            'title' => 'Ongoing hostel stay',
+            'reservation_date' => $yesterday->toDateString(),
+            'status' => ReservationStatus::PENDING_APPROVAL->value,
+        ]);
+        HostelStayDetail::factory()->create([
+            'reservation_id' => $ongoingHostel->id,
+            'check_in_at' => $yesterday->copy()->setTime(14, 0),
+            'check_out_at' => $tomorrow->copy()->setTime(10, 0),
+        ]);
+
+        $pastCanteen = CanteenReservation::factory()->create([
+            'requested_by_user_id' => $employee->id,
+            'reservation_name' => 'Yesterday lunch',
+            'reservation_date' => $yesterday->toDateString(),
+            'status' => CanteenReservationStatus::PENDING->value,
+        ]);
+        $futureCanteen = CanteenReservation::factory()->create([
+            'requested_by_user_id' => $employee->id,
+            'reservation_name' => 'Tomorrow lunch',
+            'reservation_date' => $tomorrow->toDateString(),
+            'status' => CanteenReservationStatus::PENDING->value,
+        ]);
+
+        $range = [
+            'start' => $yesterday->toIso8601String(),
+            'end' => $today->copy()->addMonths(2)->toIso8601String(),
+        ];
+
+        $resourceEvents = collect($this->actingAs($employee)
+            ->getJson(route('reservations.calendar.events', $range))
+            ->assertOk()
+            ->json());
+        $this->assertFalse($resourceEvents->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $pastResource->id));
+        $this->assertTrue($resourceEvents->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $futureResource->id));
+
+        $adminEvents = collect($this->actingAs($admin)
+            ->getJson(route('reservations.calendar.events', $range))
+            ->assertOk()
+            ->json());
+        $this->assertTrue($adminEvents->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $pastResource->id));
+
+        $hostelEvents = collect($this->actingAs($employee)
+            ->getJson(route('hostel.calendar.events', $range))
+            ->assertOk()
+            ->json());
+        $this->assertFalse($hostelEvents->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $pastHostel->id));
+        $ongoing = $hostelEvents->first(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $ongoingHostel->id);
+        $this->assertNotNull($ongoing);
+        $this->assertTrue(Carbon::parse($ongoing['start'])->timezone($timezone)->startOfDay()->gte($today));
+
+        $canteenEvents = collect($this->actingAs($employee)
+            ->getJson(route('canteen.calendar.events', $range))
+            ->assertOk()
+            ->json());
+        $this->assertFalse($canteenEvents->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $pastCanteen->id));
+        $this->assertTrue($canteenEvents->contains(fn ($event) => ($event['extendedProps']['reservationId'] ?? null) === $futureCanteen->id));
+    }
+
+    private function calendarBooking(User $requester, Resource $resource, string $title, ?Carbon $on = null): Reservation
+    {
+        $local = $on?->copy()->timezone('Asia/Colombo') ?? now('Asia/Colombo')->addDay();
+        $start = $local->copy()->setTime(10, 0)->utc();
         $reservation = Reservation::factory()->create([
             'requester_id' => $requester->id,
             'created_by_user_id' => $requester->id,
             'location_id' => $resource->location_id,
             'title' => $title,
             'status' => ReservationStatus::PENDING_APPROVAL->value,
-            'reservation_date' => now('Asia/Colombo')->addDay()->toDateString(),
+            'reservation_date' => $local->toDateString(),
             'start_time' => '10:00:00',
             'end_time' => '12:00:00',
         ]);
