@@ -389,12 +389,16 @@
     cursor: pointer;
 }
 .fc-dayGridMonth-view .rc-month-more {
+    display: block;
     flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
     color: #1769c2;
     font-size: 11px;
     font-weight: 700;
     line-height: 1.2;
     white-space: nowrap;
+    cursor: pointer;
 }
 .fc-timegrid .fc-daygrid-day-frame {
     min-height: 0;

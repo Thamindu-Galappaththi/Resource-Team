@@ -817,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `<span class="rc-month-chip" style="background:${colors.background};color:${colors.text}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
             }).join('');
             summary.hidden = false;
-            summary.innerHTML = `${holidayChip}<div class="rc-month-chips">${chips}</div>${extra > 0 ? `<span class="rc-month-more" role="button" tabindex="0">+${extra} more</span>` : ''}`;
+            summary.innerHTML = `${holidayChip}<div class="rc-month-chips">${chips}${extra > 0 ? `<span class="rc-month-more" role="button" tabindex="0">+${extra} more</span>` : ''}</div>`;
             const more = summary.querySelector('.rc-month-more');
             if (!more) return;
             const stop = (event) => event.stopPropagation();
@@ -997,9 +997,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 : 'rc-badge-cancelled';
         return `<span class="rc-badge ${cls}">${escapeHtml(label || statusValue || '—')}</span>`;
     }
+    function asLocalDate(value) {
+        if (value instanceof Date) return value;
+        const match = String(value ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        return new Date(value);
+    }
+
     function formatDate(date) {
-        if (!date || Number.isNaN(date.getTime())) return '—';
-        return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+        const value = asLocalDate(date);
+        if (!date || Number.isNaN(value.getTime())) return '—';
+        return value.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
     }
     function formatEventClock(date) {
         if (!date || Number.isNaN(date.getTime())) return '—';
