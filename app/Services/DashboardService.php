@@ -758,18 +758,33 @@ class DashboardService
     private function canteenStatusBreakdown(): array
     {
         $counts = CanteenReservation::query()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
-        $total = max(1, (int) $counts->sum());
-        $items = [];
+        $grouped = [];
+
         foreach ($counts as $status => $value) {
+            $enum = CanteenReservationStatus::tryFrom((string) $status);
+            $label = $enum?->label() ?? ucfirst(str_replace('_', ' ', (string) $status));
+            $tone = match ($status) {
+                CanteenReservationStatus::APPROVED->value, CanteenReservationStatus::CONFIRMED->value, CanteenReservationStatus::COMPLETED->value => 'success',
+                CanteenReservationStatus::PENDING->value => 'warning',
+                default => 'danger',
+            };
+
+            if (! isset($grouped[$label])) {
+                $grouped[$label] = ['label' => $label, 'value' => 0, 'tone' => $tone];
+            }
+
+            $grouped[$label]['value'] += (int) $value;
+        }
+
+        $total = max(1, (int) collect($grouped)->sum('value'));
+        $items = [];
+
+        foreach ($grouped as $row) {
             $items[] = [
-                'label' => CanteenReservationStatus::tryFrom((string) $status)?->label() ?? ucfirst(str_replace('_', ' ', (string) $status)),
-                'value' => (int) $value,
-                'pct' => (int) round(100 * (int) $value / $total),
-                'tone' => match ($status) {
-                    CanteenReservationStatus::APPROVED->value, CanteenReservationStatus::CONFIRMED->value, CanteenReservationStatus::COMPLETED->value => 'success',
-                    CanteenReservationStatus::PENDING->value => 'warning',
-                    default => 'danger',
-                },
+                'label' => $row['label'],
+                'value' => $row['value'],
+                'pct' => (int) round(100 * $row['value'] / $total),
+                'tone' => $row['tone'],
             ];
         }
 

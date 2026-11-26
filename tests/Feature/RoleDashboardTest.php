@@ -159,6 +159,23 @@ class RoleDashboardTest extends TestCase
             ->assertDontSee('New order');
     }
 
+    public function test_canteen_status_chart_counts_confirmed_orders_as_approved(): void
+    {
+        $user = User::factory()->role('canteen')->create();
+
+        CanteenReservation::factory()->create(['status' => CanteenReservationStatus::APPROVED->value]);
+        CanteenReservation::factory()->create(['status' => CanteenReservationStatus::CONFIRMED->value]);
+
+        $response = $this->actingAs($user)->get(route('dashboard'))->assertOk();
+
+        preg_match('/id="rd-dash-data"[^>]*>(.*?)<\/script>/s', $response->getContent(), $matches);
+        $breakdown = collect(json_decode($matches[1] ?? '[]', true)['breakdown'] ?? []);
+        $approved = $breakdown->where('label', 'Approved');
+
+        $this->assertCount(1, $approved);
+        $this->assertSame(2, $approved->first()['value']);
+    }
+
     public function test_admin_dashboard_links_to_daily_operations(): void
     {
         $admin = User::factory()->role('admin')->create();
